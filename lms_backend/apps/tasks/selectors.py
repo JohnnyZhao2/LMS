@@ -4,7 +4,7 @@ Task selectors.
 """
 from typing import Any, Optional
 
-from django.db.models import Count, Max, Prefetch, QuerySet, Sum
+from django.db.models import Count, Prefetch, QuerySet, Sum
 from django.utils import timezone
 
 from apps.knowledge.selectors import get_knowledge_queryset
@@ -232,17 +232,22 @@ def task_quiz_completion_counts(task_id: int) -> dict[int, int]:
     return {row['quiz_id']: row['completed_count'] for row in rows}
 
 
-def task_exam_highest_scores(task_id: int) -> list:
-    return list(
-        Submission.objects.filter(
-            task_assignment__task_id=task_id,
-            quiz__quiz_type='EXAM',
-            status__in=ANALYTICS_SUBMISSION_STATUSES,
-            obtained_score__isnull=False,
-        ).values('task_assignment_id').annotate(
-            max_obtained=Max('obtained_score')
-        ).values_list('max_obtained', flat=True)
-    )
+def task_highest_score_percentages(task_id: int) -> list[float]:
+    rows = Submission.objects.filter(
+        task_assignment__task_id=task_id,
+        status__in=ACCURACY_SUBMISSION_STATUSES,
+        obtained_score__isnull=False,
+        total_score__gt=0,
+    ).values_list('task_assignment_id', 'obtained_score', 'total_score')
+
+    best_percentages: dict[int, float] = {}
+    for assignment_id, obtained_score, total_score in rows:
+        percentage = round(float(obtained_score) / float(total_score) * 100, 1)
+        previous = best_percentages.get(assignment_id)
+        if previous is None or percentage > previous:
+            best_percentages[assignment_id] = percentage
+
+    return list(best_percentages.values())
 
 
 def task_exam_submissions_queryset(task_id: int) -> QuerySet:
@@ -377,8 +382,7 @@ def task_time_distribution(task_id: int) -> list[dict[str, int]]:
 def task_score_distribution(task_id: int) -> list[dict[str, int]]:
     distribution = {item[0]: 0 for item in SCORE_DISTRIBUTION_RANGES}
 
-    for max_score in task_exam_highest_scores(task_id):
-        score = float(max_score)
+    for score in task_highest_score_percentages(task_id):
         for label, minimum, maximum in SCORE_DISTRIBUTION_RANGES:
             if minimum <= score < maximum:
                 distribution[label] += 1
@@ -442,14 +446,7 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
         if assignment.completed_at and assignment.created_at:
             time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
 
-        score = None
-        exam_submissions = [
-            submission for submission in assignment.submissions.all()
-            if submission.quiz.quiz_type == 'EXAM' and submission.obtained_score is not None
-        ]
-        if exam_submissions:
-            best_submission = max(exam_submissions, key=lambda submission: submission.obtained_score)
-            score = float(best_submission.obtained_score)
+        score = float(assignment.score) if assignment.score is not None else None
 
         abnormal = is_assignment_abnormal(assignment)
         status = assignment.status

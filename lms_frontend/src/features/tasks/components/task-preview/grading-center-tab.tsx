@@ -1,11 +1,13 @@
 import * as React from 'react';
 import {
+  BookOpen,
+  ClipboardList,
+  GraduationCap,
   ThumbsDown,
   ThumbsUp,
   Check,
   BarChart3,
   Filter,
-  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/user-avatar';
@@ -14,8 +16,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
+import { buildQuestionSections } from '@/features/questions/question-sections';
 import { cn } from '@/lib/utils';
-import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
+import type { GradingAnswerResponse, GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
+import type { PendingTask, PendingQuiz } from '@/features/grading/api/pending-quizzes';
 import {
   useGradingAnswers,
   useGradingQuestions,
@@ -25,9 +31,20 @@ import {
 interface GradingCenterTabProps {
   taskId?: number;
   quizId?: number | null;
+  selectorConfig?: GradingCenterSelectorConfig;
 }
 
 type QuestionFilter = 'all' | 'subjective';
+
+export interface GradingCenterSelectorConfig {
+  tasks: PendingTask[];
+  selectedTaskId: number | null;
+  selectedQuizId: number | null;
+  selectedTaskTitle: string;
+  isTaskLocked?: boolean;
+  onTaskSelect: (task: PendingTask) => void;
+  onQuizSelect: (quiz: PendingQuiz) => void;
+}
 
 const questionFilters: { value: QuestionFilter; label: string }[] = [
   { value: 'all', label: '全部题目' },
@@ -40,12 +57,12 @@ const formatPassRate = (rate?: number | null) => {
   return `${rate.toFixed(1)}%`;
 };
 
-// Utility: Color helpers based on pass rate
+// Utility: Text color helpers based on pass rate
 const getPassRateColor = (rate?: number | null) => {
-  if (rate === null || rate === undefined) return 'bg-muted text-text-muted border border-border';
-  if (rate >= 80) return 'bg-secondary-50 text-secondary-700 border border-secondary-200';
-  if (rate >= 60) return 'bg-warning-50 text-warning-700 border border-warning-200';
-  return 'bg-destructive-50 text-destructive-700 border border-destructive-200';
+  if (rate === null || rate === undefined) return 'text-text-muted';
+  if (rate >= 80) return 'text-secondary-700';
+  if (rate >= 60) return 'text-warning-700';
+  return 'text-destructive-700';
 };
 
 const formatAnswerText = (answer?: string | null) => {
@@ -59,9 +76,11 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
     return acc;
   }, {});
 
-export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quizId }) => {
+export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quizId, selectorConfig }) => {
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>('all');
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
+  const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
+  const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
 
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
@@ -82,10 +101,16 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     }
     return questions;
   }, [questions, questionFilter]);
+  const groupedQuestions = React.useMemo(
+    () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
+    [filteredQuestions],
+  );
 
   React.useEffect(() => {
     if (filteredQuestions.length === 0) {
       setSelectedQuestionId(null);
+      setDisplayedQuestionId(null);
+      setDisplayedQuestionDetail(null);
       return;
     }
     const stillExists = filteredQuestions.some((question) => question.question_id === selectedQuestionId);
@@ -95,27 +120,39 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
   }, [filteredQuestions, selectedQuestionId]);
 
   React.useEffect(() => {
-    if (questionDetail?.subjective_answers) {
-      setScoresByStudent(buildScoreMap(questionDetail.subjective_answers));
+    if (questionDetail && selectedQuestionId !== null) {
+      setDisplayedQuestionId(selectedQuestionId);
+      setDisplayedQuestionDetail(questionDetail);
+    }
+  }, [questionDetail, selectedQuestionId]);
+
+  React.useEffect(() => {
+    if (displayedQuestionDetail?.subjective_answers) {
+      setScoresByStudent(buildScoreMap(displayedQuestionDetail.subjective_answers));
       return;
     }
     setScoresByStudent({});
-  }, [questionDetail]);
+  }, [displayedQuestionDetail]);
+
+  React.useEffect(() => {
+    setDisplayedQuestionId(null);
+    setDisplayedQuestionDetail(null);
+  }, [taskId, quizId]);
 
   const selectedQuestion = React.useMemo<GradingQuestion | undefined>(
-    () => questions?.find((question) => question.question_id === selectedQuestionId),
-    [questions, selectedQuestionId]
+    () => questions?.find((question) => question.question_id === (displayedQuestionId ?? selectedQuestionId ?? -1)),
+    [questions, displayedQuestionId, selectedQuestionId]
   );
+  const activeQuestionDetail = displayedQuestionId === selectedQuestionId
+    ? (questionDetail ?? displayedQuestionDetail)
+    : displayedQuestionDetail;
 
   const sortedOptions = React.useMemo(() => {
-    if (!questionDetail?.options) return [];
-    return [...questionDetail.options].sort((a, b) => Number(b.is_correct) - Number(a.is_correct));
-  }, [questionDetail]);
+    if (!activeQuestionDetail?.options) return [];
+    return [...activeQuestionDetail.options].sort((a, b) => Number(b.is_correct) - Number(a.is_correct));
+  }, [activeQuestionDetail]);
 
-  const totalAnswersCount = React.useMemo(() => {
-    if (!sortedOptions) return 0;
-    return sortedOptions.reduce((acc, opt) => acc + opt.students.length, 0);
-  }, [sortedOptions]);
+  const answeredCount = activeQuestionDetail?.answered_count ?? 0;
 
   const handleScoreChange = (studentId: number, value: string) => {
     setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
@@ -188,75 +225,156 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     );
   }
 
+  const selectedTask = selectorConfig?.tasks.find((task) => task.task_id === selectorConfig.selectedTaskId) ?? null;
+  const selectedQuiz =
+    selectedTask?.quizzes.find((quiz) => quiz.quiz_id === selectorConfig?.selectedQuizId) ?? null;
   return (
     <div className="grid h-full min-h-0 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
       {/* Left Column: Question List */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
-        {/* Header/Filter */}
-        <div className="p-4 border-b border-border bg-muted">
+        <div className="space-y-4 border-b border-border bg-background p-4">
+          {selectorConfig ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="min-w-0 space-y-1.5">
+                <div className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
+                  当前任务
+                </div>
+                {selectorConfig.isTaskLocked ? (
+                  <div className="flex h-10 items-center gap-2 rounded-xl border border-primary-100 bg-primary-50/70 px-3">
+                    <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
+                      {selectorConfig.selectedTaskTitle}
+                    </span>
+                    <span className="shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-medium text-primary-700">
+                      锁定
+                    </span>
+                  </div>
+                ) : (
+                  <Select
+                    value={selectorConfig.selectedTaskId ? String(selectorConfig.selectedTaskId) : undefined}
+                    onValueChange={(value) => {
+                      const nextTask = selectorConfig.tasks.find((task) => task.task_id === Number(value));
+                      if (nextTask) {
+                        selectorConfig.onTaskSelect(nextTask);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
+                        <SelectValue placeholder="选择任务" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectorConfig.tasks.map((task) => (
+                        <SelectItem key={task.task_id} value={String(task.task_id)}>
+                          {task.task_title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="min-w-0 space-y-1.5">
+                <div className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
+                  试卷
+                </div>
+                <Select
+                  value={selectedQuiz ? String(selectedQuiz.quiz_id) : undefined}
+                  onValueChange={(value) => {
+                    const nextQuiz = selectedTask?.quizzes.find((quiz) => quiz.quiz_id === Number(value));
+                    if (nextQuiz) {
+                      selectorConfig.onQuizSelect(nextQuiz);
+                    }
+                  }}
+                  disabled={!selectedTask || selectedTask.quizzes.length === 0}
+                >
+                  <SelectTrigger className="bg-background">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {selectedQuiz?.quiz_type === 'EXAM' ? (
+                        <GraduationCap className="h-4 w-4 shrink-0 text-destructive-500" />
+                      ) : (
+                        <BookOpen className="h-4 w-4 shrink-0 text-primary-500" />
+                      )}
+                      <SelectValue placeholder="选择试卷" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(selectedTask?.quizzes ?? []).map((quiz) => (
+                      <SelectItem key={quiz.quiz_id} value={String(quiz.quiz_id)}>
+                        {quiz.quiz_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : null}
+
           <SegmentedControl
             value={questionFilter}
             onChange={(value) => setQuestionFilter(value as QuestionFilter)}
             options={questionFilters}
             activeColor="white"
+            className="w-full"
+            fill
           />
         </div>
 
-        {/* List */}
-        <ScrollContainer className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
+        <ScrollContainer className="min-h-0 flex-1 overflow-y-auto">
           {filteredQuestions.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-40 text-text-muted text-sm">
+            <div className="flex h-40 flex-col items-center justify-center px-4 text-sm text-text-muted">
               <p>没有找到相关题目</p>
             </div>
           )}
-          {filteredQuestions.map((question) => {
-            const isActive = question.question_id === selectedQuestionId;
-            const passRateColor = getPassRateColor(question.pass_rate);
-
-            return (
-              <button
-                key={question.question_id}
-                onClick={() => setSelectedQuestionId(question.question_id)}
-                className={cn(
-                  'w-full text-left p-4 rounded-xl transition-all duration-200 border group relative mb-3',
-                  isActive
-                    ? 'border-primary-200 bg-primary-50/60  ring-1 ring-primary-100'
-                    : 'border-transparent bg-background hover:border-primary-200 hover:bg-primary-50/40'
-                )}
-              >
-                <div className="flex justify-between items-start mb-2 gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
-                      question.question_type === 'SHORT_ANSWER'
-                        ? 'bg-primary-50 text-primary-600 border-primary-100'
-                        : 'bg-background text-text-muted border-border'
-                    )}>
-                      {question.question_type_display}
-                    </span>
-                    {question.question_type === 'SHORT_ANSWER' && (
-                      <span className="text-[10px] font-medium text-warning-600 bg-warning-50 px-1.5 py-0.5 rounded border border-warning-100">
-                        人工
-                      </span>
-                    )}
-                  </div>
-                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums", passRateColor)}>
-                    {formatPassRate(question.pass_rate)}
+          <div className="space-y-4 px-3 py-4">
+            {groupedQuestions.map((section) => (
+              <div key={section.type} className="space-y-2">
+                <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5">
+                  <QuestionTypeBadge type={section.type} variant="plain" />
+                  <span className="shrink-0 text-[11px] font-medium text-text-muted">
+                    {section.entries.length} 题
                   </span>
                 </div>
-                <h3 className={cn(
-                  "text-sm font-medium leading-relaxed line-clamp-2 mb-3",
-                  isActive ? "text-foreground" : "text-foreground"
-                )}>
-                  {question.question_text}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-text-muted">
-                  <span className="font-medium bg-muted px-2 py-1 rounded">分值: {question.max_score}</span>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+
+                <div className="space-y-2">
+                  {section.entries.map(({ item: question, number }) => {
+                    const isActive = question.question_id === selectedQuestionId;
+                    const passRateColor = getPassRateColor(question.pass_rate);
+
+                    return (
+                      <button
+                        key={question.question_id}
+                        onClick={() => setSelectedQuestionId(question.question_id)}
+                        className={cn(
+                          'group relative flex min-h-[82px] w-full flex-col rounded-xl border px-3 py-2 text-left transition-all duration-200',
+                          isActive
+                            ? 'border-primary-200 bg-primary-50/60 ring-1 ring-primary-100'
+                            : 'border-transparent bg-background hover:border-primary-200 hover:bg-primary-50/40'
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-4 shrink-0 text-center text-[13px] font-medium leading-[1.375rem] tabular-nums text-text-muted">
+                            {number}
+                          </span>
+                          <h3 className="min-w-0 flex-1 line-clamp-2 text-[14px] font-medium leading-[1.375rem] text-foreground">
+                            {question.question_text}
+                          </h3>
+                        </div>
+
+                        <div className="mt-1 flex justify-end">
+                          <span className={cn('text-[11px] font-semibold tabular-nums', passRateColor)}>
+                            {formatPassRate(question.pass_rate)}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              </button>
-            );
-          })}
+              </div>
+            ))}
+          </div>
         </ScrollContainer>
       </div>
 
@@ -272,8 +390,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                       <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
                         {selectedQuestion?.question_type_display || '题目详情'}
                       </span>
-                      <span className="text-text-muted text-sm font-mono">
-                        ID: {selectedQuestion?.question_id}
+                      <span className="text-sm font-medium text-text-muted">
+                        分值: {selectedQuestion?.max_score}
                       </span>
                     </div>
                     <h2 className="text-lg font-semibold text-foreground leading-snug">
@@ -284,14 +402,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     <span className="text-xs text-text-muted uppercase font-semibold tracking-wider">该题平均通过率</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-bold text-foreground tabular-nums">
-                        {formatPassRate(questionDetail?.pass_rate ?? selectedQuestion?.pass_rate)}
+                        {formatPassRate(activeQuestionDetail?.pass_rate ?? selectedQuestion?.pass_rate)}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {selectedQuestion?.question_analysis && (
-                  <div className="mt-4 p-4 bg-muted rounded-xl border border-border text-sm text-text-muted leading-relaxed">
+                  <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm leading-relaxed text-text-muted">
                     <span className="font-semibold text-foreground mr-2">解析:</span>
                     {selectedQuestion.question_analysis}
                   </div>
@@ -299,8 +417,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
 
               {/* Content Body */}
-              <ScrollContainer className="flex-1 overflow-y-auto bg-muted p-6">
-                {detailLoading ? (
+              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-6">
+                        {detailLoading && !activeQuestionDetail ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -321,86 +439,72 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                         )}
                         {sortedOptions.map((option) => {
                           const isCorrect = option.is_correct;
-                          const percent = totalAnswersCount > 0
-                            ? Math.round((option.students.length / totalAnswersCount) * 100)
+                          const percent = answeredCount > 0
+                            ? Math.round((option.selected_count / answeredCount) * 100)
                             : 0;
+
+                          const previewStudents = option.students.slice(0, 5);
 
                           return (
                             <div
                               key={option.option_key}
                               className={cn(
-                                "group rounded-xl border bg-background overflow-hidden transition-all",
-                                isCorrect ? "border-secondary-200 ring-1 ring-secondary-100" : "border-border"
+                                'group relative rounded-xl px-4 py-5 transition-all',
+                                isCorrect
+                                  ? 'border border-secondary-300 bg-background ring-1 ring-secondary-100'
+                                  : 'border border-transparent bg-transparent',
                               )}
                             >
-                              <div className={cn(
-                                "relative px-4 py-3 flex items-center justify-between gap-4 overflow-hidden",
-                                isCorrect ? "bg-secondary-50/30" : "bg-background"
-                              )}>
-                                {/* Progress Bar Background - Subtler */}
-                                <div
-                                  className={cn(
-                                    "absolute left-0 top-0 bottom-0 transition-all duration-1000 mix-blend-multiply",
-                                    isCorrect ? "bg-secondary-50" : "bg-muted"
-                                  )}
-                                  style={{ width: `${percent}%` }}
-                                />
+                              {isCorrect ? (
+                                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-secondary-200/70">
+                                  <Check className="h-12 w-12" strokeWidth={2.5} />
+                                </div>
+                              ) : null}
 
-                                <div className="flex items-center gap-3 relative z-10 flex-1">
-                                  <span className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm border  shrink-0",
-                                    isCorrect
-                                      ? "bg-secondary-100 text-secondary-700 border-secondary-200"
-                                      : "bg-background text-text-muted border-border"
-                                  )}>
-                                    {option.option_key}
-                                  </span>
-                                  <span className={cn(
-                                    "text-sm font-medium leading-relaxed",
-                                    isCorrect ? "text-secondary-900" : "text-foreground"
-                                  )}>
+                              <div className="flex items-start gap-4">
+                                <div className="min-w-0 flex flex-1 items-start">
+                                  <span
+                                    className={cn(
+                                      'min-w-0 flex-1 text-sm font-medium leading-relaxed',
+                                      isCorrect ? 'text-secondary-900' : 'text-foreground',
+                                    )}
+                                  >
                                     {option.option_text}
                                   </span>
                                 </div>
-
-                                <div className="flex items-center gap-4 relative z-10 shrink-0">
-                                  <div className="flex flex-col items-end">
-                                    <span className="text-sm font-bold text-foreground tabular-nums">
-                                      {option.selected_count} <span className="text-xs font-normal text-text-muted">人</span>
-                                    </span>
-                                    <span className="text-[10px] text-text-muted font-medium tabular-nums">{percent}%</span>
-                                  </div>
-                                  {isCorrect && (
-                                    <div className="w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center text-secondary-600">
-                                      <Check className="w-5 h-5" />
-                                    </div>
-                                  )}
-                                </div>
                               </div>
 
-                              {/* Student List */}
-                              {option.students.length > 0 ? (
-                                <div className="p-3 bg-muted border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                                  {option.students.map(student => (
-                                    <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background border border-transparent hover:border-border transition-colors text-xs">
-                                      <UserAvatar
-                                        avatarKey={student.avatar_key}
-                                        name={student.student_name}
-                                        size="sm"
-                                        className="h-5 w-5 shrink-0"
-                                      />
-                                      <div className="min-w-0">
-                                        <div className="font-medium text-foreground truncate">{student.student_name}</div>
-                                      </div>
-                                    </div>
+                              <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={cn(
+                                    'h-full transition-[width] duration-500',
+                                    isCorrect ? 'bg-secondary-500' : 'bg-slate-400',
+                                  )}
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
+
+                              <div className="mt-5 flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center">
+                                  {previewStudents.map((student, index) => (
+                                    <UserAvatar
+                                      key={student.student_id}
+                                      avatarKey={student.avatar_key}
+                                      name={student.student_name}
+                                      size="sm"
+                                      className={cn(
+                                        'h-7 w-7 border-2 border-background shadow-sm',
+                                        index > 0 && '-ml-2.5',
+                                      )}
+                                    />
                                   ))}
                                 </div>
-                              ) : (
-                                <div className="px-4 py-2 bg-muted border-t border-border text-xs text-text-muted italic flex items-center gap-2">
-                                  <Users className="w-3 h-3 text-text-muted" />
-                                  <span>无人选择此项</span>
+                                <div className="shrink-0 text-xs font-medium tabular-nums text-text-muted">
+                                  <span>共 {option.selected_count} 人</span>
+                                  <span className="mx-2 text-text-muted/60">|</span>
+                                  <span>{percent}%</span>
                                 </div>
-                              )}
+                              </div>
                             </div>
                           );
                         })}
@@ -410,18 +514,18 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     {/* SUBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
                       <div className="space-y-4 max-w-4xl mx-auto">
-                        {questionDetail?.subjective_answers?.length === 0 && (
+                        {activeQuestionDetail?.subjective_answers?.length === 0 && (
                           <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
                             暂无学员回答
                           </div>
                         )}
-                        {questionDetail?.subjective_answers?.map((answer) => (
+                        {activeQuestionDetail?.subjective_answers?.map((answer) => (
                           <div
                             key={answer.student_id}
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
                           >
                             {/* Header: Student Info + Score */}
-                            <div className="flex items-center justify-between p-4 bg-muted border-b border-border">
+                            <div className="flex items-center justify-between border-b border-border bg-background p-4">
                               <div className="flex items-center gap-3">
                                 <UserAvatar
                                   avatarKey={answer.avatar_key}
@@ -461,7 +565,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
-                                  <div className="text-foreground text-sm leading-relaxed p-4 bg-muted rounded-xl border border-dashed border-border min-h-[80px]">
+                                  <div className="min-h-[80px] rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-relaxed text-foreground">
                                     {formatAnswerText(answer.answer_text)}
                                   </div>
                                 </div>

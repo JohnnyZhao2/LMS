@@ -129,7 +129,7 @@ export const QuestionDocumentEditMode: React.FC<QuestionDocumentEditModeProps> =
             onChange={(event) => onContentChange?.(event.target.value)}
             rows={2}
             readOnly={readOnly}
-            className="min-h-[56px] resize-none border-none bg-transparent px-0 py-0 text-[15px] font-semibold leading-7 shadow-none focus-visible:ring-0"
+            className="min-h-[56px] resize-none border-none bg-transparent px-0 py-0 text-[15px] font-medium leading-7 shadow-none focus-visible:ring-0"
           />
         </div>
 

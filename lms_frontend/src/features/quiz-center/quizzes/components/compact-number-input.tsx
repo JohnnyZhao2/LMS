@@ -76,14 +76,10 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
     onChange(formatNumber(nextValue));
   };
 
-  return (
-    <div className={cn('flex items-center gap-2 rounded-md bg-muted px-2.5 py-1', className)}>
-      {prefixLabel && (
-        <>
-          <span className={cn('text-[11px] font-medium text-foreground/60', prefixClassName)}>{prefixLabel}</span>
-          <div className="h-3.5 w-px bg-foreground/20" />
-        </>
-      )}
+  const isUnitSegmented = !prefixLabel && Boolean(unit) && dividerBeforeUnit;
+
+  const valueNode = (
+    <>
       <input
         type="text"
         inputMode={mode === 'integer' ? 'numeric' : 'decimal'}
@@ -101,6 +97,55 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
       />
       {unit && dividerBeforeUnit && <div className="h-3.5 w-px bg-foreground/20" />}
       {unit && <span className="text-[11px] font-medium text-text-muted">{unit}</span>}
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        prefixLabel
+          ? 'grid grid-cols-[auto_1px_minmax(0,1fr)] items-center gap-x-2 rounded-md bg-muted px-2.5 py-1'
+          : isUnitSegmented
+            ? 'grid grid-cols-[minmax(0,3fr)_1px_minmax(0,2fr)] items-center gap-x-2 rounded-md bg-muted px-2.5 py-1'
+          : 'flex items-center gap-2 rounded-md bg-muted px-2.5 py-1',
+        className,
+      )}
+    >
+      {prefixLabel && (
+        <>
+          <span className={cn('text-[11px] font-medium text-foreground/60', prefixClassName)}>{prefixLabel}</span>
+          <div className="h-3.5 w-px bg-foreground/20" />
+          <div className="flex min-w-0 items-center justify-center gap-1.5">
+            {valueNode}
+          </div>
+        </>
+      )}
+      {!prefixLabel && isUnitSegmented ? (
+        <>
+          <div className="flex min-w-0 items-center justify-center">
+            <input
+              type="text"
+              inputMode={mode === 'integer' ? 'numeric' : 'decimal'}
+              value={value}
+              placeholder={placeholder}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={onBlur}
+              onKeyDown={handleKeyDown}
+              className={cn(
+                'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40',
+                'focus:outline-none',
+                inputWidthClassName,
+                inputClassName,
+              )}
+            />
+          </div>
+          <div className="h-3.5 w-px bg-foreground/20" />
+          <div className="flex min-w-0 items-center justify-center">
+            <span className="text-[11px] font-medium text-text-muted">{unit}</span>
+          </div>
+        </>
+      ) : null}
+      {!prefixLabel && !isUnitSegmented ? valueNode : null}
     </div>
   );
 };

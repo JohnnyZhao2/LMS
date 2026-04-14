@@ -292,25 +292,24 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             <PageHeader
                 title="知识中心"
                 icon={<Inbox />}
-                extra={(
-                    <div className="relative w-full md:w-[22rem] lg:w-[28rem]">
-                        <Search
-                            className="pointer-events-none absolute bottom-[14px] left-0 h-4 w-4 text-foreground/28"
-                            strokeWidth={1.8}
-                            aria-hidden="true"
-                        />
-                        <input
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            onKeyDown={handleSearchKeyDown}
-                            placeholder=""
-                            aria-label="搜索知识"
-                            className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-12 text-2xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40"
-                            style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
-                        />
-                    </div>
-                )}
             />
+
+            <div className="relative w-full">
+                <Search
+                    className="pointer-events-none absolute bottom-[14px] left-0 h-4 w-4 text-foreground/28"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                />
+                <input
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder=""
+                    aria-label="搜索知识"
+                    className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-12 text-2xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40"
+                    style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
+                />
+            </div>
 
             {/* space筛选标签 — 白色卡片 */}
             {(spaceTags.length > 0 || isManagementView) && (

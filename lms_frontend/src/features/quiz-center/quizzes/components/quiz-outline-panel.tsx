@@ -5,11 +5,11 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Clock3, FileText, Target } from 'lucide-react';
+import { Clock3, Target } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
-import { getQuestionTypePresentation } from '@/features/questions/constants';
+import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
@@ -19,10 +19,13 @@ import type { InlineQuestionItem } from '../types';
 import { CompactNumberInput } from './compact-number-input';
 import { SortableOutlineItem } from './sortable-outline-item';
 
+const EXAM_META_GROUP_WIDTH_CLASSNAME = 'w-[116px]';
+
 interface QuizOutlinePanelProps {
   items: InlineQuestionItem[];
   activeKey: string | null;
   quizType: QuizType;
+  itemDisplayMode?: 'card' | 'plain';
   title?: string;
   duration?: number;
   passScore?: number;
@@ -37,6 +40,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   items,
   activeKey,
   quizType,
+  itemDisplayMode = 'card',
   title = '试卷结构',
   duration,
   passScore,
@@ -150,20 +154,19 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-background">
       <div className="flex h-12 items-center justify-between gap-3 border-b border-border px-5">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
-          <FileText className="h-4 w-4 text-primary-600" />
-          <span>{title}</span>
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold tracking-[0.01em] text-foreground">{title}</div>
         </div>
       </div>
       {quizType === 'EXAM' && (
-        <div className="space-y-3 border-b border-border bg-background px-5 py-4">
-          <div className="flex items-center justify-between text-[12px]">
-            <div className="flex items-center gap-1.5 font-medium text-text-muted">
+        <div className="flex justify-center gap-8 border-b border-border bg-background px-5 py-3.5">
+          <div className={cn('flex shrink-0 flex-col items-start gap-1.5', EXAM_META_GROUP_WIDTH_CLASSNAME)}>
+            <div className="flex w-full items-center justify-start gap-1.5 text-[12px] font-medium text-text-muted">
               <Clock3 className="h-3.5 w-3.5" />
               时间限制
             </div>
             {readOnly ? (
-              <div className="inline-flex h-8 min-w-[88px] items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
+              <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
                 {duration || 0} 分
               </div>
             ) : (
@@ -176,17 +179,17 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                 dividerBeforeUnit
                 inputWidthClassName="w-10"
                 inputClassName="text-[12px] font-semibold"
-                className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+                className="h-8 w-full rounded-lg px-2"
               />
             )}
           </div>
-          <div className="flex items-center justify-between text-[12px]">
-            <div className="flex items-center gap-1.5 font-medium text-text-muted">
+          <div className={cn('flex shrink-0 flex-col items-start gap-1.5', EXAM_META_GROUP_WIDTH_CLASSNAME)}>
+            <div className="flex w-full items-center justify-start gap-1.5 text-[12px] font-medium text-text-muted">
               <Target className="h-3.5 w-3.5" />
               及格分数
             </div>
             {readOnly ? (
-              <div className="inline-flex h-8 min-w-[88px] items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
+              <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
                 {passScore || 0} 分
               </div>
             ) : (
@@ -199,7 +202,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                 dividerBeforeUnit
                 inputWidthClassName="w-10"
                 inputClassName="text-[12px] font-semibold"
-                className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+                className="h-8 w-full rounded-lg px-2"
               />
             )}
           </div>
@@ -209,14 +212,13 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         {items.length === 0 ? (
           <div className="h-full" />
         ) : readOnly ? (
-          <div className="space-y-3 px-5 py-4">
-            {groupedSections.map((section, sectionIndex) => (
-              <div key={section.type} className="space-y-2">
-                <div className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
-                  <div className="min-w-0">
-                    <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+          <div className="space-y-5 px-4 py-4">
+            {groupedSections.map((section) => (
+              <div key={section.type} className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <SectionHeader sectionType={section.type} />
                   </div>
-                  <span className="shrink-0 text-[11px] font-medium text-text-muted">{section.entries.length} 题</span>
                 </div>
                 {section.entries.map(({ item, number }) => (
                   <SortableOutlineItem
@@ -226,6 +228,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                     isActive={item.key === activeKey}
                     onSelect={() => onSelectItem(item.key)}
                     dragDisabled
+                    displayMode={itemDisplayMode}
                   />
                 ))}
               </div>
@@ -240,14 +243,13 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={groupedItems.map((item) => item.key)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3 px-5 py-4">
-                {groupedSections.map((section, sectionIndex) => (
-                  <div key={section.type} className="space-y-2">
-                    <div className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
-                      <div className="min-w-0">
-                        <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+              <div className="space-y-5 px-4 py-4">
+                {groupedSections.map((section) => (
+                  <div key={section.type} className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <SectionHeader sectionType={section.type} />
                       </div>
-                      <span className="shrink-0 text-[11px] font-medium text-text-muted">{section.entries.length} 题</span>
                     </div>
                     {section.entries.map(({ item, number }) => (
                       <SortableOutlineItem
@@ -256,6 +258,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                         index={number - 1}
                         isActive={item.key === activeKey}
                         onSelect={() => onSelectItem(item.key)}
+                        displayMode={itemDisplayMode}
                       />
                     ))}
                   </div>
@@ -271,6 +274,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                     isActive={draggingItem.key === activeKey}
                     onSelect={() => undefined}
                     isOverlay
+                    displayMode={itemDisplayMode}
                   />
                 </div>
               ) : null}
@@ -287,14 +291,14 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
         </div>
 
-        <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-muted">
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           {distribution.length > 0 ? (
             <div className="flex h-full w-full">
               {distribution.map((item, index) => (
                 <React.Fragment key={item.type}>
                   {index > 0 && <div className="w-px bg-background" />}
                   <Tooltip
-                    title={`${item.label} ${item.percentText}`}
+                    title={`${item.label} ${item.count}题 · ${item.percentText}`}
                   >
                     <div
                       className={cn('h-full transition-[width] duration-200', item.barClassName)}
@@ -308,38 +312,11 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             <div className="h-full w-full bg-muted" />
           )}
         </div>
-
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
-          {distribution.length > 0 ? (
-            distribution.map((item) => (
-              <div key={item.type} className="flex items-center justify-between">
-                <div className="flex min-w-0 items-center gap-1">
-                  <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', item.dotClassName)} />
-                  <span className="truncate text-[10px] font-medium text-text-muted">{item.label}</span>
-                </div>
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-text-muted">
-                  {item.count}
-                </span>
-              </div>
-            ))
-          ) : null}
-        </div>
       </div>
     </div>
   );
 };
 
-const SectionHeader: React.FC<{
-  sectionType: QuestionType;
-  sectionIndex: number;
-}> = ({ sectionType }) => {
-  const presentation = getQuestionTypePresentation(sectionType);
-  const Icon = presentation.icon;
-
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', presentation.bg, presentation.color)}>
-      <Icon className="h-3 w-3" />
-      {presentation.label}
-    </span>
-  );
+const SectionHeader: React.FC<{ sectionType: QuestionType }> = ({ sectionType }) => {
+  return <QuestionTypeBadge type={sectionType} size="sm" variant="plain" />;
 };

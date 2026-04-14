@@ -57,9 +57,9 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
     label: '简答',
     fullLabel: '简答题',
     icon: AlignLeft,
-    color: 'text-primary-600',
-    bg: 'bg-primary-50',
-    accent: 'bg-primary-500',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
+    accent: 'bg-slate-400',
   },
 };
 

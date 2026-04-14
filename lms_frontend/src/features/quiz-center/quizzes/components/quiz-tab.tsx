@@ -127,7 +127,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
 
                     if (type === 'MULTIPLE_CHOICE') { label = '多'; colorClass = "text-secondary-600 bg-secondary-50"; }
                     if (type === 'TRUE_FALSE') { label = '判'; colorClass = "text-warning-600 bg-warning-50"; }
-                    if (type === 'SHORT_ANSWER') { label = '简'; colorClass = "text-primary-600 bg-primary-50"; }
+                    if (type === 'SHORT_ANSWER') { label = '简'; colorClass = "text-slate-600 bg-slate-100"; }
 
                     return (
                       <Tooltip

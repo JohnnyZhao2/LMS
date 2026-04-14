@@ -72,7 +72,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
     : showExplanation
       ? 'min-h-[120px]'
       : 'min-h-[164px]';
-  const contentClassName = 'whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-foreground';
+  const contentClassName = 'whitespace-pre-wrap break-words text-[15px] font-medium leading-7 text-foreground';
   const explanationClassName = 'min-h-[108px] whitespace-pre-wrap break-words text-[14px] leading-7 text-foreground';
 
   return (

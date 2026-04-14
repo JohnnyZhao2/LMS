@@ -22,7 +22,7 @@ export const normalizeQuestionValueToArray = (
   return value ? [value] : [];
 };
 
-export const useQuestionDocumentSplitLayout = (compactWidth = 760) => {
+export const useQuestionDocumentSplitLayout = (compactWidth = 700) => {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [splitPercent, setSplitPercent] = React.useState(46);
   const [isCompact, setIsCompact] = React.useState(false);

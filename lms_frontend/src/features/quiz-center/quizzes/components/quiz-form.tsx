@@ -43,6 +43,9 @@ import { QuizDocumentEditor } from './quiz-document-editor';
 import { QuizOutlinePanel } from './quiz-outline-panel';
 import { QuizPreviewWorkbench } from './quiz-preview-workbench';
 
+const COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME =
+  'grid h-full min-w-0 gap-3 [grid-template-columns:minmax(14rem,15.5rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';
+
 const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => {
   const normalizedScore = normalizeQuestionScore(score);
 
@@ -77,6 +80,9 @@ export const QuizForm: React.FC = () => {
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [savingItemKey, setSavingItemKey] = useState<string | null>(null);
+  const [questionBankCollapsed, setQuestionBankCollapsed] = useState(
+    () => (typeof window !== 'undefined' ? window.innerWidth < 1500 : false),
+  );
   const initializedRef = useRef(false);
 
   const appendItemPreservingFocus = useCallback((item: InlineQuestionItem) => {
@@ -299,6 +305,10 @@ export const QuizForm: React.FC = () => {
     };
   }, [questionsData, items]);
 
+  const workbenchClassName = questionBankCollapsed
+    ? COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME
+    : THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME;
+
   const handleAddQuestion = useCallback(async (question: Question) => {
     if (items.some((item) => item.resourceUuid === question.resource_uuid)) {
       toast.warning('该题目已在试卷中');
@@ -466,12 +476,13 @@ export const QuizForm: React.FC = () => {
   return (
     <EditorPageShell>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
+        <div className={workbenchClassName}>
           <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
             <QuizOutlinePanel
               items={items}
               activeKey={activeKey}
               quizType={quizType}
+              itemDisplayMode="plain"
               duration={duration}
               passScore={passScore}
               onSelectItem={setActiveKey}
@@ -487,11 +498,11 @@ export const QuizForm: React.FC = () => {
                 <SelectTrigger
                   className={
                     quizType === 'EXAM'
-                      ? 'relative z-10 h-9 w-[88px] shrink-0 rounded-lg border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
-                      : 'relative z-10 h-9 w-[88px] shrink-0 rounded-lg border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
+                      ? 'relative z-10 grid h-9 w-[88px] shrink-0 grid-cols-[minmax(0,1fr)_1rem] items-center gap-0 rounded-lg border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
+                      : 'relative z-10 grid h-9 w-[88px] shrink-0 grid-cols-[minmax(0,1fr)_1rem] items-center gap-0 rounded-lg border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
                   }
                 >
-                  <SelectValue />
+                  <SelectValue className="block w-full min-w-0 text-center" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PRACTICE">测验</SelectItem>
@@ -519,19 +530,19 @@ export const QuizForm: React.FC = () => {
                     onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${id}/preview`, {
                       state: { quizDraft: buildQuizDraft() },
                     })}
-                    className="h-9 rounded-lg px-4 text-[12px] font-semibold"
+                    className="h-9 rounded-lg px-3 text-[12px] font-semibold"
                   >
-                    <Eye className="mr-2 h-4 w-4" />
-                    预览试卷
+                    <Eye className="mr-1.5 h-4 w-4" />
+                    预览
                   </Button>
                 ) : null}
                 <Button
                   onClick={handleSubmitQuiz}
                   disabled={isSubmitting}
-                  className="h-9 rounded-lg bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                  className="h-9 rounded-lg bg-foreground px-3 text-[12px] font-semibold text-background hover:bg-foreground/90"
                 >
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  保存试卷
+                  {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                  保存
                 </Button>
               </div>
             </div>
@@ -554,8 +565,15 @@ export const QuizForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
+          <div
+            className={cn(
+              'min-h-0 overflow-hidden rounded-xl border border-border bg-background',
+              questionBankCollapsed && 'min-h-fit self-start justify-self-end overflow-visible rounded-none border-0 bg-transparent',
+            )}
+          >
             <QuestionBankPanel
+              collapsed={questionBankCollapsed}
+              onToggleCollapse={() => setQuestionBankCollapsed((prev) => !prev)}
               resourceSearch={resourceSearch}
               onResourceSearchChange={setResourceSearch}
               filterSpaceTagId={filterSpaceTagId}

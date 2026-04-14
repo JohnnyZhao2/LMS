@@ -23,7 +23,6 @@ export interface QuestionEditCardValue {
 
 interface QuestionEditCardProps {
   item: QuestionEditCardValue;
-  index: number;
   spaceTags?: Tag[];
   showScore?: boolean;
   leadingSlot?: React.ReactNode;
@@ -39,7 +38,6 @@ interface QuestionEditCardProps {
 
 export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
   item,
-  index,
   spaceTags,
   showScore = false,
   leadingSlot,
@@ -94,68 +92,65 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
       {leadingSlot}
 
       <div onClick={onFocus} className="min-w-0 flex-1">
-        <div className="space-y-2">
-          <div className="pl-1 text-[11px] font-medium text-text-muted">第 {index + 1} 题</div>
-          <QuestionDocumentEditMode
-            questionType={item.questionType}
-            content={item.content}
-            options={item.options}
-            answer={item.answer}
-            explanation={item.explanation}
-            showExplanation={item.showExplanation}
-            onContentChange={(value) => onChange({ content: value })}
-            onOptionsChange={(value) => onChange({ options: value })}
-            onAnswerChange={(value) => onChange({ answer: value })}
-            onExplanationChange={(value) => onChange({ explanation: value })}
-            onShowExplanationChange={(show) => {
-              if (!show) {
-                onChange({ showExplanation: false, explanation: '' });
-                return;
-              }
-              onChange({ showExplanation: true });
-            }}
-            metaBar={showMetaToolbar ? (
-              <QuestionMetaToolbar
-                questionType={item.questionType}
-                staticType={!!item.questionId}
-                onQuestionTypeChange={(value) => {
-                  const normalized = normalizeQuestionTypeFields({
-                    options: item.options,
-                    answer: item.answer,
-                  }, value);
+        <QuestionDocumentEditMode
+          questionType={item.questionType}
+          content={item.content}
+          options={item.options}
+          answer={item.answer}
+          explanation={item.explanation}
+          showExplanation={item.showExplanation}
+          onContentChange={(value) => onChange({ content: value })}
+          onOptionsChange={(value) => onChange({ options: value })}
+          onAnswerChange={(value) => onChange({ answer: value })}
+          onExplanationChange={(value) => onChange({ explanation: value })}
+          onShowExplanationChange={(show) => {
+            if (!show) {
+              onChange({ showExplanation: false, explanation: '' });
+              return;
+            }
+            onChange({ showExplanation: true });
+          }}
+          metaBar={showMetaToolbar ? (
+            <QuestionMetaToolbar
+              questionType={item.questionType}
+              staticType={!!item.questionId}
+              onQuestionTypeChange={(value) => {
+                const normalized = normalizeQuestionTypeFields({
+                  options: item.options,
+                  answer: item.answer,
+                }, value);
 
-                  onChange({
-                    questionType: value,
-                    options: normalized.options ?? item.options,
-                    answer: normalized.answer ?? item.answer,
-                  });
-                }}
-                score={item.score}
-                onScoreChange={(value) => onChange({ score: value })}
-                showType
-                showScore={showScore}
-                showSpace
-                showTags
-                spaceTags={spaceTags}
-                spaceTagId={item.spaceTagId}
-                selectedTagIds={item.tagIds ?? []}
-                onSpaceTagIdChange={(value) => onChange({ spaceTagId: value })}
-                onTagAdd={(tag) => onChange({
-                  tagIds: [...new Set([...(item.tagIds ?? []), tag.id])],
-                })}
-                onTagRemove={(tagId) => onChange({
-                  tagIds: (item.tagIds ?? []).filter((id) => id !== tagId),
-                })}
-              />
-            ) : null}
-            footerActions={(headerActions || defaultFooterActions) ? (
-              <div className="flex items-center gap-2.5">
-                {headerActions}
-                {defaultFooterActions}
-              </div>
-            ) : null}
-          />
-        </div>
+                onChange({
+                  questionType: value,
+                  options: normalized.options ?? item.options,
+                  answer: normalized.answer ?? item.answer,
+                });
+              }}
+              score={item.score}
+              onScoreChange={(value) => onChange({ score: value })}
+              showType
+              showScore={showScore}
+              showSpace
+              showTags
+              spaceTags={spaceTags}
+              spaceTagId={item.spaceTagId}
+              selectedTagIds={item.tagIds ?? []}
+              onSpaceTagIdChange={(value) => onChange({ spaceTagId: value })}
+              onTagAdd={(tag) => onChange({
+                tagIds: [...new Set([...(item.tagIds ?? []), tag.id])],
+              })}
+              onTagRemove={(tagId) => onChange({
+                tagIds: (item.tagIds ?? []).filter((id) => id !== tagId),
+              })}
+            />
+          ) : null}
+          footerActions={(headerActions || defaultFooterActions) ? (
+            <div className="flex items-center gap-2.5">
+              {headerActions}
+              {defaultFooterActions}
+            </div>
+          ) : null}
+        />
       </div>
     </div>
   );

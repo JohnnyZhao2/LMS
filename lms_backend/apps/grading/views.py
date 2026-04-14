@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from apps.grading.selectors import (
     calculate_question_pass_rate,
     get_latest_quiz_answers,
+    has_answer_content,
 )
 from apps.authorization.engine import enforce
 from apps.grading.serializers import (
@@ -132,10 +133,12 @@ class GradingAnswersView(GradingBaseView):
                 message='未找到对应题目或题目不属于该试卷'
             )
         question = relation.question
-        answers = get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id).select_related(
+        answers = list(get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
+        )
+        answered_count = sum(1 for answer in answers if has_answer_content(answer.user_answer))
 
         pass_rate = calculate_question_pass_rate(
             task,
@@ -150,6 +153,7 @@ class GradingAnswersView(GradingBaseView):
                 'question_id': question.id,
                 'question_type': question.question_type,
                 'pass_rate': pass_rate,
+                'answered_count': answered_count,
                 'options': self._build_objective_options(question, answers),
             }
 

@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
-import { getQuestionTypePresentation } from '@/features/questions/constants';
+import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
@@ -192,6 +192,7 @@ export function QuizPreviewWorkbench({
           items={previewOutlineItems}
           activeKey={activeQuestionId === null ? null : String(activeQuestionId)}
           quizType={effectiveQuiz.quiz_type}
+          itemDisplayMode="plain"
           duration={effectiveQuiz.duration ?? undefined}
           passScore={effectiveQuiz.pass_score ? Number(effectiveQuiz.pass_score) : undefined}
           readOnly
@@ -347,13 +348,5 @@ function SectionHeader({
   sectionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
   sectionIndex: number;
 }) {
-  const presentation = getQuestionTypePresentation(sectionType);
-  const Icon = presentation.icon;
-
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', presentation.bg, presentation.color)}>
-      <Icon className="h-3 w-3" />
-      {presentation.label}
-    </span>
-  );
+  return <QuestionTypeBadge type={sectionType} variant="plain" />;
 }

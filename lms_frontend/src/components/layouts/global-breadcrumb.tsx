@@ -90,7 +90,7 @@ export const GlobalBreadcrumb: React.FC = () => {
   }
 
   return (
-    <div className="mb-6 flex min-w-0 items-center md:mb-7">
+    <div className="mb-4 flex min-w-0 items-center md:mb-5">
       <BreadcrumbNav items={items} homePath={homePath} />
     </div>
   )

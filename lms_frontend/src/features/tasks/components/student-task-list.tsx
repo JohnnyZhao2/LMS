@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Inbox } from 'lucide-react';
+import { Inbox, Activity } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
+import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import type { TaskStatus } from '@/types/common';
 
@@ -36,10 +37,15 @@ export const StudentTaskList: React.FC = () => {
     const totalCount = data?.count ?? tasks.length;
 
     return (
-        <PageFillShell className="pb-4">
-            <PageViewport className="flex flex-col">
+        <PageShell className="pb-4">
+            <PageHeader
+                title="任务中心"
+                icon={<Activity />}
+            />
+
+            <div className="flex min-h-0 flex-1 flex-col">
                 {/* 分段筛选器 - Flat Design */}
-                <div className="mb-1 flex flex-col gap-4 border-b-2 border-border pb-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="mb-1 flex flex-col gap-4 pb-3 xl:flex-row xl:items-center xl:justify-between">
                     <SegmentedControl
                         value={statusFilter}
                         onChange={(val: string) => setStatusFilter(val)}
@@ -84,7 +90,7 @@ export const StudentTaskList: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </PageViewport>
-        </PageFillShell>
+            </div>
+        </PageShell>
     );
 };

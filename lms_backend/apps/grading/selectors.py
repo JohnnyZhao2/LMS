@@ -3,6 +3,20 @@ from django.db.models import F, OuterRef, Subquery
 from apps.submissions.models import Answer, Submission
 
 
+def has_answer_content(user_answer):
+    """判断答案是否可视为已作答。"""
+    if user_answer is None:
+        return False
+
+    if isinstance(user_answer, str):
+        return user_answer.strip() != ''
+
+    if isinstance(user_answer, (list, tuple, set, dict)):
+        return len(user_answer) > 0
+
+    return True
+
+
 def _get_latest_submission_subquery():
     return Submission.objects.filter(
         task_assignment_id=OuterRef('submission__task_assignment_id'),

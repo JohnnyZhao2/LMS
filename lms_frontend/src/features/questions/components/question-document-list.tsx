@@ -138,7 +138,6 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
       >
         <QuestionEditCard
           item={item}
-          index={index}
           spaceTags={spaceTags}
           showScore={showScore}
           onChange={onChange}

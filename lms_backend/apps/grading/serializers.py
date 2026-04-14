@@ -47,6 +47,7 @@ class GradingAnswerResponseSerializer(serializers.Serializer):
         choices=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER']
     )
     pass_rate = serializers.FloatField(allow_null=True)
+    answered_count = serializers.IntegerField(required=False)
     options = GradingOptionSerializer(many=True, required=False)
     subjective_answers = GradingSubjectiveAnswerSerializer(many=True, required=False)
 

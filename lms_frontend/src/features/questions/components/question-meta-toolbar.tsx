@@ -14,27 +14,47 @@ type MetaSpaceTag = Pick<SimpleTag, 'id' | 'name' | 'color'>;
 const META_FIELD_CLASSNAME = 'h-7 rounded-md border-none bg-[color:color-mix(in_oklab,var(--color-primary-50)_68%,white)] text-[11px] font-medium shadow-none';
 const STRIP_TRIGGER_CLASSNAME = `${QUIET_OUTLINE_FIELD_CLASSNAME} ${META_FIELD_CLASSNAME} px-2.5`;
 const TAG_BUTTON_CLASSNAME = 'inline-flex h-7 items-center rounded-full border-[1.5px] border-black/8 bg-white/70 px-3 text-[10.5px] font-semibold tracking-[-0.01em] text-text-muted shadow-none backdrop-blur-[6px] transition-all';
-const TYPE_TRIGGER_WIDTH_CLASSNAME = 'w-[96px]';
+const META_SELECT_TRIGGER_CLASSNAME = 'relative justify-start gap-0 pr-8 [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:right-2.5 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2';
+const META_SELECT_VALUE_CLASSNAME = '[&>span]:flex [&>span]:w-full [&>span]:min-w-0 [&>span]:items-center [&>span]:overflow-visible [&>span]:whitespace-nowrap';
+const META_SEGMENT_LAYOUT_CLASSNAME = 'grid w-full grid-cols-[auto_1px_minmax(0,1fr)] items-center gap-2';
+const META_SEGMENT_RIGHT_CLASSNAME = 'flex min-w-0 items-center justify-center text-center';
+const TYPE_TRIGGER_WIDTH_CLASSNAME = 'w-[108px]';
 const SCORE_TRIGGER_WIDTH_CLASSNAME = 'w-[96px]';
-const SPACE_TRIGGER_WIDTH_CLASSNAME = 'w-[96px]';
+const SPACE_TRIGGER_WIDTH_CLASSNAME = 'w-[108px]';
 
 const getSpaceAccentColor = (space?: MetaSpaceTag | null) =>
   space?.color || 'color-mix(in oklab, var(--color-text-muted) 46%, white)';
 const EMPTY_SPACE_ACCENT_COLOR = 'color-mix(in oklab, var(--color-text-muted) 36%, white)';
 
+const MetaSegmentField: React.FC<{
+  leading: React.ReactNode;
+  trailing: React.ReactNode;
+}> = ({ leading, trailing }) => (
+  <span className={META_SEGMENT_LAYOUT_CLASSNAME}>
+    <span className="inline-flex items-center justify-center">{leading}</span>
+    <span className="h-3.5 w-px shrink-0 bg-foreground/16" aria-hidden="true" />
+    <span className={META_SEGMENT_RIGHT_CLASSNAME}>
+      {trailing}
+    </span>
+  </span>
+);
+
 const TypeValue: React.FC<{ type: QuestionType }> = ({ type }) => {
   const { icon: Icon, label, color } = getQuestionTypePresentation(type);
 
   return (
-    <span className="flex min-w-0 items-center gap-1.5 leading-none">
-      <span className={cn('inline-flex h-4 w-4 shrink-0 items-center justify-center', color)}>
-        <Icon className="h-3 w-3 shrink-0" strokeWidth={2.2} />
-      </span>
-      <span className="h-3.5 w-px shrink-0 bg-foreground/16" aria-hidden="true" />
-      <span className="truncate text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
-        {label}
-      </span>
-    </span>
+    <MetaSegmentField
+      leading={(
+        <span className={cn('inline-flex h-4 w-4 shrink-0 items-center justify-center', color)}>
+          <Icon className="h-3 w-3 shrink-0" strokeWidth={2.2} />
+        </span>
+      )}
+      trailing={(
+        <span className="truncate text-[10.5px] font-semibold leading-[1.1] tracking-[-0.01em] text-text-muted">
+          {label}
+        </span>
+      )}
+    />
   );
 };
 
@@ -55,25 +75,26 @@ const TypeItem: React.FC<{ type: QuestionType }> = ({ type }) => {
 };
 
 const SpaceValue: React.FC<{ space?: MetaSpaceTag | null }> = ({ space }) => (
-  <span className="flex min-w-0 items-center gap-1.5 leading-none">
-    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-      <span
-        className="inline-flex h-3 w-3 shrink-0 rounded-full border-[1.5px]"
-        style={{ borderColor: space ? getSpaceAccentColor(space) : EMPTY_SPACE_ACCENT_COLOR }}
-        aria-hidden="true"
-      />
-    </span>
-    <span className="h-3.5 w-px shrink-0 bg-foreground/16" aria-hidden="true" />
-    {space ? (
-      <span className="min-w-0 flex-1 truncate text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
+  <MetaSegmentField
+    leading={(
+      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+        <span
+          className="inline-flex h-3 w-3 shrink-0 rounded-full border-[1.5px]"
+          style={{ borderColor: space ? getSpaceAccentColor(space) : EMPTY_SPACE_ACCENT_COLOR }}
+          aria-hidden="true"
+        />
+      </span>
+    )}
+    trailing={space ? (
+      <span className="truncate text-[10.5px] font-semibold leading-[1.1] tracking-[-0.01em] text-text-muted">
         {space.name}
       </span>
     ) : (
-      <span className="min-w-0 flex-1 text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted" aria-hidden="true">
+      <span className="text-[10.5px] font-semibold leading-[1.1] tracking-[-0.01em] text-text-muted" aria-hidden="true">
         ___
       </span>
     )}
-  </span>
+  />
 );
 
 const SpaceItem: React.FC<{ space?: MetaSpaceTag | null }> = ({ space }) => (
@@ -151,7 +172,13 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               value={questionType}
               onValueChange={(value) => onQuestionTypeChange(value as QuestionType)}
             >
-              <SelectTrigger className={cn(STRIP_TRIGGER_CLASSNAME, TYPE_TRIGGER_WIDTH_CLASSNAME)}>
+              <SelectTrigger className={cn(
+                STRIP_TRIGGER_CLASSNAME,
+                TYPE_TRIGGER_WIDTH_CLASSNAME,
+                META_SELECT_TRIGGER_CLASSNAME,
+                META_SELECT_VALUE_CLASSNAME,
+              )}
+              >
                 <SelectValue>
                   <TypeValue type={questionType} />
                 </SelectValue>
@@ -165,7 +192,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               </SelectContent>
             </Select>
           ) : (
-            <div className={cn(STRIP_TRIGGER_CLASSNAME, TYPE_TRIGGER_WIDTH_CLASSNAME, 'flex items-center justify-between gap-2')}>
+            <div className={cn(STRIP_TRIGGER_CLASSNAME, TYPE_TRIGGER_WIDTH_CLASSNAME, 'flex items-center justify-start gap-0')}>
               <TypeValue type={questionType} />
             </div>
           )
@@ -184,12 +211,16 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               prefixClassName="whitespace-nowrap text-text-muted !text-[10.5px]"
               inputWidthClassName="w-7"
               inputClassName="!text-[10.5px] leading-none !text-text-muted"
-              className={`${SCORE_TRIGGER_WIDTH_CLASSNAME} gap-1 px-2.5 py-1 ${META_FIELD_CLASSNAME}`}
+              className={`${SCORE_TRIGGER_WIDTH_CLASSNAME} ${META_FIELD_CLASSNAME}`}
             />
           ) : (
-            <div className={cn(STRIP_TRIGGER_CLASSNAME, SCORE_TRIGGER_WIDTH_CLASSNAME, 'flex items-center justify-between gap-2')}>
-              <span className="truncate text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
-                分值 {score}
+            <div className={cn(STRIP_TRIGGER_CLASSNAME, SCORE_TRIGGER_WIDTH_CLASSNAME, 'grid grid-cols-[auto_1px_minmax(0,1fr)] items-center gap-2')}>
+              <span className="whitespace-nowrap text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
+                分值
+              </span>
+              <span className="h-3.5 w-px shrink-0 bg-foreground/16" aria-hidden="true" />
+              <span className="truncate text-center text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
+                {score}
               </span>
             </div>
           )
@@ -201,7 +232,13 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               value={spaceTagId == null ? '__none__' : String(spaceTagId)}
               onValueChange={(value) => onSpaceTagIdChange(value === '__none__' ? null : Number(value))}
             >
-              <SelectTrigger className={cn(STRIP_TRIGGER_CLASSNAME, SPACE_TRIGGER_WIDTH_CLASSNAME)}>
+              <SelectTrigger className={cn(
+                STRIP_TRIGGER_CLASSNAME,
+                SPACE_TRIGGER_WIDTH_CLASSNAME,
+                META_SELECT_TRIGGER_CLASSNAME,
+                META_SELECT_VALUE_CLASSNAME,
+              )}
+              >
                 <SelectValue>
                   <SpaceValue space={currentSpace} />
                 </SelectValue>
@@ -218,7 +255,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               </SelectContent>
             </Select>
           ) : (
-            <div className={cn(STRIP_TRIGGER_CLASSNAME, SPACE_TRIGGER_WIDTH_CLASSNAME, 'flex items-center justify-between gap-2')}>
+            <div className={cn(STRIP_TRIGGER_CLASSNAME, SPACE_TRIGGER_WIDTH_CLASSNAME, 'flex items-center justify-start gap-0')}>
               <SpaceValue space={currentSpace} />
             </div>
           )

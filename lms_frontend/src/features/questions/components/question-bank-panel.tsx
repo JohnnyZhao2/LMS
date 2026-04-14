@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import type { PaginatedResponse, Tag } from '@/types/common';
 import type { Question } from '@/types/question';
 
 interface QuestionBankPanelProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   resourceSearch: string;
   onResourceSearchChange: (value: string) => void;
   filterSpaceTagId: string;
@@ -27,6 +29,8 @@ interface QuestionBankPanelProps {
 }
 
 export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
+  collapsed = false,
+  onToggleCollapse,
   resourceSearch,
   onResourceSearchChange,
   filterSpaceTagId,
@@ -39,13 +43,40 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   onPreview,
   onAddQuestion,
 }) => {
+  if (collapsed) {
+    return (
+      <div className="flex h-12 items-center justify-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-lg border border-border bg-background text-foreground shadow-sm hover:bg-background hover:text-foreground"
+          onClick={onToggleCollapse}
+          aria-label="展开公共题库"
+          title="展开公共题库"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-background">
-      <div className="flex h-12 items-center border-b border-border px-5">
+      <div className="flex h-12 items-center justify-between border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <LayoutGrid className="h-4 w-4 text-text-muted" />
           公共题库
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-lg text-text-muted hover:bg-muted hover:text-foreground"
+          onClick={onToggleCollapse}
+          aria-label="收起公共题库"
+          title="收起公共题库"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="space-y-3 bg-background px-5 pb-2 pt-4">

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
-import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
+import { PageShell } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/stores/auth-context';
@@ -173,170 +173,168 @@ export const TagManagementPage: React.FC = () => {
   };
 
   return (
-    <PageFillShell>
-      <PageViewport className="flex flex-col">
-        <div className="mb-1 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
-          <div className="flex w-full flex-col gap-3 sm:w-auto">
+    <PageShell>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto">
+          <SegmentedControl
+            className="w-full max-w-sm shrink-0 sm:w-auto"
+            options={TAG_TYPE_SEGMENT_OPTIONS}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as TagType)}
+          />
+          {activeTab === 'TAG' && (
             <SegmentedControl
               className="w-full max-w-sm shrink-0 sm:w-auto"
-              options={TAG_TYPE_SEGMENT_OPTIONS}
-              value={activeTab}
-              onChange={(v) => setActiveTab(v as TagType)}
+              options={TAG_SCOPE_SEGMENT_OPTIONS}
+              value={applicableScope}
+              onChange={(v) => setApplicableScope(v as ApplicableScope)}
             />
-            {activeTab === 'TAG' && (
-              <SegmentedControl
-                className="w-full max-w-sm shrink-0 sm:w-auto"
-                options={TAG_SCOPE_SEGMENT_OPTIONS}
-                value={applicableScope}
-                onChange={(v) => setApplicableScope(v as ApplicableScope)}
-              />
-            )}
-          </div>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
-            <SearchInput
-              value={searchInput}
-              onChange={setSearchInput}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  setSearch(searchInput.trim());
-                }
-              }}
-              placeholder="搜索标签名称"
-              className={DESKTOP_SEARCH_INPUT_CLASSNAME}
-            />
-            {canUpdate && selectedTagIds.length >= 2 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 shrink-0 rounded-full border-white/80 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
-                onClick={() => {
-                  setMergedName('');
-                  setIsMergeDialogOpen(true);
-                }}
-              >
-                <GitMerge className="h-3.5 w-3.5" />
-                合并标签
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {selectedTagIds.length}
-                </span>
-              </Button>
-            )}
-            {canCreate && (
-              <CircleButton
-                onClick={() => {
-                  setDialogMode('create');
-                  setEditingTag(null);
-                  setIsDialogOpen(true);
-                }}
-                label={`新建${typeLabel[activeTab]}`}
-                className="shrink-0"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-1 min-h-0 flex-col">
-          {isLoading ? (
-            <div className="flex flex-wrap gap-3">
-              {Array.from({ length: 16 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-12 w-32 animate-pulse rounded-full border border-border/60 bg-muted/50"
-                />
-              ))}
-            </div>
-          ) : tags.length === 0 ? (
-            <EmptyState
-              icon={activeTab === 'SPACE' ? <Shapes className="h-12 w-12" /> : <Hash className="h-12 w-12" />}
-              title={`暂无${typeLabel[activeTab]}`}
-              description={search ? '没有匹配的标签，换个关键词试试。' : '创建后会以胶囊形式集中展示在这里。'}
-              className="rounded-xl border border-dashed border-border/70 bg-muted/20"
-            />
-          ) : (
-            <div className="flex flex-wrap content-start gap-3">
-              {tags.map((tag) => {
-                const accentColor = getTagRingColor(tag);
-                const isSelected = selectedTagIds.includes(tag.id);
-
-                return (
-                  <article
-                    key={tag.id}
-                    onClick={() => handleToggleTagSelection(tag.id)}
-                    className={cn(
-                      'group relative inline-flex min-w-0 max-w-full cursor-pointer items-center gap-2.5 rounded-full border pl-3 pr-2 py-2 text-left transition-all duration-200',
-                      isSelected && 'ring-2 ring-primary/35',
-                      tag.tag_type === 'SPACE'
-                        ? 'border-transparent bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,246,237,0.98))] shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
-                        : 'border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_10px_24px_rgba(15,23,42,0.06)]',
-                    )}
-                    style={accentColor ? { boxShadow: `0 12px 30px color-mix(in srgb, ${accentColor} 20%, transparent)` } : undefined}
-                  >
-                    <span
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-                      style={{
-                        borderColor: accentColor,
-                        backgroundColor: isSelected ? accentColor : 'transparent',
-                      }}
-                    >
-                      {isSelected && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                      )}
-                    </span>
-
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <h3 className="max-w-[14rem] truncate pr-1 text-[13px] font-semibold text-foreground">
-                        {tag.name}
-                      </h3>
-                      {tag.tag_type === 'SPACE' && tag.color && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold leading-none text-text-muted">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: tag.color }}
-                          />
-                          {tag.color}
-                        </span>
-                      )}
-                    </div>
-
-                    {(canUpdate || canDelete) && (
-                      <div className="ml-1 flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                        {canUpdate && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-black/5 hover:text-foreground"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setDialogMode('edit');
-                              setEditingTag(tag);
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setDeleteTarget(tag);
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
           )}
         </div>
-      </PageViewport>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+          <SearchInput
+            value={searchInput}
+            onChange={setSearchInput}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                setSearch(searchInput.trim());
+              }
+            }}
+            placeholder="搜索标签名称"
+            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+          />
+          {canUpdate && selectedTagIds.length >= 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 shrink-0 rounded-full border-white/80 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+              onClick={() => {
+                setMergedName('');
+                setIsMergeDialogOpen(true);
+              }}
+            >
+              <GitMerge className="h-3.5 w-3.5" />
+              合并标签
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                {selectedTagIds.length}
+              </span>
+            </Button>
+          )}
+          {canCreate && (
+            <CircleButton
+              onClick={() => {
+                setDialogMode('create');
+                setEditingTag(null);
+                setIsDialogOpen(true);
+              }}
+              label={`新建${typeLabel[activeTab]}`}
+              className="shrink-0"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-1 min-h-0 flex-col">
+        {isLoading ? (
+          <div className="flex flex-wrap gap-3">
+            {Array.from({ length: 16 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-12 w-32 animate-pulse rounded-full border border-border/60 bg-muted/50"
+              />
+            ))}
+          </div>
+        ) : tags.length === 0 ? (
+          <EmptyState
+            icon={activeTab === 'SPACE' ? <Shapes className="h-12 w-12" /> : <Hash className="h-12 w-12" />}
+            title={`暂无${typeLabel[activeTab]}`}
+            description={search ? '没有匹配的标签，换个关键词试试。' : '创建后会以胶囊形式集中展示在这里。'}
+            className="rounded-xl border border-dashed border-border/70 bg-muted/20"
+          />
+        ) : (
+          <div className="flex flex-wrap content-start gap-3">
+            {tags.map((tag) => {
+              const accentColor = getTagRingColor(tag);
+              const isSelected = selectedTagIds.includes(tag.id);
+
+              return (
+                <article
+                  key={tag.id}
+                  onClick={() => handleToggleTagSelection(tag.id)}
+                  className={cn(
+                    'group relative inline-flex min-w-0 max-w-full cursor-pointer items-center gap-2.5 rounded-full border pl-3 pr-2 py-2 text-left transition-all duration-200',
+                    isSelected && 'ring-2 ring-primary/35',
+                    tag.tag_type === 'SPACE'
+                      ? 'border-transparent bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,246,237,0.98))] shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
+                      : 'border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_10px_24px_rgba(15,23,42,0.06)]',
+                  )}
+                  style={accentColor ? { boxShadow: `0 12px 30px color-mix(in srgb, ${accentColor} 20%, transparent)` } : undefined}
+                >
+                  <span
+                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all"
+                    style={{
+                      borderColor: accentColor,
+                      backgroundColor: isSelected ? accentColor : 'transparent',
+                    }}
+                  >
+                    {isSelected && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    )}
+                  </span>
+
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <h3 className="max-w-[14rem] truncate pr-1 text-[13px] font-semibold text-foreground">
+                      {tag.name}
+                    </h3>
+                    {tag.tag_type === 'SPACE' && tag.color && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold leading-none text-text-muted">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.color}
+                      </span>
+                    )}
+                  </div>
+
+                  {(canUpdate || canDelete) && (
+                    <div className="ml-1 flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-black/5 hover:text-foreground"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDialogMode('edit');
+                            setEditingTag(tag);
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-destructive/10 hover:text-destructive"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeleteTarget(tag);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <TagFormDialog
         open={isDialogOpen}
@@ -437,6 +435,6 @@ export const TagManagementPage: React.FC = () => {
         onConfirm={handleDelete}
         isConfirming={deleteTag.isPending}
       />
-    </PageFillShell>
+    </PageShell>
   );
 };
