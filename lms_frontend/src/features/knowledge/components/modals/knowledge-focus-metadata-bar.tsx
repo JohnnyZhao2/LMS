@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Check, ChevronDown, Plus, X } from 'lucide-react';
+import { ChevronDown, Plus, X } from 'lucide-react';
 import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { TagInput } from '../shared/tag-input';
 import { sanitizeRelatedLinks } from '../../utils/related-links';
 
@@ -88,38 +89,37 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
 
           <div className="akm-bottom-tools">
             <Popover open={showSpacePanel} onOpenChange={setShowSpacePanel}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="选择 space"
-                  className={`akm-space-trigger ${showSpacePanel ? ' akm-space-trigger-active' : ''}`}
-                >
-                  <span className="akm-space-trigger-label">{activeSpace?.name ?? '未设置'}</span>
-                  <ChevronDown size={14} className={`akm-space-trigger-icon${showSpacePanel ? ' akm-space-trigger-icon-open' : ''}`} />
-                </button>
-              </PopoverTrigger>
+              <div className={`akm-space-trigger-wrap ${showSpacePanel ? ' akm-space-trigger-wrap-active' : ''}`}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="选择 space"
+                    className="akm-space-trigger"
+                  >
+                    <span className="akm-space-trigger-label">{activeSpace?.name ?? '未设置'}</span>
+                    {!activeSpace ? (
+                      <ChevronDown size={14} className={`akm-space-trigger-icon${showSpacePanel ? ' akm-space-trigger-icon-open' : ''}`} />
+                    ) : null}
+                  </button>
+                </PopoverTrigger>
+                {activeSpace ? (
+                  <button
+                    type="button"
+                    aria-label="清除 space"
+                    className="akm-space-clear-inline"
+                    onClick={() => onSpaceTagChange(undefined)}
+                  >
+                    <X size={11} />
+                  </button>
+                ) : null}
+              </div>
               <PopoverContent
                 side="top"
                 align="start"
                 sideOffset={14}
                 className="akm-space-popover"
               >
-                <div className="akm-space-popover-header">
-                  <p className="akm-space-popover-title">空间</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSpaceTagChange(undefined);
-                      setShowSpacePanel(false);
-                    }}
-                    disabled={spaceTagId == null}
-                    className="akm-space-clear-btn"
-                  >
-                    清除
-                  </button>
-                </div>
-
-                <div className="akm-space-list">
+                <ScrollContainer className="akm-space-list">
                   {spaces.map((tag) => {
                     const selected = tag.id === activeSpace?.id;
                     return (
@@ -133,11 +133,10 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
                         className={`akm-space-item${selected ? ' akm-space-item-active' : ''}`}
                       >
                         <span className="akm-space-item-name">{tag.name}</span>
-                        {selected ? <Check size={14} className="akm-space-item-check" /> : null}
                       </button>
                     );
                   })}
-                </div>
+                </ScrollContainer>
               </PopoverContent>
             </Popover>
 
@@ -269,12 +268,12 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           display: flex;
           align-items: center;
         }
-        .akm-space-trigger,
+        .akm-space-trigger-wrap,
         .akm-title-input {
           background: rgba(255,255,255,0.7);
           font-family: inherit;
         }
-        .akm-space-trigger {
+        .akm-space-trigger-wrap {
           width: 106px;
           height: 34px;
           border: 1.5px solid rgba(0,0,0,0.08);
@@ -286,14 +285,27 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           align-items: center;
           justify-content: space-between;
           gap: 8px;
-          cursor: pointer;
           transition: all 0.15s ease;
         }
-        .akm-space-trigger:hover,
-        .akm-space-trigger-active {
+        .akm-space-trigger-wrap:hover,
+        .akm-space-trigger-wrap-active {
           background: rgba(255,255,255,0.94);
           color: #5c657c;
           box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .akm-space-trigger {
+          min-width: 0;
+          flex: 1;
+          height: 100%;
+          border: none;
+          background: transparent;
+          padding: 0;
+          color: inherit;
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          cursor: pointer;
         }
         .akm-space-trigger-label {
           min-width: 0;
@@ -313,52 +325,45 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           transform: rotate(180deg);
           color: #687385;
         }
-        .akm-space-popover {
-          width: 168px;
-          padding: 10px;
-          border-radius: 18px;
-          border: 1px solid rgba(255,255,255,0.52);
-          background: rgba(255,255,255,0.44);
-          backdrop-filter: blur(20px);
-          box-shadow: 0 12px 32px rgba(37, 49, 72, 0.12);
-          z-index: 620;
-        }
-        .akm-space-popover-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          padding: 2px 2px 8px;
-        }
-        .akm-space-popover-title {
-          margin: 0;
-          font-size: 11px;
-          font-weight: 600;
-          color: #8a90a2;
-          letter-spacing: 0.04em;
-        }
-        .akm-space-clear-btn {
+        .akm-space-clear-inline {
+          width: 18px;
+          height: 18px;
           border: none;
-          background: transparent;
-          padding: 0;
-          font-size: 11px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.84);
           color: #8a90a2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
           cursor: pointer;
-          transition: color 0.15s ease, opacity 0.15s ease;
+          transition: background 0.15s ease, color 0.15s ease;
         }
-        .akm-space-clear-btn:hover:not(:disabled) {
+        .akm-space-clear-inline:hover {
+          background: rgba(255,255,255,0.98);
           color: #5c657c;
         }
-        .akm-space-clear-btn:disabled {
-          opacity: 0.35;
-          cursor: default;
+        .akm-space-popover {
+          width: 176px;
+          padding: 0;
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.5);
+          background: rgba(255,255,255,0.42);
+          backdrop-filter: blur(20px);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+          z-index: 620;
+          overflow: hidden;
         }
         .akm-space-list {
           display: flex;
           flex-direction: column;
           gap: 4px;
-          max-height: min(280px, calc(100dvh - 140px));
+          max-height: min(284px, calc(100dvh - 140px));
           overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-gutter: auto;
+          box-sizing: border-box;
+          padding: 10px;
         }
         .akm-space-item {
           width: 100%;
@@ -376,11 +381,14 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           text-align: left;
           transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         }
-        .akm-space-item:hover,
+        .akm-space-item:hover {
+          background: rgba(255,255,255,0.58);
+          color: #3a4352;
+        }
         .akm-space-item-active {
-          background: rgba(77, 144, 238, 0.92);
-          color: #fff;
-          box-shadow: inset 0 0 0 1px rgba(77, 144, 238, 0.18);
+          background: rgba(255,255,255,0.94);
+          color: #3a4352;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65), 0 4px 14px rgba(148, 163, 184, 0.12);
         }
         .akm-space-item-name {
           min-width: 0;
@@ -388,9 +396,6 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        }
-        .akm-space-item-check {
-          flex-shrink: 0;
         }
         .akm-links-panel {
           position: absolute;
@@ -448,7 +453,7 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
           gap: 10px;
           max-height: 240px;
           overflow-y: auto;
-          padding-right: 4px;
+          scrollbar-gutter: auto;
         }
         .akm-link-row {
           display: grid;

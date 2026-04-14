@@ -50,13 +50,12 @@ export function useKnowledgeModalInteractions({
     const previousBodyOverscrollBehavior = bodyStyle.overscrollBehavior;
     const previousHtmlScrollbarGutter = htmlStyle.scrollbarGutter;
     const previousBodyScrollbarGutter = bodyStyle.scrollbarGutter;
-
     htmlStyle.overflow = 'hidden';
     bodyStyle.overflow = 'hidden';
     htmlStyle.overscrollBehavior = 'none';
     bodyStyle.overscrollBehavior = 'none';
-    htmlStyle.scrollbarGutter = 'stable';
-    bodyStyle.scrollbarGutter = 'stable';
+    htmlStyle.scrollbarGutter = 'auto';
+    bodyStyle.scrollbarGutter = 'auto';
 
     return () => {
       htmlStyle.overflow = previousHtmlOverflow;

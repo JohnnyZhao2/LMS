@@ -49,7 +49,7 @@ export interface GradingCenterSelectorConfig {
 
 const questionFilterTypes: QuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER'];
 
-const questionFilters: { value: QuestionFilter; label: string }[] = questionFilterTypes.map((type) => ({
+const questionFilters: { value: QuestionType; label: string }[] = questionFilterTypes.map((type) => ({
   value: type,
   label: QUESTION_TYPE_CONFIG[type].label,
 }));
@@ -79,10 +79,15 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
     return acc;
   }, {});
 
-export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quizId, selectorConfig }) => {
+export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
+  taskId,
+  quizId,
+  selectorConfig,
+}) => {
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
   const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
+  const [displayedQuestion, setDisplayedQuestion] = React.useState<GradingQuestion | null>(null);
   const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
 
@@ -140,17 +145,23 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
   );
   const submitGrading = useSubmitGrading(taskId || 0);
+  const effectiveQuestion = React.useMemo<GradingQuestion | null>(
+    () => questions?.find((question) => question.question_id === effectiveQuestionId) ?? null,
+    [effectiveQuestionId, questions]
+  );
 
   React.useEffect(() => {
-    if (questionDetail && effectiveQuestionId !== null) {
+    if (questionDetail && effectiveQuestionId !== null && effectiveQuestion) {
       setDisplayedQuestionId(effectiveQuestionId);
+      setDisplayedQuestion(effectiveQuestion);
       setDisplayedQuestionDetail(questionDetail);
     }
-  }, [effectiveQuestionId, questionDetail]);
+  }, [effectiveQuestion, effectiveQuestionId, questionDetail]);
 
   React.useEffect(() => {
     if (filteredQuestions.length === 0) {
       setDisplayedQuestionId(null);
+      setDisplayedQuestion(null);
       setDisplayedQuestionDetail(null);
     }
   }, [filteredQuestions.length]);
@@ -163,20 +174,29 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     setScoresByStudent({});
   }, [displayedQuestionDetail]);
 
-  const activeQuestionId = React.useMemo(() => {
-    if (displayedQuestionId !== null && questions?.some((question) => question.question_id === displayedQuestionId)) {
-      return displayedQuestionId;
+  const shouldHoldPreviousDetail =
+    detailLoading
+    && displayedQuestionId !== null
+    && displayedQuestionDetail !== null
+    && displayedQuestionId !== effectiveQuestionId;
+  const selectedQuestion = React.useMemo<GradingQuestion | undefined>(() => {
+    if (shouldHoldPreviousDetail && displayedQuestion) {
+      return displayedQuestion;
     }
-
-    return effectiveQuestionId;
-  }, [displayedQuestionId, effectiveQuestionId, questions]);
-  const selectedQuestion = React.useMemo<GradingQuestion | undefined>(
-    () => questions?.find((question) => question.question_id === activeQuestionId),
-    [activeQuestionId, questions]
-  );
-  const activeQuestionDetail = displayedQuestionId === activeQuestionId
-    ? (questionDetail ?? displayedQuestionDetail)
-    : questionDetail;
+    return effectiveQuestion ?? displayedQuestion ?? undefined;
+  }, [displayedQuestion, effectiveQuestion, shouldHoldPreviousDetail]);
+  const activeQuestionDetail = React.useMemo(() => {
+    if (shouldHoldPreviousDetail) {
+      return displayedQuestionDetail;
+    }
+    if (questionDetail) {
+      return questionDetail;
+    }
+    if (displayedQuestionId !== null && displayedQuestionId === effectiveQuestionId) {
+      return displayedQuestionDetail;
+    }
+    return null;
+  }, [displayedQuestionDetail, displayedQuestionId, effectiveQuestionId, questionDetail, shouldHoldPreviousDetail]);
 
   const sortedOptions = React.useMemo(() => {
     if (!activeQuestionDetail?.options) return [];
@@ -462,7 +482,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
               {/* Content Body */}
               <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
-                        {detailLoading && !activeQuestionDetail ? (
+                {!activeQuestionDetail && detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -472,7 +492,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                   <>
                     {/* OBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
-                      <div className="space-y-4 max-w-3xl mx-auto">
+                      <div className="relative mx-auto max-w-3xl space-y-4">
                         {sortedOptions.length === 0 && (
                           <div className="bg-background rounded-xl border border-dashed">
                             <EmptyState
@@ -521,7 +541,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                               <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
                                 <div
                                   className={cn(
-                                    'h-full transition-[width] duration-500',
+                                    'h-full',
                                     isCorrect ? 'bg-secondary-500' : 'bg-slate-400',
                                   )}
                                   style={{ width: `${percent}%` }}
@@ -557,7 +577,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
                     {/* SUBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
-                      <div className="space-y-4 max-w-4xl mx-auto">
+                      <div className="relative mx-auto max-w-4xl space-y-4">
                         {activeQuestionDetail?.subjective_answers?.length === 0 && (
                           <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
                             暂无学员回答
