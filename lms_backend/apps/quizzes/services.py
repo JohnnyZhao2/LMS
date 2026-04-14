@@ -76,7 +76,6 @@ class QuizService(BaseService):
         """
         quiz = Quiz.objects.select_related('created_by', 'updated_by').filter(
             pk=pk,
-            is_deleted=False,
         ).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
@@ -101,7 +100,6 @@ class QuizService(BaseService):
             试卷列表
         """
         qs = Quiz.objects.filter(
-            is_deleted=False,
             is_current=True
         ).select_related('created_by', 'updated_by')
         # 应用过滤条件
@@ -245,8 +243,7 @@ class QuizService(BaseService):
                 message='该试卷已被任务引用，无法删除'
             )
 
-        # 软删除
-        quiz.soft_delete()
+        quiz.delete()
         return quiz
 
     def _create_new_version(

@@ -8,8 +8,9 @@ import { Agentation } from 'agentation';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/components/route-guard';
 import { useAuth } from '@/features/auth/stores/auth-context';
+import { LoginPage } from '@/app/routes/auth/login';
+import { OidcCallbackPage } from '@/app/routes/auth/oidc-callback';
 import { roleRoutes } from './routes/role-routes';
-import { authRoutes } from './routes/auth';
 import { AppContent } from './app-content';
 import { AppProvider } from './provider';
 import { ROUTES } from '@/config/routes';
@@ -52,7 +53,8 @@ export const appRouter = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<AppRoot />}>
       {/* 认证路由（不需要角色前缀） */}
-      {authRoutes}
+      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+      <Route path={ROUTES.LOGIN_OIDC_CALLBACK} element={<OidcCallbackPage />} />
 
       {/* 角色前缀路由 */}
       <Route path="/:role" element={<RoleRouteWrapper />}>

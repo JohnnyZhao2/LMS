@@ -59,7 +59,7 @@ export const StudentDashboard: React.FC = () => {
   const visibleParticipants = (participants || []).slice(0, 2);
 
   return (
-    <div className="grid min-h-0 w-full flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4 pb-4 pt-1 font-sans animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="grid min-h-0 w-full flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4 pb-4 pt-1 font-sans">
       {/* 统计横栏 */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard title="进行中" value={stats?.in_progress_count ?? 0} icon={Activity} accentClassName="bg-primary-500" size="sm" />

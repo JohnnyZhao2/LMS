@@ -268,7 +268,7 @@ export const TeamManagerDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageShell className="animate-pulse">
+      <PageShell>
         <Skeleton className="h-20 w-1/3 rounded-lg" />
         <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -296,7 +296,6 @@ export const TeamManagerDashboard: React.FC = () => {
             icon={Users}
             accentClassName="bg-primary"
             subtitle="平台学习成员"
-            delay="stagger-delay-1"
           />
           <StatCard
             title="导师数量"
@@ -304,7 +303,6 @@ export const TeamManagerDashboard: React.FC = () => {
             icon={UserRoundCheck}
             accentClassName="bg-secondary"
             subtitle="平台在岗导师"
-            delay="stagger-delay-2"
           />
           <StatCard
             title="平台知识数量"
@@ -312,7 +310,6 @@ export const TeamManagerDashboard: React.FC = () => {
             icon={BookOpen}
             accentClassName="bg-success-500"
             subtitle="当前有效知识"
-            delay="stagger-delay-3"
           />
         </div>
 

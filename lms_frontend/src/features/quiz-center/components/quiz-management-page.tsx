@@ -21,7 +21,7 @@ export const QuizManagementPage: React.FC = () => {
         icon={<Layout />}
       />
 
-      <PageViewport className="flex flex-col reveal-item stagger-delay-2">
+      <PageViewport className="flex flex-col">
         <div className="mb-1 flex items-center gap-3">
           <SegmentedControl
             value={quizType}
@@ -31,7 +31,6 @@ export const QuizManagementPage: React.FC = () => {
               { label: '考试', value: 'EXAM' },
               { label: '测验', value: 'PRACTICE' },
             ]}
-            activeColor="white"
             className="shrink-0"
           />
 

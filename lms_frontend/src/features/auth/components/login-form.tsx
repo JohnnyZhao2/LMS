@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
+import { getWorkspaceHome } from '@/app/workspace-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,9 +16,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { ROUTES } from '@/config/routes';
 import { useAuth } from '../stores/auth-context';
 import { ApiError } from '@/lib/api-client';
-import { oidcApi } from '../api/oidc';
+import { beginOidcLogin } from '../utils/oidc-session';
 
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
@@ -25,12 +27,13 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+type PendingAction = 'password' | 'oidc' | null;
 
 export const LoginForm: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [oidcLoading, setOidcLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const isPending = pendingAction !== null;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,23 +44,21 @@ export const LoginForm: React.FC = () => {
   });
 
   const handleOidcLogin = async () => {
-    setOidcLoading(true);
+    setPendingAction('oidc');
     try {
-      const result = await oidcApi.getAuthorizeUrl();
-      sessionStorage.setItem('lms_oidc_state', result.state);
-      window.location.href = result.authorize_url;
+      await beginOidcLogin();
     } catch {
       toast.error('获取扫码登录地址失败');
-      setOidcLoading(false);
+      setPendingAction(null);
     }
   };
 
   const handleSubmit = async (values: LoginFormValues) => {
-    setLoading(true);
+    setPendingAction('password');
     try {
       const currentRole = await login(values);
       toast.success('登录成功');
-      const rolePath = `/${currentRole.toLowerCase()}/dashboard`;
+      const rolePath = getWorkspaceHome(currentRole) ?? ROUTES.LOGIN;
       navigate(rolePath, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -72,7 +73,7 @@ export const LoginForm: React.FC = () => {
         toast.error('网络错误，请稍后重试');
       }
     } finally {
-      setLoading(false);
+      setPendingAction(null);
     }
   };
 
@@ -161,10 +162,10 @@ export const LoginForm: React.FC = () => {
           <div className="space-y-4">
             <Button
               type="submit"
-              disabled={loading || oidcLoading}
+              disabled={isPending}
               className="w-full h-12 !rounded-full border-none bg-[#C41230] text-white font-black text-sm tracking-[0.6em] soft-press shadow-[0_6px_16px_rgba(196,18,48,0.22)] hover:bg-[#A30F28] hover:shadow-[0_8px_20px_rgba(196,18,48,0.28)] focus-visible:ring-[#C41230]/20 focus-visible:ring-offset-0"
             >
-              {loading ? '正在验证身份...' : '登录'}
+              {pendingAction === 'password' ? '正在验证身份...' : '登录'}
             </Button>
             <div className="flex items-center gap-4 py-3">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-foreground/10 to-foreground/5" />
@@ -174,11 +175,11 @@ export const LoginForm: React.FC = () => {
             <Button
               type="button"
               variant="ghost"
-              disabled={loading || oidcLoading}
+              disabled={isPending}
               onClick={handleOidcLogin}
               className="w-full h-12 !rounded-full border-none bg-[#F7E8EA] text-[#C41230] shadow-none hover:bg-[#F2DADD] hover:text-[#A30F28] focus-visible:ring-[#C41230]/16 focus-visible:ring-offset-0"
             >
-              {oidcLoading ? '跳转扫码中...' : '扫码登录'}
+              {pendingAction === 'oidc' ? '跳转扫码中...' : '扫码登录'}
             </Button>
           </div>
         </form>

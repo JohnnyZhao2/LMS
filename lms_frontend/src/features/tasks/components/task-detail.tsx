@@ -1,47 +1,36 @@
 import { useMemo, type ReactNode } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
+  Activity,
+  AlertCircle,
   ArrowLeft,
   BookOpen,
-  FileText,
-  Clock,
-  Edit,
-  Info,
-  Trophy,
-  Activity,
-  User,
   CheckCircle2,
-  AlertCircle,
-  Ghost,
-  Layers,
-  Calendar,
-  GraduationCap,
   ClipboardList,
-  MoreVertical,
+  Edit,
+  Ghost,
+  GraduationCap,
+  Info,
+  Layers,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { PageShell } from '@/components/ui/page-shell';
-import { MicroLabel } from '@/components/common/micro-label';
 import { IconBox } from '@/components/common/icon-box';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
-import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
-import dayjs from '@/lib/dayjs';
+import { MicroLabel } from '@/components/common/micro-label';
+import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell';
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import dayjs from '@/lib/dayjs';
+import { richTextToPlainText } from '@/lib/rich-text';
 import { cn } from '@/lib/utils';
-import { richTextToPreviewText } from '@/lib/rich-text';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
+
+import { useStudentLearningTaskDetail, useTaskDetail } from '../api/get-task-detail';
 
 const assignmentStatusLabelMap: Record<string, string> = {
   IN_PROGRESS: '进行中',
@@ -53,59 +42,146 @@ interface KnowledgeListViewItem {
   id: number;
   knowledgeId: number;
   title: string;
-  spaceTagName?: string | null;
-  contentPreview?: string;
   isCompleted?: boolean;
-  completedAt?: string | null;
 }
 
-const TaskDetailMetaBadge: React.FC<{
-  icon: ReactNode;
+type TaskQuizViewItem = LearningTaskQuizItem | TaskQuiz;
+
+const TaskStatusBadge: React.FC<{
+  status: string;
   label: string;
-}> = ({ icon, label }) => (
-  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground transition-colors">
-    <span className="text-muted-foreground">{icon}</span>
-    <span>{label}</span>
+}> = ({ status, label }) => {
+  const isCompleted = status === 'COMPLETED';
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
+        isCompleted
+          ? 'border-secondary-200 bg-secondary-50 text-secondary-700'
+          : 'border-primary-200 bg-primary-50 text-primary-700',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          isCompleted ? 'bg-secondary-500' : 'bg-primary-500',
+        )}
+      />
+      {label}
+    </span>
+  );
+};
+
+const TaskSectionHeader: React.FC<{
+  icon: LucideIcon;
+  title: string;
+  iconBgClassName: string;
+  iconColorClassName: string;
+}> = ({ icon, title, iconBgClassName, iconColorClassName }) => (
+  <div className="flex items-center gap-3">
+    <IconBox
+      icon={icon}
+      size="sm"
+      bgColor={iconBgClassName}
+      iconColor={iconColorClassName}
+      rounded="lg"
+      hoverScale={false}
+    />
+    <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
   </div>
 );
 
-const TaskDetailActionMenu: React.FC<{
-  items: Array<{
-    icon?: LucideIcon;
-    label: string;
-    onClick: () => void;
-  }>;
-}> = ({ items }) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <button
-        type="button"
-        aria-label="任务操作"
-        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent
-      align="end"
-      className="w-48 rounded-lg border border-border bg-background p-2"
-    >
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <DropdownMenuItem
-            key={item.label}
-            className="cursor-pointer rounded-lg px-3 py-2.5 font-semibold hover:bg-muted"
-            onClick={item.onClick}
-          >
-            {Icon && <Icon className="mr-2 h-4 w-4" />}
-            {item.label}
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuContent>
-  </DropdownMenu>
+const TaskInfoRow: React.FC<{
+  label: string;
+  value: ReactNode;
+}> = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-4 border-b border-border/60 py-3.5 last:border-b-0 last:pb-0">
+    <span className="text-xs leading-5 text-text-muted">{label}</span>
+    <div className="min-w-0 text-right text-xs font-medium leading-5 text-foreground">{value}</div>
+  </div>
 );
+
+const TaskEmptyState: React.FC<{
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}> = ({ icon: Icon, title, description }) => (
+  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-10 text-center">
+    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-background text-text-muted">
+      <Icon className="h-5 w-5" />
+    </div>
+    <p className="text-sm font-medium text-foreground">{title}</p>
+    <p className="mt-1 text-sm text-text-muted">{description}</p>
+  </div>
+);
+
+const TaskNodeCard: React.FC<{
+  index: number;
+  title: string;
+  meta?: ReactNode;
+  metaSeparated?: boolean;
+  status?: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  tone?: 'default' | 'success' | 'warning';
+}> = ({ index, title, meta, metaSeparated = false, status, onClick, disabled = false, tone = 'default' }) => {
+  const interactive = Boolean(onClick) && !disabled;
+
+  const toneClassName = {
+    default: 'border-border/70 bg-background hover:border-primary-200 hover:shadow-[0_12px_28px_rgba(59,130,246,0.08)]',
+    success: 'border-secondary-200/80 bg-secondary-50/30 hover:border-secondary-300 hover:shadow-[0_12px_28px_rgba(22,163,74,0.08)]',
+    warning: 'border-border/70 bg-background hover:border-warning-200 hover:shadow-[0_12px_28px_rgba(245,158,11,0.08)]',
+  }[tone];
+
+  const content = (
+    <div
+      className={cn(
+        'group flex min-h-[92px] h-full flex-col rounded-[20px] border px-4 py-3.5 text-left transition-all',
+        toneClassName,
+        interactive && 'cursor-pointer hover:-translate-y-0.5',
+        disabled && 'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-none',
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold tabular-nums tracking-[0.16em] text-text-muted/80">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        {status && (
+          <div className="text-right text-[11px] font-semibold leading-5 text-text-muted">
+            {status}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2 min-w-0 flex-1">
+        <h4 className="line-clamp-2 text-[15px] font-semibold leading-5 text-foreground">{title}</h4>
+
+        {meta && (
+          metaSeparated ? (
+            <div className="mt-3 border-t border-border/60 pt-2.5 text-xs leading-5 text-text-muted">
+              {meta}
+            </div>
+          ) : (
+            <p className="mt-1 truncate text-xs leading-5 text-text-muted">
+              {meta}
+            </p>
+          )
+        )}
+      </div>
+    </div>
+  );
+
+  if (interactive) {
+    return (
+      <button type="button" onClick={onClick} className="h-full w-full text-left">
+        {content}
+      </button>
+    );
+  }
+
+  return content;
+};
 
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string; role: string }>();
@@ -143,10 +219,7 @@ export const TaskDetail: React.FC = () => {
         id: item.id,
         knowledgeId: item.knowledge_id,
         title: item.title || '无标题',
-        spaceTagName: item.space_tag_name,
-        contentPreview: item.content_preview,
         isCompleted: item.is_completed,
-        completedAt: item.completed_at,
       }));
     }
 
@@ -154,8 +227,6 @@ export const TaskDetail: React.FC = () => {
       id: item.id,
       knowledgeId: item.knowledge,
       title: item.knowledge_title || '无标题',
-      spaceTagName: item.space_tag_name,
-      contentPreview: item.content_preview,
       isCompleted: false,
     }));
   }, [isStudent, learningDetail, task]);
@@ -164,12 +235,12 @@ export const TaskDetail: React.FC = () => {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 rotate-3 items-center justify-center rounded-lg bg-destructive-50 text-destructive-500">
-              <AlertCircle className="w-8 h-8" />
+              <AlertCircle className="h-8 w-8" />
             </div>
-            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Invalid Task ID</h3>
-            <p className="mb-8 text-sm leading-relaxed text-text-muted">无法找到指定的任务编号，请检查后重试。</p>
+            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">任务编号无效</h3>
+            <p className="mb-8 text-sm leading-relaxed text-text-muted">无法找到指定任务，请检查后重试。</p>
             <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
               返回上一页
             </Button>
@@ -181,24 +252,18 @@ export const TaskDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageShell className="animate-pulse">
-        <div className="flex min-h-16 items-center rounded-2xl border border-border/60 bg-background px-4 lg:px-6">
-          <Skeleton className="h-8 w-64" />
+      <PageFillShell>
+        <div className="space-y-3">
+          <Skeleton className="h-9 w-28 rounded-lg" />
+          <Skeleton className="h-5 w-[28rem] max-w-full rounded-lg" />
         </div>
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-8">
-            <Skeleton className="h-40 w-full rounded-lg" />
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-            </div>
-          </div>
-          <div className="space-y-6 lg:col-span-4">
-            <Skeleton className="h-64 w-full rounded-lg" />
-          </div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <PageSplit className="min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+            <Skeleton className="h-full min-h-[36rem] rounded-2xl" />
+            <Skeleton className="h-full min-h-[28rem] rounded-2xl" />
+          </PageSplit>
         </div>
-      </PageShell>
+      </PageFillShell>
     );
   }
 
@@ -206,12 +271,12 @@ export const TaskDetail: React.FC = () => {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 -rotate-3 items-center justify-center rounded-lg bg-muted text-text-muted">
-              <Ghost className="w-8 h-8" />
+              <Ghost className="h-8 w-8" />
             </div>
-            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Task Not Found</h3>
-            <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看，请联系管理员。</p>
+            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">任务不存在</h3>
+            <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看。</p>
             <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
               返回任务中心
             </Button>
@@ -221,19 +286,32 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  const myAssignment = task.assignments?.find((a) => a.assignee === user?.id);
+  const myAssignment = task.assignments?.find((assignment) => assignment.assignee === user?.id);
   const studentStatus = learningDetail?.status;
   const studentStatusDisplay = learningDetail?.status_display;
 
   const canStartExam = isStudent
-    ? (studentStatus === 'IN_PROGRESS')
-    : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
-  const canEditTask = !isStudent && !!task.actions.update && dayjs(task.deadline).isAfter(dayjs());
+    ? studentStatus === 'IN_PROGRESS'
+    : Boolean(myAssignment && myAssignment.status === 'IN_PROGRESS');
+  const canEditTask = !isStudent && Boolean(task.actions.update) && dayjs(task.deadline).isAfter(dayjs());
 
-  const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
+  const displayQuizzes: TaskQuizViewItem[] = isStudent
+    ? (learningDetail?.quiz_items ?? [])
+    : (task.quizzes ?? []);
+  const practiceQuizzes = displayQuizzes.filter((item) => item.quiz_type !== 'EXAM');
+  const examQuizzes = displayQuizzes.filter((item) => item.quiz_type === 'EXAM');
   const hasKnowledge = knowledgeList.length > 0;
-  const hasQuizzes = displayQuizzes.length > 0;
-
+  const hasPractice = practiceQuizzes.length > 0;
+  const hasExam = examQuizzes.length > 0;
+  const descriptionText = task.description ? richTextToPlainText(task.description).trim() : '';
+  const hasDescription = Boolean(descriptionText);
+  const statusValue = isStudent
+    ? studentStatus
+    : myAssignment?.status;
+  const statusLabel = isStudent
+    ? (studentStatusDisplay || (studentStatus ? assignmentStatusLabelMap[studentStatus] : ''))
+    : (myAssignment ? assignmentStatusLabelMap[myAssignment.status] || myAssignment.status : '');
+  const totalNodeCount = knowledgeList.length + practiceQuizzes.length + examQuizzes.length;
 
   const handleStartQuiz = (quizId: number, quizType?: string) => {
     if (!isStudent) return;
@@ -243,393 +321,302 @@ export const TaskDetail: React.FC = () => {
     navigate(getRolePath(`quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`));
   };
 
-  const getStatusBadge = () => {
-    if (isStudent && studentStatus) {
-      const isCompleted = studentStatus === 'COMPLETED';
-      return (
-        <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5",
-          isCompleted
-            ? "bg-secondary-50 text-secondary-600 border-secondary-200"
-            : "bg-primary-50 text-primary-600 border-primary-200"
-        )}>
-          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-secondary-500" : "bg-primary-500 animate-pulse")} />
-          {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
-        </span>
-      );
-    }
-    if (!isStudent && myAssignment) {
-      const isCompleted = myAssignment.status === 'COMPLETED';
-      return (
-        <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5",
-          isCompleted
-            ? "bg-secondary-50 text-secondary-600 border-secondary-200"
-            : "bg-primary-50 text-primary-600 border-primary-200"
-        )}>
-          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-secondary-500" : "bg-primary-500")} />
-          {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
-        </span>
-      );
-    }
-    return null;
-  };
+  const getQuizMetaText = (item: TaskQuizViewItem) =>
+    [
+      `${item.question_count} 题`,
+      `总分 ${item.total_score}`,
+      item.duration ? `${item.duration} 分钟` : null,
+      item.quiz_type === 'EXAM' && item.pass_score ? `及格 ${item.pass_score}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
 
   return (
-    <PageShell className="selection:bg-primary-100 selection:text-primary-700">
-      <header className="sticky top-0 z-20 flex flex-col gap-4 rounded-2xl border border-border/60 bg-background px-4 py-4 backdrop-blur-md transition-all duration-300 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-        <div className="flex min-w-0 items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full p-0 text-text-muted hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="h-4 w-px flex-shrink-0 bg-muted" />
-          <h1 className="text-base lg:text-lg font-bold text-foreground truncate tracking-tight" title={task.title}>
+    <PageFillShell className="gap-4 selection:bg-primary-100 selection:text-primary-700">
+      <section className={cn('flex gap-3', hasDescription ? 'items-start' : 'items-center')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
+          className="flex h-8 w-8 shrink-0 rounded-full p-0 text-text-muted hover:bg-background hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+
+        <div className={cn('min-w-0', hasDescription ? 'space-y-1' : '')}>
+          <h1 className="truncate text-[18px] font-semibold tracking-tight text-foreground">
             {task.title}
           </h1>
-          <div className="hidden sm:block">
-            {getStatusBadge()}
-          </div>
-        </div>
-
-        <div className="flex w-full flex-wrap items-center gap-4 text-sm lg:w-auto lg:flex-shrink-0 lg:justify-end lg:gap-6">
-          <div className="hidden md:flex items-center gap-6 text-text-muted">
-            <TaskDetailMetaBadge
-              icon={<User className="w-3.5 h-3.5" />}
-              label={task.updated_by_name || task.created_by_name}
-            />
-            <TaskDetailMetaBadge
-              icon={<Calendar className="w-3.5 h-3.5" />}
-              label={`${dayjs(task.deadline).format('MM-DD HH:mm')} 截止`}
-            />
-          </div>
-
-          {canEditTask && (
-            <TaskDetailActionMenu
-              items={[
-                {
-                  icon: Edit,
-                  label: '编辑任务',
-                  onClick: () => navigate(getRolePath(`tasks/${taskId}/edit`)),
-                },
-              ]}
-            />
+          {descriptionText && (
+            <p className="line-clamp-2 max-w-4xl text-sm leading-6 text-text-muted">
+              {descriptionText}
+            </p>
           )}
         </div>
-      </header>
+      </section>
 
-      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
-
-          <div className="lg:col-span-8 space-y-8">
-
-            {task.description && (
-              <section className="bg-background rounded-2xl border border-border p-8   transition-all duration-300">
-                <MicroLabel icon={<FileText className="w-3 h-3" />} className="mb-4">
-                  任务描述
-                </MicroLabel>
-                <div className="prose prose-sm prose-gray max-w-none">
-                  <p className="text-text-muted leading-relaxed whitespace-pre-line text-[15px]">
-                    {task.description}
-                  </p>
-                </div>
-              </section>
-            )}
-
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground flex items-center gap-3 tracking-tight">
-                  <IconBox icon={BookOpen} size="sm" bgColor="bg-primary-50" iconColor="text-primary-600" rounded="lg" />
-                  学习资料
-                  <span className="text-sm font-medium text-text-muted font-mono bg-muted px-2 py-0.5 rounded-md ml-1">
-                    {knowledgeList.length}
-                  </span>
-                </h3>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <PageSplit className="min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-background">
+            <div className="shrink-0 border-b border-border/60 px-5 py-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <MicroLabel>任务结构</MicroLabel>
+                <span className="text-xs font-medium text-text-muted">{totalNodeCount}</span>
               </div>
+            </div>
 
-              {!hasKnowledge ? (
-                <div className="bg-background rounded-xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                    <Layers className="w-8 h-8 text-text-muted" />
-                  </div>
-                  <p className="text-text-muted font-medium">暂无学习资料</p>
-                  <p className="text-sm text-text-muted mt-1">该任务尚未关联任何知识点</p>
-                </div>
-              ) : (
-                <div className="grid gap-6">
-                  {knowledgeList.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`))}
-                      className={cn(
-                        "group relative bg-background rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px] hover:-translate-y-0.5",
-                        item.isCompleted
-                          ? "border-secondary-100 bg-secondary-50/10"
-                          : "border-border hover:border-primary-100"
-                      )}
-                    >
-                      <div className="flex items-center gap-6 h-full">
-                        <div className={cn(
-                          "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold  transition-colors",
-                          item.isCompleted
-                            ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
-                            : "bg-background text-text-muted border border-border group-hover:bg-primary-50 group-hover:text-primary-600 group-hover:border-primary-100"
-                        )}>
-                          {item.isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
-                        </div>
+            <ScrollContainer as="div" className="min-h-0 flex-1 overflow-y-auto">
+              <div className="space-y-7 px-5 py-5">
+                <section className="space-y-3">
+                  <TaskSectionHeader
+                    icon={BookOpen}
+                    title="学习资料"
+                    iconBgClassName="bg-primary-50"
+                    iconColorClassName="text-primary-600"
+                  />
 
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 h-5 bg-muted text-text-muted border-border uppercase tracking-wide rounded-full">
-                              {item.spaceTagName || '知识文档'}
-                            </Badge>
-                            <h4 className={cn(
-                              "font-bold text-foreground truncate text-lg transition-colors",
-                              item.isCompleted ? "text-secondary-900" : "group-hover:text-primary-700"
-                            )}>
-                              {item.title}
-                            </h4>
-                          </div>
-                          <div className="h-10">
-                            {item.contentPreview && (
-                              <p className="text-sm text-text-muted line-clamp-2 leading-relaxed group-hover:text-text-muted">
-                                {richTextToPreviewText(item.contentPreview)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0 flex items-center justify-end w-[40px]">
-                          {/* Zero-Clutter Right Side */}
-                        </div>
-                      </div>
+                  {!hasKnowledge ? (
+                    <TaskEmptyState
+                      icon={Layers}
+                      title="暂无学习资料"
+                      description="当前任务还没有配置学习资料。"
+                    />
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                      {knowledgeList.map((item, index) => (
+                        <TaskNodeCard
+                          key={item.id}
+                          index={index}
+                          title={item.title}
+                          status={
+                            item.isCompleted ? (
+                              <span className="inline-flex items-center gap-1 text-secondary-700">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                已完成
+                              </span>
+                            ) : null
+                          }
+                          tone={item.isCompleted ? 'success' : 'default'}
+                          onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`))}
+                        />
+                      ))}
                     </div>
-                  ))}
+                  )}
+                </section>
+
+                {(hasPractice || hasExam) ? (
+                  <>
+                    {hasPractice && (
+                      <section className="space-y-3">
+                        <TaskSectionHeader
+                          icon={ClipboardList}
+                          title="测验"
+                          iconBgClassName="bg-primary-50"
+                          iconColorClassName="text-primary-600"
+                        />
+
+                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                          {practiceQuizzes.map((item, index) => {
+                            const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
+                            const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
+                            const isCompleted = Boolean(studentQuizItem?.is_completed);
+                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名测验';
+
+                            return (
+                              <TaskNodeCard
+                                key={item.id}
+                                index={index}
+                                title={title}
+                                meta={getQuizMetaText(item)}
+                                metaSeparated
+                                status={
+                                  isStudent
+                                    ? isCompleted
+                                      ? (
+                                        <span className="inline-flex items-center gap-1 text-secondary-700">
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                          {studentQuizItem?.score ?? '--'} 分
+                                        </span>
+                                      )
+                                      : null
+                                    : null
+                                }
+                                tone={isCompleted ? 'success' : 'default'}
+                                onClick={isStudent && quizId ? () => handleStartQuiz(quizId, item.quiz_type) : undefined}
+                              />
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )}
+
+                    {hasExam && (
+                      <section className="space-y-3">
+                        <TaskSectionHeader
+                          icon={Trophy}
+                          title="考试"
+                          iconBgClassName="bg-warning-50"
+                          iconColorClassName="text-warning-600"
+                        />
+
+                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                          {examQuizzes.map((item, index) => {
+                            const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
+                            const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
+                            const isCompleted = Boolean(studentQuizItem?.is_completed);
+                            const isDisabled = Boolean(isStudent && !canStartExam && !isCompleted);
+                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名考试';
+
+                            return (
+                              <TaskNodeCard
+                                key={item.id}
+                                index={index}
+                                title={title}
+                                meta={getQuizMetaText(item)}
+                                metaSeparated
+                                status={
+                                  isStudent
+                                    ? isCompleted
+                                      ? (
+                                        <span className="inline-flex items-center gap-1 text-secondary-700">
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                          {studentQuizItem?.score ?? '--'} 分
+                                        </span>
+                                      )
+                                      : isDisabled
+                                        ? <span className="text-warning-700">待解锁</span>
+                                        : null
+                                    : null
+                                }
+                                tone={isCompleted ? 'success' : 'warning'}
+                                disabled={isDisabled}
+                                onClick={isStudent && quizId && !isDisabled ? () => handleStartQuiz(quizId, item.quiz_type) : undefined}
+                              />
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )}
+                  </>
+                ) : (
+                  <section className="space-y-3">
+                    <TaskSectionHeader
+                      icon={GraduationCap}
+                      title="考核"
+                      iconBgClassName="bg-warning-50"
+                      iconColorClassName="text-warning-600"
+                    />
+                    <TaskEmptyState
+                      icon={GraduationCap}
+                      title="暂无考核内容"
+                      description="当前任务还没有配置测验或考试。"
+                    />
+                  </section>
+                )}
+              </div>
+            </ScrollContainer>
+          </section>
+
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-background">
+            <div className="shrink-0 border-b border-border/60 px-5 py-5">
+              <MicroLabel icon={<Info className="h-4 w-4 text-text-muted" />}>
+                任务信息
+              </MicroLabel>
+              {statusValue && statusLabel && (
+                <div className="mt-4">
+                  <TaskStatusBadge status={statusValue} label={statusLabel} />
                 </div>
               )}
-            </section>
+            </div>
 
-            <section className="space-y-6 pt-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground flex items-center gap-3 tracking-tight">
-                  <IconBox icon={Trophy} size="sm" bgColor="bg-warning-50" iconColor="text-warning-600" rounded="lg" />
-                  能力考核
-                  <span className="text-sm font-medium text-text-muted font-mono bg-muted px-2 py-0.5 rounded-md ml-1">
-                    {displayQuizzes.length}
-                  </span>
-                </h3>
-              </div>
+            <ScrollContainer as="aside" className="min-h-0 flex-1 overflow-y-auto">
+              <div className="space-y-6 px-5 py-5">
+                {isStudent && learningDetail && (
+                  <section className="space-y-4 rounded-2xl border border-primary-100/80 bg-primary-50/35 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-semibold text-foreground">学习进度</p>
+                        <p className="mt-1.5 text-[22px] font-semibold text-foreground">
+                          {learningDetail.progress?.percentage ?? 0}
+                          <span className="ml-1 text-xs font-medium text-text-muted">%</span>
+                        </p>
+                      </div>
+                      <IconBox
+                        icon={Activity}
+                        size="sm"
+                        bgColor="bg-primary-100"
+                        iconColor="text-primary-600"
+                        rounded="lg"
+                        hoverScale={false}
+                      />
+                    </div>
 
-              {!hasQuizzes ? (
-                <div className="bg-background rounded-xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                    <GraduationCap className="w-8 h-8 text-text-muted" />
-                  </div>
-                  <p className="text-text-muted font-medium">暂无考核内容</p>
-                  <p className="text-sm text-text-muted mt-1">该任务尚未配置任何测验或考试</p>
-                </div>
-              ) : (
-                <div className="grid gap-6">
-                  {displayQuizzes.map((item) => {
-                    const isExam = item.quiz_type === 'EXAM';
-                    const studentQuizItem = isStudent ? item as LearningTaskQuizItem : null;
-                    const adminQuizItem = !isStudent ? item as TaskQuiz : null;
-                    const isCompleted = studentQuizItem?.is_completed;
-
-                    return (
+                    <div className="h-2 overflow-hidden rounded-full bg-primary-100">
                       <div
-                        key={item.id}
-                        onClick={() => handleStartQuiz(
-                          studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0),
-                          item.quiz_type
-                        )}
-                        className={cn(
-                          "group relative bg-background rounded-xl border p-6 transition-all duration-300 h-[140px] cursor-pointer",
-                          isCompleted
-                            ? "border-secondary-100 bg-secondary-50/10"
-                            : "border-border hover:border-primary-100"
-                        )}
-                      >
+                        className="h-full rounded-full bg-primary-500 transition-[width] duration-700"
+                        style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
+                      />
+                    </div>
 
-                        <div className="flex items-center gap-6 h-full">
-                          <div
-                            className={cn(
-                              "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
-                              isCompleted
-                                ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
-                                : cn("bg-muted", isExam ? "text-warning-600" : "text-primary-600")
-                            )}
-                          >
-                            {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : (isExam ? <Trophy className="w-6 h-6" /> : <ClipboardList className="w-6 h-6" />)}
-                          </div>
+                    <div className="space-y-0">
+                      {Number(learningDetail.progress?.knowledge_total) > 0 && (
+                        <TaskInfoRow
+                          label="学习资料"
+                          value={`${learningDetail.progress?.knowledge_completed ?? 0} / ${learningDetail.progress?.knowledge_total ?? 0}`}
+                        />
+                      )}
+                      {Number(learningDetail.progress?.practice_total) > 0 && (
+                        <TaskInfoRow
+                          label="测验"
+                          value={`${learningDetail.progress?.practice_completed ?? 0} / ${learningDetail.progress?.practice_total ?? 0}`}
+                        />
+                      )}
+                      {Number(learningDetail.progress?.exam_total) > 0 && (
+                        <TaskInfoRow
+                          label="考试"
+                          value={`${learningDetail.progress?.exam_completed ?? 0} / ${learningDetail.progress?.exam_total ?? 0}`}
+                        />
+                      )}
+                    </div>
+                  </section>
+                )}
 
-                          <div className="flex-1 min-w-0 flex flex-col justify-center space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                              <Badge variant="outline" className={cn(
-                                "text-[11px] font-bold px-2 py-0.5 h-5 uppercase tracking-wide border-none rounded-full",
-                                isCompleted
-                                  ? "bg-secondary-100/50 text-secondary-700"
-                                  : (isExam ? "bg-warning-100/50 text-warning-700" : "bg-primary-100/50 text-primary-700")
-                              )}>
-                                {item.quiz_type_display || (isExam ? '考试' : '测验')}
-                              </Badge>
-                              <h4 className={cn(
-                                "text-lg font-bold tracking-tight leading-none transition-colors",
-                                isCompleted ? "text-secondary-900" : "text-foreground"
-                              )}>
-                                {studentQuizItem?.quiz_title || adminQuizItem?.quiz_title}
-                              </h4>
-                            </div>
-
-                            <div className="flex flex-wrap gap-4 text-sm text-text-muted font-medium h-5">
-                              <div className="flex items-center gap-1.5">
-                                <Info className="w-3.5 h-3.5" />
-                                <span>{item.question_count} 题</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <Activity className="w-3.5 h-3.5" />
-                                <span>总分 {item.total_score}</span>
-                              </div>
-                              {item.duration && (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  <span>{item.duration} min</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex-shrink-0 w-[120px] flex flex-col items-end justify-center">
-                            {isStudent && isCompleted && (
-                              <div className="text-[11px] font-bold text-secondary-600 bg-secondary-50 px-3 py-1 rounded-full border border-secondary-100 flex items-center gap-1.5 tracking-tight">
-                                得分: <span className="text-sm font-black">{studentQuizItem.score}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-
-          <div className="lg:col-span-4 flex h-full flex-col gap-6">
-
-            {isStudent && learningDetail && (
-              <div className="bg-background rounded-xl border border-border  p-6 sticky top-24">
-                <MicroLabel icon={<Activity className="w-4 h-4 text-primary-500" />} className="mb-6">
-                  总体进度
-                </MicroLabel>
-
-                <div className="mb-8 text-center relative">
-                  <div className="text-6xl font-bold text-foreground mb-2 font-mono tracking-tighter">
-                    {learningDetail.progress?.percentage ?? 0}<span className="text-2xl text-text-muted ml-1">%</span>
+                <section>
+                  <div className="space-y-0">
+                    <TaskInfoRow
+                      label="截止日期"
+                      value={dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}
+                    />
+                    <TaskInfoRow
+                      label="最后更新"
+                      value={task.updated_by_name || task.created_by_name}
+                    />
+                    <TaskInfoRow
+                      label="更新时间"
+                      value={dayjs(task.updated_at).format('YYYY-MM-DD HH:mm')}
+                    />
                   </div>
-                  <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-primary-500 to-primary-600 h-full rounded-full transition-all duration-1000 ease-out relative"
-                      style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
+                </section>
+
+                <section className="pt-2">
+                  {canEditTask && (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl border-border/80 hover:bg-muted"
+                      onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))}
                     >
-                      <div className="absolute inset-0 bg-background animate-[shimmer_2s_infinite]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {Number(learningDetail.progress?.knowledge_total) > 0 && (
-                    <div className="flex justify-between items-center text-sm p-4 bg-muted rounded-xl border border-border">
-                      <div className="flex items-center gap-3">
-                        <IconBox icon={BookOpen} size="sm" bgColor="bg-primary-100" iconColor="text-primary-600" rounded="lg" hoverScale={false} />
-                        <span className="text-text-muted font-medium">知识学习</span>
-                      </div>
-                      <span className="font-bold text-foreground font-mono">
-                        {learningDetail.progress?.knowledge_completed ?? 0} <span className="text-text-muted">/</span> {learningDetail.progress?.knowledge_total ?? 0}
-                      </span>
-                    </div>
+                      <Edit className="mr-2 h-4 w-4" />
+                      编辑任务配置
+                    </Button>
                   )}
-                  {Number(learningDetail.progress?.quiz_total) > 0 && (
-                    <div className="flex justify-between items-center text-sm p-4 bg-muted rounded-xl border border-border">
-                      <div className="flex items-center gap-3">
-                        <IconBox icon={Trophy} size="sm" bgColor="bg-warning-100" iconColor="text-warning-600" rounded="lg" hoverScale={false} />
-                        <span className="text-text-muted font-medium">测验进度</span>
-                      </div>
-                      <span className="font-bold text-foreground font-mono">
-                        {learningDetail.progress?.quiz_completed ?? 0} <span className="text-text-muted">/</span> {learningDetail.progress?.quiz_total ?? 0}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {studentStatus === 'IN_PROGRESS' && (
-                  <div className="mt-8 p-4 bg-primary-50/50 rounded-xl border border-primary-100/50 text-sm text-primary-700 flex gap-3">
-                    <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-primary-500" />
-                    <div>
-                      <p className="font-bold text-primary-700 mb-1">当前状态: 进行中</p>
-                      <p className="opacity-80 leading-relaxed">
-                        请按时完成所有学习内容和考核。加油！
-                      </p>
-                    </div>
-                  </div>
-                )}
+                </section>
               </div>
-            )}
-
-            {!isStudent && (
-              <div className="bg-background rounded-xl border border-border  p-6 sticky top-24">
-                <MicroLabel icon={<Info className="w-4 h-4 text-text-muted" />} className="mb-6">
-                  任务信息
-                </MicroLabel>
-                <div className="space-y-4 text-sm">
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-text-muted">截止日期</span>
-                    <span className="font-semibold text-foreground bg-muted px-2 py-1 rounded border border-border">
-                      {dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-text-muted">更新人</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-text-muted">
-                        {(task.updated_by_name || task.created_by_name)?.[0]}
-                      </div>
-                      <span className="font-semibold text-foreground">{task.updated_by_name || task.created_by_name}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-text-muted">更新时间</span>
-                    <span className="font-semibold text-foreground bg-muted px-2 py-1 rounded border border-border">
-                      {dayjs(task.updated_at).format('YYYY-MM-DD HH:mm')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-text-muted">知识点数量</span>
-                    <span className="font-semibold text-foreground">{task.knowledge_items?.length || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-text-muted">测验数量</span>
-                    <span className="font-semibold text-foreground">{task.quizzes?.length || 0}</span>
-                  </div>
-                </div>
-
-                {canEditTask && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-8 border-border text-foreground hover:bg-muted hover:text-foreground rounded-lg h-11"
-                    onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    编辑任务配置
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+            </ScrollContainer>
+          </aside>
+        </PageSplit>
       </div>
-    </PageShell>
+    </PageFillShell>
   );
 };

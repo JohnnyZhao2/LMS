@@ -8,7 +8,7 @@ Implements:
 """
 import secrets
 import string
-from typing import Any, Dict, Optional
+from typing import Any, Dict, NoReturn, Optional
 
 from django.contrib.auth import authenticate
 from django.utils import timezone
@@ -27,7 +27,7 @@ from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import enforce
 from apps.authorization.roles import (
     SUPER_ADMIN_ROLE,
-    get_default_role,
+    resolve_current_role,
     serialize_user_roles,
 )
 from apps.authorization.services import AuthorizationService
@@ -46,7 +46,7 @@ class AuthenticationService(BaseService):
         super().__init__(request)
         self.one_account_client = OneAccountClient()
 
-    def _log_user_action_safely(
+    def _log_user_action(
         self,
         *,
         user: User,
@@ -55,17 +55,13 @@ class AuthenticationService(BaseService):
         operator: Optional[User] = None,
         status: str = 'success',
     ) -> None:
-        try:
-            ActivityLogService.log_user_action(
-                user=user,
-                operator=operator,
-                action=action,
-                description=description,
-                status=status,
-            )
-        except Exception:
-            # 日志异常不影响主流程
-            pass
+        ActivityLogService.log_user_action(
+            user=user,
+            operator=operator,
+            action=action,
+            description=description,
+            status=status,
+        )
 
     def _validate_active_user(self, user: Optional[User]) -> User:
         user_obj = self.validate_not_none(user, '用户不存在')
@@ -76,15 +72,22 @@ class AuthenticationService(BaseService):
             )
         return user_obj
 
-    def _resolve_current_role(
+    def _raise_login_error(
         self,
-        available_roles: list[dict[str, str]],
-        requested_role: Optional[str] = None,
-    ) -> str:
-        role_codes = {role['code'] for role in available_roles}
-        if requested_role and requested_role in role_codes:
-            return requested_role
-        return get_default_role(role_codes)
+        *,
+        user: Optional[User],
+        description: str,
+        code: str,
+        message: str,
+    ) -> NoReturn:
+        if user is not None:
+            self._log_user_action(
+                user=user,
+                action='login_failed',
+                description=description,
+                status='failed',
+            )
+        raise BusinessError(code=code, message=message)
 
     def _build_user_payload(
         self,
@@ -92,13 +95,7 @@ class AuthenticationService(BaseService):
         requested_role: Optional[str] = None,
     ) -> Dict[str, Any]:
         available_roles = serialize_user_roles(user)
-        if user.is_superuser:
-            current_role = SUPER_ADMIN_ROLE
-        else:
-            current_role = self._resolve_current_role(
-                available_roles=available_roles,
-                requested_role=requested_role,
-            )
+        current_role = resolve_current_role(user, requested_role=requested_role)
         authorization_service = AuthorizationService(self.request)
         capabilities = authorization_service.get_capability_map(
             current_role=current_role,
@@ -133,7 +130,7 @@ class AuthenticationService(BaseService):
     ) -> Dict[str, Any]:
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
-        self._log_user_action_safely(
+        self._log_user_action(
             user=user,
             action='login',
             description=description,
@@ -154,27 +151,22 @@ class AuthenticationService(BaseService):
         """
         user_obj = get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
-            self._log_user_action_safely(
+            self._raise_login_error(
                 user=user_obj,
-                action='login_failed',
                 description=f'原因：账号已停用；账号：{user_obj.username}（{user_obj.employee_id}）',
-                status='failed',
-            )
-            raise BusinessError(
                 code=ErrorCodes.AUTH_USER_INACTIVE,
                 message='用户账号已被停用',
             )
 
         user = authenticate(username=employee_id, password=password)
         if user is None:
-            if user_obj:
-                self._log_user_action_safely(
-                    user=user_obj,
-                    action='login_failed',
-                    description=f'原因：密码错误；账号：{user_obj.username}（{user_obj.employee_id}）',
-                    status='failed',
-                )
-            raise BusinessError(
+            self._raise_login_error(
+                user=user_obj,
+                description=(
+                    f'原因：密码错误；账号：{user_obj.username}（{user_obj.employee_id}）'
+                    if user_obj is not None
+                    else f'原因：工号不存在；工号：{employee_id}'
+                ),
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
                 message='工号或密码错误',
             )
@@ -217,7 +209,7 @@ class AuthenticationService(BaseService):
             except (TokenError, InvalidToken, ValueError):
                 pass
 
-        self._log_user_action_safely(
+        self._log_user_action(
             user=user,
             action='logout',
             description=f'账号：{user.username}（{user.employee_id}）',
@@ -245,13 +237,16 @@ class AuthenticationService(BaseService):
 
             user = self._validate_active_user(get_user_by_id(user_id))
             requested_role = incoming_token.get('current_role')
-            tokens = self._build_auth_payload(user, requested_role=requested_role)
+            tokens = self._generate_tokens(
+                user,
+                current_role=resolve_current_role(user, requested_role=requested_role),
+            )
 
             # 轮换 refresh token：生成新 token 后立刻失效旧 token
             incoming_token.blacklist()
             return {
-                'access_token': tokens['access_token'],
-                'refresh_token': tokens['refresh_token'],
+                'access_token': tokens['access'],
+                'refresh_token': tokens['refresh'],
             }
         except BusinessError:
             raise
@@ -306,7 +301,7 @@ class AuthenticationService(BaseService):
         target_user.save(update_fields=['password'])
         self.blacklist_all_tokens(target_user)
 
-        self._log_user_action_safely(
+        self._log_user_action(
             user=target_user,
             operator=operator,
             action='password_change',
@@ -331,15 +326,8 @@ class AuthenticationService(BaseService):
         refresh = RefreshToken.for_user(user)
         refresh['employee_id'] = user.employee_id
         refresh['username'] = user.username
-        if user.is_superuser:
-            refresh['roles'] = [SUPER_ADMIN_ROLE]
-            refresh['current_role'] = SUPER_ADMIN_ROLE
-        else:
-            refresh['roles'] = user.role_codes
-            if current_role:
-                refresh['current_role'] = current_role
-            else:
-                refresh['current_role'] = get_default_role(user.role_codes)
+        refresh['roles'] = [SUPER_ADMIN_ROLE] if user.is_superuser else user.role_codes
+        refresh['current_role'] = resolve_current_role(user, requested_role=current_role)
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),

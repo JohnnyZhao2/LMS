@@ -111,7 +111,7 @@ export const SpotCheckList: React.FC = () => {
 
   return (
     <>
-      <PageFillShell className="animate-fadeIn">
+      <PageFillShell>
         <PageHeader
           title="抽查管理"
           icon={<ListChecks className="h-5 w-5" />}

@@ -50,7 +50,6 @@ export const StudentTaskList: React.FC = () => {
                         value={statusFilter}
                         onChange={(val: string) => setStatusFilter(val)}
                         options={statusOptions}
-                        activeColor="white"
                         className="w-full xl:w-auto xl:shrink-0"
                     />
                     <div className="flex w-full flex-col gap-3 xl:w-auto xl:flex-row xl:items-center">

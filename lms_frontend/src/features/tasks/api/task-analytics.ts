@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
@@ -43,6 +43,7 @@ export const useGradingQuestions = (
     queryKey: ['grading-questions', currentRole ?? 'UNKNOWN', taskId, quizId],
     queryFn: () => apiClient.get<GradingQuestion[]>(`/grading/tasks/${taskId}/questions/?quiz_id=${quizId}`),
     enabled: Boolean(taskId) && Boolean(quizId) && currentRole !== null && enabled,
+    placeholderData: keepPreviousData,
   });
 };
 

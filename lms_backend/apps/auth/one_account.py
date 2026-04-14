@@ -45,9 +45,12 @@ class OneAccountClient:
             client_private_key=config['CLIENT_PRIVATE_KEY'],
         )
 
-    def build_authorize_url(self, *, state: str) -> str:
+    def _ensure_enabled(self) -> None:
         if not self.config.enabled:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='统一认证未启用')
+
+    def build_authorize_url(self, *, state: str) -> str:
+        self._ensure_enabled()
 
         params = {
             'client_id': self.config.client_id,
@@ -59,8 +62,7 @@ class OneAccountClient:
         return f"{self.config.domain}{self.config.auth_path}?{urlencode(params)}"
 
     def exchange_code(self, *, code: str) -> Dict[str, Any]:
-        if not self.config.enabled:
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='统一认证未启用')
+        self._ensure_enabled()
 
         query_pairs = [
             ('client_id', self.config.client_id),

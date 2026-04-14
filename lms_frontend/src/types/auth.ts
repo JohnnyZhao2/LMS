@@ -24,12 +24,17 @@ export interface AuthSessionPayload {
 }
 
 /**
- * 登录响应
+ * 令牌对
  */
-export interface LoginResponse extends AuthSessionPayload {
+export interface TokenPair {
   access_token: string;
   refresh_token: string;
 }
+
+/**
+ * 切换角色响应
+ */
+export interface LoginResponse extends AuthSessionPayload, TokenPair {}
 
 /**
  * 切换角色响应

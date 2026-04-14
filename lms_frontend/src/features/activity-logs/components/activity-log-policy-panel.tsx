@@ -16,60 +16,54 @@ const CATEGORY_LABELS: Record<ActivityLogType, string> = {
 export const ActivityLogPolicyPanel: React.FC = () => {
   const { hasCapability } = useAuth();
   const canUpdatePolicies = hasCapability('activity_log.policy.update');
-  const canViewPolicies = canUpdatePolicies;
-
-  const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies);
+  const { data: policies = [], isLoading } = useActivityLogPolicies(canUpdatePolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
   const [activeCategory, setActiveCategory] = useState<ActivityLogType | ''>('');
 
-  const groupedPolicies = useMemo(() => {
-    const grouped: Record<string, Record<string, ActivityLogPolicy[]>> = {};
+  const {
+    categoryModules,
+    categoryCounts,
+    resolvedActiveCategory,
+    activeCategorySummary,
+  } = useMemo(() => {
+    const grouped: Partial<Record<ActivityLogType, Record<string, ActivityLogPolicy[]>>> = {};
     for (const policy of policies) {
-      if (!grouped[policy.category]) {
-        grouped[policy.category] = {};
-      }
-      if (!grouped[policy.category][policy.group]) {
-        grouped[policy.category][policy.group] = [];
-      }
-      grouped[policy.category][policy.group].push(policy);
+      const categoryGroups = grouped[policy.category] ?? (grouped[policy.category] = {});
+      const groupPolicies = categoryGroups[policy.group] ?? (categoryGroups[policy.group] = []);
+      groupPolicies.push(policy);
     }
-    return grouped;
-  }, [policies]);
 
-  const categorySummaries = useMemo(
-    () => (['user', 'content', 'operation'] as const)
-      .filter((category) => groupedPolicies[category])
-      .map((category) => {
-        const groups = Object.entries(groupedPolicies[category]);
-        const items = groups.flatMap(([, records]) => records);
-        return {
-          category,
-          groups,
-          total: items.length,
-          enabled: items.filter((policy) => policy.enabled).length,
-        };
-      }),
-    [groupedPolicies],
-  );
+    const categorySummaries = (['user', 'content', 'operation'] as const).flatMap((category) => {
+      const categoryGroups = grouped[category];
+      if (!categoryGroups) return [];
 
-  const categoryModules = useMemo(
-    () => categorySummaries.map(({ category }) => category),
-    [categorySummaries],
-  );
-  const categoryCounts = useMemo(
-    () => Object.fromEntries(categorySummaries.map(({ category, total, enabled }) => [category, { total, enabled }])),
-    [categorySummaries],
-  );
-  const resolvedActiveCategory = useMemo<ActivityLogType | null>(
-    () => (categoryModules.includes(activeCategory as ActivityLogType)
-      ? activeCategory as ActivityLogType
-      : categoryModules[0] ?? null),
-    [activeCategory, categoryModules],
-  );
-  const activeCategorySummary = useMemo(
-    () => categorySummaries.find(({ category }) => category === resolvedActiveCategory) ?? null,
-    [categorySummaries, resolvedActiveCategory],
-  );
+      const groups = Object.entries(categoryGroups) as [string, ActivityLogPolicy[]][];
+      const items = groups.flatMap(([, records]) => records);
+
+      return [{
+        category,
+        groups,
+        total: items.length,
+        enabled: items.reduce((count, policy) => count + (policy.enabled ? 1 : 0), 0),
+      }];
+    });
+
+    const categoryModules = categorySummaries.map(({ category }) => category);
+    const categoryCounts = Object.fromEntries(
+      categorySummaries.map(({ category, total, enabled }) => [category, { total, enabled }])
+    ) as Record<string, { total: number; enabled: number }>;
+    const resolvedActiveCategory = activeCategory && categoryModules.includes(activeCategory)
+      ? activeCategory
+      : categoryModules[0] ?? null;
+
+    return {
+      categoryModules,
+      categoryCounts,
+      resolvedActiveCategory,
+      activeCategorySummary:
+        categorySummaries.find(({ category }) => category === resolvedActiveCategory) ?? null,
+    };
+  }, [activeCategory, policies]);
 
   const handleTogglePolicy = async (policy: ActivityLogPolicy) => {
     try {
@@ -81,20 +75,11 @@ export const ActivityLogPolicyPanel: React.FC = () => {
     }
   };
 
-  if (!canViewPolicies) {
-    return (
-      <div className="flex items-center gap-3 rounded-[22px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
-        <ShieldCheck size={18} />
-        无权查看日志策略。
-      </div>
-    );
-  }
-
   if (!canUpdatePolicies) {
     return (
       <div className="flex items-center gap-3 rounded-[22px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
         <ShieldCheck size={18} />
-        无权配置日志策略。
+        无权查看日志策略。
       </div>
     );
   }

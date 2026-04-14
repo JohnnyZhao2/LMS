@@ -14,10 +14,10 @@ from core.base_view import BaseAPIView
 from core.responses import success_response
 from core.throttles import AuthThrottle
 from apps.auth.serializers import (
+    AuthSessionSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
-    MeResponseSerializer,
     OidcAuthorizeUrlResponseSerializer,
     OidcCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
@@ -153,7 +153,7 @@ class MeView(BaseAPIView):
         summary='获取当前用户信息',
         description='获取当前登录用户的最新信息和角色列表',
         responses={
-            200: MeResponseSerializer,
+            200: AuthSessionSerializer,
             401: OpenApiResponse(description='未登录'),
         },
         tags=['认证']

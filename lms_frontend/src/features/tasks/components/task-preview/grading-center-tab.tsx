@@ -101,30 +101,35 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     }
     return questions;
   }, [questions, questionFilter]);
+  const effectiveQuestionId = React.useMemo(() => {
+    if (filteredQuestions.length === 0) {
+      return null;
+    }
+
+    if (selectedQuestionId !== null && filteredQuestions.some((question) => question.question_id === selectedQuestionId)) {
+      return selectedQuestionId;
+    }
+
+    return filteredQuestions[0].question_id;
+  }, [filteredQuestions, selectedQuestionId]);
   const groupedQuestions = React.useMemo(
     () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
     [filteredQuestions],
   );
 
   React.useEffect(() => {
-    if (filteredQuestions.length === 0) {
-      setSelectedQuestionId(null);
-      setDisplayedQuestionId(null);
-      setDisplayedQuestionDetail(null);
-      return;
-    }
-    const stillExists = filteredQuestions.some((question) => question.question_id === selectedQuestionId);
-    if (!selectedQuestionId || !stillExists) {
-      setSelectedQuestionId(filteredQuestions[0].question_id);
-    }
-  }, [filteredQuestions, selectedQuestionId]);
-
-  React.useEffect(() => {
-    if (questionDetail && selectedQuestionId !== null) {
-      setDisplayedQuestionId(selectedQuestionId);
+    if (questionDetail && effectiveQuestionId !== null) {
+      setDisplayedQuestionId(effectiveQuestionId);
       setDisplayedQuestionDetail(questionDetail);
     }
-  }, [questionDetail, selectedQuestionId]);
+  }, [effectiveQuestionId, questionDetail]);
+
+  React.useEffect(() => {
+    if (filteredQuestions.length === 0) {
+      setDisplayedQuestionId(null);
+      setDisplayedQuestionDetail(null);
+    }
+  }, [filteredQuestions.length]);
 
   React.useEffect(() => {
     if (displayedQuestionDetail?.subjective_answers) {
@@ -134,18 +139,20 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     setScoresByStudent({});
   }, [displayedQuestionDetail]);
 
-  React.useEffect(() => {
-    setDisplayedQuestionId(null);
-    setDisplayedQuestionDetail(null);
-  }, [taskId, quizId]);
+  const activeQuestionId = React.useMemo(() => {
+    if (displayedQuestionId !== null && questions?.some((question) => question.question_id === displayedQuestionId)) {
+      return displayedQuestionId;
+    }
 
+    return effectiveQuestionId;
+  }, [displayedQuestionId, effectiveQuestionId, questions]);
   const selectedQuestion = React.useMemo<GradingQuestion | undefined>(
-    () => questions?.find((question) => question.question_id === (displayedQuestionId ?? selectedQuestionId ?? -1)),
-    [questions, displayedQuestionId, selectedQuestionId]
+    () => questions?.find((question) => question.question_id === activeQuestionId),
+    [activeQuestionId, questions]
   );
-  const activeQuestionDetail = displayedQuestionId === selectedQuestionId
+  const activeQuestionDetail = displayedQuestionId === activeQuestionId
     ? (questionDetail ?? displayedQuestionDetail)
-    : displayedQuestionDetail;
+    : questionDetail;
 
   const sortedOptions = React.useMemo(() => {
     if (!activeQuestionDetail?.options) return [];
@@ -188,7 +195,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     await commitScore(studentId, formattedScore);
   };
 
-  if (questionsLoading) {
+  if (questionsLoading && !questions) {
     return (
       <div className="grid h-full min-h-0 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
         <div className="flex min-h-0 h-full flex-col rounded-2xl border border-border bg-background p-4 space-y-4">
@@ -316,7 +323,6 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
             value={questionFilter}
             onChange={(value) => setQuestionFilter(value as QuestionFilter)}
             options={questionFilters}
-            activeColor="white"
             className="w-full"
             fill
           />
@@ -340,7 +346,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
                 <div className="space-y-2">
                   {section.entries.map(({ item: question, number }) => {
-                    const isActive = question.question_id === selectedQuestionId;
+                    const isActive = question.question_id === effectiveQuestionId;
                     const passRateColor = getPassRateColor(question.pass_rate);
 
                     return (

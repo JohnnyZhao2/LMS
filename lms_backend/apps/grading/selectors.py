@@ -1,6 +1,6 @@
-from django.db.models import F, OuterRef, Subquery
+from django.db.models import F, OuterRef, Prefetch, Subquery
 
-from apps.submissions.models import Answer, Submission
+from apps.submissions.models import Answer, AnswerSelection, Submission
 
 
 def has_answer_content(user_answer):
@@ -31,6 +31,12 @@ def get_latest_quiz_answers(task, quiz_id):
         submission__task_assignment__task=task,
         submission__quiz_id=quiz_id,
         submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
+    ).select_related('question').prefetch_related(
+        'question__question_options',
+        Prefetch(
+            'answer_selections',
+            queryset=AnswerSelection.objects.select_related('question_option'),
+        ),
     )
 
     return base_answers.annotate(

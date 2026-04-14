@@ -15,6 +15,53 @@ from core.mixins import (
 from apps.tags.models import Tag
 
 
+def build_choice_option_key(index: int) -> str:
+    """将 0-based 索引转换为 A/B/.../Z/AA 的展示键。"""
+    label_index = index + 1
+    chars: list[str] = []
+    while label_index > 0:
+        label_index, remainder = divmod(label_index - 1, 26)
+        chars.append(chr(65 + remainder))
+    return ''.join(reversed(chars))
+
+
+class QuestionOption(TimestampMixin, models.Model):
+    """题目选项。"""
+
+    question = models.ForeignKey(
+        'Question',
+        on_delete=models.CASCADE,
+        related_name='question_options',
+        verbose_name='题目',
+    )
+    sort_order = models.PositiveIntegerField(
+        default=1,
+        verbose_name='排序',
+    )
+    content = models.TextField(
+        verbose_name='选项内容',
+    )
+    is_correct = models.BooleanField(
+        default=False,
+        verbose_name='是否正确答案',
+    )
+
+    class Meta:
+        db_table = 'lms_question_option'
+        verbose_name = '题目选项'
+        verbose_name_plural = '题目选项'
+        ordering = ['question_id', 'sort_order', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['question', 'sort_order'],
+                name='uniq_question_option_order',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Q{self.question_id}#{self.sort_order}'
+
+
 class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     题目模型
@@ -41,19 +88,11 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         choices=QUESTION_TYPE_CHOICES,
         verbose_name='题目类型'
     )
-    # 选项（用于选择题，JSON 格式存储）
-    # 格式: [{"key": "A", "value": "选项内容"}, ...]
-    options = models.JSONField(
-        default=list,
+    reference_answer = models.TextField(
         blank=True,
-        verbose_name='选项'
+        default='',
+        verbose_name='参考答案',
     )
-    # 答案
-    # 单选题: "A"
-    # 多选题: ["A", "B", "C"]
-    # 判断题: "TRUE" 或 "FALSE"
-    # 简答题: 参考答案文本
-    answer = models.JSONField(verbose_name='答案')
     # 解析
     explanation = models.TextField(
         blank=True,
@@ -124,6 +163,76 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
     def is_subjective(self):
         """是否为主观题（需人工评分）"""
         return self.question_type == 'SHORT_ANSWER'
+
+    def _ordered_options(self):
+        cached = getattr(self, '_prefetched_objects_cache', {})
+        if 'question_options' in cached:
+            return sorted(
+                cached['question_options'],
+                key=lambda option: (option.sort_order, option.id),
+            )
+        return list(self.question_options.order_by('sort_order', 'id'))
+
+    def get_option_descriptors(self) -> list[dict]:
+        """返回带稳定内部 ID 和兼容展示 key 的选项列表。"""
+        options = self._ordered_options()
+
+        if self.question_type == 'SHORT_ANSWER':
+            return []
+
+        if self.question_type == 'TRUE_FALSE':
+            keys = ['TRUE', 'FALSE']
+        else:
+            keys = [build_choice_option_key(index) for index in range(len(options))]
+
+        return [
+            {
+                'id': option.id,
+                'key': keys[index],
+                'value': option.content,
+                'is_correct': option.is_correct,
+                'sort_order': option.sort_order,
+            }
+            for index, option in enumerate(options)
+        ]
+
+    @property
+    def options(self):
+        return [
+            {
+                'key': option['key'],
+                'value': option['value'],
+            }
+            for option in self.get_option_descriptors()
+        ]
+
+    @property
+    def answer(self):
+        if self.question_type == 'SHORT_ANSWER':
+            return self.reference_answer
+
+        correct_keys = [
+            option['key']
+            for option in self.get_option_descriptors()
+            if option['is_correct']
+        ]
+        if self.question_type == 'MULTIPLE_CHOICE':
+            return correct_keys
+        return correct_keys[0] if correct_keys else ''
+
+    def get_option_key_map(self) -> dict[str, dict]:
+        return {
+            option['key']: option
+            for option in self.get_option_descriptors()
+        }
+
+    def get_option_id_key_map(self) -> dict[int, str]:
+        return {
+            option['id']: option['key']
+            for option in self.get_option_descriptors()
+            if option['id'] is not None
+        }
+
     def check_answer(self, user_answer, full_score=None):
         """
         检查用户答案是否正确（仅适用于客观题）

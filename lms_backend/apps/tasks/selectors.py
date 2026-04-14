@@ -131,7 +131,6 @@ def task_resource_options(
 
     if resource_type in {'ALL', 'QUIZ'}:
         quiz_rows = Quiz.objects.filter(
-            is_deleted=False,
             is_current=True,
         ).annotate(
             question_count_value=Count('quiz_questions'),

@@ -22,7 +22,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-lg px-4 py-3 theme-input",
+          "flex h-12 w-full rounded-lg px-4 py-3",
           interactionStyle === "default" ? FIELD_CHROME_CLASSNAME : "focus:outline-none",
           "text-base font-medium text-foreground",
           "placeholder:text-text-muted",

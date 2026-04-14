@@ -1,11 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { tokenStorage } from '@/lib/token-storage';
 import type { AuthSessionPayload, LoginRequest, LoginResponse, SwitchRoleResponse } from '@/types/auth';
 import type { CapabilityMap } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
-import { oidcApi } from '../api/oidc';
+import {
+  clearStoredAuthSession,
+  commitAuthSession,
+  getStoredRefreshToken,
+  hasStoredAuthSession,
+} from '@/lib/auth-session';
 
 interface AuthState {
   user: UserInfo | null;
@@ -29,11 +33,6 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const MIN_ROLE_SWITCH_DURATION_MS = 220;
-let activeRoleSwitchRequest: {
-  roleCode: RoleCode;
-  startedAt: number;
-  promise: Promise<SwitchRoleResponse>;
-} | null = null;
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -51,8 +50,13 @@ const buildLoggedOutState = (): AuthState => ({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const activeRoleSwitchRequestRef = useRef<{
+    roleCode: RoleCode;
+    startedAt: number;
+    promise: Promise<SwitchRoleResponse>;
+  } | null>(null);
   const [state, setState] = useState<AuthState>(() => {
-    const hasTokens = tokenStorage.hasTokens();
+    const hasTokens = hasStoredAuthSession();
 
     return {
       user: null,
@@ -66,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const resetAuthState = useCallback(() => {
-    tokenStorage.clearAll();
+    clearStoredAuthSession();
     setState(buildLoggedOutState());
   }, []);
 
@@ -87,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const refreshUser = useCallback(async () => {
-    if (!tokenStorage.hasTokens()) {
+    if (!hasStoredAuthSession()) {
       setState(buildLoggedOutState());
       return;
     }
@@ -101,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyAuthSession, resetAuthState]);
 
   const completeLogin = useCallback((response: LoginResponse) => {
-    tokenStorage.setTokens(response.access_token, response.refresh_token);
+    commitAuthSession(response);
     applyAuthSession(response, { isSwitching: false });
     return response.current_role;
   }, [applyAuthSession]);
@@ -112,12 +116,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [completeLogin]);
 
   const loginByOidcCode = useCallback(async (code: string) => {
-    const response = await oidcApi.codeLogin({ code });
+    const response = await apiClient.post<LoginResponse>(
+      '/auth/oidc/code-login/',
+      { code },
+      { skipAuth: true },
+    );
     return completeLogin(response);
   }, [completeLogin]);
 
   const logout = useCallback(async () => {
-    const refreshToken = tokenStorage.getRefreshToken();
+    const refreshToken = getStoredRefreshToken();
     if (refreshToken) {
       try {
         await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
@@ -131,15 +139,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchRole = useCallback(async (roleCode: RoleCode) => {
     setState((prev) => ({ ...prev, isSwitching: true }));
 
-    const sharedRequest = activeRoleSwitchRequest?.roleCode === roleCode
-      ? activeRoleSwitchRequest
+    const existingRequest = activeRoleSwitchRequestRef.current;
+    const sharedRequest = existingRequest && existingRequest.roleCode === roleCode
+      ? existingRequest
       : (() => {
           const request = {
             roleCode,
             startedAt: Date.now(),
             promise: apiClient.post<SwitchRoleResponse>('/auth/switch-role/', { role_code: roleCode }),
           };
-          activeRoleSwitchRequest = request;
+          activeRoleSwitchRequestRef.current = request;
           return request;
         })();
 
@@ -149,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
         await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
       }
-      tokenStorage.setTokens(response.access_token, response.refresh_token);
+      commitAuthSession(response);
       applyAuthSession(response, { isSwitching: false });
     } catch (error) {
       const elapsed = Date.now() - sharedRequest.startedAt;
@@ -159,8 +168,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState((prev) => ({ ...prev, isSwitching: false }));
       throw error;
     } finally {
-      if (activeRoleSwitchRequest?.promise === sharedRequest.promise) {
-        activeRoleSwitchRequest = null;
+      if (activeRoleSwitchRequestRef.current?.promise === sharedRequest.promise) {
+        activeRoleSwitchRequestRef.current = null;
       }
     }
   }, [applyAuthSession]);

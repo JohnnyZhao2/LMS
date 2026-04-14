@@ -20,11 +20,10 @@ import { cn } from '@/lib/utils';
 import {
   useActivityLogs,
   useBulkDeleteActivityLogs,
-  useActivityLogUsers,
 } from '../api/use-activity-logs';
 import { ActivityLogFeed } from './activity-log-feed';
 import { ActivityLogMemberList } from './activity-log-member-list';
-import type { ActivityLogItem, ActivityLogType } from '../types';
+import type { ActivityLogItem, ActivityLogMember, ActivityLogType } from '../types';
 import type { DateRange } from 'react-day-picker';
 
 const LOG_TYPE_META = {
@@ -66,25 +65,22 @@ export const ActivityLogsPanel: React.FC = () => {
   );
 
   const { data, isLoading } = useActivityLogs(query, canViewActivityLogs);
-  const { data: activityLogUsers = [] } = useActivityLogUsers(canViewActivityLogs);
   const bulkDeleteActivityLogs = useBulkDeleteActivityLogs();
+  const members = useMemo<ActivityLogMember[]>(
+    () => data?.members ?? [],
+    [data?.members]
+  );
 
   const normalizedItems = useMemo<ActivityLogItem[]>(
     () => data?.results ?? [],
     [data?.results]
   );
 
-  const memberActivityCountMap = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const member of data?.members ?? []) {
-      map[member.user.id] = member.activity_count;
-    }
-    return map;
-  }, [data?.members]);
-
   const selectedMembers = useMemo(
-    () => activityLogUsers.filter((member) => selectedMemberIds.includes(member.id)),
-    [activityLogUsers, selectedMemberIds]
+    () => members
+      .filter(({ user }) => selectedMemberIds.includes(user.id))
+      .map(({ user }) => user),
+    [members, selectedMemberIds]
   );
   const selectedLogs = useMemo(
     () => normalizedItems.filter((item) => selectedLogIds.includes(item.id)),
@@ -101,17 +97,34 @@ export const ActivityLogsPanel: React.FC = () => {
   const totalCount = data?.count ?? 0;
   const shouldShowPagination = totalCount > pageSize;
 
+  const clearSelectedLogs = () => {
+    setSelectedLogIds([]);
+  };
+
+  const resetPagingAndSelection = () => {
+    setPage(1);
+    clearSelectedLogs();
+  };
+
+  const resetFiltersAndSelection = () => {
+    setSearch('');
+    setDateRange(undefined);
+    setSelectedMemberIds([]);
+    resetPagingAndSelection();
+  };
+
   const handleConfirmBulkDelete = async () => {
     if (selectedLogs.length === 0) return;
 
     try {
+      const selectedCount = selectedLogs.length;
       await bulkDeleteActivityLogs.mutateAsync(selectedLogs.map((item) => item.id));
-      if (selectedLogs.length === normalizedItems.length && page > 1) {
+      if (selectedCount === normalizedItems.length && page > 1) {
         setPage((current) => Math.max(1, current - 1));
       }
-      setSelectedLogIds([]);
+      clearSelectedLogs();
       setBulkDeleteOpen(false);
-      toast.success(`已删除 ${selectedLogs.length} 条日志`);
+      toast.success(`已删除 ${selectedCount} 条日志`);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -125,10 +138,7 @@ export const ActivityLogsPanel: React.FC = () => {
     if (nextType === activeType) return;
     startTransition(() => {
       setActiveType(nextType);
-      setPage(1);
-      setSelectedLogIds([]);
-      setDateRange(undefined);
-      setSelectedMemberIds([]);
+      resetFiltersAndSelection();
     });
   };
 
@@ -137,8 +147,7 @@ export const ActivityLogsPanel: React.FC = () => {
       setSelectedMemberIds((cur) =>
         cur.includes(memberId) ? cur.filter((id) => id !== memberId) : [...cur, memberId]
       );
-      setPage(1);
-      setSelectedLogIds([]);
+      resetPagingAndSelection();
     });
   };
 
@@ -194,8 +203,7 @@ export const ActivityLogsPanel: React.FC = () => {
             dateRange={dateRange}
             onDateRangeChange={(range) => {
               setDateRange(range);
-              setPage(1);
-              setSelectedLogIds([]);
+              resetPagingAndSelection();
             }}
             placeholder="时间区间"
             align="end"
@@ -205,16 +213,16 @@ export const ActivityLogsPanel: React.FC = () => {
           <SearchInput
             className={`${DESKTOP_SEARCH_INPUT_CLASSNAME} ml-auto`}
             value={search}
-            onChange={(value) => { setSearch(value); setPage(1); setSelectedLogIds([]); }}
+            onChange={(value) => {
+              setSearch(value);
+              resetPagingAndSelection();
+            }}
             placeholder="搜索日志"
           />
           {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => {
-                setSearch(''); setDateRange(undefined);
-                setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
-              }}
+              onClick={resetFiltersAndSelection}
               className="h-11 shrink-0 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:border-primary-200 hover:bg-primary-50/40 hover:text-foreground"
             >
               清空
@@ -225,8 +233,7 @@ export const ActivityLogsPanel: React.FC = () => {
         {/* 左侧成员列表 */}
         <div className="min-h-0 xl:row-span-2 xl:row-start-1">
           <ActivityLogMemberList
-            users={activityLogUsers}
-            memberActivityCountMap={memberActivityCountMap}
+            members={members}
             selectedMemberIds={selectedMemberIds}
             activeType={activeType}
             onToggleMember={handleToggleMember}
@@ -236,7 +243,7 @@ export const ActivityLogsPanel: React.FC = () => {
         {/* 右侧日志流 */}
         <div className="min-h-0 h-full xl:col-start-2 xl:row-start-2">
           <div className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background">
-              {/* 选中成员标签 + Tab */}
+            {/* 选中成员标签 + Tab */}
             <div className="border-b border-border/60 px-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 {selectedMembers.length > 0 ? (
@@ -272,7 +279,7 @@ export const ActivityLogsPanel: React.FC = () => {
                   </button>
                 )}
 
-                {canViewActivityLogs && normalizedItems.length > 0 && (
+                {normalizedItems.length > 0 && (
                   <div className="flex h-14 flex-wrap items-center gap-3">
                     <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
                       <Checkbox
@@ -324,8 +331,16 @@ export const ActivityLogsPanel: React.FC = () => {
                   defaultPageSize={10}
                   showSizeChanger
                   showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-                  onChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
-                  onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
+                  onChange={(p, s) => {
+                    setPage(p);
+                    setPageSize(s);
+                    clearSelectedLogs();
+                  }}
+                  onShowSizeChange={(p, s) => {
+                    setPage(p);
+                    setPageSize(s);
+                    clearSelectedLogs();
+                  }}
                 />
               </div>
             )}

@@ -96,6 +96,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             Decimal: 试卷所有题目分值之和
         """
+        if not self.pk:
+            return 0
         from django.db.models import Sum
         result = self.quiz_questions.aggregate(
             total=Sum('score')
@@ -108,6 +110,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             int: 试卷中的题目数量
         """
+        if not self.pk:
+            return 0
         return self.quiz_questions.count()
     @property
     def has_subjective_questions(self):
@@ -116,6 +120,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             bool: 如果包含简答题则返回 True
         """
+        if not self.pk:
+            return False
         return self.quiz_questions.filter(
             question__question_type='SHORT_ANSWER'
         ).exists()
@@ -126,6 +132,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             int: 客观题（单选/多选/判断）数量
         """
+        if not self.pk:
+            return 0
         return self.quiz_questions.exclude(
             question__question_type='SHORT_ANSWER'
         ).count()
@@ -136,6 +144,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             int: 主观题（简答题）数量
         """
+        if not self.pk:
+            return 0
         return self.quiz_questions.filter(
             question__question_type='SHORT_ANSWER'
         ).count()
@@ -146,6 +156,8 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         Returns:
             dict: {type: count, ...}
         """
+        if not self.pk:
+            return {}
         from django.db.models import Count
         counts = self.quiz_questions.values('question__question_type').annotate(
             count=Count('id')

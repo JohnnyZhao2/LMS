@@ -247,35 +247,29 @@ def log_user_action(
             # 执行原方法
             result = func(self, *args, **kwargs)
 
-            # 记录日志
-            try:
-                from apps.activity_logs.services import ActivityLogService
+            from apps.activity_logs.services import ActivityLogService
 
-                # 构建描述
-                if description_template:
-                    template_vars = _build_template_vars(func, self, args, kwargs, result)
-                    description = description_template.format(**template_vars)
-                else:
-                    description = f'{action} 操作'
+            if description_template:
+                template_vars = _build_template_vars(func, self, args, kwargs, result)
+                description = description_template.format(**template_vars)
+            else:
+                description = f'{action} 操作'
 
-                # 确定目标用户和操作者
-                user = (
-                    result
-                    if hasattr(result, 'employee_id')
-                    else (kwargs.get('user') or (args[0] if args else None))
-                )
-                operator = kwargs.get('operator') or kwargs.get('assigned_by') or getattr(self, 'user', None)
+            user = (
+                result
+                if hasattr(result, 'employee_id')
+                else (kwargs.get('user') or (args[0] if args else None))
+            )
+            operator = kwargs.get('operator') or kwargs.get('assigned_by') or getattr(self, 'user', None)
 
-                ActivityLogService.log_user_action(
-                    user=user,
-                    operator=operator,
-                    action=action,
-                    description=description,
-                    status='success',
-                    action_key=action_key
-                )
-            except Exception:
-                pass  # 日志记录失败不影响主流程
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=operator,
+                action=action,
+                description=description,
+                status='success',
+                action_key=action_key
+            )
 
             return result
         return wrapper
@@ -311,33 +305,27 @@ def log_content_action(
             # 执行原方法
             result = func(self, *args, **kwargs)
 
-            # 记录日志
-            try:
-                from apps.activity_logs.services import ActivityLogService
+            from apps.activity_logs.services import ActivityLogService
 
-                # 构建描述
-                if description_template:
-                    template_vars = _build_template_vars(func, self, template_args, template_kwargs, result)
-                    description = description_template.format(**template_vars)
-                else:
-                    description = f'{action} {content_type}'
+            if description_template:
+                template_vars = _build_template_vars(func, self, template_args, template_kwargs, result)
+                description = description_template.format(**template_vars)
+            else:
+                description = f'{action} {content_type}'
 
-                # 获取内容信息
-                content_id = str(result.id) if hasattr(result, 'id') else 'unknown'
-                content_title = getattr(result, 'title', None) or getattr(result, 'content', '')[:50] or '内容'
+            content_id = str(result.id) if hasattr(result, 'id') else 'unknown'
+            content_title = getattr(result, 'title', None) or getattr(result, 'content', '')[:50] or '内容'
 
-                ActivityLogService.log_content_action(
-                    content_type=content_type,
-                    content_id=content_id,
-                    content_title=content_title,
-                    operator=getattr(self, 'user', None),
-                    action=action,
-                    description=description,
-                    status='success',
-                    action_key=action_key
-                )
-            except Exception:
-                pass  # 日志记录失败不影响主流程
+            ActivityLogService.log_content_action(
+                content_type=content_type,
+                content_id=content_id,
+                content_title=content_title,
+                operator=getattr(self, 'user', None),
+                action=action,
+                description=description,
+                status='success',
+                action_key=action_key
+            )
 
             return result
         return wrapper
@@ -384,40 +372,34 @@ def log_operation(
             # 计算耗时
             duration = int((time.time() - start_time) * 1000) if measure_duration else 0
 
-            # 记录日志
-            try:
-                from apps.activity_logs.services import ActivityLogService
+            from apps.activity_logs.services import ActivityLogService
 
-                template_vars = _build_template_vars(func, self, args, kwargs, result)
+            template_vars = _build_template_vars(func, self, args, kwargs, result)
 
-                # 构建描述
-                if description_template:
-                    description = description_template.format(**template_vars)
-                else:
-                    description = f'{action} 操作'
+            if description_template:
+                description = description_template.format(**template_vars)
+            else:
+                description = f'{action} 操作'
 
-                # 构建 target
-                resolved_target_title = ''
-                resolved_target_id = ''
-                if target_title_template:
-                    resolved_target_title = target_title_template.format(**template_vars)
-                if result is not None and hasattr(result, 'id'):
-                    resolved_target_id = str(result.id)
+            resolved_target_title = ''
+            resolved_target_id = ''
+            if target_title_template:
+                resolved_target_title = target_title_template.format(**template_vars)
+            if result is not None and hasattr(result, 'id'):
+                resolved_target_id = str(result.id)
 
-                ActivityLogService.log_operation(
-                    operator=getattr(self, 'user', None),
-                    operation_type=operation_type,
-                    action=action,
-                    description=description,
-                    duration=duration,
-                    status='success',
-                    action_key=action_key,
-                    target_type=target_type,
-                    target_id=resolved_target_id,
-                    target_title=resolved_target_title,
-                )
-            except Exception:
-                pass  # 日志记录失败不影响主流程
+            ActivityLogService.log_operation(
+                operator=getattr(self, 'user', None),
+                operation_type=operation_type,
+                action=action,
+                description=description,
+                duration=duration,
+                status='success',
+                action_key=action_key,
+                target_type=target_type,
+                target_id=resolved_target_id,
+                target_title=resolved_target_title,
+            )
 
             return result
         return wrapper

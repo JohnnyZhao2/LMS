@@ -16,14 +16,23 @@ const resolveKnowledgeLabel = (role: RoleCode | null) => {
   return workspace?.menuVariant === 'student' ? '知识中心' : '知识管理';
 }
 
+const resolveTaskPreviewLabel = (tab: string | null) => {
+  if (tab === 'grading') {
+    return '阅卷中心'
+  }
+  return '进度监控'
+}
+
 const createBreadcrumbs = (
   pathname: string,
   roleCode: RoleCode | null,
   entry: string | null,
+  taskPreviewTab: string | null,
 ): BreadcrumbItem[] => {
   const buildWorkspaceRoute = (route: string) => getWorkspacePath(roleCode, route) ?? route
   const taskLabel = resolveTaskLabel(roleCode)
   const knowledgeLabel = resolveKnowledgeLabel(roleCode)
+  const taskPreviewLabel = resolveTaskPreviewLabel(taskPreviewTab)
   const tasksPath = buildWorkspaceRoute(ROUTES.TASKS)
   const knowledgePath = buildWorkspaceRoute(ROUTES.KNOWLEDGE)
   const quizzesPath = buildWorkspaceRoute(ROUTES.QUIZZES)
@@ -54,7 +63,7 @@ const createBreadcrumbs = (
     },
     { pattern: '/:role/tasks/create', items: [{ title: taskLabel, path: tasksPath }, { title: '新建任务' }] },
     { pattern: '/:role/tasks/:id/edit', items: [{ title: taskLabel, path: tasksPath }, { title: '编辑任务' }] },
-    { pattern: '/:role/tasks/:id/preview', items: [{ title: taskLabel, path: tasksPath }, { title: '任务预览' }] },
+    { pattern: '/:role/tasks/:id/preview', items: [{ title: taskLabel, path: tasksPath }, { title: taskPreviewLabel }] },
     { pattern: '/:role/tasks/:id', items: [{ title: taskLabel, path: tasksPath }, { title: '任务详情' }] },
     { pattern: '/:role/tasks', items: [{ title: taskLabel }] },
     { pattern: '/:role/spot-checks/create', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '发起抽查' }] },
@@ -78,11 +87,16 @@ export const GlobalBreadcrumb: React.FC = () => {
   const location = useLocation()
   const currentRole = useCurrentRole()
   const homePath = getWorkspaceHome(currentRole) ?? ROUTES.DASHBOARD
-  const entry = React.useMemo(() => new URLSearchParams(location.search).get('entry'), [location.search])
-
+  const { entry, taskPreviewTab } = React.useMemo(() => {
+    const searchParams = new URLSearchParams(location.search)
+    return {
+      entry: searchParams.get('entry'),
+      taskPreviewTab: searchParams.get('tab'),
+    }
+  }, [location.search])
   const items = React.useMemo(
-    () => createBreadcrumbs(location.pathname, currentRole, entry),
-    [currentRole, entry, location.pathname],
+    () => createBreadcrumbs(location.pathname, currentRole, entry, taskPreviewTab),
+    [currentRole, entry, location.pathname, taskPreviewTab],
   )
 
   if (items.length === 0) {

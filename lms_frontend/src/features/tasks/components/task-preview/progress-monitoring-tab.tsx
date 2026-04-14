@@ -166,32 +166,37 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
   if (isLoading || !analytics) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="grid gap-4 xl:grid-cols-12 xl:items-stretch">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-4 xl:h-full xl:grid-cols-2 xl:grid-rows-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-24 xl:h-full" />
+            ))}
+          </div>
+          <Skeleton className="h-52 xl:col-span-4 xl:h-full" />
+          <Skeleton className="h-52 xl:col-span-4 xl:h-full" />
         </div>
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Skeleton className="h-52" />
-          <Skeleton className="h-52" />
-        </div>
-        <Skeleton className="min-h-0 flex-1" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <ProgressMetricGrid analytics={analytics} />
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-        <NodeProgressPanel aggregatedProgress={aggregatedProgress} />
-        <DistributionPanel
-          analytics={analytics}
-          chartType={chartType}
-          hasScoreDistribution={hasScoreDistribution}
-          onChartTypeChange={setChartType}
-        />
+      <div className="grid gap-4 xl:grid-cols-12 xl:items-stretch">
+        <div className="xl:col-span-4 xl:h-full">
+          <ProgressMetricGrid analytics={analytics} />
+        </div>
+        <div className="xl:col-span-4">
+          <NodeProgressPanel aggregatedProgress={aggregatedProgress} />
+        </div>
+        <div className="xl:col-span-4">
+          <DistributionPanel
+            analytics={analytics}
+            chartType={chartType}
+            hasScoreDistribution={hasScoreDistribution}
+            onChartTypeChange={setChartType}
+          />
+        </div>
       </div>
 
       <DataTable
@@ -208,15 +213,14 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
           </>
         )}
         className="mt-0"
-        fillHeight
-        minHeight={0}
+        minHeight={220}
       />
     </div>
   );
 };
 
 const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics }) => (
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:h-full xl:grid-cols-2 xl:grid-rows-2">
     <StatCard
       title="完成人数"
       value={`${analytics.completion.completed_count}/${analytics.completion.total_count}`}
@@ -225,6 +229,7 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       iconClassName="text-primary"
       accentClassName="bg-primary-50"
       size="xs"
+      className="xl:h-full"
     />
     <StatCard
       title="平均用时"
@@ -234,6 +239,7 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       iconClassName="text-secondary"
       accentClassName="bg-secondary-50"
       size="xs"
+      className="xl:h-full"
     />
     <StatCard
       title={analytics.accuracy.has_quiz ? '准确率' : '考试情况'}
@@ -243,6 +249,7 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       iconClassName="text-primary-500"
       accentClassName="bg-primary-50"
       size="xs"
+      className="xl:h-full"
     />
     <StatCard
       title="异常人数"
@@ -252,12 +259,15 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-text-muted'}
       accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-muted'}
       size="xs"
+      className="xl:h-full"
     />
   </div>
 );
 
-const NodeProgressPanel: React.FC<{ aggregatedProgress: AggregatedProgressCategory[] }> = ({ aggregatedProgress }) => (
-  <Card className="border border-border/70 p-4">
+const NodeProgressPanel: React.FC<{
+  aggregatedProgress: AggregatedProgressCategory[];
+}> = ({ aggregatedProgress }) => (
+  <Card className="flex h-full flex-col border border-border/70 p-4">
     <div className="mb-3">
       <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">节点概览</p>
     </div>
@@ -286,7 +296,7 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
   hasScoreDistribution,
   onChartTypeChange,
 }) => (
-  <Card className="border border-border/70 p-4">
+  <Card className="flex h-full flex-col border border-border/70 p-4">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="space-y-1">
         <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">结果分布</p>
@@ -340,10 +350,12 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
       )}
     </div>
 
-    <DistributionChart
-      data={chartType === 'time' ? analytics.time_distribution : (analytics.score_distribution || [])}
-      type={chartType}
-    />
+    <div className="flex flex-1 flex-col justify-center">
+      <DistributionChart
+        data={chartType === 'time' ? analytics.time_distribution : (analytics.score_distribution || [])}
+        type={chartType}
+      />
+    </div>
   </Card>
 );
 
@@ -353,34 +365,26 @@ interface CategoryProgressBarProps {
 
 const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) => {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <IconBox
-            icon={category.icon}
-            size="sm"
-            bgColor={category.bgClass}
-            iconColor={category.textClass}
-            rounded="md"
-            hoverScale={false}
-          />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">{category.label}</span>
-              <span className="text-[11px] text-text-muted">{category.nodeCount}项</span>
-            </div>
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <IconBox
+          icon={category.icon}
+          size="sm"
+          bgColor={category.bgClass}
+          iconColor={category.textClass}
+          rounded="md"
+          hoverScale={false}
+        />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{category.label}</span>
+            <span className="text-[11px] text-text-muted">{category.nodeCount}项</span>
           </div>
         </div>
-        <span className="shrink-0 text-xs text-text-muted tabular-nums">
-          {category.completedCount}/{category.totalCount} ({category.percentage}%)
-        </span>
       </div>
-      <div className="h-5 overflow-hidden rounded-md bg-muted/80">
-        <div
-          className={cn("h-full rounded-md transition-all duration-500 ease-out", category.barClass)}
-          style={{ width: `${category.percentage}%` }}
-        />
-      </div>
+      <span className="shrink-0 text-xs font-medium text-text-muted tabular-nums">
+        {category.completedCount}/{category.totalCount} 人
+      </span>
     </div>
   );
 };

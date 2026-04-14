@@ -102,10 +102,12 @@ export const TaskManagement: React.FC = () => {
             id: "resources",
             cell: ({ row }) => {
                 const kCount = row.original.knowledge_count || 0
-                const qCount = row.original.quiz_count || 0
+                const practiceCount = row.original.practice_count || 0
+                const examCount = row.original.exam_count || 0
                 const tags = []
                 if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bgClass: 'bg-secondary-100', textClass: 'text-secondary' })
-                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bgClass: 'bg-primary-100', textClass: 'text-primary' })
+                if (practiceCount > 0) tags.push({ key: 'p', label: `${practiceCount} 测验`, bgClass: 'bg-primary-100', textClass: 'text-primary' })
+                if (examCount > 0) tags.push({ key: 'e', label: `${examCount} 考试`, bgClass: 'bg-warning-100', textClass: 'text-warning-700' })
                 return <CellTags tags={tags} />
             }
         },
@@ -272,7 +274,6 @@ export const TaskManagement: React.FC = () => {
                                     { label: '管理端', value: 'management' },
                                     { label: '非管理端', value: 'non_management' },
                                 ]}
-                                activeColor="white"
                                 className="shrink-0"
                             />
                         )}
@@ -284,7 +285,6 @@ export const TaskManagement: React.FC = () => {
                                 { label: '已结束', value: 'closed' },
                                 { label: '全部', value: 'all' },
                             ]}
-                            activeColor="white"
                             className="shrink-0"
                         />
                     </div>

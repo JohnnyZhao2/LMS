@@ -10,7 +10,7 @@ improving code reusability and testability.
 from typing import Any, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 from django.utils import timezone
 
 from apps.quizzes.models import Quiz
@@ -20,7 +20,7 @@ from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Answer, Submission
+from .models import Answer, AnswerSelection, Submission
 from .scoring import calculate_submission_obtained_score, refresh_assignment_score
 
 UNSET = object()
@@ -43,8 +43,13 @@ class SubmissionService(BaseService):
             'quiz',
             'user'
         ).prefetch_related(
+            'answers__question__question_options',
+            Prefetch(
+                'answers__answer_selections',
+                queryset=AnswerSelection.objects.select_related('question_option'),
+            ),
             'answers__question',
-            'answers__graded_by'
+            'answers__graded_by',
         )
         if user:
             qs = qs.filter(user=user)
@@ -87,7 +92,13 @@ class SubmissionService(BaseService):
         question_id: int
     ) -> Optional[Answer]:
         """按提交和题目获取答案"""
-        return Answer.objects.select_related('question').filter(
+        return Answer.objects.select_related('question').prefetch_related(
+            'question__question_options',
+            Prefetch(
+                'answer_selections',
+                queryset=AnswerSelection.objects.select_related('question_option'),
+            ),
+        ).filter(
             submission_id=submission_id,
             question_id=question_id
         ).first()
@@ -97,7 +108,13 @@ class SubmissionService(BaseService):
         return Answer.objects.filter(
             submission_id=submission_id,
             question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ).select_related('question')
+        ).select_related('question').prefetch_related(
+            'question__question_options',
+            Prefetch(
+                'answer_selections',
+                queryset=AnswerSelection.objects.select_related('question_option'),
+            ),
+        )
 
     def _create_with_answers(self, answers_data: List[dict], **submission_data) -> Submission:
         submission = Submission.objects.create(**submission_data)
@@ -109,6 +126,84 @@ class SubmissionService(BaseService):
             for answer_data in answers_data
         ])
         return submission
+
+    def _normalize_user_answer_input(self, answer: Answer, user_answer: Any) -> dict[str, Any]:
+        """将接口层答案转换为存储层结构。"""
+        question = answer.question
+
+        if question.is_subjective:
+            if user_answer in (None, ''):
+                return {'text_answer': ''}
+            if not isinstance(user_answer, str):
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='简答题答案必须是字符串',
+                )
+            return {'text_answer': user_answer}
+
+        option_key_map = question.get_option_key_map()
+        if question.question_type == 'MULTIPLE_CHOICE':
+            if user_answer in (None, ''):
+                return {'option_ids': []}
+            if not isinstance(user_answer, list):
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='多选题答案必须是列表',
+                )
+
+            normalized_keys: list[str] = []
+            for item in user_answer:
+                if not isinstance(item, str) or item not in option_key_map:
+                    raise BusinessError(
+                        code=ErrorCodes.VALIDATION_ERROR,
+                        message='多选题答案包含无效选项',
+                    )
+                if item not in normalized_keys:
+                    normalized_keys.append(item)
+
+            return {
+                'option_ids': [
+                    option_key_map[key]['id']
+                    for key in normalized_keys
+                ],
+            }
+
+        if user_answer in (None, ''):
+            return {'option_ids': []}
+        if not isinstance(user_answer, str):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='客观题答案必须是字符串',
+            )
+        if user_answer not in option_key_map:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='答案必须是有效的选项',
+            )
+        return {'option_ids': [option_key_map[user_answer]['id']]}
+
+    def _sync_answer_option_ids(self, answer: Answer, option_ids: list[int]) -> None:
+        """同步客观题所选选项。"""
+        desired_ids = set(option_ids)
+        existing_links = list(answer.answer_selections.all())
+        existing_ids = {link.question_option_id for link in existing_links}
+
+        stale_ids = existing_ids - desired_ids
+        if stale_ids:
+            answer.answer_selections.filter(question_option_id__in=stale_ids).delete()
+
+        missing_ids = desired_ids - existing_ids
+        if missing_ids:
+            AnswerSelection.objects.bulk_create(
+                [
+                    AnswerSelection(answer=answer, question_option_id=option_id)
+                    for option_id in option_ids
+                    if option_id in missing_ids
+                ]
+            )
+        prefetched_cache = getattr(answer, '_prefetched_objects_cache', None)
+        if prefetched_cache is not None:
+            prefetched_cache.pop('answer_selections', None)
 
     def get_submission_by_id(self, pk: int, user: User = None) -> Submission:
         """
@@ -170,11 +265,6 @@ class SubmissionService(BaseService):
                 message='该试卷不在此任务中'
             )
         quiz = task_quiz.quiz
-        if quiz.is_deleted:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不存在'
-            )
         return assignment, task_quiz, quiz
 
     def check_exam_constraints(
@@ -306,8 +396,22 @@ class SubmissionService(BaseService):
         self.validate_not_none(answer, '该题目不在此答卷中')
         update_fields = []
         if user_answer is not UNSET:
-            answer.user_answer = user_answer
-            update_fields.append('user_answer')
+            normalized_answer = self._normalize_user_answer_input(answer, user_answer)
+            if answer.question.is_subjective:
+                next_text_answer = normalized_answer['text_answer']
+                if answer.text_answer != next_text_answer:
+                    answer.text_answer = next_text_answer
+                    update_fields.append('text_answer')
+                if answer.answer_selections.exists():
+                    answer.answer_selections.all().delete()
+                    prefetched_cache = getattr(answer, '_prefetched_objects_cache', None)
+                    if prefetched_cache is not None:
+                        prefetched_cache.pop('answer_selections', None)
+            else:
+                if answer.text_answer:
+                    answer.text_answer = ''
+                    update_fields.append('text_answer')
+                self._sync_answer_option_ids(answer, normalized_answer['option_ids'])
         if is_marked is not UNSET:
             answer.is_marked = is_marked
             update_fields.append('is_marked')

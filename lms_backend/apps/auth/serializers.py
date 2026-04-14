@@ -33,12 +33,15 @@ class AuthSessionSerializer(serializers.Serializer):
     )
 
 
-class LoginResponseSerializer(AuthSessionSerializer):
+class TokenPairSerializer(serializers.Serializer):
+    access_token = serializers.CharField(help_text='访问令牌')
+    refresh_token = serializers.CharField(help_text='刷新令牌')
+
+
+class LoginResponseSerializer(AuthSessionSerializer, TokenPairSerializer):
     """
     Serializer for login response.
     """
-    access_token = serializers.CharField(help_text='访问令牌')
-    refresh_token = serializers.CharField(help_text='刷新令牌')
 
 
 class LogoutRequestSerializer(serializers.Serializer):
@@ -57,10 +60,8 @@ class RefreshTokenRequestSerializer(serializers.Serializer):
     )
 
 
-class RefreshTokenResponseSerializer(serializers.Serializer):
+class RefreshTokenResponseSerializer(TokenPairSerializer):
     """Serializer for token refresh response."""
-    access_token = serializers.CharField(help_text='新的访问令牌')
-    refresh_token = serializers.CharField(help_text='新的刷新令牌')
 
 
 class SwitchRoleRequestSerializer(serializers.Serializer):
@@ -72,13 +73,6 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
         required=True,
         help_text='要切换到的角色代码'
     )
-
-
-class MeResponseSerializer(AuthSessionSerializer):
-    """
-    Serializer for current user info response.
-    """
-
 
 class ResetPasswordRequestSerializer(serializers.Serializer):
     """

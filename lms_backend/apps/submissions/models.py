@@ -202,15 +202,10 @@ class Answer(TimestampMixin, models.Model):
         related_name='answers',
         verbose_name='题目'
     )
-    # 用户答案
-    # 单选题: "A"
-    # 多选题: ["A", "B"]
-    # 判断题: "TRUE" 或 "FALSE"
-    # 简答题: 答案文本
-    user_answer = models.JSONField(
-        null=True,
+    text_answer = models.TextField(
         blank=True,
-        verbose_name='用户答案'
+        default='',
+        verbose_name='文本答案'
     )
     is_marked = models.BooleanField(
         default=False,
@@ -256,6 +251,24 @@ class Answer(TimestampMixin, models.Model):
         ordering = ['submission', 'id']
     def __str__(self):
         return f"{self.submission} - {self.question}"
+
+    def _ordered_answer_selections(self):
+        cached = getattr(self, '_prefetched_objects_cache', {})
+        if 'answer_selections' in cached:
+            return sorted(
+                cached['answer_selections'],
+                key=lambda selection: (
+                    selection.question_option.sort_order,
+                    selection.id,
+                ),
+            )
+        return list(
+            self.answer_selections.select_related('question_option').order_by(
+                'question_option__sort_order',
+                'id',
+            )
+        )
+
     @property
     def is_objective(self):
         """是否为客观题答案"""
@@ -270,6 +283,27 @@ class Answer(TimestampMixin, models.Model):
         if self.is_objective:
             return True  # 客观题自动评分
         return self.graded_by is not None
+
+    @property
+    def user_answer(self):
+        if self.is_subjective:
+            text = self.text_answer.strip()
+            return text or None
+
+        option_id_key_map = self.question.get_option_id_key_map()
+        selected_keys = [
+            option_id_key_map[selection.question_option_id]
+            for selection in self._ordered_answer_selections()
+            if selection.question_option_id in option_id_key_map
+        ]
+
+        if not selected_keys:
+            return None
+
+        if self.question.question_type == 'MULTIPLE_CHOICE':
+            return selected_keys
+
+        return selected_keys[0]
 
     @property
     def max_score(self):
@@ -321,3 +355,35 @@ class Answer(TimestampMixin, models.Model):
         elif submission.status in ['SUBMITTED', 'GRADED']:
             submission.refresh_obtained_score()
             submission.refresh_assignment_score()
+
+
+class AnswerSelection(TimestampMixin, models.Model):
+    """客观题作答与题目选项的关联。"""
+
+    answer = models.ForeignKey(
+        Answer,
+        on_delete=models.CASCADE,
+        related_name='answer_selections',
+        verbose_name='答案记录',
+    )
+    question_option = models.ForeignKey(
+        'questions.QuestionOption',
+        on_delete=models.PROTECT,
+        related_name='answer_selections',
+        verbose_name='题目选项',
+    )
+
+    class Meta:
+        db_table = 'lms_answer_selection'
+        verbose_name = '答案选项'
+        verbose_name_plural = '答案选项'
+        ordering = ['answer_id', 'question_option_id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['answer', 'question_option'],
+                name='uniq_answer_question_option',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.answer_id}-{self.question_option_id}'

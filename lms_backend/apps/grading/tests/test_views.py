@@ -1,9 +1,9 @@
 import pytest
 
 from apps.grading.views import GradingAnswersView
-from apps.questions.models import Question
+from apps.questions.models import Question, QuestionOption
 from apps.quizzes.models import QuizQuestion
-from apps.submissions.models import Answer
+from apps.submissions.models import Answer, AnswerSelection
 from apps.tasks.models import TaskQuiz
 from apps.tasks.tests.factories import (
     QuizFactory,
@@ -14,6 +14,38 @@ from apps.tasks.tests.factories import (
 )
 
 
+def create_choice_question(*, created_by, content: str, correct_keys: list[str]) -> Question:
+    question = Question.objects.create(
+        content=content,
+        question_type='MULTIPLE_CHOICE',
+        score=2,
+        created_by=created_by,
+    )
+    for index, label in enumerate(['选项 A', '选项 B', '选项 C'], start=1):
+        QuestionOption.objects.create(
+            question=question,
+            sort_order=index,
+            content=label,
+            is_correct=chr(64 + index) in correct_keys,
+        )
+    return question
+
+
+def create_objective_answer(*, submission, question, selected_keys: list[str], is_correct: bool):
+    answer = Answer.objects.create(
+        submission=submission,
+        question=question,
+        is_correct=is_correct,
+    )
+    key_map = question.get_option_key_map()
+    for key in selected_keys:
+        AnswerSelection.objects.create(
+            answer=answer,
+            question_option_id=key_map[key]['id'],
+        )
+    return answer
+
+
 @pytest.mark.django_db
 def test_objective_distribution_counts_answered_students_once():
     mentor = UserFactory()
@@ -21,17 +53,10 @@ def test_objective_distribution_counts_answered_students_once():
     quiz = QuizFactory(created_by=mentor)
     TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
 
-    question = Question.objects.create(
-        content='多选题',
-        question_type='MULTIPLE_CHOICE',
-        options=[
-            {'key': 'A', 'value': '选项 A'},
-            {'key': 'B', 'value': '选项 B'},
-            {'key': 'C', 'value': '选项 C'},
-        ],
-        answer=['A', 'B'],
-        score=2,
+    question = create_choice_question(
         created_by=mentor,
+        content='多选题',
+        correct_keys=['A', 'B'],
     )
     QuizQuestion.objects.create(quiz=quiz, question=question, order=1, score=2)
 
@@ -43,9 +68,9 @@ def test_objective_distribution_counts_answered_students_once():
     submission_b = SubmissionFactory(task_assignment=assignment_b, quiz=quiz, status='SUBMITTED')
     submission_c = SubmissionFactory(task_assignment=assignment_c, quiz=quiz, status='SUBMITTED')
 
-    Answer.objects.create(submission=submission_a, question=question, user_answer=['A', 'B'], is_correct=True)
-    Answer.objects.create(submission=submission_b, question=question, user_answer=['B'], is_correct=False)
-    Answer.objects.create(submission=submission_c, question=question, user_answer=[], is_correct=False)
+    create_objective_answer(submission=submission_a, question=question, selected_keys=['A', 'B'], is_correct=True)
+    create_objective_answer(submission=submission_b, question=question, selected_keys=['B'], is_correct=False)
+    create_objective_answer(submission=submission_c, question=question, selected_keys=[], is_correct=False)
 
     payload = GradingAnswersView()._get_grading_answers(task, question.id, quiz.id)
     option_map = {option['option_key']: option for option in payload['options']}

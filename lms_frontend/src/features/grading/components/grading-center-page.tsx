@@ -17,66 +17,54 @@ export const GradingCenterPage: React.FC = () => {
   const lockedTaskTitle = searchParams.get('taskTitle')?.trim() || '';
 
   const { data: tasks, isLoading } = usePendingQuizzes();
-  const selectedTask = tasks?.find((task) => task.task_id === selectedTaskId) ?? null;
-
-  React.useEffect(() => {
+  const resolvedTaskId = React.useMemo(() => {
     if (!tasks || tasks.length === 0) {
-      setSelectedTaskId(null);
-      return;
+      return null;
     }
 
-    if (isTaskManagementEntry && preferredTaskId > 0) {
-      const nextTaskId = tasks.some((task) => task.task_id === preferredTaskId)
+    if (isTaskManagementEntry) {
+      return preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)
         ? preferredTaskId
         : null;
-
-      if (nextTaskId !== selectedTaskId) {
-        setSelectedTaskId(nextTaskId);
-      }
-      return;
     }
 
-    const hasSelectedTask =
-      selectedTaskId !== null && tasks.some((task) => task.task_id === selectedTaskId);
-    const hasPreferredTask =
-      preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId);
-
-    const nextTaskId =
-      hasSelectedTask
-        ? selectedTaskId
-        : hasPreferredTask
-          ? preferredTaskId
-          : tasks[0].task_id;
-
-    if (nextTaskId !== selectedTaskId) {
-      setSelectedTaskId(nextTaskId);
+    if (selectedTaskId !== null && tasks.some((task) => task.task_id === selectedTaskId)) {
+      return selectedTaskId;
     }
+
+    if (preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)) {
+      return preferredTaskId;
+    }
+
+    return tasks[0].task_id;
   }, [isTaskManagementEntry, preferredTaskId, selectedTaskId, tasks]);
 
-  React.useEffect(() => {
+  const selectedTask = tasks?.find((task) => task.task_id === resolvedTaskId) ?? null;
+  const resolvedQuizId = React.useMemo(() => {
     if (!selectedTask) {
-      setSelectedQuizId(null);
-      return;
+      return null;
     }
 
-    if (!selectedTask.quizzes.some((quiz) => quiz.quiz_id === selectedQuizId)) {
-      setSelectedQuizId(selectedTask.quizzes[0]?.quiz_id ?? null);
+    if (selectedQuizId !== null && selectedTask.quizzes.some((quiz) => quiz.quiz_id === selectedQuizId)) {
+      return selectedQuizId;
     }
+
+    return selectedTask.quizzes[0]?.quiz_id ?? null;
   }, [selectedQuizId, selectedTask]);
 
   React.useEffect(() => {
-    if (!selectedTaskId) {
+    if (!resolvedTaskId) {
       return;
     }
 
-    if (Number(searchParams.get('task') || 0) === selectedTaskId) {
+    if (Number(searchParams.get('task') || 0) === resolvedTaskId) {
       return;
     }
 
     const nextSearchParams = new URLSearchParams(searchParams);
-    nextSearchParams.set('task', String(selectedTaskId));
+    nextSearchParams.set('task', String(resolvedTaskId));
     setSearchParams(nextSearchParams, { replace: true });
-  }, [searchParams, selectedTaskId, setSearchParams]);
+  }, [resolvedTaskId, searchParams, setSearchParams]);
 
   const handleTaskSelect = (task: PendingTask) => {
     setSelectedTaskId(task.task_id);
@@ -94,8 +82,8 @@ export const GradingCenterPage: React.FC = () => {
   const selectorConfig: GradingCenterSelectorConfig | undefined = tasks && tasks.length > 0
     ? {
       tasks,
-      selectedTaskId,
-      selectedQuizId,
+      selectedTaskId: resolvedTaskId,
+      selectedQuizId: resolvedQuizId,
       selectedTaskTitle: selectedTask?.task_title || lockedTaskTitle || '当前任务',
       isTaskLocked: isTaskManagementEntry,
       onTaskSelect: handleTaskSelect,
@@ -126,10 +114,10 @@ export const GradingCenterPage: React.FC = () => {
       {/* Main Content */}
       <PageWorkbench>
         {isTaskManagementEntry ? (
-          selectedTask && selectedQuizId ? (
+          selectedTask && resolvedQuizId ? (
             <GradingCenterTab
               taskId={selectedTask.task_id}
-              quizId={selectedQuizId}
+              quizId={resolvedQuizId}
               selectorConfig={selectorConfig}
             />
           ) : (
@@ -149,10 +137,10 @@ export const GradingCenterPage: React.FC = () => {
               description="当前没有需要批阅的试卷"
             />
           </div>
-        ) : selectedTask && selectedQuizId ? (
+        ) : selectedTask && resolvedQuizId ? (
           <GradingCenterTab
             taskId={selectedTask.task_id}
-            quizId={selectedQuizId}
+            quizId={resolvedQuizId}
             selectorConfig={selectorConfig}
           />
         ) : (

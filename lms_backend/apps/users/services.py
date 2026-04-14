@@ -208,27 +208,22 @@ class UserManagementService(BaseService):
         # Refresh user from database
         user.refresh_from_db()
 
-        # 记录用户日志（只记录实际变更）
-        try:
-            role_name_map = dict(Role.ROLE_CHOICES)
-            added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
-            removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
-            parts = [f'被操作账号：{user.username}（{user.employee_id}）']
-            if roles_to_add:
-                parts.append(f'新增角色：{added_names}')
-            if roles_to_remove:
-                parts.append(f'移除角色：{removed_names}')
-            description = '；'.join(parts)
+        role_name_map = dict(Role.ROLE_CHOICES)
+        added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
+        removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+        parts = [f'被操作账号：{user.username}（{user.employee_id}）']
+        if roles_to_add:
+            parts.append(f'新增角色：{added_names}')
+        if roles_to_remove:
+            parts.append(f'移除角色：{removed_names}')
 
-            ActivityLogService.log_user_action(
-                user=user,
-                operator=assigned_by,
-                action='role_assigned',
-                description=description,
-                status='success'
-            )
-        except Exception:
-            pass  # 日志记录失败不影响主流程
+        ActivityLogService.log_user_action(
+            user=user,
+            operator=assigned_by,
+            action='role_assigned',
+            description='；'.join(parts),
+            status='success'
+        )
 
         return user
 
@@ -262,25 +257,20 @@ class UserManagementService(BaseService):
             user.mentor_id = mentor_id
             user.save(update_fields=['mentor'])
 
-        # 记录用户日志
-        try:
-            parts = [f'学员：{user.username}（{user.employee_id}）']
-            if mentor_id is None:
-                parts.append('导师：已解除绑定')
-            else:
-                mentor = self._get_user(mentor_id)
-                parts.append(f'导师：{mentor.username}')
-            description = '；'.join(parts)
+        parts = [f'学员：{user.username}（{user.employee_id}）']
+        if mentor_id is None:
+            parts.append('导师：已解除绑定')
+        else:
+            mentor = self._get_user(mentor_id)
+            parts.append(f'导师：{mentor.username}')
 
-            ActivityLogService.log_user_action(
-                user=user,
-                operator=self.user,
-                action='mentor_assigned',
-                description=description,
-                status='success'
-            )
-        except Exception:
-            pass  # 日志记录失败不影响主流程
+        ActivityLogService.log_user_action(
+            user=user,
+            operator=self.user,
+            action='mentor_assigned',
+            description='；'.join(parts),
+            status='success'
+        )
 
         return user
 

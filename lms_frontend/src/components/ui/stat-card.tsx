@@ -15,8 +15,6 @@ interface StatCardProps {
     size?: 'xs' | 'sm' | 'lg';
     /** Optional subtitle text */
     subtitle?: string;
-    gradient?: string;
-    delay?: string;
     className?: string;
     trend?: {
         value: string;
@@ -38,7 +36,6 @@ export const StatCard: React.FC<StatCardProps> = ({
     iconClassName, // Optional override
     size = 'lg',
     subtitle,
-    delay = '',
     className = '',
     trend,
 }) => {
@@ -58,7 +55,6 @@ export const StatCard: React.FC<StatCardProps> = ({
                 "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]",
                 "hover:border-primary/20",
                 isLarge ? "h-36" : isCompact ? "h-24" : "h-28",
-                delay,
                 className
             )}
         >

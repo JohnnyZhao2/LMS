@@ -226,7 +226,7 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
   };
 
   return (
-    <div className={`flex min-h-0 flex-1 flex-col ${hidePageHeader ? '' : 'animate-fadeIn'}`}>
+    <div className="flex min-h-0 flex-1 flex-col">
       {!hidePageHeader ? (
         <PageHeader
           title={isEdit ? '编辑抽查' : '新建抽查'}

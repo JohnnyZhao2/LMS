@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { getWorkspaceHome } from '@/app/workspace-config';
+import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/stores/auth-context';
+import { consumeOidcCallbackCode } from '@/features/auth/utils/oidc-session';
 
 export const OidcCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -10,25 +13,20 @@ export const OidcCallbackPage: React.FC = () => {
   const { loginByOidcCode } = useAuth();
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const localState = sessionStorage.getItem('lms_oidc_state');
-
-    if (!code || !state || state !== localState) {
+    const code = consumeOidcCallbackCode(searchParams);
+    if (!code) {
       toast.error('扫码登录回调参数无效');
-      navigate('/login', { replace: true });
+      navigate(ROUTES.LOGIN, { replace: true });
       return;
     }
-
-    sessionStorage.removeItem('lms_oidc_state');
 
     void (async () => {
       try {
         const currentRole = await loginByOidcCode(code);
-        navigate(`/${currentRole.toLowerCase()}/dashboard`, { replace: true });
+        navigate(getWorkspaceHome(currentRole) ?? ROUTES.LOGIN, { replace: true });
       } catch {
         toast.error('扫码登录失败');
-        navigate('/login', { replace: true });
+        navigate(ROUTES.LOGIN, { replace: true });
       }
     })();
   }, [loginByOidcCode, navigate, searchParams]);

@@ -6,10 +6,10 @@ from django.utils import timezone
 
 from apps.authorization.models import Permission, RolePermission
 from apps.knowledge.models import Knowledge
-from apps.questions.models import Question
+from apps.questions.models import Question, QuestionOption
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.spot_checks.models import SpotCheck
-from apps.submissions.models import Answer, Submission
+from apps.submissions.models import Answer, AnswerSelection, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
@@ -91,11 +91,21 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
     question = Question.objects.create(
         content='测试题目',
         question_type='SINGLE_CHOICE',
-        options=[{'key': 'A', 'value': '选项A'}, {'key': 'B', 'value': '选项B'}],
-        answer='A',
         created_by=inactive_user,
         updated_by=inactive_user,
         space_tag=space_tag,
+    )
+    option_a = QuestionOption.objects.create(
+        question=question,
+        sort_order=1,
+        content='选项A',
+        is_correct=True,
+    )
+    QuestionOption.objects.create(
+        question=question,
+        sort_order=2,
+        content='选项B',
+        is_correct=False,
     )
     quiz = Quiz.objects.create(
         title='离职用户试卷',
@@ -129,11 +139,11 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
     answer = Answer.objects.create(
         submission=submission,
         question=question,
-        user_answer='A',
         is_correct=True,
         obtained_score=1,
         graded_by=admin_user,
     )
+    AnswerSelection.objects.create(answer=answer, question_option=option_a)
 
     created_task = Task.objects.create(
         title='离职用户任务',

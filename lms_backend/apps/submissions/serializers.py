@@ -25,9 +25,11 @@ class AnswerSerializer(serializers.ModelSerializer):
     question_score = serializers.DecimalField(
         source='max_score', max_digits=5, decimal_places=2, read_only=True
     )
+    user_answer = serializers.JSONField(read_only=True)
     correct_answer = serializers.JSONField(source='question.answer', read_only=True)
     explanation = serializers.CharField(source='question.explanation', read_only=True)
     graded_by_name = serializers.CharField(source='graded_by.username', read_only=True)
+
     class Meta:
         model = Answer
         fields = [
@@ -41,6 +43,8 @@ class AnswerSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'is_correct', 'obtained_score', 'graded_by', 'graded_at', 'comment'
         ]
+
+
 class SubmissionDetailSerializer(serializers.ModelSerializer):
     """Serializer for submission detail view."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
@@ -53,6 +57,7 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)
     is_passed = serializers.ReadOnlyField()
     pass_score = serializers.ReadOnlyField()
+
     class Meta:
         model = Submission
         fields = [
@@ -63,6 +68,8 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
             'started_at', 'submitted_at', 'remaining_seconds',
             'answers', 'created_at', 'updated_at'
         ]
+
+
 class SaveAnswerSerializer(serializers.Serializer):
     """
     Serializer for saving an answer during practice/exam.
@@ -93,6 +100,8 @@ class SaveAnswerSerializer(serializers.Serializer):
             user_answer=self.validated_data.get('user_answer', UNSET),
             is_marked=self.validated_data.get('is_marked', UNSET),
         )
+
+
 class StartQuizSerializer(serializers.Serializer):
     """
     统一的开始答题 Serializer，根据 quiz_type 自动判断行为。

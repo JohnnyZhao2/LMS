@@ -10,8 +10,6 @@ export interface ActivityLogActor {
   department_code?: string | null;
 }
 
-export type ActivityLogUser = ActivityLogActor;
-
 export interface ActivityLogItem {
   id: string;
   category: ActivityLogType;
@@ -45,7 +43,7 @@ export interface ActivityLogsQuery {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
-  status?: Exclude<ActivityLogStatus, 'partial'> | ActivityLogStatus;
+  status?: ActivityLogStatus;
 }
 
 export interface ActivityLogPolicy {

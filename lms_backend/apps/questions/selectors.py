@@ -4,13 +4,23 @@ Question selectors.
 """
 from typing import Optional
 
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 
-from .models import Question
+from .models import Question, QuestionOption
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Question.objects.select_related('created_by', 'updated_by', 'space_tag').prefetch_related('tags')
+    qs = Question.objects.select_related(
+        'created_by',
+        'updated_by',
+        'space_tag',
+    ).prefetch_related(
+        Prefetch(
+            'question_options',
+            queryset=QuestionOption.objects.order_by('sort_order', 'id'),
+        ),
+        'tags',
+    )
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs

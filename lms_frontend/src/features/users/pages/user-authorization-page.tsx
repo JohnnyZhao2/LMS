@@ -166,7 +166,7 @@ export const UserAuthorizationPage: React.FC = () => {
   };
 
   return (
-    <PageFillShell ref={setPageContainerElement} className="animate-fadeIn">
+    <PageFillShell ref={setPageContainerElement}>
       <PageHeader
         title="用户授权"
         icon={<ShieldCheck className="h-5 w-5" />}

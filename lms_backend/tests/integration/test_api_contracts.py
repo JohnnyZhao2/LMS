@@ -1,13 +1,14 @@
 from datetime import datetime
+from typing import Optional
 
 import pytest
 from django.utils import timezone
 
-from apps.activity_logs.models import ContentLog, OperationLog, UserLog
+from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
-from apps.questions.models import Question
+from apps.questions.models import Question, QuestionOption
 from apps.quizzes.models import Quiz
-from apps.submissions.models import Answer, Submission
+from apps.submissions.models import Answer, AnswerSelection, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
@@ -141,19 +142,33 @@ def question_tag():
     )
 
 
+def create_single_choice_question(*, created_by, content: str, space_tag=None, **overrides):
+    option_defs = overrides.pop(
+        'option_defs',
+        [
+            {'sort_order': 1, 'content': '选项A', 'is_correct': True},
+            {'sort_order': 2, 'content': '选项B', 'is_correct': False},
+        ],
+    )
+    question = Question.objects.create(
+        content=content,
+        question_type='SINGLE_CHOICE',
+        score=1,
+        created_by=created_by,
+        updated_by=created_by,
+        space_tag=space_tag,
+        **overrides,
+    )
+    for option_def in option_defs:
+        QuestionOption.objects.create(question=question, **option_def)
+    return question
+
+
 @pytest.fixture
 def sample_question(mentor_user, space_tag):
-    question = Question.objects.create(
-        content='契约测试题目',
-        question_type='SINGLE_CHOICE',
-        options=[
-            {'key': 'A', 'value': '选项A'},
-            {'key': 'B', 'value': '选项B'},
-        ],
-        answer='A',
-        score=1,
+    question = create_single_choice_question(
         created_by=mentor_user,
-        updated_by=mentor_user,
+        content='契约测试题目',
         space_tag=space_tag,
     )
     return question
@@ -215,6 +230,33 @@ def practice_task_quiz(student_assignment, sample_quiz):
         defaults={'order': 1},
     )
     return sample_quiz
+
+
+def create_activity_log(
+    *,
+    category: str,
+    actor: Optional[User],
+    action: str,
+    summary: str,
+    description: str,
+    status: str = 'success',
+    target_type: str = '',
+    target_id: str = '',
+    target_title: str = '',
+    duration: int = 0,
+) -> ActivityLog:
+    return ActivityLog.objects.create(
+        category=category,
+        actor=actor,
+        action=action,
+        summary=summary,
+        description=description,
+        status=status,
+        target_type=target_type,
+        target_id=target_id,
+        target_title=target_title,
+        duration=duration,
+    )
 
 
 @pytest.fixture
@@ -279,17 +321,9 @@ class TestQuestionApiContracts:
         assert sample_question.id in result_ids
 
     def test_question_list_hides_history_versions(self, api_client, mentor_user, sample_question):
-        historical_version = Question.objects.create(
-            content='旧版本题目',
-            question_type='SINGLE_CHOICE',
-            options=[
-                {'key': 'A', 'value': '选项A'},
-                {'key': 'B', 'value': '选项B'},
-            ],
-            answer='A',
-            score=1,
+        historical_version = create_single_choice_question(
             created_by=mentor_user,
-            updated_by=mentor_user,
+            content='旧版本题目',
             resource_uuid=sample_question.resource_uuid,
             version_number=2,
             is_current=False,
@@ -304,32 +338,16 @@ class TestQuestionApiContracts:
         assert historical_version.id not in result_ids
 
     def test_question_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
-        current = Question.objects.create(
-            content='当前题目',
-            question_type='SINGLE_CHOICE',
-            options=[
-                {'key': 'A', 'value': '选项A'},
-                {'key': 'B', 'value': '选项B'},
-            ],
-            answer='A',
-            score=1,
+        current = create_single_choice_question(
             created_by=mentor_user,
-            updated_by=mentor_user,
+            content='当前题目',
             space_tag=space_tag,
             version_number=2,
             is_current=True,
         )
-        historical_version = Question.objects.create(
-            content='历史题目',
-            question_type='SINGLE_CHOICE',
-            options=[
-                {'key': 'A', 'value': '选项A'},
-                {'key': 'B', 'value': '选项B'},
-            ],
-            answer='A',
-            score=1,
+        historical_version = create_single_choice_question(
             created_by=mentor_user,
-            updated_by=mentor_user,
+            content='历史题目',
             space_tag=space_tag,
             resource_uuid=current.resource_uuid,
             version_number=1,
@@ -461,10 +479,11 @@ class TestQuestionApiContracts:
         )
 
         assert response.status_code == 200, response.data
-        log = ContentLog.objects.filter(
-            content_type='question',
+        log = ActivityLog.objects.filter(
+            category='content',
+            target_type='question',
             action='update',
-            operator=mentor_user,
+            actor=mentor_user,
         ).latest('id')
         updated_question_id = response.data['data']['id']
         assert f'题目#{updated_question_id}' in log.description
@@ -1667,38 +1686,62 @@ class TestGradingApiContracts:
 
 @pytest.mark.django_db
 class TestActivityLogApiContracts:
-    def test_activity_log_user_pool_response_includes_users_without_logs(
+    def test_activity_log_list_only_returns_members_with_logs(
         self,
         api_client,
         admin_user,
+        mentor_user,
         department,
     ):
-        user_without_logs = User.objects.create_user(
+        User.objects.create_user(
             employee_id='CONTRACT_NO_LOG_001',
             username='无日志用户',
             password='password123',
             department=department,
         )
+        create_activity_log(
+            category='user',
+            actor=admin_user,
+            action='login',
+            summary=f'{admin_user.username} 登录成功',
+            description=f'账号：{admin_user.username}（{admin_user.employee_id}）',
+            target_type='user',
+            target_id=str(admin_user.id),
+            target_title=admin_user.username,
+        )
+        create_activity_log(
+            category='user',
+            actor=mentor_user,
+            action='login',
+            summary=f'{mentor_user.username} 登录成功',
+            description=f'账号：{mentor_user.username}（{mentor_user.employee_id}）',
+            target_type='user',
+            target_id=str(mentor_user.id),
+            target_title=mentor_user.username,
+        )
+
         api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/users/')
+        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
 
         assert response.status_code == 200
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
-        assert isinstance(response.data['data'], list)
-        result_ids = {item['id'] for item in response.data['data']}
+        result_ids = {item['user']['id'] for item in response.data['data']['members']}
         assert admin_user.id in result_ids
-        assert user_without_logs.id in result_ids
-        target = next(item for item in response.data['data'] if item['id'] == user_without_logs.id)
-        assert target['department_name'] == department.name
+        assert mentor_user.id in result_ids
+        assert len(result_ids) == 2
 
     def test_activity_log_list_response_is_wrapped(self, api_client, admin_user, student_user):
-        log = UserLog.objects.create(
-            user=student_user,
-            operator=admin_user,
+        log = create_activity_log(
+            category='user',
+            actor=admin_user,
             action='role_assigned',
+            summary=f'{admin_user.username} 更新了用户角色',
             description=f'被操作账号：{student_user.username}（{student_user.employee_id}）；新增角色：学员',
             status='success',
+            target_type='user',
+            target_id=str(student_user.id),
+            target_title=student_user.username,
         )
         api_client.force_authenticate(user=admin_user)
         response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
@@ -1721,23 +1764,27 @@ class TestActivityLogApiContracts:
         assert student_user.username in response.data['data']['results'][0]['description']
 
     def test_activity_log_filters_member_ids_by_active_actor(self, api_client, admin_user, mentor_user):
-        ContentLog.objects.create(
-            content_type='knowledge',
-            content_id='K-1',
-            content_title='知识A',
-            operator=admin_user,
+        create_activity_log(
+            category='content',
+            actor=admin_user,
             action='create',
+            summary=f'{admin_user.username} 创建了知识文档《知识A》',
             description='管理员创建知识',
             status='success',
+            target_type='knowledge',
+            target_id='K-1',
+            target_title='知识A',
         )
-        mentor_log = ContentLog.objects.create(
-            content_type='quiz',
-            content_id='Q-1',
-            content_title='导师试卷',
-            operator=mentor_user,
+        mentor_log = create_activity_log(
+            category='content',
+            actor=mentor_user,
             action='update',
+            summary=f'{mentor_user.username} 更新了试卷《导师试卷》',
             description='导师更新试卷',
             status='success',
+            target_type='quiz',
+            target_id='Q-1',
+            target_title='导师试卷',
         )
 
         api_client.force_authenticate(user=admin_user)
@@ -1759,23 +1806,27 @@ class TestActivityLogApiContracts:
         admin_user,
         mentor_user,
     ):
-        ContentLog.objects.create(
-            content_type='knowledge',
-            content_id='K-1',
-            content_title='管理员知识',
-            operator=admin_user,
+        create_activity_log(
+            category='content',
+            actor=admin_user,
             action='create',
+            summary=f'{admin_user.username} 创建了知识文档《管理员知识》',
             description='管理员创建知识',
             status='success',
+            target_type='knowledge',
+            target_id='K-1',
+            target_title='管理员知识',
         )
-        mentor_log = ContentLog.objects.create(
-            content_type='quiz',
-            content_id='Q-1',
-            content_title='导师试卷',
-            operator=mentor_user,
+        mentor_log = create_activity_log(
+            category='content',
+            actor=mentor_user,
             action='update',
+            summary=f'{mentor_user.username} 更新了试卷《导师试卷》',
             description='导师更新试卷',
             status='success',
+            target_type='quiz',
+            target_id='Q-1',
+            target_title='导师试卷',
         )
 
         api_client.force_authenticate(user=admin_user)
@@ -1790,26 +1841,31 @@ class TestActivityLogApiContracts:
         }
 
     def test_activity_log_filters_search_date_and_status(self, api_client, admin_user):
-        old_log = OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='grading',
+        old_log = create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='manual_grade',
+            summary=f'{admin_user.username} 批改了答卷',
             description='旧的批阅记录',
             status='failed',
             duration=10,
         )
-        matched_log = OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='submission',
+        matched_log = create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='submit',
+            summary=f'{admin_user.username} 提交了《答卷》',
             description='提交答卷成功',
             status='success',
             duration=25,
+            target_type='submission',
+            target_id='S-1',
+            target_title='答卷',
         )
-        OperationLog.objects.filter(pk=old_log.pk).update(
+        ActivityLog.objects.filter(pk=old_log.pk).update(
             created_at=timezone.make_aware(datetime(2026, 3, 10, 9, 0, 0))
         )
-        OperationLog.objects.filter(pk=matched_log.pk).update(
+        ActivityLog.objects.filter(pk=matched_log.pk).update(
             created_at=timezone.make_aware(datetime(2026, 3, 25, 15, 30, 0))
         )
 
@@ -1830,26 +1886,29 @@ class TestActivityLogApiContracts:
         admin_user,
         mentor_user,
     ):
-        OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='task_management',
+        create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='create_and_assign',
+            summary=f'{admin_user.username} 创建了任务《任务 1》',
             description='创建任务 1',
             status='success',
             duration=100,
         )
-        OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='task_management',
+        create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='update_task',
+            summary=f'{admin_user.username} 更新了任务《任务 2》',
             description='更新任务 2',
             status='success',
             duration=80,
         )
-        OperationLog.objects.create(
-            operator=mentor_user,
-            operation_type='spot_check',
+        create_activity_log(
+            category='operation',
+            actor=mentor_user,
             action='create',
+            summary=f'{mentor_user.username} 创建抽查',
             description='创建抽查',
             status='success',
             duration=50,
@@ -1875,13 +1934,17 @@ class TestActivityLogApiContracts:
         assert response.data['code'] == 'PERMISSION_DENIED'
 
     def test_activity_log_delete_endpoint_removes_selected_log(self, api_client, admin_user):
-        log = OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='submission',
+        log = create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='submit',
+            summary=f'{admin_user.username} 提交了《删除测试》',
             description='用于删除测试',
             status='success',
             duration=15,
+            target_type='submission',
+            target_id='DELETE-1',
+            target_title='删除测试',
         )
 
         api_client.force_authenticate(user=admin_user)
@@ -1889,7 +1952,7 @@ class TestActivityLogApiContracts:
 
         assert response.status_code == 200
         assert response.data['code'] == 'SUCCESS'
-        assert not OperationLog.objects.filter(pk=log.id).exists()
+        assert not ActivityLog.objects.filter(pk=log.id).exists()
 
     def test_activity_log_delete_requires_view_permission(
         self,
@@ -1897,12 +1960,16 @@ class TestActivityLogApiContracts:
         admin_user,
         student_user,
     ):
-        log = UserLog.objects.create(
-            user=student_user,
-            operator=admin_user,
+        log = create_activity_log(
+            category='user',
+            actor=admin_user,
             action='login',
+            summary=f'{admin_user.username} 登录成功',
             description='用于权限校验',
             status='success',
+            target_type='user',
+            target_id=str(student_user.id),
+            target_title=student_user.username,
         )
 
         api_client.force_authenticate(user=student_user)
@@ -1912,18 +1979,23 @@ class TestActivityLogApiContracts:
         assert response.data['code'] == 'PERMISSION_DENIED'
 
     def test_activity_log_bulk_delete_endpoint_removes_selected_logs(self, api_client, admin_user):
-        first_log = OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='submission',
+        first_log = create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='submit',
+            summary=f'{admin_user.username} 提交了《批量删除测试1》',
             description='用于批量删除测试1',
             status='success',
             duration=12,
+            target_type='submission',
+            target_id='BULK-1',
+            target_title='批量删除测试1',
         )
-        second_log = OperationLog.objects.create(
-            operator=admin_user,
-            operation_type='grading',
+        second_log = create_activity_log(
+            category='operation',
+            actor=admin_user,
             action='manual_grade',
+            summary=f'{admin_user.username} 批改了答卷',
             description='用于批量删除测试2',
             status='success',
             duration=18,
@@ -1943,8 +2015,8 @@ class TestActivityLogApiContracts:
 
         assert response.status_code == 200
         assert response.data['data']['deleted_count'] == 2
-        assert not OperationLog.objects.filter(pk=first_log.id).exists()
-        assert not OperationLog.objects.filter(pk=second_log.id).exists()
+        assert not ActivityLog.objects.filter(pk=first_log.id).exists()
+        assert not ActivityLog.objects.filter(pk=second_log.id).exists()
 
     def test_activity_log_bulk_delete_requires_view_permission(
         self,
@@ -1952,12 +2024,16 @@ class TestActivityLogApiContracts:
         admin_user,
         student_user,
     ):
-        log = UserLog.objects.create(
-            user=student_user,
-            operator=admin_user,
+        log = create_activity_log(
+            category='user',
+            actor=admin_user,
             action='login',
+            summary=f'{admin_user.username} 登录成功',
             description='用于批量删除权限校验',
             status='success',
+            target_type='user',
+            target_id=str(student_user.id),
+            target_title=student_user.username,
         )
 
         api_client.force_authenticate(user=student_user)

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import {
   Eye,
@@ -24,7 +24,7 @@ import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-i
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/stores/auth-context';
-import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/knowledge';
+import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
@@ -81,6 +81,46 @@ function placeCaretAtPoint(container: HTMLElement, clientX: number, clientY: num
   fallbackRange.collapse(false);
   selection.removeAllRanges();
   selection.addRange(fallbackRange);
+}
+
+function hasSameTagIds(left: { id: number }[], right: { id: number }[]) {
+  return left.length === right.length && left.every((tag, index) => tag.id === right[index]?.id);
+}
+
+function hasSameRelatedLinks(left: RelatedLink[], right: RelatedLink[]) {
+  const normalizedLeft = sanitizeRelatedLinks(left);
+  const normalizedRight = sanitizeRelatedLinks(right);
+
+  return (
+    normalizedLeft.length === normalizedRight.length
+    && normalizedLeft.every((link, index) => (
+      link.url === normalizedRight[index]?.url
+      && (link.title ?? '') === (normalizedRight[index]?.title ?? '')
+    ))
+  );
+}
+
+function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
+  for (const link of relatedLinks) {
+    const title = link.title?.trim() ?? '';
+    const url = link.url.trim();
+
+    if (!title && !url) {
+      continue;
+    }
+
+    if (!url) {
+      return '请填写链接地址';
+    }
+
+    try {
+      new URL(url);
+    } catch {
+      return '链接地址格式不正确';
+    }
+  }
+
+  return null;
 }
 
 interface KnowledgeDetailModalProps {
@@ -146,6 +186,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
   const knowledgeContentShellRef = useRef<HTMLDivElement | null>(null);
+  const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
+  const [editingLinks, setEditingLinks] = useState(false);
 
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
@@ -182,19 +224,67 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     (editSpaceTagId !== undefined) ||
     (editRelatedLinks !== undefined)
   ));
-  const canSubmit = Boolean(hasChanges);
+  const hasContentChanges = Boolean(knowledge && editContent !== undefined && editContent !== knowledge.content);
+  const canSubmit = Boolean(hasContentChanges);
+
+  const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
+    setLocalKnowledgeSnapshot({
+      knowledgeId,
+      detail: updatedKnowledge,
+    });
+  }, [knowledgeId]);
+
+  const commitPatch = useCallback(async (
+    data: KnowledgeUpdateRequest,
+    errorMessage: string,
+    onSuccess?: () => void,
+  ) => {
+    try {
+      const updatedKnowledge = await updateKnowledge.mutateAsync({
+        id: knowledgeId,
+        data,
+      });
+      applyKnowledgeSnapshot(updatedKnowledge);
+      onSuccess?.();
+      onUpdated?.();
+      return updatedKnowledge;
+    } catch {
+      toast.error(errorMessage);
+      return null;
+    }
+  }, [applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
 
   // 标签操作
   const addTag = useCallback((tag: { id: number; name: string }) => {
     const current = editTags ?? knowledge?.tags ?? [];
     if (current.some(t => t.id === tag.id)) return;
-    setEditTags([...current, tag]);
-  }, [editTags, knowledge?.tags]);
+    const nextTags = [...current, tag];
+    setEditTags(nextTags);
+    void commitPatch(
+      { tag_ids: nextTags.map((item) => item.id) },
+      '标签保存失败',
+      () => {
+        setEditTags((currentTags) => (
+          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
+        ));
+      },
+    );
+  }, [commitPatch, editTags, knowledge?.tags]);
 
   const removeTag = useCallback((tagId: number) => {
     const current = editTags ?? knowledge?.tags ?? [];
-    setEditTags(current.filter(t => t.id !== tagId));
-  }, [editTags, knowledge?.tags]);
+    const nextTags = current.filter(t => t.id !== tagId);
+    setEditTags(nextTags);
+    void commitPatch(
+      { tag_ids: nextTags.map((item) => item.id) },
+      '标签保存失败',
+      () => {
+        setEditTags((currentTags) => (
+          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
+        ));
+      },
+    );
+  }, [commitPatch, editTags, knowledge?.tags]);
 
   const handleRelatedLinkChange = useCallback((
     index: number,
@@ -216,8 +306,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
   const handleRemoveRelatedLink = useCallback((index: number) => {
     const current = editRelatedLinks ?? knowledge?.related_links ?? [];
-    setEditRelatedLinks(current.filter((_, itemIndex) => itemIndex !== index));
-  }, [editRelatedLinks, knowledge?.related_links]);
+    const nextLinks = current.filter((_, itemIndex) => itemIndex !== index);
+    setEditRelatedLinks(nextLinks);
+    void commitPatch(
+      { related_links: sanitizeRelatedLinks(nextLinks) },
+      '相关链接保存失败',
+      () => {
+        setEditRelatedLinks((currentLinks) => (
+          currentLinks && hasSameRelatedLinks(currentLinks, nextLinks) ? undefined : currentLinks
+        ));
+      },
+    );
+  }, [commitPatch, editRelatedLinks, knowledge?.related_links]);
 
   const handleExitFocusMode = useCallback(() => {
     if (closeOnExitFocus || forceFocus) {
@@ -241,12 +341,87 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     },
   });
 
-  const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
-    setLocalKnowledgeSnapshot({
-      knowledgeId,
-      detail: updatedKnowledge,
-    });
-  }, [knowledgeId]);
+  const handleTitleBlur = useCallback(() => {
+    if (!knowledge || editTitle === undefined || editTitle === knowledge.title) {
+      return;
+    }
+
+    const nextTitle = editTitle;
+    void commitPatch(
+      { title: nextTitle },
+      '标题保存失败',
+      () => {
+        setEditTitle((currentTitle) => (
+          currentTitle === nextTitle ? undefined : currentTitle
+        ));
+      },
+    );
+  }, [commitPatch, editTitle, knowledge]);
+
+  const handleOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
+    setEditingLinks(true);
+    if (!appendEmpty) {
+      return;
+    }
+
+    setEditRelatedLinks((currentLinks) => [
+      ...(currentLinks ?? knowledge?.related_links ?? []),
+      createEmptyRelatedLink(),
+    ]);
+  }, [knowledge?.related_links]);
+
+  const handleRelatedLinksBlur = useCallback(() => {
+    if (!knowledge) {
+      setEditingLinks(false);
+      return;
+    }
+
+    if (editRelatedLinks === undefined) {
+      setEditingLinks(false);
+      return;
+    }
+
+    const nextLinks = editRelatedLinks;
+    const draftError = getRelatedLinksDraftError(nextLinks);
+    if (draftError) {
+      toast.error(draftError);
+      return;
+    }
+
+    if (hasSameRelatedLinks(nextLinks, knowledge.related_links ?? [])) {
+      setEditRelatedLinks(undefined);
+      setEditingLinks(false);
+      return;
+    }
+
+    setEditingLinks(false);
+    void commitPatch(
+      { related_links: sanitizeRelatedLinks(nextLinks) },
+      '相关链接保存失败',
+      () => {
+        setEditRelatedLinks(undefined);
+      },
+    );
+  }, [commitPatch, editRelatedLinks, knowledge]);
+
+  useEffect(() => {
+    if (!editingLinks) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && relatedLinksSectionRef.current?.contains(target)) {
+        return;
+      }
+      handleRelatedLinksBlur();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [editingLinks, handleRelatedLinksBlur]);
 
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
@@ -292,6 +467,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, []);
 
+  const handleContentBlur = useCallback(() => {
+    if (hasChanges) {
+      void handleSave();
+      return;
+    }
+
+    setEditing(false);
+  }, [handleSave, hasChanges]);
+
   const handleDelete = () => {
     onDelete?.(knowledgeId);
     onClose();
@@ -304,6 +488,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditTags(undefined);
     setEditSpaceTagId(undefined);
     setEditRelatedLinks(undefined);
+    setEditingLinks(false);
     setShowTagInput(false);
     setShowSpaceTags(false);
   }, []);
@@ -484,6 +669,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   key={editing ? 'editable' : 'readonly'}
                   value={activeContent}
                   onChange={handleContentChange}
+                  onBlur={handleContentBlur}
                   placeholder="键入 / 调出快捷指令"
                   className={`kd-content kd-content-shell${editing ? ' kd-content-editable' : ''}`}
                   minHeight={300}
@@ -501,6 +687,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   <input
                     value={activeTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                      }
+                    }}
                     placeholder="Title goes here"
                     className="kd-title-input"
                   />
@@ -555,14 +748,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 </div>
 
-                {(editing || activeRelatedLinks.length > 0) && (
-                  <div className="kd-section">
+                {(canUpdateKnowledge || activeRelatedLinks.length > 0) && (
+                  <div className="kd-section" ref={relatedLinksSectionRef}>
                     <div className="kd-links-header">
                       <p className="kd-label">相关链接</p>
-                      {canUpdateKnowledge && editing && (
+                      {canUpdateKnowledge && (
                         <button
                           type="button"
-                          onClick={handleAddRelatedLink}
+                          onClick={() => {
+                            if (editingLinks) {
+                              handleAddRelatedLink();
+                              return;
+                            }
+
+                            handleOpenRelatedLinksEditor(activeRelatedLinks.length === 0);
+                          }}
                           className="kd-links-add-btn"
                           aria-label="添加相关链接"
                         >
@@ -571,22 +771,39 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                       )}
                     </div>
 
-                    {editing && canUpdateKnowledge ? (
+                    {canUpdateKnowledge && editingLinks ? (
                       activeRelatedLinks.length > 0 ? (
                         <div className="kd-links-edit-list">
+                          <div className="kd-link-edit-head">
+                            <span className="kd-link-edit-head-label">名称</span>
+                            <span className="kd-link-edit-head-label">链接</span>
+                            <span />
+                          </div>
                           {activeRelatedLinks.map((link, index) => (
                             <div key={`detail-link-${index}`} className="kd-link-edit-row">
                               <input
                                 value={link.title ?? ''}
                                 onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
-                                placeholder=""
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    handleRelatedLinksBlur();
+                                  }
+                                }}
+                                placeholder="链接名称"
                                 aria-label="链接标题"
                                 className="kd-link-input kd-link-input-title"
                               />
                               <input
                                 value={link.url}
                                 onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
-                                placeholder=""
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    handleRelatedLinksBlur();
+                                  }
+                                }}
+                                placeholder="https://example.com"
                                 aria-label="链接地址"
                                 className="kd-link-input kd-link-input-url"
                               />
@@ -601,7 +818,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                             </div>
                           ))}
                         </div>
-                      ) : null
+                      ) : (
+                        <button
+                          type="button"
+                          className="kd-links-empty"
+                          onClick={handleAddRelatedLink}
+                        >
+                          添加相关链接
+                        </button>
+                      )
                     ) : (
                       <div className="kd-links-list">
                         {activeRelatedLinks.map((link, index) => (
@@ -618,6 +843,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                             </span>
                           </a>
                         ))}
+                        {canUpdateKnowledge && activeRelatedLinks.length === 0 && (
+                          <button
+                            type="button"
+                            className="kd-links-empty"
+                            onClick={() => handleOpenRelatedLinksEditor(true)}
+                          >
+                            添加相关链接
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -655,7 +889,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 )}
 
-                {canUpdateKnowledge && (editing || hasChanges) ? (
+                {canUpdateKnowledge && (editing || hasContentChanges) ? (
                   <div className="kd-edit-actions">
                     <button
                       type="button"
@@ -881,6 +1115,19 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           display: flex;
           flex-direction: column;
           gap: 8px;
+        }
+        .kd-link-edit-head {
+          display: grid;
+          grid-template-columns: minmax(0, 108px) minmax(0, 1fr) 28px;
+          gap: 10px;
+          align-items: end;
+        }
+        .kd-link-edit-head-label {
+          font-size: 10px;
+          line-height: 1;
+          color: #99a3af;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
         .kd-related-link {
           display: flex;

@@ -14,7 +14,6 @@ interface SegmentedControlProps {
   onChange: (value: string) => void;
   label?: string;
   className?: string;
-  activeColor?: 'white' | 'blue';
   size?: 'default' | 'sm';
   fill?: boolean;
 }
@@ -25,14 +24,9 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   label,
   className,
-  activeColor = 'white',
   size = 'default',
   fill = false,
 }) => {
-  const activeStyles = {
-    white: 'bg-white text-foreground shadow-sm',
-    blue: 'bg-white text-foreground shadow-sm',
-  };
   const sizeStyles = {
     default: {
       wrapper: 'h-10 rounded-xl p-[2px]',
@@ -53,7 +47,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
       )}
       <div
         className={cn(
-          'max-w-full items-stretch overflow-x-auto bg-black/[0.04] no-scrollbar',
+          'max-w-full items-stretch overflow-x-auto bg-black/[0.04]',
           sizeStyles[size].wrapper,
           fill ? 'flex w-full' : 'inline-flex w-fit',
         )}
@@ -67,7 +61,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               fill ? 'min-w-0 flex-1' : 'flex-none',
               sizeStyles[size].button,
               value === opt.value
-                ? activeStyles[activeColor]
+                ? 'bg-white text-foreground shadow-sm'
                 : 'text-text-muted hover:text-foreground'
             )}
           >

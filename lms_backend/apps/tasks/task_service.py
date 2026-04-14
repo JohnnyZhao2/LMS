@@ -217,18 +217,7 @@ class TaskService(BaseService):
             association_model: 关联模型（TaskKnowledge 或 TaskQuiz）
             resource_type: 资源类型（'knowledge' 或 'quiz'）
         """
-        if resource_type == 'knowledge':
-            queryset = resource_model.objects.filter(
-                id__in=resource_ids,
-                is_deleted=False,
-                is_current=True
-            )
-        else:
-            queryset = resource_model.objects.filter(
-                id__in=resource_ids,
-                is_deleted=False,
-                is_current=True
-            )
+        queryset = self._get_current_resources(resource_ids, resource_model)
         resource_map = {r.id: r for r in queryset}
         valid_ids = [resource_id for resource_id in resource_ids if resource_id in resource_map]
 
@@ -440,16 +429,22 @@ class TaskService(BaseService):
         """
         if not resource_ids:
             return True, []
-        published = resource_model.objects.filter(
-            id__in=resource_ids,
-            is_deleted=False,
-            is_current=True
-        )
+        published = TaskService._get_current_resources(resource_ids, resource_model)
         published_ids = set(published.values_list('id', flat=True))
         invalid_ids = set(resource_ids) - published_ids
         if not invalid_ids:
             return True, []
         return False, list(invalid_ids)
+
+    @staticmethod
+    def _get_current_resources(resource_ids: List[int], resource_model: Any) -> QuerySet:
+        """获取可用于任务绑定的当前资源。"""
+        if resource_model not in {Knowledge, Quiz}:
+            raise ValueError(f'Unsupported resource model: {resource_model}')
+        return resource_model.objects.filter(
+            id__in=resource_ids,
+            is_current=True,
+        )
 
     @staticmethod
     def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int]]:

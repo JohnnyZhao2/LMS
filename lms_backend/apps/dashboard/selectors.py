@@ -9,7 +9,7 @@ from django.conf import settings
 from django.db.models import Avg, Case, Count, IntegerField, Prefetch, QuerySet, Sum, Value, When
 from django.utils import timezone
 
-from apps.activity_logs.models import UserLog
+from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
 from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Submission
@@ -218,13 +218,14 @@ def get_weekly_active_users_count(user_ids: List[int]) -> int:
         tz = timezone.get_current_timezone()
         start_dt = timezone.make_aware(start_dt, tz)
         end_dt = timezone.make_aware(end_dt, tz)
-    active_user_ids = UserLog.objects.filter(
-        user_id__in=user_ids,
+    active_user_ids = ActivityLog.objects.filter(
+        category='user',
+        actor_id__in=user_ids,
         action='login',
         status='success',
         created_at__gte=start_dt,
         created_at__lt=end_dt
-    ).values_list('user_id', flat=True).distinct()
+    ).values_list('actor_id', flat=True).distinct()
     return User.objects.filter(
         id__in=active_user_ids,
         is_active=True
@@ -381,12 +382,13 @@ def get_monthly_active_user_ids(user_ids: List[int]) -> Set[int]:
     if not user_ids:
         return set()
     start_dt = get_month_start_datetime()
-    active_user_ids = UserLog.objects.filter(
-        user_id__in=user_ids,
+    active_user_ids = ActivityLog.objects.filter(
+        category='user',
+        actor_id__in=user_ids,
         action='login',
         status='success',
         created_at__gte=start_dt
-    ).values_list('user_id', flat=True).distinct()
+    ).values_list('actor_id', flat=True).distinct()
     return set(active_user_ids)
 
 

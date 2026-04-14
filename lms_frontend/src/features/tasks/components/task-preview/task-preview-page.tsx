@@ -86,7 +86,7 @@ export const TaskPreviewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageShell className="animate-pulse">
+      <PageShell>
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -111,7 +111,7 @@ export const TaskPreviewPage: React.FC = () => {
     return (
       <PageShell>
         <div className="flex h-96 flex-col items-center justify-center text-text-muted">
-          <p>无权访问任务预览</p>
+          <p>无权访问当前页面</p>
           <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
             返回任务列表
           </Button>
@@ -123,8 +123,8 @@ export const TaskPreviewPage: React.FC = () => {
   const Shell = PageFillShell;
 
   return (
-    <Shell className="animate-fadeIn">
-      <div className="flex min-w-0 flex-col gap-4 border-b border-border/60 pb-4 lg:flex-row lg:items-start lg:justify-between">
+    <Shell className="gap-4">
+      <div className="flex min-w-0 flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 items-start gap-4">
           <div className="flex items-center gap-4">
             <Button

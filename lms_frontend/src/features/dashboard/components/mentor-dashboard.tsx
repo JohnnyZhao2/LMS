@@ -51,7 +51,7 @@ export const MentorDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageShell className="animate-pulse">
+      <PageShell>
         <Skeleton className="h-20 w-1/3 rounded-lg" />
         <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -77,29 +77,23 @@ export const MentorDashboard: React.FC = () => {
             value={data?.summary?.total_students ?? 0}
             icon={Users}
             accentClassName="bg-primary"
-            gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
-            delay="stagger-delay-1"
           />
           <StatCard
             title="任务完成率"
             value={`${data?.summary?.overall_completion_rate ?? 0}%`}
             icon={CheckCircle}
             accentClassName="bg-secondary"
-            gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
-            delay="stagger-delay-2"
           />
           <StatCard
             title="平均分"
             value={data?.summary?.overall_avg_score ?? 0}
             icon={Trophy}
             accentClassName="bg-primary-500"
-            gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
-            delay="stagger-delay-3"
           />
         </div>
 
         {/* 主内容区域 */}
-        <div className="reveal-item stagger-delay-2">
+        <div>
           <Card className="h-full border border-border p-6">
             <div className="mb-5 flex items-center gap-2">
               <Layout className="w-4 h-4 text-primary-500" />
@@ -114,7 +108,6 @@ export const MentorDashboard: React.FC = () => {
                 icon={FileSearch}
                 route={`${ROUTES.SPOT_CHECKS}/create`}
                 actionColor="rose"
-                delay="stagger-delay-1"
               />
               <ActionCard
                 title="发布任务"
@@ -122,7 +115,6 @@ export const MentorDashboard: React.FC = () => {
                 icon={Send}
                 route={`${ROUTES.TASKS}/create`}
                 actionColor="indigo"
-                delay="stagger-delay-2"
               />
               <ActionCard
                 title="新建试卷"
@@ -130,7 +122,6 @@ export const MentorDashboard: React.FC = () => {
                 icon={Plus}
                 route={`${ROUTES.QUIZZES}/create`}
                 actionColor="emerald"
-                delay="stagger-delay-3"
               />
               <ActionCard
                 title="阅卷中心"
@@ -138,7 +129,6 @@ export const MentorDashboard: React.FC = () => {
                 icon={FileCheck}
                 route={ROUTES.GRADING_CENTER}
                 actionColor="amber"
-                delay="stagger-delay-4"
               />
             </div>
           </Card>

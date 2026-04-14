@@ -4,11 +4,10 @@ import { Users } from 'lucide-react';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
-import type { ActivityLogType, ActivityLogUser } from '../types';
+import type { ActivityLogActor, ActivityLogMember, ActivityLogType } from '../types';
 
 interface ActivityLogMemberListProps {
-  users: ActivityLogUser[];
-  memberActivityCountMap: Record<number, number>;
+  members: ActivityLogMember[];
   selectedMemberIds: number[];
   activeType: ActivityLogType;
   onToggleMember: (memberId: number) => void;
@@ -22,7 +21,7 @@ const TYPE_LABELS: Record<ActivityLogType, string> = {
 
 type ActivityLogDepartmentFilter = 'all' | 'room1' | 'room2';
 
-const resolveDepartmentLabel = (user: ActivityLogUser) => (
+const resolveDepartmentLabel = (user: ActivityLogActor) => (
   user.department_code === 'DEPT1'
     ? '一室'
     : user.department_code === 'DEPT2'
@@ -30,7 +29,7 @@ const resolveDepartmentLabel = (user: ActivityLogUser) => (
       : (user.department_name ?? '未分组')
 );
 
-const matchesDepartmentFilter = (user: ActivityLogUser, filter: ActivityLogDepartmentFilter) => {
+const matchesDepartmentFilter = (user: ActivityLogActor, filter: ActivityLogDepartmentFilter) => {
   if (filter === 'all') {
     return true;
   }
@@ -42,7 +41,7 @@ const matchesDepartmentFilter = (user: ActivityLogUser, filter: ActivityLogDepar
   return departmentCode === 'DEPT2';
 };
 
-const matchesSearch = (user: ActivityLogUser, keyword: string) => {
+const matchesSearch = (user: ActivityLogActor, keyword: string) => {
   if (!keyword) {
     return true;
   }
@@ -62,8 +61,7 @@ const matchesSearch = (user: ActivityLogUser, keyword: string) => {
 };
 
 export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
-  users,
-  memberActivityCountMap,
+  members,
   selectedMemberIds,
   activeType,
   onToggleMember,
@@ -73,33 +71,30 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredMembers = useMemo(
-    () => users.filter((user) => (
+    () => members.filter(({ user }) => (
       matchesDepartmentFilter(user, departmentFilter) && matchesSearch(user, normalizedSearch)
     )),
-    [departmentFilter, normalizedSearch, users],
+    [departmentFilter, members, normalizedSearch],
   );
 
-  const panelItems = filteredMembers.map((user) => {
-    const activityCount = memberActivityCountMap[user.id] ?? 0;
-    const isSelected = selectedMemberIds.includes(user.id);
+  const panelItems = filteredMembers.map(({ user, activity_count }) => {
     return {
       id: user.id,
       name: user.username,
       employeeId: user.employee_id,
       avatarKey: user.avatar_key,
       meta: `${user.employee_id} · ${resolveDepartmentLabel(user)}`,
-      count: activityCount,
-      disabled: activityCount === 0 && !isSelected,
+      count: activity_count,
     };
   });
 
-  const resolvedEmptyText = filteredMembers.length === 0
-    ? (normalizedSearch
+  const resolvedEmptyText = members.length === 0
+    ? `当前"${TYPE_LABELS[activeType]}"下没有成员记录`
+    : normalizedSearch
       ? '没有匹配的成员'
       : departmentFilter === 'all'
-      ? '暂无可筛选成员'
-      : '当前分组下没有成员')
-    : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
+        ? '暂无可筛选成员'
+        : '当前分组下没有成员';
 
   return (
     <aside className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">

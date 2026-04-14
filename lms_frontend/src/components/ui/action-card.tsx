@@ -13,7 +13,6 @@ interface ActionCardProps {
   /** Theme color for the card accent (e.g. 'indigo', 'rose') */
   actionColor?: string;
   className?: string;
-  delay?: string;
 }
 
 /**
@@ -29,7 +28,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   onClick,
   actionColor = 'indigo',
   className,
-  delay = '',
 }) => {
   const { roleNavigate } = useRoleNavigate();
 
@@ -65,8 +63,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         "cursor-pointer transition-all duration-500 ease-out",
         "hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]", // StatCard Shadow
         "hover:border-primary/20 hover:-translate-y-1",
-        delay,
-        "animate-fadeInUp",
         // Ensure nice height for content
         "h-28",
         className

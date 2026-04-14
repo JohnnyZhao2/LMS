@@ -300,6 +300,17 @@ def test_validate_assignee_ids_rejects_non_student_identity():
 
 
 @pytest.mark.django_db
+def test_validate_knowledge_ids_accepts_current_version():
+    """当前知识版本应允许绑定任务。"""
+    current = KnowledgeFactory(is_current=True)
+
+    is_valid, invalid_ids = TaskService.validate_knowledge_ids([current.id])
+
+    assert is_valid is True
+    assert invalid_ids == []
+
+
+@pytest.mark.django_db
 def test_validate_knowledge_ids_rejects_historical_version():
     """任务只允许绑定知识当前版本。"""
     current = KnowledgeFactory(version_number=2, is_current=True)

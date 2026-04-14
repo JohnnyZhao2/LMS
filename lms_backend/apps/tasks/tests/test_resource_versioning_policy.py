@@ -4,7 +4,7 @@ import pytest
 
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import KnowledgeService
-from apps.questions.models import Question
+from apps.questions.models import Question, QuestionOption
 from apps.questions.services import QuestionService
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.quizzes.services import QuizService
@@ -24,18 +24,23 @@ def _create_question(created_by, **overrides):
         'updated_by': created_by,
         'content': '原题干',
         'question_type': 'SINGLE_CHOICE',
-        'options': [
-            {'key': 'A', 'value': '选项A'},
-            {'key': 'B', 'value': '选项B'},
-        ],
-        'answer': 'A',
         'explanation': '',
         'score': 1,
         'is_current': True,
         'version_number': 1,
     }
     data.update(overrides)
-    return Question.objects.create(**data)
+    option_defs = data.pop(
+        'option_defs',
+        [
+            {'sort_order': 1, 'content': '选项A', 'is_correct': True},
+            {'sort_order': 2, 'content': '选项B', 'is_correct': False},
+        ],
+    )
+    question = Question.objects.create(**data)
+    for option_def in option_defs:
+        QuestionOption.objects.create(question=question, **option_def)
+    return question
 
 
 def _create_scope_tag(name: str, *, allow_knowledge: bool = False, allow_question: bool = False) -> Tag:
@@ -423,3 +428,16 @@ def test_quiz_update_referenced_no_change_keeps_single_version():
 
     assert updated.id == quiz.id
     assert Quiz.objects.filter(resource_uuid=quiz.resource_uuid).count() == 1
+
+
+@pytest.mark.django_db
+def test_quiz_delete_hard_deletes_record():
+    user = UserFactory()
+    quiz = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
+    service = QuizService(_build_request(user))
+    quiz_id = quiz.id
+
+    deleted = service.delete(quiz.id)
+
+    assert deleted.pk is None
+    assert Quiz.objects.filter(id=quiz_id).exists() is False

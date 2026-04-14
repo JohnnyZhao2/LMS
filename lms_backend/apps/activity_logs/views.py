@@ -1,26 +1,23 @@
 """
 Activity logs views.
-提供统一的日志查询接口与日志策略接口。
 """
 from typing import Any
 
-from django.db import transaction
-from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.engine import enforce
-from apps.users.models import User
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.responses import no_content_response, success_response
 
-from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
+from .models import ActivityLog, ActivityLogPolicy
 from .selectors import (
     apply_activity_log_filters,
     get_activity_log_queryset,
     list_activity_log_members,
+    serialize_activity_log_item,
 )
 from .serializers import (
     ActivityLogBulkDeleteSerializer,
@@ -29,15 +26,8 @@ from .serializers import (
     ActivityLogPolicySerializer,
     ActivityLogPolicyUpdateSerializer,
     ActivityLogQuerySerializer,
-    SimpleUserSerializer,
 )
 from .services import ActivityLogService
-
-LOG_MODEL_MAP = {
-    'user': UserLog,
-    'content': ContentLog,
-    'operation': OperationLog,
-}
 
 
 class ActivityLogListView(BaseAPIView):
@@ -49,7 +39,7 @@ class ActivityLogListView(BaseAPIView):
         description='获取统一日志列表，返回成员聚合与分页明细',
         parameters=[
             OpenApiParameter(name='type', type=str, description='日志类型：user|content|operation', required=True),
-            OpenApiParameter(name='member_ids', type=str, description='行为主动方 ID 列表，逗号分隔'),
+            OpenApiParameter(name='member_ids', type=str, description='行为主体 ID 列表，逗号分隔'),
             OpenApiParameter(name='search', type=str, description='搜索关键词'),
             OpenApiParameter(name='date_from', type=str, description='开始日期 YYYY-MM-DD'),
             OpenApiParameter(name='date_to', type=str, description='结束日期 YYYY-MM-DD'),
@@ -65,26 +55,19 @@ class ActivityLogListView(BaseAPIView):
         enforce('activity_log.view', request, error_message='无权查看活动日志')
 
         params = self._validated_query_params(request.query_params)
-        log_type = params['type']
-        members_queryset = apply_activity_log_filters(
-            get_activity_log_queryset(log_type),
-            log_type,
-            {
-                key: value
-                for key, value in params.items()
-                if key != 'member_ids'
-            },
+        base_queryset = get_activity_log_queryset(params['type'])
+        members = list_activity_log_members(
+            apply_activity_log_filters(
+                base_queryset,
+                {key: value for key, value in params.items() if key != 'member_ids'},
+            )
         )
-        queryset = apply_activity_log_filters(
-            get_activity_log_queryset(log_type),
-            log_type,
-            params,
-        )
-        members = list_activity_log_members(members_queryset, log_type)
+        queryset = apply_activity_log_filters(base_queryset, params)
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
-        serializer = ActivityLogItemSerializer(page, many=True, context={'log_type': log_type})
+        results = [serialize_activity_log_item(log) for log in page]
+        serializer = ActivityLogItemSerializer(results, many=True)
 
         return success_response(
             {
@@ -108,40 +91,6 @@ class ActivityLogListView(BaseAPIView):
         )
 
 
-class ActivityLogUserListView(BaseAPIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary='获取日志成员用户池',
-        description='返回可用于日志筛选的用户列表（不依赖是否有日志记录）',
-        parameters=[
-            OpenApiParameter(name='search', type=str, description='按姓名、工号或部门搜索'),
-        ],
-        responses={200: SimpleUserSerializer(many=True), 403: OpenApiResponse(description='无权限')},
-        tags=['活动日志']
-    )
-    def get(self, request):
-        enforce('activity_log.view', request, error_message='无权查看活动日志成员列表')
-
-        queryset = (
-            User.objects.filter(is_active=True)
-            .select_related('department')
-            .only('id', 'employee_id', 'username', 'avatar_key', 'department__name', 'department__code')
-        )
-
-        search = (request.query_params.get('search') or '').strip()
-        if search:
-            queryset = queryset.filter(
-                Q(username__icontains=search)
-                | Q(employee_id__icontains=search)
-                | Q(department__name__icontains=search)
-            )
-
-        queryset = queryset.order_by('department__code', 'employee_id', 'id')
-        serializer = SimpleUserSerializer(queryset, many=True)
-        return success_response(serializer.data)
-
-
 class ActivityLogPolicyView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -154,18 +103,17 @@ class ActivityLogPolicyView(BaseAPIView):
     def get(self, request):
         enforce('activity_log.policy.update', request, error_message='无权查看日志策略')
         ActivityLogService.sync_policies()
-        queryset = ActivityLogPolicy.objects.all().order_by('category', 'group', 'label')
-        serializer = ActivityLogPolicySerializer(queryset, many=True)
+        serializer = ActivityLogPolicySerializer(
+            ActivityLogPolicy.objects.all().order_by('category', 'group', 'label'),
+            many=True,
+        )
         return success_response(serializer.data)
 
     @extend_schema(
         summary='更新日志策略',
         description='更新动作级日志记录开关',
         request=ActivityLogPolicyUpdateSerializer,
-        responses={
-            200: ActivityLogPolicySerializer,
-            403: OpenApiResponse(description='无权限'),
-        },
+        responses={200: ActivityLogPolicySerializer, 403: OpenApiResponse(description='无权限')},
         tags=['活动日志']
     )
     def patch(self, request):
@@ -173,9 +121,8 @@ class ActivityLogPolicyView(BaseAPIView):
         serializer = ActivityLogPolicyUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         key = serializer.validated_data['key']
-        enabled = serializer.validated_data['enabled']
         policy = ActivityLogService._ensure_policy(key)
-        policy.enabled = enabled
+        policy.enabled = serializer.validated_data['enabled']
         policy.save(update_fields=['enabled', 'updated_at'])
         ActivityLogService.invalidate_policy_cache(key)
         return success_response(ActivityLogPolicySerializer(policy).data)
@@ -197,15 +144,14 @@ class ActivityLogItemView(BaseAPIView):
     def delete(self, request, log_item_id: str):
         enforce('activity_log.view', request, error_message='无权删除活动日志')
 
-        log_type, record_id = _parse_log_item_id(log_item_id)
-        log = LOG_MODEL_MAP[log_type].objects.filter(pk=record_id).first()
-        if log is None:
+        category, record_id = _parse_log_item_id(log_item_id)
+        deleted_count, _ = ActivityLog.objects.filter(id=record_id, category=category).delete()
+        if deleted_count == 0:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='活动日志不存在',
             )
 
-        log.delete()
         return no_content_response()
 
 
@@ -228,8 +174,21 @@ class ActivityLogBulkDeleteView(BaseAPIView):
 
         serializer = ActivityLogBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        grouped_ids = _group_log_ids(serializer.validated_data['item_ids'])
-        deleted_count = _delete_logs(grouped_ids)
+        item_refs = [_parse_log_item_id(item_id) for item_id in serializer.validated_data['item_ids']]
+        existing_refs = set(
+            ActivityLog.objects.filter(id__in=[record_id for _, record_id in item_refs])
+            .values_list('category', 'id')
+        )
+        requested_refs = set(item_refs)
+        if existing_refs != requested_refs:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='部分活动日志不存在',
+            )
+
+        deleted_count, _ = ActivityLog.objects.filter(
+            id__in=[record_id for _, record_id in requested_refs]
+        ).delete()
         return success_response({'deleted_count': deleted_count})
 
 
@@ -266,39 +225,3 @@ def _parse_log_item_id(log_item_id: str) -> tuple[str, int]:
         ) from exc
 
     return log_type, record_id
-
-
-def _group_log_ids(log_item_ids: list[str]) -> dict[str, set[int]]:
-    grouped_ids = {log_type: set() for log_type in LOG_MODEL_MAP}
-
-    for log_item_id in log_item_ids:
-        log_type, record_id = _parse_log_item_id(log_item_id)
-        grouped_ids[log_type].add(record_id)
-
-    return grouped_ids
-
-
-def _delete_logs(grouped_ids: dict[str, set[int]]) -> int:
-    querysets: list[tuple[type, set[int]]] = []
-    deleted_count = 0
-
-    for log_type, record_ids in grouped_ids.items():
-        if not record_ids:
-            continue
-
-        model = LOG_MODEL_MAP[log_type]
-        existing_ids = set(model.objects.filter(id__in=record_ids).values_list('id', flat=True))
-        if existing_ids != record_ids:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='部分活动日志不存在',
-            )
-
-        querysets.append((model, record_ids))
-        deleted_count += len(record_ids)
-
-    with transaction.atomic():
-        for model, record_ids in querysets:
-            model.objects.filter(id__in=record_ids).delete()
-
-    return deleted_count

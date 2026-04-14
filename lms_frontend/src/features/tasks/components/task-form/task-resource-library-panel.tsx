@@ -84,7 +84,6 @@ export function TaskResourceLibraryPanel({
               { label: '试卷', value: 'QUIZ' },
             ]}
             size="sm"
-            activeColor="white"
             className="w-full [&>div]:grid [&>div]:h-9 [&>div]:w-full [&>div]:grid-cols-3 [&_button]:h-full [&_button]:px-0"
           />
 

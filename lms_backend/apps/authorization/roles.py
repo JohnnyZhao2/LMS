@@ -40,15 +40,23 @@ def get_default_role(role_codes: Iterable[str]) -> str:
     return 'STUDENT'
 
 
-def get_current_role(user):
+def resolve_current_role(user, requested_role: Optional[str] = None) -> Optional[str]:
     if not user or not user.is_authenticated:
         return None
 
     if is_super_admin(user):
         return SUPER_ADMIN_ROLE
 
-    if hasattr(user, 'current_role') and user.current_role:
-        return user.current_role
+    role_codes = {role_code for role_code in getattr(user, 'role_codes', []) if role_code}
+    if requested_role and requested_role in role_codes:
+        return requested_role
 
-    role_codes = user.role_codes if hasattr(user, 'role_codes') else []
+    current_role = getattr(user, 'current_role', None)
+    if current_role and current_role in role_codes:
+        return current_role
+
     return get_default_role(role_codes)
+
+
+def get_current_role(user):
+    return resolve_current_role(user)
