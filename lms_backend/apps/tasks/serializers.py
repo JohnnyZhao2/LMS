@@ -18,6 +18,7 @@ from .models import (
     TaskKnowledge,
     TaskQuiz,
 )
+from .selectors import is_assignment_abnormal
 from .student_task_service import StudentTaskService, extract_knowledge_preview
 from .task_service import TaskService
 
@@ -107,13 +108,23 @@ class TaskListSerializer(serializers.ModelSerializer):
     """Serializer for task list view."""
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    knowledge_count = serializers.ReadOnlyField()
-    quiz_count = serializers.ReadOnlyField()
-    exam_count = serializers.ReadOnlyField()
-    practice_count = serializers.ReadOnlyField()
-    assignee_count = serializers.ReadOnlyField()
-    completed_count = serializers.ReadOnlyField()
+    knowledge_count = serializers.IntegerField(source='knowledge_count_value', read_only=True)
+    quiz_count = serializers.IntegerField(source='quiz_count_value', read_only=True)
+    exam_count = serializers.IntegerField(source='exam_count_value', read_only=True)
+    practice_count = serializers.IntegerField(source='practice_count_value', read_only=True)
+    assignee_count = serializers.IntegerField(source='assignee_count_value', read_only=True)
+    completed_count = serializers.IntegerField(source='completed_count_value', read_only=True)
+    pending_grading_count = serializers.IntegerField(source='pending_grading_count_value', read_only=True)
+    abnormal_count = serializers.SerializerMethodField()
     actions = serializers.SerializerMethodField()
+
+    def get_abnormal_count(self, obj):
+        abnormal_ids = {
+            assignment.assignee_id
+            for assignment in obj.completed_assignments_for_abnormal
+            if is_assignment_abnormal(assignment)
+        }
+        return len(abnormal_ids)
 
     def get_actions(self, obj):
         return get_task_actions(self.context.get('request'), obj)
@@ -124,7 +135,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
-            'assignee_count', 'completed_count',
+            'assignee_count', 'completed_count', 'pending_grading_count', 'abnormal_count',
             'created_by_name', 'updated_by_name', 'created_at', 'updated_at',
             'actions',
         ]

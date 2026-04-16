@@ -5,7 +5,7 @@ import {
     Eye,
     Trash2,
     Clock,
-    Layout,
+    ListTodo,
     Pencil,
     BarChart3,
     FileCheck,
@@ -22,7 +22,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
+import { ListTag } from '@/components/ui/list-tag';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
@@ -32,15 +32,174 @@ import type { TaskListItem } from '@/types/task';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 
-/**
- * 辅助组件: 趋势图标
- */
-const TrendingUp = ({ className }: { className?: string }) => (
-    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17 6H23V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-)
+type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'OVERDUE' | 'ENDED'
+type ResponsiveColumnMeta = {
+    width: string
+}
+
+const TASK_STATUS_META: Record<TaskDisplayStatus, {
+    label: string
+    tone: 'neutral' | 'secondary' | 'warning' | 'destructive' | 'primary'
+}> = {
+    IN_PROGRESS: { label: '进行中', tone: 'secondary' },
+    DUE_SOON: { label: '即将截止', tone: 'warning' },
+    OVERDUE: { label: '已逾期', tone: 'destructive' },
+    ENDED: { label: '已结束', tone: 'primary' },
+}
+
+const getTaskDisplayStatus = (task: TaskListItem): TaskDisplayStatus => {
+    const now = dayjs()
+    const deadline = dayjs(task.deadline)
+    const total = task.assignee_count
+    const completed = task.completed_count
+
+    if (total > 0 && completed >= total) {
+        return 'ENDED'
+    }
+    if (!deadline.isAfter(now)) {
+        return 'OVERDUE'
+    }
+    if (deadline.diff(now, 'hour', true) <= 48) {
+        return 'DUE_SOON'
+    }
+    return 'IN_PROGRESS'
+}
+
+const getTaskOwnerText = (task: TaskListItem) => {
+    if (task.updated_by_name && task.updated_by_name !== task.created_by_name) {
+        return `最近编辑 · ${task.updated_by_name}`
+    }
+    return `创建人 · ${task.created_by_name}`
+}
+
+const getTaskResourceTags = (task: TaskListItem) => {
+    const tags: Array<{ key: string; label: string; tone: 'secondary' | 'primary' | 'warning' }> = []
+    if (task.knowledge_count > 0) {
+        tags.push({ key: 'knowledge', label: `${task.knowledge_count}知识`, tone: 'secondary' })
+    }
+    if (task.practice_count > 0) {
+        tags.push({ key: 'practice', label: `${task.practice_count}测验`, tone: 'primary' })
+    }
+    if (task.exam_count > 0) {
+        tags.push({ key: 'exam', label: `${task.exam_count}考试`, tone: 'warning' })
+    }
+    return tags
+}
+
+const getTaskRiskTags = (task: TaskListItem) => {
+    const tags: Array<{ key: string; label: string; tone: 'warning' | 'destructive' | 'neutral' }> = []
+    if (task.pending_grading_count > 0) {
+        tags.push({ key: 'grading', label: `待批改 ${task.pending_grading_count}`, tone: 'warning' })
+    }
+    if (task.abnormal_count > 0) {
+        tags.push({ key: 'abnormal', label: `异常学员 ${task.abnormal_count}`, tone: 'destructive' })
+    }
+    if (task.assignee_count === 0) {
+        tags.push({ key: 'empty', label: '0人参与', tone: 'neutral' })
+    }
+    return tags
+}
+
+const TaskTitleCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    return (
+        <div className="flex min-w-0 items-center gap-3.5 py-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/55 text-foreground/60">
+                <ListTodo className="h-3.5 w-3.5" strokeWidth={1.8} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+                <span className="truncate font-bold text-foreground">
+                    {task.title}
+                </span>
+                <span className="truncate text-[11px] text-text-muted">
+                    {getTaskOwnerText(task)}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+const TaskResourceCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    const resourceTags = getTaskResourceTags(task)
+
+    if (resourceTags.length === 0) {
+        return <span className="text-xs text-text-muted">—</span>
+    }
+
+    return (
+        <div className="flex flex-wrap items-center gap-1">
+            {resourceTags.map((tag) => (
+                <ListTag key={tag.key} tone={tag.tone}>
+                    {tag.label}
+                </ListTag>
+            ))}
+        </div>
+    )
+}
+
+const TaskStatusCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    const status = getTaskDisplayStatus(task)
+    const meta = TASK_STATUS_META[status]
+
+    return (
+        <ListTag tone={meta.tone}>
+            {meta.label}
+        </ListTag>
+    )
+}
+
+const TaskDeadlineCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    const date = dayjs(task.deadline)
+    const status = getTaskDisplayStatus(task)
+    const isAttention = status === 'DUE_SOON' || status === 'OVERDUE'
+
+    return (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <Clock className={cn("h-3.5 w-3.5", isAttention ? "text-destructive" : "text-text-muted")} />
+            <span className={cn("text-sm font-semibold", isAttention ? "text-destructive" : "text-foreground")}>
+                {date.format("MM-DD HH:mm")}
+            </span>
+        </div>
+    )
+}
+
+const TaskProgressCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    const completed = task.completed_count
+    const total = task.assignee_count
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0
+
+    return (
+        <div className="w-full max-w-[144px] pr-4">
+            <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground">{percent}%</span>
+                <span className="text-[11px] text-text-muted">{completed}/{total}</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${percent}%` }}
+                />
+            </div>
+        </div>
+    )
+}
+
+const TaskRiskCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
+    const riskTags = getTaskRiskTags(task)
+
+    if (riskTags.length === 0) {
+        return <span className="pl-2 text-xs text-text-muted">—</span>
+    }
+
+    return (
+        <div className="flex flex-wrap items-center gap-1 pl-2">
+            {riskTags.map((tag) => (
+                <ListTag key={tag.key} tone={tag.tone}>
+                    {tag.label}
+                </ListTag>
+            ))}
+        </div>
+    )
+}
 
 export const TaskManagement: React.FC = () => {
     const { roleNavigate } = useRoleNavigate()
@@ -61,6 +220,15 @@ export const TaskManagement: React.FC = () => {
         creatorSide: canFilterCreatorSide ? creatorSideFilter : 'all',
     })
     const deleteTask = useDeleteTask()
+    const columnMeta = React.useMemo<Record<string, ResponsiveColumnMeta>>(() => ({
+        title: { width: '22%' },
+        resources: { width: '14%' },
+        status: { width: '8%' },
+        deadline: { width: '12%' },
+        progress: { width: '12%' },
+        risk: { width: '12%' },
+        actions: { width: '16%' },
+    }), [])
 
     React.useEffect(() => {
         setPage(1)
@@ -87,103 +255,56 @@ export const TaskManagement: React.FC = () => {
 
     const columns: ColumnDef<TaskListItem>[] = [
         {
-            header: "任务详情",
+            header: "任务名称",
             id: "title",
-            cell: ({ row }) => (
-                <CellWithIcon
-                    icon={<Layout className="h-5 w-5" />}
-                    title={row.original.title}
-                    subtitle={row.original.updated_by_name || row.original.created_by_name}
-                />
-            ),
+            meta: columnMeta.title,
+            cell: ({ row }) => <TaskTitleCell task={row.original} />,
         },
         {
-            header: "关联资源",
+            header: "资源组成",
             id: "resources",
-            cell: ({ row }) => {
-                const kCount = row.original.knowledge_count || 0
-                const practiceCount = row.original.practice_count || 0
-                const examCount = row.original.exam_count || 0
-                const tags = []
-                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bgClass: 'bg-secondary-100', textClass: 'text-secondary' })
-                if (practiceCount > 0) tags.push({ key: 'p', label: `${practiceCount} 测验`, bgClass: 'bg-primary-100', textClass: 'text-primary' })
-                if (examCount > 0) tags.push({ key: 'e', label: `${examCount} 考试`, bgClass: 'bg-warning-100', textClass: 'text-warning-700' })
-                return <CellTags tags={tags} />
-            }
+            meta: columnMeta.resources,
+            cell: ({ row }) => <TaskResourceCell task={row.original} />,
         },
         {
-            header: "完成进度",
-            id: "progress",
-            cell: ({ row }) => {
-                const completed = row.original.completed_count || 0
-                const total = row.original.assignee_count || 0
-                const percent = total > 0 ? Math.round((completed / total) * 100) : 0
-                return (
-                    <div className="w-32 group/progress">
-                        <div className="flex items-center justify-between mb-1.5 px-0.5">
-                            <span className="text-[10px] font-bold text-foreground">
-                                {percent}% <span className="text-text-muted font-medium ml-1">({completed}/{total})</span>
-                            </span>
-                            <TrendingUp className="w-3 h-3 text-secondary opacity-0 group-hover/progress:opacity-100 transition-opacity" />
-                        </div>
-                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-primary rounded-full"
-                                style={{ width: `${percent}%` }}
-                            />
-                        </div>
-                    </div>
-                )
-            }
+            header: "状态",
+            id: "status",
+            meta: columnMeta.status,
+            cell: ({ row }) => <TaskStatusCell task={row.original} />,
         },
         {
-            header: "截止日期",
+            header: "截止时间",
             id: "deadline",
-            cell: ({ row }) => {
-                const now = dayjs()
-                const date = dayjs(row.original.deadline)
-                const isUrgent = date.isAfter(now) && date.diff(now, 'hour') <= 48
-                return (
-                    <div className="flex flex-col min-w-[100px]">
-                        <div className="flex items-center gap-1.5">
-                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-destructive" : "text-text-muted")} />
-                            <span className={cn("text-xs font-bold", isUrgent ? "text-destructive" : "text-foreground")}>
-                                {date.format("MM-DD")}
-                            </span>
-                        </div>
-                        <span className="text-[10px] text-text-muted font-medium">{date.format("HH:mm")}</span>
-                    </div>
-                )
-            }
+            meta: columnMeta.deadline,
+            cell: ({ row }) => <TaskDeadlineCell task={row.original} />,
         },
         {
-            header: "更新时间",
-            id: "updated_at",
-            cell: ({ row }) => (
-                <div className="flex flex-col min-w-[100px]">
-                    <span className="text-sm font-bold text-foreground">
-                        {dayjs(row.original.updated_at).format("YYYY.MM.DD")}
-                    </span>
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
-                        {dayjs(row.original.updated_at).format("HH:mm:ss")}
-                    </span>
-                </div>
-            )
+            header: "参与人数进度",
+            id: "progress",
+            meta: columnMeta.progress,
+            cell: ({ row }) => <TaskProgressCell task={row.original} />,
+        },
+        {
+            header: "风险提示",
+            id: "risk",
+            meta: columnMeta.risk,
+            cell: ({ row }) => <TaskRiskCell task={row.original} />,
         },
         {
             header: "操作",
             id: "actions",
+            meta: columnMeta.actions,
             cell: ({ row }) => {
                 const canEdit = row.original.actions.update || row.original.actions.delete;
                 const canPreview = row.original.actions.analytics;
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
-                    <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="查看详情">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
+                                className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted soft-press"
                                 onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
@@ -195,7 +316,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-secondary-100 hover:text-secondary text-text-muted  soft-press"
+                                        className="h-8 w-8 rounded-md hover:bg-secondary-100 hover:text-secondary text-text-muted soft-press"
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
@@ -205,7 +326,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted  soft-press"
+                                        className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted soft-press"
                                         onClick={() => {
                                             const searchParams = new URLSearchParams({
                                                 task: String(row.original.id),
@@ -226,7 +347,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
+                                        className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted soft-press"
                                         disabled={!row.original.actions.update || isClosedByDeadline}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
@@ -238,7 +359,7 @@ export const TaskManagement: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-9 w-9 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted  soft-press"
+                                            className="h-8 w-8 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted soft-press"
                                             onClick={() => setDeleteId(row.original.id)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -316,7 +437,6 @@ export const TaskManagement: React.FC = () => {
                             <DataTable
                                 columns={columns}
                                 data={tasksData?.results || []}
-                                fillHeight
                                 pagination={{
                                     pageIndex: page - 1,
                                     pageSize: pageSize,

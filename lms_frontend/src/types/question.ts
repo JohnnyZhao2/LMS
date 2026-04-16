@@ -19,6 +19,8 @@ export interface Question {
   explanation?: string;
   space_tag?: SimpleTag;
   tags?: SimpleTag[];
+  usage_count: number;
+  is_referenced: boolean;
   is_objective?: boolean;
   is_subjective?: boolean;
   is_current: boolean;

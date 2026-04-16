@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question, QuestionOption
-from apps.quizzes.models import Quiz
+from apps.quizzes.models import Quiz, QuizQuestion
 from apps.submissions.models import Answer, AnswerSelection, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
@@ -336,6 +336,22 @@ class TestQuestionApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_question.id in result_ids
         assert historical_version.id not in result_ids
+
+    def test_question_list_includes_usage_stats(self, api_client, mentor_user, sample_question, sample_quiz):
+        QuizQuestion.objects.create(
+            quiz=sample_quiz,
+            question=sample_question,
+            order=1,
+            score=sample_question.score,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/questions/?page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        result = next(item for item in response.data['data']['results'] if item['id'] == sample_question.id)
+        assert result['usage_count'] == 1
+        assert result['is_referenced'] is True
 
     def test_question_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
         current = create_single_choice_question(
@@ -759,6 +775,63 @@ class TestTagApiContracts:
         assert sample_question.space_tag_id == knowledge_tag.id
         assert sample_knowledge.tags.count() == 0
         assert sample_question.tags.count() == 0
+
+    def test_space_tag_create_appends_to_end_by_default(self, api_client, admin_user, space_tag):
+        Tag.objects.create(
+            name='第二个空间',
+            tag_type='SPACE',
+            allow_knowledge=True,
+            allow_question=True,
+            sort_order=2,
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/',
+            {
+                'name': '第三个空间',
+                'tag_type': 'SPACE',
+                'color': '#123456',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert response.data['data']['sort_order'] == 3
+
+    def test_space_tag_reorder_updates_sort_order(self, api_client, admin_user, space_tag):
+        second_space_tag = Tag.objects.create(
+            name='第二个空间',
+            tag_type='SPACE',
+            allow_knowledge=True,
+            allow_question=True,
+            sort_order=2,
+        )
+        third_space_tag = Tag.objects.create(
+            name='第三个空间',
+            tag_type='SPACE',
+            allow_knowledge=True,
+            allow_question=True,
+            sort_order=3,
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/reorder/',
+            {
+                'ordered_tag_ids': [third_space_tag.id, space_tag.id, second_space_tag.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+
+        space_tag.refresh_from_db()
+        second_space_tag.refresh_from_db()
+        third_space_tag.refresh_from_db()
+        assert third_space_tag.sort_order == 1
+        assert space_tag.sort_order == 2
+        assert second_space_tag.sort_order == 3
 
     def test_tag_patch_can_convert_space_to_tag(
         self,
@@ -1275,6 +1348,43 @@ class TestTaskListApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert matched_task.id in result_ids
         assert len(result_ids) == 1
+
+    def test_task_list_includes_risk_counters(self, api_client, student_user, mentor_user, sample_quiz):
+        task = Task.objects.create(
+            title='风险计数任务',
+            description='用于验证任务列表风险字段',
+            deadline=timezone.now() + timezone.timedelta(days=2),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        assignment = TaskAssignment.objects.create(
+            task=task,
+            assignee=student_user,
+            status='COMPLETED',
+            completed_at=timezone.now(),
+        )
+        TaskQuiz.objects.create(
+            task=task,
+            quiz=sample_quiz,
+            order=1,
+        )
+        submission = Submission.objects.create(
+            task_assignment=assignment,
+            quiz=sample_quiz,
+            user=student_user,
+            status='GRADING',
+        )
+        submission.started_at = timezone.now() - timezone.timedelta(minutes=3)
+        submission.submitted_at = timezone.now()
+        submission.save(update_fields=['started_at', 'submitted_at'])
+
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get('/api/tasks/?search=风险计数&page=1&page_size=10')
+
+        assert response.status_code == 200
+        result = response.data['data']['results'][0]
+        assert result['pending_grading_count'] == 1
+        assert result['abnormal_count'] == 1
 
 
 @pytest.mark.django_db

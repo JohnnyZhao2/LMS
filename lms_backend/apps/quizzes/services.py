@@ -9,7 +9,8 @@
 from typing import Any, List
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Count, DecimalField, Max, Sum, Value
+from django.db.models.functions import Coalesce
 
 from apps.questions.models import Question
 from core.base_service import BaseService
@@ -84,7 +85,7 @@ class QuizService(BaseService):
         self,
         filters: dict = None,
         search: str = None,
-        ordering: str = '-created_at',
+        ordering: str = '-updated_at',
         limit: int = None,
         offset: int = None
     ) -> List[Quiz]:
@@ -101,7 +102,18 @@ class QuizService(BaseService):
         """
         qs = Quiz.objects.filter(
             is_current=True
-        ).select_related('created_by', 'updated_by')
+        ).select_related('created_by', 'updated_by').annotate(
+            question_count_value=Count('quiz_questions', distinct=True),
+            total_score_value=Coalesce(
+                Sum(
+                    'quiz_questions__score',
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+                Value(0),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
+            usage_count_value=Count('quiz_tasks__task_id', distinct=True),
+        )
         # 应用过滤条件
         if filters:
             if filters.get('created_by_id'):

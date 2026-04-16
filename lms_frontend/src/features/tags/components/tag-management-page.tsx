@@ -1,4 +1,10 @@
 import * as React from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable';
 import { GitMerge, Hash, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,11 +26,21 @@ import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/stores/auth-context';
+import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 
-import { useCreateTag, useDeleteTag, useMergeTag, useTags, useUpdateTag } from '../api/tags';
+import {
+  useCreateTag,
+  useDeleteTag,
+  useMergeTag,
+  useReorderSpaceTags,
+  useTags,
+  useUpdateTag,
+} from '../api/tags';
+import { SortableSpaceTagItem } from './sortable-space-tag-item';
+import { SpaceTagQuickCreateDialog } from './space-tag-quick-create-dialog';
 import { TagFormDialog } from './tag-form-dialog';
 
 
@@ -73,10 +89,12 @@ export const TagManagementPage: React.FC = () => {
   const [dialogMode, setDialogMode] = React.useState<'create' | 'edit'>('create');
   const [editingTag, setEditingTag] = React.useState<Tag | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isSpaceDialogOpen, setIsSpaceDialogOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Tag | null>(null);
   const [selectedTagIds, setSelectedTagIds] = React.useState<number[]>([]);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
   const [mergedName, setMergedName] = React.useState('');
+  const [spaceTags, setSpaceTags] = React.useState<Tag[]>([]);
 
   React.useEffect(() => {
     if (activeTab === 'SPACE') {
@@ -86,6 +104,7 @@ export const TagManagementPage: React.FC = () => {
 
   const { data: tags = [], isLoading } = useTags({
     tag_type: activeTab,
+    limit: 200,
     search: search || undefined,
     applicable_to: activeTab === 'TAG' && applicableScope !== 'all' ? applicableScope : undefined,
   });
@@ -93,6 +112,13 @@ export const TagManagementPage: React.FC = () => {
   const updateTag = useUpdateTag();
   const mergeTag = useMergeTag();
   const deleteTag = useDeleteTag();
+  const reorderSpaceTags = useReorderSpaceTags();
+
+  React.useEffect(() => {
+    if (activeTab === 'SPACE') {
+      setSpaceTags(tags);
+    }
+  }, [activeTab, tags]);
 
   React.useEffect(() => {
     setSelectedTagIds((current) => current.filter((id) => tags.some((tag) => tag.id === id)));
@@ -102,7 +128,6 @@ export const TagManagementPage: React.FC = () => {
     name: string;
     tag_type: TagType;
     color?: string;
-    sort_order?: number;
     allow_knowledge: boolean;
     allow_question: boolean;
   }) => {
@@ -161,6 +186,69 @@ export const TagManagementPage: React.FC = () => {
     }
   };
 
+  const handleSpaceDialogSubmit = async ({ name, color }: { name: string; color: string }) => {
+    try {
+      await createTag.mutateAsync({
+        name,
+        tag_type: 'SPACE',
+        color,
+      });
+      toast.success('space 已添加');
+      setIsSpaceDialogOpen(false);
+    } catch (error) {
+      showApiError(error, '添加失败');
+    }
+  };
+
+  const handleSpaceTagReorder = async (activeKey: string, overKey: string) => {
+    if (activeTab !== 'SPACE' || !!search || reorderSpaceTags.isPending) {
+      return;
+    }
+
+    const oldIndex = spaceTags.findIndex((tag) => tag.id === Number(activeKey));
+    const newIndex = spaceTags.findIndex((tag) => tag.id === Number(overKey));
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+      return;
+    }
+
+    const previousSpaceTags = spaceTags;
+    const nextSpaceTags = arrayMove(spaceTags, oldIndex, newIndex);
+    setSpaceTags(nextSpaceTags);
+
+    try {
+      await reorderSpaceTags.mutateAsync({
+        ordered_tag_ids: nextSpaceTags.map((tag) => tag.id),
+      });
+      toast.success('空间顺序已更新');
+    } catch (error) {
+      setSpaceTags(previousSpaceTags);
+      showApiError(error, '排序更新失败');
+    }
+  };
+
+  const visibleTags = activeTab === 'SPACE' && !search ? spaceTags : tags;
+  const canDragSpaceTags = activeTab === 'SPACE' && canUpdate && !search && visibleTags.length > 1;
+  const visibleSpaceTagIds = React.useMemo(
+    () => visibleTags.map((tag) => String(tag.id)),
+    [visibleTags],
+  );
+  const sortableSpaceTags = React.useMemo(
+    () => visibleTags.map((tag) => ({ key: String(tag.id), tag })),
+    [visibleTags],
+  );
+  const {
+    sensors,
+    draggingItem,
+    draggingItemWidth,
+    clearDragState,
+    handleDragStart,
+    handleDragEnd,
+  } = useSortableListDnd({
+    items: sortableSpaceTags,
+    onSelectItem: () => undefined,
+    onReorderItems: handleSpaceTagReorder,
+  });
+
   return (
     <PageShell>
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
@@ -210,15 +298,25 @@ export const TagManagementPage: React.FC = () => {
             </Button>
           )}
           {canCreate && (
-            <CircleButton
-              onClick={() => {
-                setDialogMode('create');
-                setEditingTag(null);
-                setIsDialogOpen(true);
-              }}
-              label={`新建${typeLabel[activeTab]}`}
-              className="shrink-0"
-            />
+            activeTab === 'SPACE' ? (
+              <CircleButton
+                onClick={() => {
+                  setIsSpaceDialogOpen(true);
+                }}
+                label="新建空间"
+                className="shrink-0"
+              />
+            ) : (
+              <CircleButton
+                onClick={() => {
+                  setDialogMode('create');
+                  setEditingTag(null);
+                  setIsDialogOpen(true);
+                }}
+                label={`新建${typeLabel[activeTab]}`}
+                className="shrink-0"
+              />
+            )
           )}
         </div>
       </div>
@@ -233,7 +331,7 @@ export const TagManagementPage: React.FC = () => {
               />
             ))}
           </div>
-        ) : tags.length === 0 ? (
+        ) : visibleTags.length === 0 ? (
           <EmptyState
             icon={activeTab === 'SPACE' ? <Shapes className="h-12 w-12" /> : <Hash className="h-12 w-12" />}
             title={`暂无${typeLabel[activeTab]}`}
@@ -241,80 +339,134 @@ export const TagManagementPage: React.FC = () => {
             className="rounded-xl border border-dashed border-border/70 bg-muted/20"
           />
         ) : (
-          <div className="flex flex-wrap content-start gap-3">
-            {tags.map((tag) => {
-              const accentColor = getTagRingColor(tag);
-              const isSelected = selectedTagIds.includes(tag.id);
+          <div className="flex flex-col gap-2.5">
+            {activeTab === 'SPACE' && canUpdate && (
+              <p className="text-[11px] font-medium text-text-muted">
+                {search ? '搜索结果不支持拖拽排序' : '拖动卡片调整顺序'}
+              </p>
+            )}
+            {activeTab === 'SPACE' ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragCancel={clearDragState}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={visibleSpaceTagIds} strategy={rectSortingStrategy}>
+                  <div className="flex flex-wrap content-start gap-3">
+                    {visibleTags.map((tag) => {
+                      const accentColor = getTagRingColor(tag);
+                      const isSelected = selectedTagIds.includes(tag.id);
 
-              return (
-                <article
-                  key={tag.id}
-                  onClick={() => handleToggleTagSelection(tag.id)}
-                  className={cn(
-                    'group relative inline-flex min-w-0 max-w-full cursor-pointer items-center gap-2.5 rounded-full border pl-3 pr-2 py-2 text-left transition-all duration-200',
-                    isSelected && 'ring-2 ring-primary/35',
-                    tag.tag_type === 'SPACE'
-                      ? 'border-transparent bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,246,237,0.98))] shadow-[0_12px_30px_rgba(15,23,42,0.08)]'
-                      : 'border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_10px_24px_rgba(15,23,42,0.06)]',
-                  )}
-                  style={accentColor ? { boxShadow: `0 12px 30px color-mix(in srgb, ${accentColor} 20%, transparent)` } : undefined}
-                >
-                  <SelectionIndicator
-                    color={accentColor}
-                    selected={isSelected}
-                    className="transition-all"
-                  />
-
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <h3 className="max-w-[14rem] truncate pr-1 text-[13px] font-semibold text-foreground">
-                      {tag.name}
-                    </h3>
-                    {tag.tag_type === 'SPACE' && tag.color && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold leading-none text-text-muted">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.color}
-                      </span>
-                    )}
-                  </div>
-
-                  {(canUpdate || canDelete) && (
-                    <div className="ml-1 flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                      {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-black/5 hover:text-foreground"
-                          onClick={(event) => {
-                            event.stopPropagation();
+                      return (
+                        <SortableSpaceTagItem
+                          key={tag.id}
+                          tag={tag}
+                          accentColor={accentColor}
+                          isSelected={isSelected}
+                          canUpdate={canUpdate}
+                          canDelete={canDelete}
+                          dragDisabled={!canDragSpaceTags || reorderSpaceTags.isPending}
+                          onClick={() => handleToggleTagSelection(tag.id)}
+                          onEdit={() => {
                             setDialogMode('edit');
                             setEditingTag(tag);
                             setIsDialogOpen(true);
                           }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(event) => {
-                            event.stopPropagation();
+                          onDelete={() => {
                             setDeleteTarget(tag);
                           }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+                <DragOverlay>
+                  {draggingItem?.tag ? (
+                    <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
+                      <SortableSpaceTagItem
+                        tag={draggingItem.tag}
+                        accentColor={getTagRingColor(draggingItem.tag)}
+                        isSelected={selectedTagIds.includes(draggingItem.tag.id)}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        dragDisabled
+                        isOverlay
+                        onClick={() => undefined}
+                        onEdit={() => undefined}
+                        onDelete={() => undefined}
+                      />
                     </div>
-                  )}
-                </article>
-              );
-            })}
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            ) : (
+              <div className="flex flex-wrap content-start gap-3">
+                {visibleTags.map((tag) => {
+                  const accentColor = getTagRingColor(tag);
+                  const isSelected = selectedTagIds.includes(tag.id);
+
+                  return (
+                    <article
+                      key={tag.id}
+                      onClick={() => handleToggleTagSelection(tag.id)}
+                      className={cn(
+                        'group relative inline-flex min-w-0 max-w-full cursor-pointer items-center gap-2.5 rounded-full border pl-3 pr-2 py-2 text-left transition-all duration-200',
+                        isSelected && 'ring-2 ring-primary/35',
+                        'border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_10px_24px_rgba(15,23,42,0.06)]',
+                      )}
+                      style={accentColor ? { boxShadow: `0 12px 30px color-mix(in srgb, ${accentColor} 20%, transparent)` } : undefined}
+                    >
+                      <SelectionIndicator
+                        color={accentColor}
+                        selected={isSelected}
+                        className="transition-all"
+                      />
+
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <h3 className="max-w-[14rem] truncate pr-1 text-[13px] font-semibold text-foreground">
+                          {tag.name}
+                        </h3>
+                      </div>
+
+                      {(canUpdate || canDelete) && (
+                        <div className="ml-1 flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                          {canUpdate && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-black/5 hover:text-foreground"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDialogMode('edit');
+                                setEditingTag(tag);
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDeleteTarget(tag);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -327,6 +479,14 @@ export const TagManagementPage: React.FC = () => {
         tag={editingTag}
         onSubmit={handleSubmit}
         isSubmitting={createTag.isPending || updateTag.isPending}
+      />
+
+      <SpaceTagQuickCreateDialog
+        open={isSpaceDialogOpen}
+        onOpenChange={setIsSpaceDialogOpen}
+        mode="create"
+        onSubmit={handleSpaceDialogSubmit}
+        isSubmitting={createTag.isPending}
       />
 
       <Dialog

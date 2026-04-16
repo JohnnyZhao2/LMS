@@ -26,6 +26,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { Pagination } from "@/components/ui/pagination"
 
+type ColumnWidthMeta = {
+  width?: string
+  minWidth?: string
+  maxWidth?: string
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
@@ -132,7 +138,26 @@ export function DataTable<TData, TValue>({
 
   const visibleRowCount = table.getRowModel().rows.length
   const targetRowCount = pagination?.pageSize
-  const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
+  const getColumnWidthMeta = React.useCallback((column: ColumnDef<TData, TValue>): ColumnWidthMeta => {
+    const meta = (column.meta ?? {}) as ColumnWidthMeta
+    return {
+      width: meta.width,
+      minWidth: meta.minWidth,
+      maxWidth: meta.maxWidth,
+    }
+  }, [])
+  const getColumnWidthStyle = React.useCallback((column: ColumnDef<TData, TValue>) => {
+    const meta = getColumnWidthMeta(column)
+    return {
+      width: meta.width ?? (column.size ? `${column.size}px` : undefined),
+      minWidth: meta.minWidth ?? (column.minSize ? `${column.minSize}px` : undefined),
+      maxWidth: meta.maxWidth ?? (column.maxSize ? `${column.maxSize}px` : undefined),
+    }
+  }, [getColumnWidthMeta])
+  const hasColumnSizes = columns.some((col) => {
+    const meta = getColumnWidthMeta(col)
+    return col.size || col.minSize || col.maxSize || meta.width || meta.minWidth || meta.maxWidth
+  })
   const hasTopBar = Boolean(header)
   const shouldStretchRows = fillHeight
     && !isLoading
@@ -240,11 +265,7 @@ export function DataTable<TData, TValue>({
                   {headerGroup.headers.map((header, index) => (
                     <TableHead
                       key={header.id}
-                      style={{
-                        width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : undefined,
-                        minWidth: header.column.columnDef.minSize ? `${header.column.columnDef.minSize}px` : undefined,
-                        maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : undefined,
-                      }}
+                      style={getColumnWidthStyle(header.column.columnDef)}
                       className={cn(
                         getColumnSpacingClass(index, headerGroup.headers.length),
                         !hasTopBar && index === 0
@@ -272,11 +293,7 @@ export function DataTable<TData, TValue>({
                     {columns.map((column, index) => (
                       <TableCell
                         key={index}
-                        style={{
-                          width: column.size ? `${column.size}px` : undefined,
-                          minWidth: column.minSize ? `${column.minSize}px` : undefined,
-                          maxWidth: column.maxSize ? `${column.maxSize}px` : undefined,
-                        }}
+                        style={getColumnWidthStyle(column)}
                         className={getColumnSpacingClass(index, columns.length)}
                       >
                         <Skeleton className="h-6 w-full opacity-50" />
@@ -296,11 +313,7 @@ export function DataTable<TData, TValue>({
                     {row.getVisibleCells().map((cell, index, cells) => (
                       <TableCell
                         key={cell.id}
-                        style={{
-                          width: cell.column.columnDef.size ? `${cell.column.columnDef.size}px` : undefined,
-                          minWidth: cell.column.columnDef.minSize ? `${cell.column.columnDef.minSize}px` : undefined,
-                          maxWidth: cell.column.columnDef.maxSize ? `${cell.column.columnDef.maxSize}px` : undefined,
-                        }}
+                        style={getColumnWidthStyle(cell.column.columnDef)}
                         className={getColumnSpacingClass(index, cells.length)}
                       >
                         {flexRender(

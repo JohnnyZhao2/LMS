@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { ListTag } from '@/components/ui/list-tag';
 
 /**
  * Cell 带图标和文字
@@ -110,8 +110,16 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
  * Cell 标签列表
  * 用于：角色、资源统计等需要多个标签的列
  */
+export interface CellTagItem {
+    key: string;
+    label: React.ReactNode;
+    textClass?: string;
+    borderClass?: string;
+    className?: string;
+}
+
 interface CellTagsProps {
-    tags: { key: string; label: string; textClass?: string; bgClass?: string; className?: string }[];
+    tags: CellTagItem[];
     className?: string;
 }
 
@@ -121,19 +129,19 @@ export const CellTags: React.FC<CellTagsProps> = ({ tags, className }) => {
     }
 
     return (
-        <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
+        <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
             {tags.map((tag) => (
-                <div
+                <ListTag
                     key={tag.key}
                     className={cn(
-                        'px-2 py-0.5 rounded-md text-[10px] font-bold border-0',
-                        tag.bgClass || 'bg-primary-100',
-                        tag.textClass || 'text-primary',
+                        'max-w-full',
+                        tag.textClass || 'text-primary-700',
+                        tag.borderClass || 'border-primary-200',
                         tag.className
                     )}
                 >
                     {tag.label}
-                </div>
+                </ListTag>
             ))}
         </div>
     );
@@ -156,15 +164,16 @@ export const CellStatus: React.FC<CellStatusProps> = ({
     inactiveText = '已停用',
     className,
 }) => (
-    <div className={cn('', className)}>
-        <Badge
+    <div className={className}>
+        <ListTag
             className={cn(
-                'border-0',
-                isActive ? 'bg-secondary-100 text-secondary' : 'bg-muted text-text-muted'
+                isActive
+                    ? 'border-secondary-200 text-secondary-700'
+                    : 'border-border/80 text-text-muted'
             )}
         >
             {isActive ? activeText : inactiveText}
-        </Badge>
+        </ListTag>
     </div>
 );
 

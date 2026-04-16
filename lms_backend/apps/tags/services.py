@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from django.core.exceptions import ValidationError
+from django.db.models import Max
 from django.db import IntegrityError, transaction
 
 from apps.authorization.engine import authorize
@@ -43,6 +44,8 @@ class TagService(BaseService):
         if tag_type == 'SPACE':
             data['allow_knowledge'] = True
             data['allow_question'] = True
+            if data.get('sort_order') is None:
+                data['sort_order'] = self._next_space_sort_order()
         else:
             self._apply_scope_defaults(data, current_module)
             data['sort_order'] = 0
@@ -104,6 +107,8 @@ class TagService(BaseService):
         tag.tag_type = next_tag_type
 
         if tag.tag_type == 'SPACE':
+            if original_tag_type != 'SPACE' and 'sort_order' not in data:
+                tag.sort_order = self._next_space_sort_order(exclude_id=tag.id)
             tag.allow_knowledge = True
             tag.allow_question = True
         elif not tag.allow_knowledge and not tag.allow_question:
@@ -125,6 +130,35 @@ class TagService(BaseService):
             else:
                 self._migrate_space_relations_to_tag(tag)
         return tag
+
+    @transaction.atomic
+    def reorder_spaces(self, ordered_tag_ids: List[int]) -> None:
+        if not ordered_tag_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='空间标签顺序不能为空',
+            )
+
+        if len(set(ordered_tag_ids)) != len(ordered_tag_ids):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='空间标签顺序不能重复',
+            )
+
+        current_space_ids = list(
+            Tag.objects.filter(tag_type='SPACE').values_list('id', flat=True)
+        )
+        if set(ordered_tag_ids) != set(current_space_ids):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='必须提交完整的空间标签顺序',
+            )
+
+        tags_by_id = Tag.objects.in_bulk(ordered_tag_ids)
+        ordered_tags = [tags_by_id[tag_id] for tag_id in ordered_tag_ids]
+        for index, tag in enumerate(ordered_tags, start=1):
+            tag.sort_order = index
+        Tag.objects.bulk_update(ordered_tags, ['sort_order'])
 
     @transaction.atomic
     def merge(self, source_tag_ids: List[int], merged_name: str) -> Tag:
@@ -352,6 +386,14 @@ class TagService(BaseService):
             code=ErrorCodes.VALIDATION_ERROR,
             message=message,
         )
+
+    @staticmethod
+    def _next_space_sort_order(*, exclude_id: Optional[int] = None) -> int:
+        queryset = Tag.objects.filter(tag_type='SPACE')
+        if exclude_id is not None:
+            queryset = queryset.exclude(id=exclude_id)
+        max_sort_order = queryset.aggregate(max_sort_order=Max('sort_order'))['max_sort_order'] or 0
+        return max_sort_order + 1
 
 
 def enforce_tag_view_permission(

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Bold,
+  Check,
   Link2,
   PaintBucket,
   Heading2,
@@ -78,51 +79,80 @@ const FLOATING_FORMAT_TOOLBAR_STYLES = `
     top: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%);
-    min-width: 220px;
-    border-radius: 16px;
-    border: 1px solid rgba(220, 226, 236, 0.92);
-    background: rgba(255, 255, 255, 0.99);
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06);
-    padding: 10px;
+    min-width: 264px;
+    border-radius: 12px;
+    border: 1px solid rgba(214, 223, 235, 0.92);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 44px rgba(148, 163, 184, 0.22), 0 4px 14px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(14px);
+    padding: 12px 14px;
   }
 
   .sqe-toolbar-link-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .sqe-toolbar-link-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .sqe-toolbar-link-input {
     flex: 1;
-    height: 36px;
-    border: 1px solid rgba(203, 213, 225, 0.9);
-    border-radius: 10px;
-    padding: 0 12px;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 13px;
+    min-width: 0;
+    height: 38px;
+    border: none;
+    border-bottom: 1px solid rgba(95, 109, 132, 0.18);
+    border-radius: 0;
+    padding: 8px 2px 6px;
+    background: transparent;
+    color: #48576a;
+    font-size: 12px;
+    font-family: inherit;
     outline: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .sqe-toolbar-link-input::placeholder {
+    color: #9aa5b3;
   }
 
   .sqe-toolbar-link-input:focus {
-    border-color: rgba(148, 163, 184, 0.95);
+    border-bottom-color: rgba(86, 109, 145, 0.42);
+    color: #334155;
   }
 
   .sqe-toolbar-link-action {
-    height: 36px;
+    width: 28px;
+    height: 28px;
     border: none;
-    border-radius: 10px;
-    padding: 0 12px;
-    background: #0f172a;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: 999px;
+    padding: 0;
+    background: transparent;
+    color: #7a8698;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
   }
 
-  .sqe-toolbar-link-clear {
-    background: #f1f5f9;
-    color: #475569;
+  .sqe-toolbar-link-action:hover {
+    background: rgba(255,255,255,0.32);
+    color: #526277;
+  }
+
+  .sqe-toolbar-link-action-confirm {
+    color: #64748b;
+  }
+
+  .sqe-toolbar-link-action-confirm:hover {
+    color: #334155;
   }
 
   .sqe-toolbar-color-grid {
@@ -177,6 +207,9 @@ export function FloatingFormatToolbar({
   const hasActiveBackground = useMemo(() => (
     BACKGROUND_COLORS.some((item) => item.value.toLowerCase() === normalizedBackground)
   ), [normalizedBackground]);
+  const normalizedLinkValue = normalizeLink(linkValue);
+  const currentLink = activeFormats.link ?? '';
+  const shouldShowApplyAction = normalizedLinkValue.length > 0 && normalizedLinkValue !== currentLink;
 
   return (
     <>
@@ -263,31 +296,36 @@ export function FloatingFormatToolbar({
                 placeholder="粘贴或输入链接"
                 className="sqe-toolbar-link-input"
               />
-              <button
-                type="button"
-                className="sqe-toolbar-link-action"
-                onClick={() => {
-                  onApplyLink(linkValue ? normalizeLink(linkValue) : null);
-                  setOpenPanel(null);
-                }}
-              >
-                应用
-              </button>
-            </div>
-            {activeFormats.link && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  className="sqe-toolbar-link-action sqe-toolbar-link-clear"
-                  onClick={() => {
-                    onApplyLink(null);
-                    setOpenPanel(null);
-                  }}
-                >
-                  清除链接
-                </button>
+              <div className="sqe-toolbar-link-actions">
+                {shouldShowApplyAction ? (
+                  <button
+                    type="button"
+                    className="sqe-toolbar-link-action sqe-toolbar-link-action-confirm"
+                    aria-label="应用链接"
+                    onClick={() => {
+                      onApplyLink(normalizedLinkValue);
+                      setOpenPanel(null);
+                    }}
+                  >
+                    <Check size={14} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="sqe-toolbar-link-action"
+                    aria-label={activeFormats.link ? '清除链接' : '关闭'}
+                    onClick={() => {
+                      if (activeFormats.link) {
+                        onApplyLink(null);
+                      }
+                      setOpenPanel(null);
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 

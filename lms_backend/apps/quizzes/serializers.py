@@ -41,16 +41,29 @@ class QuizListSerializer(serializers.ModelSerializer):
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    question_count = serializers.ReadOnlyField()
-    total_score = serializers.ReadOnlyField()
+    question_count = serializers.IntegerField(source='question_count_value', read_only=True)
+    total_score = serializers.DecimalField(source='total_score_value', max_digits=10, decimal_places=2, read_only=True)
+    usage_count = serializers.IntegerField(source='usage_count_value', read_only=True)
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
-    question_type_counts = serializers.DictField(child=serializers.IntegerField(), read_only=True)
+    duration = serializers.SerializerMethodField()
+    pass_score = serializers.SerializerMethodField()
+
+    def get_duration(self, obj):
+        if obj.quiz_type != 'EXAM':
+            return None
+        return obj.duration
+
+    def get_pass_score(self, obj):
+        if obj.quiz_type != 'EXAM' or obj.pass_score is None:
+            return None
+        return str(obj.pass_score)
+
     class Meta:
         model = Quiz
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'question_count', 'total_score',
-            'question_type_counts',
+            'usage_count',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
             'created_by_name', 'updated_by_name',
@@ -68,6 +81,19 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     total_score = serializers.ReadOnlyField()
     questions = serializers.SerializerMethodField()
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
+    duration = serializers.SerializerMethodField()
+    pass_score = serializers.SerializerMethodField()
+
+    def get_duration(self, obj):
+        if obj.quiz_type != 'EXAM':
+            return None
+        return obj.duration
+
+    def get_pass_score(self, obj):
+        if obj.quiz_type != 'EXAM' or obj.pass_score is None:
+            return None
+        return str(obj.pass_score)
+
     class Meta:
         model = Quiz
         fields = [
@@ -91,6 +117,8 @@ class QuizQuestionBindingValidationMixin:
     def _validate_exam_fields(self, attrs):
         quiz_type = attrs.get('quiz_type', self.instance.quiz_type if self.instance else 'PRACTICE')
         if quiz_type != 'EXAM':
+            attrs['duration'] = None
+            attrs['pass_score'] = None
             return attrs
 
         duration = attrs.get('duration', getattr(self.instance, 'duration', None))

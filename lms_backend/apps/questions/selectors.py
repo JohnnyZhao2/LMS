@@ -4,12 +4,14 @@ Question selectors.
 """
 from typing import Optional
 
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Count, Exists, OuterRef, Prefetch, QuerySet
 
 from .models import Question, QuestionOption
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:
+    from apps.quizzes.models import QuizQuestion
+
     qs = Question.objects.select_related(
         'created_by',
         'updated_by',
@@ -20,6 +22,11 @@ def question_base_queryset(include_deleted: bool = False) -> QuerySet:
             queryset=QuestionOption.objects.order_by('sort_order', 'id'),
         ),
         'tags',
+    ).annotate(
+        usage_count=Count('question_quizzes', distinct=True),
+        is_referenced=Exists(
+            QuizQuestion.objects.filter(question_id=OuterRef('pk'))
+        ),
     )
     if not include_deleted:
         qs = qs.filter(is_deleted=False)

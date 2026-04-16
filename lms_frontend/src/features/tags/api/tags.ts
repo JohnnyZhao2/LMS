@@ -29,6 +29,10 @@ interface MergeTagPayload {
   merged_name: string;
 }
 
+interface ReorderSpaceTagsPayload {
+  ordered_tag_ids: number[];
+}
+
 const invalidateTagRelatedQueries = (
   queryClient: ReturnType<typeof useQueryClient>,
 ) => {
@@ -104,6 +108,18 @@ export const useDeleteTag = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/tags/${id}/`),
+    onSuccess: () => {
+      invalidateTagRelatedQueries(queryClient);
+    },
+  });
+};
+
+export const useReorderSpaceTags = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: ReorderSpaceTagsPayload) =>
+      apiClient.post('/tags/reorder/', data),
     onSuccess: () => {
       invalidateTagRelatedQueries(queryClient);
     },

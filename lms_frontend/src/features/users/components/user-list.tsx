@@ -5,7 +5,6 @@
 import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
-  MoreVertical,
   Pencil,
   Lock,
   Ban,
@@ -29,7 +28,7 @@ import { Button } from "@/components/ui/button"
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
@@ -224,7 +223,8 @@ export const UserList: React.FC = () => {
           tags={row.original.roles.map((role: Role) => ({
             key: role.code,
             label: role.name,
-            ...getRoleColor(role.code),
+            textClass: getRoleColor(role.code).textClass,
+            borderClass: getRoleColor(role.code).borderClass,
           }))}
         />
       ),
@@ -261,84 +261,83 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
-      size: 80,
+      size: 220,
       cell: ({ row }) => (
-        <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted">
-                <MoreVertical className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Tooltip title="编辑资料">
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={!canUpdateUser}
+              className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+              onClick={() => {
+                if (!canUpdateUser) return
+                setEditingUserId(row.original.id)
+                setFormModalOpen(true)
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+          {canManageUserAuthorization && !row.original.is_superuser && (
+            <Tooltip title="权限配置">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+                onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}
+              >
+                <ShieldCheck className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border border-border">
-              <DropdownMenuLabel className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-3 py-2">
-                账号控制台
-              </DropdownMenuLabel>
-
-              <DropdownMenuItem
-                disabled={!canUpdateUser}
-                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
+            </Tooltip>
+          )}
+          {canResetPassword && (
+            <Tooltip title="重置密码">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md text-text-muted hover:bg-muted hover:text-foreground"
+                onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
+              >
+                <Lock className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
+          {canManageUserAccount && (
+            <Tooltip title={row.original.is_active ? "停用账号" : "启用账号"}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 rounded-md text-text-muted",
+                  row.original.is_active
+                    ? "hover:bg-destructive-50 hover:text-destructive"
+                    : "hover:bg-secondary-50 hover:text-secondary",
+                )}
+                onClick={() => handleToggleActive(row.original)}
+              >
+                {row.original.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+              </Button>
+            </Tooltip>
+          )}
+          {canDeleteUser && (
+            <Tooltip title="彻底删除">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md text-text-muted hover:bg-destructive-50 hover:text-destructive"
                 onClick={() => {
-                  if (!canUpdateUser) return
-                  setEditingUserId(row.original.id)
-                  setFormModalOpen(true)
+                  if (row.original.is_active) {
+                    toast.error("请先停用账号，再执行彻底删除")
+                    return
+                  }
+                  setDeleteUserDialog({ open: true, user: row.original })
                 }}
               >
-                <Pencil className="mr-2 h-4 w-4" /> 编辑资料
-              </DropdownMenuItem>
-              {canManageUserAuthorization && !row.original.is_superuser && (
-                <DropdownMenuItem
-                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
-                  onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" /> 权限配置
-                </DropdownMenuItem>
-              )}
-              {canResetPassword && (
-                <DropdownMenuItem
-                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
-                  onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
-                >
-                  <Lock className="mr-2 h-4 w-4" /> 重置密码
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuSeparator className="my-1" />
-
-              {canManageUserAccount && (
-                <DropdownMenuItem
-                  className={cn(
-                    "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
-                    row.original.is_active
-                      ? "text-destructive focus:bg-destructive-100"
-                      : "text-secondary focus:bg-secondary-100"
-                  )}
-                  onClick={() => handleToggleActive(row.original)}
-                >
-                  {row.original.is_active ? (
-                    <><Ban className="mr-2 h-4 w-4" /> 停用账号</>
-                  ) : (
-                    <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
-                  )}
-                </DropdownMenuItem>
-              )}
-
-              {canDeleteUser && (
-                <DropdownMenuItem
-                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-destructive focus:bg-destructive-100"
-                  onClick={() => {
-                    if (row.original.is_active) {
-                      toast.error("请先停用账号，再执行彻底删除")
-                      return
-                    }
-                    setDeleteUserDialog({ open: true, user: row.original })
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> 彻底删除
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
         </div>
       ),
     },

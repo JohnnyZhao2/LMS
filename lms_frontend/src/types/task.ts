@@ -192,6 +192,8 @@ export interface TaskListItem {
   assignee_count: number;
   /** 已完成的学员数量 */
   completed_count: number;
+  pending_grading_count: number;
+  abnormal_count: number;
   created_by_name: string;
   updated_by_name?: string;
   created_at: string;

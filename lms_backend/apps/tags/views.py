@@ -106,6 +106,13 @@ class TagMergeSerializer(serializers.Serializer):
     merged_name = serializers.CharField(max_length=100)
 
 
+class TagReorderSerializer(serializers.Serializer):
+    ordered_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )
+
+
 class TagMergeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -125,3 +132,21 @@ class TagMergeView(APIView):
             serializer.validated_data['merged_name'],
         )
         return success_response(TagSerializer(tag).data)
+
+
+class TagReorderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='重排空间标签',
+        request=TagReorderSerializer,
+        responses={200: OpenApiResponse(description='重排成功')},
+        tags=['标签管理'],
+    )
+    def post(self, request):
+        enforce('tag.update', request, error_message='无权调整空间标签顺序')
+        serializer = TagReorderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service = TagService(request)
+        service.reorder_spaces(serializer.validated_data['ordered_tag_ids'])
+        return success_response()

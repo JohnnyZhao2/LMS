@@ -155,6 +155,8 @@ export const QuizForm: React.FC = () => {
       explanation: quizQuestion.explanation ?? '',
       space_tag: quizQuestion.space_tag,
       tags: quizQuestion.tags ?? [],
+      usage_count: 0,
+      is_referenced: false,
       created_at: '',
       updated_at: '',
     };
@@ -296,6 +298,14 @@ export const QuizForm: React.FC = () => {
     };
   }, [isEdit, loadQuizQuestionItem, quizData, quizDraft, searchParams]);
 
+  useEffect(() => {
+    if (quizType !== 'PRACTICE') {
+      return;
+    }
+    setDuration(undefined);
+    setPassScore(undefined);
+  }, [quizType]);
+
   const filteredQuestionsData = useMemo(() => {
     if (!questionsData) return undefined;
     const usedUuids = new Set(items.filter((item) => item.resourceUuid).map((item) => item.resourceUuid));
@@ -431,8 +441,8 @@ export const QuizForm: React.FC = () => {
       const data: QuizCreateRequest = {
         title,
         quiz_type: quizType,
-        duration: quizType === 'EXAM' ? duration : undefined,
-        pass_score: quizType === 'EXAM' ? passScore : undefined,
+        duration: quizType === 'EXAM' ? duration : null,
+        pass_score: quizType === 'EXAM' ? passScore : null,
         question_versions: savedItems.map((item) => ({
           question_id: item.questionId!,
           score: normalizeQuestionScore(item.score),

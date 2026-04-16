@@ -4,7 +4,7 @@ Task selectors.
 """
 from typing import Any, Optional
 
-from django.db.models import Count, Prefetch, QuerySet, Sum
+from django.db.models import Count, Prefetch, Q, QuerySet, Sum
 from django.utils import timezone
 
 from apps.knowledge.selectors import get_knowledge_queryset
@@ -55,6 +55,52 @@ def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
 
 def task_base_queryset(include_deleted: bool = False) -> QuerySet:
     qs = Task.objects.select_related('created_by', 'updated_by')
+    if not include_deleted:
+        qs = qs.filter(is_deleted=False)
+    return qs
+
+
+def task_list_queryset(include_deleted: bool = False) -> QuerySet:
+    completed_assignments_prefetch = Prefetch(
+        'assignments',
+        queryset=TaskAssignment.objects.filter(
+            status='COMPLETED',
+        ).prefetch_related(
+            'knowledge_progress',
+            Prefetch(
+                'submissions',
+                queryset=Submission.objects.select_related('quiz').filter(
+                    status__in=ANALYTICS_SUBMISSION_STATUSES,
+                ),
+            ),
+        ),
+        to_attr='completed_assignments_for_abnormal',
+    )
+    qs = Task.objects.select_related('created_by', 'updated_by').annotate(
+        knowledge_count_value=Count('task_knowledge', distinct=True),
+        quiz_count_value=Count('task_quizzes', distinct=True),
+        exam_count_value=Count(
+            'task_quizzes',
+            filter=Q(task_quizzes__quiz__quiz_type='EXAM'),
+            distinct=True,
+        ),
+        practice_count_value=Count(
+            'task_quizzes',
+            filter=Q(task_quizzes__quiz__quiz_type='PRACTICE'),
+            distinct=True,
+        ),
+        assignee_count_value=Count('assignments', distinct=True),
+        completed_count_value=Count(
+            'assignments',
+            filter=Q(assignments__status='COMPLETED'),
+            distinct=True,
+        ),
+        pending_grading_count_value=Count(
+            'assignments__submissions',
+            filter=Q(assignments__submissions__status='GRADING'),
+            distinct=True,
+        ),
+    ).prefetch_related(completed_assignments_prefetch)
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs

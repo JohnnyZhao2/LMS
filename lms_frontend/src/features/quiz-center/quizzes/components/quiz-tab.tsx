@@ -1,12 +1,10 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, Layout } from 'lucide-react';
+import { Eye, Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
-import { getQuestionTypeLabel } from '@/features/questions/constants';
 import { ROUTES } from '@/config/routes';
-import type { QuestionType } from '@/types/common';
 import type { QuizListItem } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
@@ -54,111 +52,104 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
   const columns: ColumnDef<QuizListItem>[] = [
     {
       id: 'title',
-      header: '试卷信息',
-      minSize: 500,
+      header: '试卷名称',
+      minSize: 280,
+      meta: {
+        width: '28%',
+        minWidth: '280px',
+      },
       cell: ({ row }) => (
         <CellWithIcon
-          icon={<Layout className="w-5 h-5" />}
+          icon={<FileCheck className="h-3.5 w-3.5" strokeWidth={1.8} />}
           title={row.original.title}
-          subtitle={row.original.updated_by_name || row.original.created_by_name}
-          iconBgClass="bg-primary-50"
-          iconColorClass="text-primary-600"
+          iconBgClass="bg-muted/55"
+          iconColorClass="text-foreground/60"
         />
       )
     },
     {
       id: 'quiz_type',
       header: '类型',
-      size: 120,
+      minSize: 96,
+      meta: {
+        width: '10%',
+        minWidth: '96px',
+      },
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         return (
-          <div className="flex items-center gap-2">
-            <CellTags
-              tags={[{
-                key: row.original.quiz_type,
-                label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
-                bgClass: isExam ? 'bg-destructive-100' : 'bg-primary-50',
-                textClass: isExam ? 'text-destructive' : 'text-primary-600',
-              }]}
-            />
-            {isExam && row.original.duration && (
-              <span className="text-[10px] font-medium text-text-muted whitespace-nowrap">
-                {row.original.duration}min / {row.original.pass_score}分
-              </span>
-            )}
-          </div>
+          <CellTags
+            tags={[{
+              key: row.original.quiz_type,
+              label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
+              textClass: isExam ? 'text-destructive-700' : 'text-primary-700',
+              borderClass: isExam ? 'border-destructive-200' : 'border-primary-200',
+            }]}
+          />
         );
       }
     },
     {
       id: 'metrics',
-      header: '构成指标',
-      size: 200,
+      header: '核心指标',
+      minSize: 260,
+      meta: {
+        width: '28%',
+        minWidth: '260px',
+      },
       cell: ({ row }) => {
-        const hasTypes = row.original.question_type_counts && Object.keys(row.original.question_type_counts).length > 0;
-
+        const isExam = row.original.quiz_type === 'EXAM';
         return (
-          <div className="flex items-center gap-3">
-            {/* Primary Stats */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted border border-border">
-                <span className="text-[10px] text-text-muted font-medium">题量</span>
-                <span className="text-sm font-bold text-foreground">
-                  {row.original.question_count}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-50/50 border border-primary-100/50">
-                <span className="text-[10px] text-primary-500 font-medium">总分</span>
-                <span className="text-sm font-bold text-primary-700">
-                  {row.original.total_score}
-                </span>
-              </div>
-            </div>
-
-            {/* Type Breakdown */}
-            {hasTypes && (
-              <>
-                <div className="h-3 w-px bg-muted shrink-0" />
-                <div className="flex items-center gap-2">
-                  {Object.entries(row.original.question_type_counts!).map(([type, count]) => {
-                    let label = '单';
-                    let colorClass = "text-text-muted bg-muted";
-
-                    if (type === 'MULTIPLE_CHOICE') { label = '多'; colorClass = "text-secondary-600 bg-secondary-50"; }
-                    if (type === 'TRUE_FALSE') { label = '判'; colorClass = "text-warning-600 bg-warning-50"; }
-                    if (type === 'SHORT_ANSWER') { label = '简'; colorClass = "text-slate-600 bg-slate-100"; }
-
-                    return (
-                      <Tooltip
-                        key={type}
-                        title={`${getQuestionTypeLabel(type as QuestionType)}: ${count}题`}
-                      >
-                        <div className="flex items-center gap-1 cursor-help hover:opacity-80 transition-opacity">
-                          <span className={`flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-medium ${colorClass}`}>
-                            {label}
-                          </span>
-                          <span className="text-[11px] font-medium text-text-muted font-mono">
-                            {count}
-                          </span>
-                        </div>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-foreground/85">
+            <span className="whitespace-nowrap">
+              <span className="text-text-muted">题量</span>
+              <span className="ml-1 font-semibold text-foreground">{row.original.question_count}</span>
+            </span>
+            <span className="text-border">/</span>
+            <span className="whitespace-nowrap">
+              <span className="text-text-muted">总分</span>
+              <span className="ml-1 font-semibold text-foreground">{row.original.total_score}</span>
+            </span>
+            <span className="text-border">/</span>
+            <span className="whitespace-nowrap">
+              <span className="text-text-muted">时长</span>
+              <span className="ml-1 font-semibold text-foreground">{isExam && row.original.duration ? `${row.original.duration}min` : '-'}</span>
+            </span>
+            <span className="text-border">/</span>
+            <span className="whitespace-nowrap">
+              <span className="text-text-muted">及格线</span>
+              <span className="ml-1 font-semibold text-foreground">{isExam ? (row.original.pass_score ?? '-') : '-'}</span>
+            </span>
           </div>
         );
       }
     },
     {
+      id: 'usage',
+      header: '使用情况',
+      minSize: 152,
+      meta: {
+        width: '14%',
+        minWidth: '152px',
+      },
+      cell: ({ row }) => (
+        <div className="text-sm font-medium text-foreground">
+          {row.original.usage_count > 0 ? `已被 ${row.original.usage_count} 个任务使用` : '未被任务使用'}
+        </div>
+      ),
+    },
+    {
       id: 'timestamp',
       header: '更新时间',
-      size: 100,
+      minSize: 148,
+      meta: {
+        width: '14%',
+        minWidth: '148px',
+      },
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-bold text-foreground">
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Clock3 className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.8} />
+          <span className="text-sm font-medium text-foreground">
             {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
           </span>
           <span className="text-[11px] font-medium text-text-muted">
@@ -168,24 +159,13 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       ),
     },
     {
-      id: 'created_timestamp',
-      header: '创建时间',
-      size: 100,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-bold text-foreground">
-            {dayjs(row.original.created_at).format('YYYY.MM.DD')}
-          </span>
-          <span className="text-[11px] font-medium text-text-muted">
-            {dayjs(row.original.created_at).format('HH:mm')}
-          </span>
-        </div>
-      ),
-    },
-    {
       id: 'actions',
       header: '操作',
-      size: 50,
+      minSize: 108,
+      meta: {
+        width: '6%',
+        minWidth: '108px',
+      },
       cell: ({ row }) => {
         const record = row.original;
         return (

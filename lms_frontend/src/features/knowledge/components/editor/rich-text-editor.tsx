@@ -410,10 +410,20 @@ export function SlashQuillEditor({
       const selection = quill.getSelection();
 
       if (!selection) {
-        selectionRef.current = null;
         setSlashTrigger(null);
-        setToolbarVisible(false);
         setInlinePlaceholderVisible(false);
+        if (
+          hasFocusWithinRef.current
+          && selectionRef.current
+          && selectionRef.current.length > 0
+          && enableSelectionToolbarRef.current
+          && !readOnlyRef.current
+        ) {
+          setToolbarVisible(true);
+          return;
+        }
+        selectionRef.current = null;
+        setToolbarVisible(false);
         return;
       }
 

@@ -18,6 +18,7 @@ type QuestionTypePresentation = {
   icon: LucideIcon;
   color: string;
   bg: string;
+  border: string;
   accent: string;
 };
 
@@ -30,8 +31,9 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
     label: '单选',
     fullLabel: '单选题',
     icon: CircleDot,
-    color: 'text-primary-600',
+    color: 'text-primary-700',
     bg: 'bg-primary-50',
+    border: 'border-primary-200',
     accent: 'bg-primary-500',
   },
   MULTIPLE_CHOICE: {
@@ -39,8 +41,9 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
     label: '多选',
     fullLabel: '多选题',
     icon: CheckSquare2,
-    color: 'text-secondary-600',
+    color: 'text-secondary-700',
     bg: 'bg-secondary-50',
+    border: 'border-secondary-200',
     accent: 'bg-secondary-500',
   },
   TRUE_FALSE: {
@@ -48,8 +51,9 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
     label: '判断',
     fullLabel: '判断题',
     icon: ToggleLeft,
-    color: 'text-warning-600',
+    color: 'text-warning-700',
     bg: 'bg-warning-50',
+    border: 'border-warning-200',
     accent: 'bg-warning-500',
   },
   SHORT_ANSWER: {
@@ -57,8 +61,9 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
     label: '简答',
     fullLabel: '简答题',
     icon: AlignLeft,
-    color: 'text-slate-600',
+    color: 'text-slate-700',
     bg: 'bg-slate-100',
+    border: 'border-slate-200',
     accent: 'bg-slate-400',
   },
 };
@@ -132,6 +137,6 @@ export const getQuestionTypeLabel = (type: QuestionType): string =>
  * 获取题目类型标签样式
  */
 export const getQuestionTypeStyle = (type: QuestionType) => {
-  const { label, color, bg, accent } = QUESTION_TYPE_CONFIG[type];
-  return { label, color, bg, accent };
+  const { label, color, bg, border, accent } = QUESTION_TYPE_CONFIG[type];
+  return { label, color, bg, border, accent };
 };

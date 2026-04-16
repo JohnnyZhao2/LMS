@@ -6,16 +6,17 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import type { StudentTaskCenterItem } from '@/types/task';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
+import { ListTag } from '@/components/ui/list-tag';
 
 interface TaskCardProps {
   task: StudentTaskCenterItem;
 }
 
 const taskCategoryBadgeClassMap = {
-  knowledge: 'text-secondary-600 bg-secondary-50',
-  practice: 'text-warning-600 bg-warning-50',
-  exam: 'text-primary-600 bg-primary-50',
-  completed: 'text-muted-foreground bg-muted',
+  knowledge: 'border-secondary-200 text-secondary-700',
+  practice: 'border-warning-200 text-warning-700',
+  exam: 'border-primary-200 text-primary-700',
+  completed: 'border-border/80 text-muted-foreground',
 } as const;
 
 const TaskStatusDot: React.FC<{
@@ -36,14 +37,14 @@ const TaskCategoryBadge: React.FC<{
   label: string;
   variant: keyof typeof taskCategoryBadgeClassMap;
 }> = ({ count, label, variant }) => (
-  <span
+  <ListTag
     className={cn(
-      'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors',
+      'transition-colors',
       taskCategoryBadgeClassMap[variant]
     )}
   >
     {count} {label}
-  </span>
+  </ListTag>
 );
 
 /**
@@ -68,10 +69,10 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   const hasKnowledge = task.has_knowledge;
 
   const missionConfig = hasQuiz && hasKnowledge
-    ? { bgClass: 'bg-primary', label: '综合任务' }
+    ? { barClass: 'bg-primary', tagClass: 'border-primary-200 text-primary-700', label: '综合任务' }
     : hasQuiz
-      ? { bgClass: 'bg-primary-500', label: '考核任务' }
-      : { bgClass: 'bg-secondary', label: '知识任务' };
+      ? { barClass: 'bg-primary-500', tagClass: 'border-primary-200 text-primary-700', label: '考核任务' }
+      : { barClass: 'bg-secondary', tagClass: 'border-secondary-200 text-secondary-700', label: '知识任务' };
 
   const targetTaskId = task.task_id;
   const progress = task.progress;
@@ -112,15 +113,19 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
     >
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+          <ListTag
+            className={cn(
+              isUrgent
+                ? 'border-destructive-200 text-destructive-700'
+                : missionConfig.tagClass
+            )}
+          >
             <TaskStatusDot
-              color={isUrgent ? 'bg-destructive-500' : missionConfig.bgClass}
+              color={isUrgent ? 'bg-destructive-500' : missionConfig.barClass}
               animate={isUrgent}
             />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
-              {isUrgent ? '紧急任务' : missionConfig.label}
-            </span>
-          </div>
+            {isUrgent ? '紧急任务' : missionConfig.label}
+          </ListTag>
         </div>
 
         <div className="flex items-center gap-4">
@@ -166,7 +171,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
           <div
             className={cn(
               'h-full rounded-full transition-all duration-700 ease-out',
-              missionConfig.bgClass
+              missionConfig.barClass
             )}
             style={{ width: `${progress.percentage ?? 0}%` }}
           />

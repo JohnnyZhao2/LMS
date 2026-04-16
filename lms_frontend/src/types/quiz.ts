@@ -45,6 +45,7 @@ export interface QuizListItem {
   title: string;
   question_count: number;
   total_score: string;
+  usage_count: number;
   quiz_type: QuizType;
   quiz_type_display: string;
   duration?: number | null;
@@ -52,7 +53,6 @@ export interface QuizListItem {
   is_current: boolean;
   created_by_name?: string;
   updated_by_name?: string;
-  question_type_counts?: Record<string, number>;
   created_at: string;
   updated_at: string;
 }
@@ -85,7 +85,7 @@ export interface QuizDetail {
 export interface QuizCreateRequest {
   title: string;
   quiz_type: QuizType;
-  duration?: number;       // 考试类型必填
-  pass_score?: number;     // 考试类型必填
+  duration?: number | null;       // 考试类型必填
+  pass_score?: number | null;     // 考试类型必填
   question_versions?: QuizQuestionVersionInput[];
 }

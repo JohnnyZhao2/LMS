@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, MoreHorizontal, FileText, Eye, PencilLine } from 'lucide-react';
+import { Trash2, Eye, PencilLine, Clock3, CircleHelp } from 'lucide-react';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/questions/api/create-question';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
@@ -7,22 +7,17 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
+import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
+import { ListTag } from '@/components/ui/list-tag';
+import { Tooltip } from '@/components/ui/tooltip';
 import { richTextToPreviewText } from '@/lib/rich-text';
+import { cn } from '@/lib/utils';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
@@ -72,69 +67,113 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
     const columns: ColumnDef<Question>[] = [
         {
             id: 'content',
-            header: '题目内容',
-            size: 560,
-            minSize: 360,
-            cell: ({ row }) => (
-                <CellWithIcon
-                    icon={<FileText className="w-5 h-5" />}
-                    title={richTextToPreviewText(row.original.content)}
-                    subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
-                    iconBgClass="bg-secondary-50"
-                    iconColorClass="text-secondary-600"
-                />
-            )
-        },
-        {
-            id: 'type',
-            header: '题型',
-            size: 110,
-            minSize: 100,
-            maxSize: 128,
+            header: '题干',
+            minSize: 280,
+            meta: {
+                width: '30%',
+                minWidth: '280px',
+                maxWidth: '360px',
+            },
             cell: ({ row }) => {
-                const typeStyle = getQuestionTypeStyle(row.original.question_type);
+                const typePresentation = getQuestionTypePresentation(row.original.question_type as QuestionType);
+
                 return (
-                    <CellTags
-                        tags={[{
-                            key: row.original.question_type,
-                            label: getQuestionTypeLabel(row.original.question_type as QuestionType),
-                            bgClass: typeStyle.bg,
-                            textClass: typeStyle.color,
-                        }]}
-                    />
+                    <div className="flex min-w-0 items-center gap-4 py-1">
+                        <div
+                            className={cn(
+                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/55',
+                                typePresentation.color,
+                            )}
+                        >
+                            <CircleHelp className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1">
+                            <span className="truncate font-bold text-foreground">
+                                {richTextToPreviewText(row.original.content)}
+                            </span>
+                            <span className="truncate text-[11px] font-normal text-text-muted">
+                                {row.original.updated_by_name || row.original.created_by_name || '系统'}
+                            </span>
+                        </div>
+                    </div>
                 );
             }
         },
         {
-            id: 'tags',
-            header: '标签',
-            size: 220,
-            minSize: 160,
-            maxSize: 260,
+            id: 'type',
+            header: '题型',
+            minSize: 88,
+            meta: {
+                width: '9%',
+                minWidth: '88px',
+                maxWidth: '104px',
+            },
             cell: ({ row }) => (
-                <CellTags
-                    tags={(row.original.tags ?? []).map((tag) => ({
-                        key: String(tag.id),
-                        label: tag.name,
-                        bgClass: 'bg-muted',
-                        textClass: 'text-foreground',
-                    }))}
-                />
+                <span className="whitespace-nowrap text-[13px] font-normal text-foreground/68">
+                    {getQuestionTypeLabel(row.original.question_type as QuestionType)}
+                </span>
+            )
+        },
+        {
+            id: 'space',
+            header: '所属空间',
+            minSize: 112,
+            meta: {
+                width: '11%',
+                minWidth: '112px',
+                maxWidth: '144px',
+            },
+            cell: ({ row }) => {
+                const spaceTag = row.original.space_tag;
+                if (!spaceTag) {
+                    return <span className="text-text-muted italic text-xs">—</span>;
+                }
+
+                return (
+                    <ListTag
+                        className="max-w-full"
+                        style={spaceTag.color ? {
+                            color: spaceTag.color,
+                            borderColor: spaceTag.color,
+                        } : undefined}
+                    >
+                        {spaceTag.name}
+                    </ListTag>
+                );
+            },
+        },
+        {
+            id: 'usage',
+            header: '使用情况',
+            minSize: 88,
+            meta: {
+                width: '9%',
+                minWidth: '88px',
+                maxWidth: '108px',
+            },
+            cell: ({ row }) => (
+                <span className={row.original.is_referenced ? 'text-[13px] font-medium text-secondary-700' : 'text-[13px] font-medium text-text-muted'}>
+                    {row.original.is_referenced ? `${row.original.usage_count} 次` : '未引用'}
+                </span>
             ),
         },
         {
             id: 'timestamp',
             header: '更新时间',
-            size: 150,
-            minSize: 132,
-            maxSize: 168,
+            minSize: 120,
+            meta: {
+                width: '11%',
+                minWidth: '120px',
+                maxWidth: '132px',
+            },
             cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-sm font-bold text-foreground">
-                        {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                    <Clock3 className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.8} />
+                    <span className="text-[13px] font-medium text-foreground">
+                        {dayjs(row.original.updated_at).format('YY.MM.DD')}
                     </span>
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
-                        {dayjs(row.original.updated_at).format('HH:mm:ss')}
+                    <span className="text-[11px] font-medium text-text-muted">
+                        {dayjs(row.original.updated_at).format('HH:mm')}
                     </span>
                 </div>
             ),
@@ -142,41 +181,46 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'actions',
             header: '操作',
-            size: 84,
-            minSize: 72,
-            maxSize: 96,
+            minSize: 108,
+            meta: {
+                width: '9%',
+                minWidth: '108px',
+                maxWidth: '124px',
+            },
             cell: ({ row }) => {
                 const record = row.original;
                 return (
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
-                                    <MoreHorizontal className="w-4 h-4 text-text-muted" strokeWidth={2} />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border  bg-background">
-                                <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer text-xs"
-                                    onClick={() => setPreviewQuestion(record)}
-                                >
-                                    <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer text-xs"
-                                    onClick={() => roleNavigate(`/questions/${record.id}/edit`)}
-                                >
-                                    <PencilLine className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑题目
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-muted mx-2" />
-                                <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold text-destructive-600 focus:bg-destructive-50 cursor-pointer transition-colors text-xs"
-                                    onClick={() => setDeleteId(record.id)}
-                                >
-                                    <Trash2 className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 彻底删除
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="查看详情">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-md text-text-muted hover:bg-muted hover:text-foreground"
+                                onClick={() => setPreviewQuestion(record)}
+                            >
+                                <Eye className="h-4 w-4" strokeWidth={2} />
+                            </Button>
+                        </Tooltip>
+                        <Tooltip title="编辑题目">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+                                onClick={() => roleNavigate(`/questions/${record.id}/edit`)}
+                            >
+                                <PencilLine className="h-4 w-4" strokeWidth={2} />
+                            </Button>
+                        </Tooltip>
+                        <Tooltip title="彻底删除">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-md text-text-muted hover:bg-destructive-50 hover:text-destructive"
+                                onClick={() => setDeleteId(record.id)}
+                            >
+                                <Trash2 className="h-4 w-4" strokeWidth={2} />
+                            </Button>
+                        </Tooltip>
                     </div>
                 );
             },
@@ -226,7 +270,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 open={!!deleteId}
                 onOpenChange={(open) => !open && setDeleteId(null)}
                 title="彻底从系统中清除此题目?"
-                description="此操作将永久删除该题目记录。如果已有试卷正在引用此题目,可能会导致作业显示异常。该操作不可撤销。"
+                description="此操作将永久删除该题目记录。若该题已被试卷引用，系统会直接阻止删除。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
                 iconBgColor="bg-destructive-100"
                 iconColor="text-destructive"

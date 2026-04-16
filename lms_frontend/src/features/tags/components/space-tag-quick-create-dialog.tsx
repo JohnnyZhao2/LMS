@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils';
 interface SpaceTagQuickCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: 'create' | 'edit';
+  initialName?: string;
+  initialColor?: string;
   onSubmit: (payload: { name: string; color: string }) => Promise<void> | void;
   isSubmitting?: boolean;
 }
@@ -19,6 +22,9 @@ interface SpaceTagQuickCreateDialogProps {
 export const SpaceTagQuickCreateDialog: React.FC<SpaceTagQuickCreateDialogProps> = ({
   open,
   onOpenChange,
+  mode = 'create',
+  initialName = '',
+  initialColor = SPACE_THEME_COLORS[0],
   onSubmit,
   isSubmitting = false,
 }) => {
@@ -29,12 +35,14 @@ export const SpaceTagQuickCreateDialog: React.FC<SpaceTagQuickCreateDialogProps>
   React.useEffect(() => {
     if (open) {
       setStep(1);
+      setName(initialName);
+      setColor(initialColor);
       return;
     }
     setStep(1);
     setName('');
     setColor(SPACE_THEME_COLORS[0]);
-  }, [open]);
+  }, [open, initialColor, initialName]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -63,10 +71,12 @@ export const SpaceTagQuickCreateDialog: React.FC<SpaceTagQuickCreateDialogProps>
               </div>
 
               <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-foreground sm:text-[34px]">
-                创建新 Space
+                {mode === 'create' ? '创建新 Space' : '编辑 Space'}
               </DialogTitle>
               <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-text-muted sm:text-[15px]">
-                Space 是知识卡片的单选归类。你可以直接上传卡片到 Space，也可以从概览中选择卡片。
+                {mode === 'create'
+                  ? 'Space 是知识卡片的单选归类。你可以直接上传卡片到 Space，也可以从概览中选择卡片。'
+                  : '先更新名称，再确认颜色。整个管理端都统一走这一套 Space 编辑流程。'}
               </DialogDescription>
 
               <div className="mt-7 w-full max-w-[360px]">
@@ -137,7 +147,7 @@ export const SpaceTagQuickCreateDialog: React.FC<SpaceTagQuickCreateDialogProps>
                       : 'bg-[#E8793A] text-white hover:bg-[#D96C2F]',
                   )}
                 >
-                  {isSubmitting ? '保存中' : '保存'}
+                  {isSubmitting ? '保存中' : mode === 'create' ? '保存' : '更新'}
                 </button>
               </div>
             </div>

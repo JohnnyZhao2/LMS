@@ -26,8 +26,8 @@ from .models import (
     TaskQuiz,
 )
 from .selectors import (
-    task_base_queryset,
     task_detail_queryset,
+    task_list_queryset,
 )
 
 
@@ -48,7 +48,7 @@ class TaskService(BaseService):
         Returns:
             QuerySet of tasks accessible to the user
         """
-        qs = task_base_queryset(include_deleted=False)
+        qs = task_list_queryset(include_deleted=False)
         return scope_filter('task.view', self.request, base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(

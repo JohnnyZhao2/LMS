@@ -62,7 +62,7 @@ class QuizListCreateView(BaseAPIView):
         quiz_list = self.service.get_list(
             filters=filters,
             search=search,
-            ordering='-created_at'
+            ordering='-updated_at'
         )
         
         # 3. 分页
