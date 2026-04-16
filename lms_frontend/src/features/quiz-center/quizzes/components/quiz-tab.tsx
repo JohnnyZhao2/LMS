@@ -8,13 +8,12 @@ import { ROUTES } from '@/config/routes';
 import type { QuizListItem } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
-import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
+import { CellMutedTimestamp, CellReferenceTag, CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuizTabProps {
@@ -79,12 +78,14 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         return (
           <CellTags
+            tagSize="sm"
             tags={[{
               key: row.original.quiz_type,
               label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
               textClass: isExam ? 'text-destructive-700' : 'text-primary-700',
               borderClass: isExam ? 'border-destructive-200' : 'border-primary-200',
             }]}
+            tagClassName="font-medium"
           />
         );
       }
@@ -99,63 +100,58 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       },
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
+        const metricItems = [
+          { key: 'question-count', label: '题量', value: String(row.original.question_count) },
+          { key: 'total-score', label: '总分', value: String(row.original.total_score) },
+          ...(isExam
+            ? [
+              { key: 'duration', label: '时长', value: row.original.duration ? `${row.original.duration}min` : '' },
+              { key: 'pass-score', label: '及格线', value: row.original.pass_score ?? '' },
+            ]
+            : []),
+        ].filter((item) => item.value !== '');
+
         return (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-foreground/85">
-            <span className="whitespace-nowrap">
-              <span className="text-text-muted">题量</span>
-              <span className="ml-1 font-semibold text-foreground">{row.original.question_count}</span>
-            </span>
-            <span className="text-border">/</span>
-            <span className="whitespace-nowrap">
-              <span className="text-text-muted">总分</span>
-              <span className="ml-1 font-semibold text-foreground">{row.original.total_score}</span>
-            </span>
-            <span className="text-border">/</span>
-            <span className="whitespace-nowrap">
-              <span className="text-text-muted">时长</span>
-              <span className="ml-1 font-semibold text-foreground">{isExam && row.original.duration ? `${row.original.duration}min` : '-'}</span>
-            </span>
-            <span className="text-border">/</span>
-            <span className="whitespace-nowrap">
-              <span className="text-text-muted">及格线</span>
-              <span className="ml-1 font-semibold text-foreground">{isExam ? (row.original.pass_score ?? '-') : '-'}</span>
-            </span>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-text-muted">
+            {metricItems.map((item, index) => (
+              <React.Fragment key={item.key}>
+                {index > 0 ? <span className="text-border/80">/</span> : null}
+                <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+                  <span className="text-[12px] font-medium text-text-muted">{item.label}</span>
+                  <span className="text-[12px] font-medium text-text-muted">{item.value}</span>
+                </span>
+              </React.Fragment>
+            ))}
           </div>
         );
       }
     },
     {
       id: 'usage',
-      header: '使用情况',
-      minSize: 152,
+      header: '引用次数',
+      minSize: 96,
       meta: {
-        width: '14%',
-        minWidth: '152px',
+        width: '10%',
+        minWidth: '96px',
+        maxWidth: '120px',
       },
       cell: ({ row }) => (
-        <div className="text-sm font-medium text-foreground">
-          {row.original.usage_count > 0 ? `已被 ${row.original.usage_count} 个任务使用` : '未被任务使用'}
-        </div>
+        <CellReferenceTag count={row.original.usage_count} />
       ),
     },
     {
       id: 'timestamp',
       header: '更新时间',
-      minSize: 148,
+      minSize: 164,
       meta: {
-        width: '14%',
-        minWidth: '148px',
+        width: '15%',
+        minWidth: '164px',
       },
       cell: ({ row }) => (
-        <div className="flex items-center gap-2 whitespace-nowrap">
-          <Clock3 className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.8} />
-          <span className="text-sm font-medium text-foreground">
-            {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
-          </span>
-          <span className="text-[11px] font-medium text-text-muted">
-            {dayjs(row.original.updated_at).format('HH:mm')}
-          </span>
-        </div>
+        <CellMutedTimestamp
+          icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
+          value={row.original.updated_at}
+        />
       ),
     },
     {

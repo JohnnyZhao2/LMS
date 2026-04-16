@@ -7,17 +7,16 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/features/questions/constants';
+import { getQuestionTypeLabel } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
-import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { ListTag } from '@/components/ui/list-tag';
+import { CellMutedTimestamp, CellReferenceTag, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { Tooltip } from '@/components/ui/tooltip';
 import { richTextToPreviewText } from '@/lib/rich-text';
-import { cn } from '@/lib/utils';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
@@ -75,27 +74,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 maxWidth: '360px',
             },
             cell: ({ row }) => {
-                const typePresentation = getQuestionTypePresentation(row.original.question_type as QuestionType);
-
                 return (
-                    <div className="flex min-w-0 items-center gap-4 py-1">
-                        <div
-                            className={cn(
-                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/55',
-                                typePresentation.color,
-                            )}
-                        >
-                            <CircleHelp className="h-3.5 w-3.5" strokeWidth={1.8} />
-                        </div>
-                        <div className="flex min-w-0 flex-col gap-1">
-                            <span className="truncate font-bold text-foreground">
-                                {richTextToPreviewText(row.original.content)}
-                            </span>
-                            <span className="truncate text-[11px] font-normal text-text-muted">
-                                {row.original.updated_by_name || row.original.created_by_name || '系统'}
-                            </span>
-                        </div>
-                    </div>
+                    <CellWithIcon
+                        icon={<CircleHelp className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                        title={richTextToPreviewText(row.original.content)}
+                        subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
+                        iconBgClass="bg-muted/55"
+                        iconColorClass="text-foreground/60"
+                    />
                 );
             }
         },
@@ -109,7 +95,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 maxWidth: '104px',
             },
             cell: ({ row }) => (
-                <span className="whitespace-nowrap text-[13px] font-normal text-foreground/68">
+                <span className="whitespace-nowrap text-[13px] font-medium text-text-muted">
                     {getQuestionTypeLabel(row.original.question_type as QuestionType)}
                 </span>
             )
@@ -126,12 +112,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
             cell: ({ row }) => {
                 const spaceTag = row.original.space_tag;
                 if (!spaceTag) {
-                    return <span className="text-text-muted italic text-xs">—</span>;
+                    return <span className="text-[13px] font-medium text-text-muted">—</span>;
                 }
 
                 return (
                     <ListTag
-                        className="max-w-full"
+                        size="sm"
+                        className="max-w-full text-[11px] font-medium"
                         style={spaceTag.color ? {
                             color: spaceTag.color,
                             borderColor: spaceTag.color,
@@ -144,38 +131,29 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         },
         {
             id: 'usage',
-            header: '使用情况',
-            minSize: 88,
+            header: '引用次数',
+            minSize: 96,
             meta: {
-                width: '9%',
-                minWidth: '88px',
-                maxWidth: '108px',
+                width: '10%',
+                minWidth: '96px',
+                maxWidth: '120px',
             },
-            cell: ({ row }) => (
-                <span className={row.original.is_referenced ? 'text-[13px] font-medium text-secondary-700' : 'text-[13px] font-medium text-text-muted'}>
-                    {row.original.is_referenced ? `${row.original.usage_count} 次` : '未引用'}
-                </span>
-            ),
+            cell: ({ row }) => <CellReferenceTag count={row.original.usage_count} />,
         },
         {
             id: 'timestamp',
             header: '更新时间',
-            minSize: 120,
+            minSize: 156,
             meta: {
-                width: '11%',
-                minWidth: '120px',
-                maxWidth: '132px',
+                width: '14%',
+                minWidth: '156px',
+                maxWidth: '172px',
             },
             cell: ({ row }) => (
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                    <Clock3 className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.8} />
-                    <span className="text-[13px] font-medium text-foreground">
-                        {dayjs(row.original.updated_at).format('YY.MM.DD')}
-                    </span>
-                    <span className="text-[11px] font-medium text-text-muted">
-                        {dayjs(row.original.updated_at).format('HH:mm')}
-                    </span>
-                </div>
+                <CellMutedTimestamp
+                    icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                    value={row.original.updated_at}
+                />
             ),
         },
         {

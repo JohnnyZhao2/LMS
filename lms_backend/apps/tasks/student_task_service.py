@@ -1,10 +1,5 @@
-"""
-Student task execution service.
-Provides business logic for:
-- Student task list and detail retrieval
-- Knowledge learning progress tracking
-- Task completion logic
-"""
+"""Student task execution service."""
+
 from typing import List
 
 from django.db.models import QuerySet
@@ -26,47 +21,35 @@ from .selectors import (
 
 
 def extract_knowledge_preview(knowledge, max_length: int = 160) -> str:
-    """Extract a preview from knowledge content."""
     text = getattr(knowledge, 'content_preview', '') or ''
     return text[:max_length] if text else ''
 
 
 class StudentTaskService(BaseService):
-    """
-    Service for student task execution operations.
-    Handles:
-    - Student task list and detail retrieval
-    - Knowledge learning progress tracking
-    - Task completion logic
-    """
-
     def get_student_assignment(self, task_id: int) -> TaskAssignment:
-        """
-        Get a student's task assignment.
-        """
         assignment = assignment_detail_queryset().filter(
             task_id=task_id,
             assignee_id=self.user.id,
-            task__is_deleted=False
+            task__is_deleted=False,
         ).first()
         self.validate_not_none(assignment, '任务不存在或未分配给您')
         assignment.check_and_update_overdue()
         return assignment
 
     def ensure_knowledge_progress(self, assignment: TaskAssignment) -> None:
-        """Ensure KnowledgeLearningProgress records exist for all task knowledge items."""
         task_knowledge_items = task_knowledge_queryset(assignment.task.id)
         existing_progress = set(
-            KnowledgeLearningProgress.objects.filter(
-                assignment_id=assignment.id
-            ).values_list('task_knowledge_id', flat=True)
+            KnowledgeLearningProgress.objects.filter(assignment_id=assignment.id).values_list(
+                'task_knowledge_id',
+                flat=True,
+            )
         )
         for tk in task_knowledge_items:
             if tk.id not in existing_progress:
                 KnowledgeLearningProgress.objects.create(
                     assignment_id=assignment.id,
                     task_knowledge_id=tk.id,
-                    is_completed=False
+                    is_completed=False,
                 )
 
     @log_operation(
@@ -79,43 +62,23 @@ class StudentTaskService(BaseService):
     def complete_knowledge_learning(
         self,
         assignment: TaskAssignment,
-        task_knowledge_id: int
+        task_knowledge_id: int,
     ) -> KnowledgeLearningProgress:
-        """
-        Mark a knowledge document as completed.
-        """
         assignment.check_and_update_overdue()
         if assignment.status == 'COMPLETED':
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='任务已完成'
-            )
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已完成')
         if assignment.status == 'OVERDUE':
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='任务已逾期，无法继续学习'
-            )
-        task_knowledge_items = task_knowledge_queryset(assignment.task.id)
-        task_knowledge = None
-        for tk in task_knowledge_items:
-            if tk.id == task_knowledge_id:
-                task_knowledge = tk
-                break
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已逾期，无法继续学习')
+        task_knowledge = task_knowledge_queryset(assignment.task.id).filter(id=task_knowledge_id).first()
         if not task_knowledge:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='该任务知识不在此任务中'
-            )
+            raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='该任务知识不在此任务中')
         progress, _ = KnowledgeLearningProgress.objects.get_or_create(
             assignment_id=assignment.id,
             task_knowledge_id=task_knowledge.id,
-            defaults={'is_completed': False}
+            defaults={'is_completed': False},
         )
         if progress.is_completed:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='该知识已标记为已学习'
-            )
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='该知识已标记为已学习')
         progress.is_completed = True
         progress.completed_at = timezone.now()
         progress.save(update_fields=['is_completed', 'completed_at'])
@@ -124,75 +87,74 @@ class StudentTaskService(BaseService):
 
     @staticmethod
     def get_student_knowledge_items(assignment: TaskAssignment) -> List[dict]:
-        """获取学员任务的知识条目与进度"""
         task_knowledge_items = task_knowledge_queryset(assignment.task.id)
-        progress_map = {
-            p.task_knowledge_id: p
-            for p in knowledge_progress_queryset(assignment.id)
-        }
+        progress_map = {p.task_knowledge_id: p for p in knowledge_progress_queryset(assignment.id)}
         result = []
         for tk in task_knowledge_items:
             progress = progress_map.get(tk.id)
             knowledge = tk.knowledge
-            result.append({
-                'id': tk.id,
-                'knowledge_id': tk.knowledge_id,
-                'title': knowledge.title,
-                'space_tag_name': knowledge.space_tag.name if knowledge.space_tag else None,
-                'content_preview': extract_knowledge_preview(knowledge),
-                'order': tk.order,
-                'is_completed': progress.is_completed if progress else False,
-                'completed_at': progress.completed_at if progress else None,
-            })
+            result.append(
+                {
+                    'id': tk.id,
+                    'knowledge_id': tk.source_knowledge_id,
+                    'knowledge_revision_id': tk.knowledge_id,
+                    'title': knowledge.title,
+                    'space_tag_name': knowledge.space_tag_name or None,
+                    'content_preview': extract_knowledge_preview(knowledge),
+                    'order': tk.order,
+                    'is_completed': progress.is_completed if progress else False,
+                    'completed_at': progress.completed_at if progress else None,
+                }
+            )
         return sorted(result, key=lambda x: x['order'])
 
     @staticmethod
     def get_student_quiz_items(assignment: TaskAssignment) -> List[dict]:
-        """获取学员任务的试卷条目与提交状态"""
         task_quiz_items = task_quiz_queryset(assignment.task.id)
         submissions = Submission.objects.filter(
             task_assignment_id=assignment.id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
         ).select_related('quiz')
         submission_map = {}
         for submission in submissions:
-            submission_map.setdefault(submission.quiz_id, []).append(submission)
+            submission_map.setdefault(submission.task_quiz_id, []).append(submission)
+
         result = []
         for tq in task_quiz_items:
             quiz = tq.quiz
-            quiz_subs = submission_map.get(tq.quiz_id, [])
+            quiz_subs = submission_map.get(tq.id, [])
             is_completed = len(quiz_subs) > 0
             best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
             latest_sub = max(quiz_subs, key=lambda x: x.submitted_at) if is_completed else None
-            result.append({
-                'id': tq.id,
-                'quiz': tq.quiz_id,
-                'quiz_id': tq.quiz_id,
-                'quiz_title': quiz.title,
-                'quiz_type': quiz.quiz_type,
-                'quiz_type_display': quiz.get_quiz_type_display(),
-                'question_count': quiz.question_count,
-                'total_score': float(quiz.total_score) if quiz.total_score else 0,
-                'duration': quiz.duration,
-                'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
-                'order': tq.order,
-                'is_completed': is_completed,
-                'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,
-                'latest_submission_id': latest_sub.id if latest_sub else None,
-                'latest_status': latest_sub.status if latest_sub else None,
-            })
+            result.append(
+                {
+                    'id': tq.id,
+                    'quiz': tq.id,
+                    'quiz_id': tq.id,
+                    'task_quiz_id': tq.id,
+                    'quiz_revision_id': tq.quiz_id,
+                    'quiz_title': quiz.title,
+                    'quiz_type': quiz.quiz_type,
+                    'quiz_type_display': quiz.get_quiz_type_display(),
+                    'question_count': quiz.question_count,
+                    'total_score': float(quiz.total_score) if quiz.total_score else 0,
+                    'duration': quiz.duration,
+                    'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
+                    'order': tq.order,
+                    'is_completed': is_completed,
+                    'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,
+                    'latest_submission_id': latest_sub.id if latest_sub else None,
+                    'latest_status': latest_sub.status if latest_sub else None,
+                }
+            )
         return sorted(result, key=lambda x: x['order'])
 
     def get_student_assignments_queryset(
         self,
         status_filter: str = None,
-        search: str = None
+        search: str = None,
     ) -> QuerySet:
-        """Get student's task assignments queryset with filters."""
-        qs = assignment_list_queryset().filter(
-            assignee_id=self.user.id,
-            task__is_deleted=False
-        )
+        qs = assignment_list_queryset().filter(assignee_id=self.user.id, task__is_deleted=False)
         if status_filter:
             qs = qs.filter(status=status_filter)
         if search:

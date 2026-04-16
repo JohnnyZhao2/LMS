@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Trash2,
   GripVertical,
-  AlertCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ interface SortableResourceItemProps {
   idx: number;
   moveResource: (idx: number, direction: 'up' | 'down') => void;
   removeResource: (idx: number) => void;
-  upgradeResource?: (idx: number) => void;
   totalResources: number;
   disabled?: boolean;
 }
@@ -30,7 +28,6 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
   idx,
   moveResource,
   removeResource,
-  upgradeResource,
   totalResources,
   disabled = false,
 }) => {
@@ -75,27 +72,16 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
       </div>
       <div
         className={`flex-1 flex flex-col gap-2 p-4 bg-background border rounded-xl transition-all ${
-          item.is_current === false
+          item.isMissingSource
             ? 'border-warning-300 bg-warning-50/30'
             : item.quizType === 'EXAM'
               ? 'border-destructive-100 hover:border-destructive-200'
               : 'border-border hover:border-primary-300'
         }`}
       >
-        {item.is_current === false && (
+        {item.isMissingSource && (
           <div className="flex items-center gap-2 text-xs text-warning-600">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>资源有新版本</span>
-            {upgradeResource && !disabled && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-2 text-xs text-warning-700 hover:text-warning-800 hover:bg-warning-100"
-                onClick={() => upgradeResource(idx)}
-              >
-                升级
-              </Button>
-            )}
+            <span>原始资源已删除，需要手动替换</span>
           </div>
         )}
         <div className="flex items-center gap-3">

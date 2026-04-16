@@ -50,7 +50,6 @@ export const TaskForm: React.FC = () => {
     addResource,
     moveResource,
     removeResource,
-    upgradeResource,
     toggleUser,
     toggleUsers,
     handleDragEnd,
@@ -131,7 +130,6 @@ export const TaskForm: React.FC = () => {
               onDragEnd={handleDragEnd}
               onMoveResource={moveResource}
               onRemoveResource={removeResource}
-              onUpgradeResource={upgradeResource}
               embedded
             />
           </div>

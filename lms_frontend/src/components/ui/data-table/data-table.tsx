@@ -83,8 +83,9 @@ export function DataTable<TData, TValue>({
   const shellRef = React.useRef<HTMLDivElement | null>(null)
   const topBarRef = React.useRef<HTMLDivElement | null>(null)
   const headerRef = React.useRef<HTMLTableSectionElement | null>(null)
+  const bodyRef = React.useRef<HTMLTableSectionElement | null>(null)
   const footerRef = React.useRef<HTMLDivElement | null>(null)
-  const [stretchedRowHeight, setStretchedRowHeight] = React.useState<number | null>(null)
+  const [distributedRowPaddingY, setDistributedRowPaddingY] = React.useState<number>(0)
   const paginationState = React.useMemo<PaginationState | undefined>(
     () => (
       pagination
@@ -163,6 +164,13 @@ export function DataTable<TData, TValue>({
     && !isLoading
     && !!targetRowCount
     && visibleRowCount === targetRowCount
+  const shouldExpandShell = fillHeight
+    && !isLoading
+    && !!targetRowCount
+    && visibleRowCount === targetRowCount
+  const resolvedMinHeight = fillHeight
+    ? (shouldExpandShell ? minHeight : undefined)
+    : minHeight
 
   const getColumnSpacingClass = React.useCallback((index: number, total: number) => {
     if (total <= 1) {
@@ -179,7 +187,7 @@ export function DataTable<TData, TValue>({
 
   React.useLayoutEffect(() => {
     if (!shouldStretchRows) {
-      setStretchedRowHeight(null)
+      setDistributedRowPaddingY(0)
       return
     }
 
@@ -190,13 +198,18 @@ export function DataTable<TData, TValue>({
       const footerHeight = footerRef.current?.offsetHeight ?? 0
       const availableHeight = shellHeight - topBarHeight - headerHeight - footerHeight
 
-      if (availableHeight <= 0 || !targetRowCount) {
-        setStretchedRowHeight(null)
+      const bodyRows = Array.from(bodyRef.current?.querySelectorAll("tr") ?? [])
+      if (availableHeight <= 0 || !targetRowCount || bodyRows.length !== targetRowCount) {
+        setDistributedRowPaddingY(0)
         return
       }
 
-      const nextHeight = Math.max(68, Math.floor(availableHeight / targetRowCount))
-      setStretchedRowHeight((prev) => (prev === nextHeight ? prev : nextHeight))
+      const measuredRowsHeight = bodyRows.reduce((sum, row) => sum + row.getBoundingClientRect().height, 0)
+      const naturalRowsHeight = measuredRowsHeight - distributedRowPaddingY * 2 * targetRowCount
+      const remainingHeight = availableHeight - naturalRowsHeight
+      const nextPaddingY = Math.max(0, Number((remainingHeight / targetRowCount / 2).toFixed(2)))
+
+      setDistributedRowPaddingY((prev) => (prev === nextPaddingY ? prev : nextPaddingY))
     }
 
     const scheduleUpdate = () => {
@@ -229,18 +242,20 @@ export function DataTable<TData, TValue>({
       resizeObserver?.disconnect()
       window.removeEventListener("resize", scheduleUpdate)
     }
-  }, [shouldStretchRows, targetRowCount, shouldShowPagination])
+  }, [distributedRowPaddingY, shouldStretchRows, targetRowCount, shouldShowPagination])
 
   return (
     <div
-      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "flex-1 max-h-full", className)}
-      style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
+      className={cn("mt-4 flex min-h-0 flex-col", shouldExpandShell && "flex-1 max-h-full", className)}
+      style={resolvedMinHeight === undefined
+        ? undefined
+        : { minHeight: typeof resolvedMinHeight === 'number' ? `${resolvedMinHeight}px` : resolvedMinHeight }}
     >
       <div
         ref={shellRef}
         className={cn(
           "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-white",
-          fillHeight && "flex-1 max-h-full",
+          shouldExpandShell && "flex-1 max-h-full",
           shellClassName,
         )}
       >
@@ -256,7 +271,7 @@ export function DataTable<TData, TValue>({
           </div>
         )}
         <Table
-          containerClassName={cn("min-h-0", fillHeight && "flex-1", tableContainerClassName)}
+          containerClassName={cn("min-h-0", shouldExpandShell && "flex-1", tableContainerClassName)}
           className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
         >
             <TableHeader ref={headerRef}>
@@ -286,7 +301,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
+            <TableBody ref={bodyRef}>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
@@ -308,12 +323,19 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => onRowClick?.(row.original)}
                     className={cn(onRowClick && "cursor-pointer", rowClassName)}
-                    style={stretchedRowHeight ? { height: `${stretchedRowHeight}px` } : undefined}
                   >
                     {row.getVisibleCells().map((cell, index, cells) => (
                       <TableCell
                         key={cell.id}
-                        style={getColumnWidthStyle(cell.column.columnDef)}
+                        style={{
+                          ...getColumnWidthStyle(cell.column.columnDef),
+                          ...(distributedRowPaddingY > 0
+                            ? {
+                                paddingTop: `${distributedRowPaddingY}px`,
+                                paddingBottom: `${distributedRowPaddingY}px`,
+                              }
+                            : {}),
+                        }}
                         className={getColumnSpacingClass(index, cells.length)}
                       >
                         {flexRender(

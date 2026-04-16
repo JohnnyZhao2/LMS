@@ -13,8 +13,7 @@ from apps.grading.serializers import (
     GradingSubmitSerializer,
     PendingTaskSerializer,
 )
-from apps.quizzes.models import QuizQuestion
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskQuiz
 from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
@@ -37,7 +36,7 @@ class GradingBaseView(BaseAPIView):
         return task
 
     def _validate_quiz_in_task(self, task, quiz_id):
-        if not task.task_quizzes.filter(quiz_id=quiz_id).exists():
+        if not task.task_quizzes.filter(id=quiz_id).exists():
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='试卷不属于该任务'
@@ -68,26 +67,32 @@ class GradingQuestionsView(GradingBaseView):
 
     def _get_grading_questions(self, task, quiz_id):
         """获取阅卷中心题目列表"""
-        relations = QuizQuestion.objects.filter(
-            quiz_id=quiz_id
-        ).select_related('question').order_by('order')
+        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
+            id=quiz_id,
+            task=task,
+        ).first()
+        if not task_quiz:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='试卷不属于该任务',
+            )
+        relations = task_quiz.quiz.quiz_questions.prefetch_related('question_options').order_by('order')
 
         results = []
         for relation in relations:
-            question = relation.question
             pass_rate = calculate_question_pass_rate(
                 task,
-                question.id,
+                relation.id,
                 quiz_id,
                 relation.score,
-                question.is_objective,
+                relation.is_objective,
             )
             results.append({
-                'question_id': question.id,
-                'question_text': question.content,
-                'question_analysis': question.explanation or '',
-                'question_type': question.question_type,
-                'question_type_display': question.get_question_type_display(),
+                'question_id': relation.id,
+                'question_text': relation.content,
+                'question_analysis': relation.explanation or '',
+                'question_type': relation.question_type,
+                'question_type_display': relation.get_question_type_display(),
                 'max_score': float(relation.score),
                 'pass_rate': pass_rate,
             })
@@ -123,16 +128,23 @@ class GradingAnswersView(GradingBaseView):
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
-        relation = QuizQuestion.objects.select_related('question').filter(
-            quiz_id=quiz_id,
-            question_id=question_id,
+        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
+            id=quiz_id,
+            task=task,
+        ).first()
+        if not task_quiz:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='试卷不属于该任务',
+            )
+        relation = task_quiz.quiz.quiz_questions.prefetch_related('question_options').filter(
+            id=question_id,
         ).first()
         if not relation:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='未找到对应题目或题目不属于该试卷'
             )
-        question = relation.question
         answers = list(get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
@@ -142,24 +154,24 @@ class GradingAnswersView(GradingBaseView):
 
         pass_rate = calculate_question_pass_rate(
             task,
-            question.id,
+            relation.id,
             quiz_id,
             relation.score,
-            question.is_objective,
+            relation.is_objective,
         )
 
-        if question.is_objective:
+        if relation.is_objective:
             return {
-                'question_id': question.id,
-                'question_type': question.question_type,
+                'question_id': relation.id,
+                'question_type': relation.question_type,
                 'pass_rate': pass_rate,
                 'answered_count': answered_count,
-                'options': self._build_objective_options(question, answers),
+                'options': self._build_objective_options(relation, answers),
             }
 
         return {
-            'question_id': question.id,
-            'question_type': question.question_type,
+            'question_id': relation.id,
+            'question_type': relation.question_type,
             'pass_rate': pass_rate,
             'subjective_answers': self._build_subjective_answers(answers),
         }
@@ -339,10 +351,10 @@ class PendingQuizzesView(GradingBaseView):
             for tq in task_quizzes:
                 quiz = tq.quiz
                 # 统计待批阅数量（主观题未评分的提交）
-                pending_count = self._count_pending_grading(task, quiz.id)
+                pending_count = self._count_pending_grading(task, tq.id)
 
                 quizzes_data.append({
-                    'quiz_id': quiz.id,
+                    'quiz_id': tq.id,
                     'quiz_title': quiz.title,
                     'quiz_type': quiz.quiz_type,
                     'quiz_type_display': quiz.get_quiz_type_display(),

@@ -134,8 +134,8 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
 
     if hasattr(result, 'title'):
         template_vars['resource_title'] = result.title
-    if hasattr(result, 'version_number'):
-        template_vars['version_number'] = result.version_number
+    if hasattr(result, 'revision_number'):
+        template_vars['revision_number'] = result.revision_number
     if hasattr(result, 'score'):
         template_vars['score_text'] = _format_number(result.score)
     if hasattr(result, 'average_score'):

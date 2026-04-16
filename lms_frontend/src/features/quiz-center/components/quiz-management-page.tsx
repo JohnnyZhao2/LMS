@@ -3,7 +3,7 @@ import { Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
+import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
@@ -21,7 +21,7 @@ export const QuizManagementPage: React.FC = () => {
         icon={<Layout />}
       />
 
-      <PageViewport className="flex flex-col">
+      <PageWorkbench>
         <div className="mb-1 flex items-center gap-3">
           <SegmentedControl
             value={quizType}
@@ -53,7 +53,7 @@ export const QuizManagementPage: React.FC = () => {
         <div className="flex flex-1 min-h-0 flex-col">
           <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
         </div>
-      </PageViewport>
+      </PageWorkbench>
     </PageFillShell>
   );
 };

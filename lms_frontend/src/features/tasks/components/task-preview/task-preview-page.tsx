@@ -49,13 +49,13 @@ export const TaskPreviewPage: React.FC = () => {
 
   const quizzes = React.useMemo(() => task?.quizzes || [], [task]);
   const hasMultipleQuizzes = quizzes.length > 1;
-  const activeQuizId = (selectedQuizId && quizzes.some((q) => q.quiz === selectedQuizId))
+  const activeQuizId = (selectedQuizId && quizzes.some((q) => q.task_quiz_id === selectedQuizId))
     ? selectedQuizId
-    : (quizzes[0]?.quiz ?? null);
+    : (quizzes[0]?.task_quiz_id ?? null);
 
   React.useEffect(() => {
     if (activeTab === 'grading' && !selectedQuizId && quizzes.length > 0) {
-      setSelectedQuizId(quizzes[0].quiz);
+      setSelectedQuizId(quizzes[0].task_quiz_id);
     }
   }, [activeTab, quizzes, selectedQuizId]);
 
@@ -195,13 +195,13 @@ export const TaskPreviewPage: React.FC = () => {
             {hasMultipleQuizzes ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {quizzes.map((quiz) => {
-                  const isActive = quiz.quiz === activeQuizId;
+                  const isActive = quiz.task_quiz_id === activeQuizId;
                   const isExam = quiz.quiz_type === 'EXAM';
 
                   return (
                     <button
                       key={quiz.id}
-                      onClick={() => setSelectedQuizId(quiz.quiz)}
+                      onClick={() => setSelectedQuizId(quiz.task_quiz_id)}
                       className={cn(
                         'group relative flex flex-col items-start overflow-hidden rounded-xl border-2 p-4 text-left transition-all duration-200',
                         isActive
@@ -278,7 +278,7 @@ export const TaskPreviewPage: React.FC = () => {
               </div>
             )}
 
-            {quizzes.find((q) => q.quiz === activeQuizId)?.quiz_type !== 'EXAM' && (
+            {quizzes.find((q) => q.task_quiz_id === activeQuizId)?.quiz_type !== 'EXAM' && (
               <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50 p-3 text-sm text-primary-700">
                 <div className="mt-0.5">
                   <BookOpen className="w-4 h-4" />

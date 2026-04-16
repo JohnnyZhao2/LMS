@@ -140,11 +140,11 @@ def purge_user_related_business_data(
     """
     清理用户关联业务数据（硬删除，破坏式）。
     """
-    from apps.knowledge.models import Knowledge
+    from apps.knowledge.models import Knowledge, KnowledgeRevision
     from apps.questions.models import Question
-    from apps.quizzes.models import Quiz, QuizQuestion
+    from apps.quizzes.models import Quiz, QuizRevision
     from apps.spot_checks.models import SpotCheck
-    from apps.submissions.models import Answer, Submission
+    from apps.submissions.models import Submission
     from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 
     created_quiz_ids = created_resource_ids['quiz_ids']
@@ -159,19 +159,12 @@ def purge_user_related_business_data(
     TaskAssignment.objects.filter(assignee_id=user_id).delete()
     Submission.objects.filter(user_id=user_id).delete()
 
-    # 2) 清理该用户“创建”的资源依赖关系（避免 PROTECT 阻塞）
-    if created_quiz_ids:
-        Submission.objects.filter(quiz_id__in=created_quiz_ids).delete()
-        TaskQuiz.objects.filter(quiz_id__in=created_quiz_ids).delete()
+    # 2) 清理该用户创建的执行快照及其引用（避免 PROTECT 阻塞）
+    Submission.objects.filter(quiz__created_by_id=user_id).delete()
+    TaskQuiz.objects.filter(quiz__created_by_id=user_id).delete()
+    TaskKnowledge.objects.filter(knowledge__created_by_id=user_id).delete()
 
-    if created_question_ids:
-        Answer.objects.filter(question_id__in=created_question_ids).delete()
-        QuizQuestion.objects.filter(question_id__in=created_question_ids).delete()
-
-    if created_knowledge_ids:
-        TaskKnowledge.objects.filter(knowledge_id__in=created_knowledge_ids).delete()
-
-    # 3) 删除该用户创建的资源
+    # 3) 删除该用户创建的任务与当前资源
     if created_task_ids:
         Task.objects.filter(id__in=created_task_ids).delete()
     if created_quiz_ids:
@@ -180,3 +173,14 @@ def purge_user_related_business_data(
         Knowledge.objects.filter(id__in=created_knowledge_ids).delete()
     if created_question_ids:
         Question.objects.filter(id__in=created_question_ids).delete()
+
+    # 4) 清理未再被执行链路引用的快照
+    KnowledgeRevision.objects.filter(
+        created_by_id=user_id,
+        knowledge_tasks__isnull=True,
+    ).delete()
+    QuizRevision.objects.filter(
+        created_by_id=user_id,
+        quiz_tasks__isnull=True,
+        submissions__isnull=True,
+    ).delete()

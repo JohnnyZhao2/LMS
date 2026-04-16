@@ -10,14 +10,10 @@ interface QuizDocumentEditorProps {
   activeKey: string | null;
   spaceTags?: Tag[];
   onUpdateItem: (key: string, patch: Partial<InlineQuestionItem>) => void;
-  onSaveItem: (key: string) => void;
   onRemoveItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
   onAddBlank: (questionType?: QuestionType) => void;
   onFocusItem: (key: string) => void;
-  savingItemKey?: string | null;
-  onToggleSyncToBank: (key: string) => void;
-  onUpgradeToLatest: (key: string) => void;
 }
 
 /**
@@ -28,14 +24,10 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   activeKey,
   spaceTags,
   onUpdateItem,
-  onSaveItem,
   onRemoveItem,
   onReorderItems,
   onAddBlank,
   onFocusItem,
-  savingItemKey = null,
-  onToggleSyncToBank,
-  onUpgradeToLatest,
 }) => {
   const [showAddMenu, setShowAddMenu] = React.useState(false);
 
@@ -45,17 +37,14 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
       activeKey={activeKey}
       spaceTags={spaceTags}
       showScore
+      lockQuestionType={false}
       onChangeItem={(key, patch) => onUpdateItem(key, patch as Partial<InlineQuestionItem>)}
       onSelectItem={onFocusItem}
       onReorderItems={onReorderItems}
-      onSaveItem={onSaveItem}
       onDeleteItem={onRemoveItem}
-      itemSavingKey={savingItemKey}
       addMenuOpen={showAddMenu}
       onAddMenuOpenChange={setShowAddMenu}
       onAddQuestion={onAddBlank}
-      onToggleSyncToBank={onToggleSyncToBank}
-      onUpgradeToLatest={onUpgradeToLatest}
     />
   );
 };

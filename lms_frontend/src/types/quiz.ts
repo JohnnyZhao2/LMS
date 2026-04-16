@@ -4,30 +4,30 @@
 
 import type { SimpleTag } from './common';
 import type { QuestionType } from './common';
-/**
- * 试卷类型
- */
+
 export type QuizType = 'PRACTICE' | 'EXAM';
 
-interface QuizQuestionVersionInput {
-  question_id: number;
+export interface QuizQuestionInput {
+  id?: number;
+  source_question_id?: number | null;
+  content: string;
+  question_type: QuestionType;
+  options?: Array<{ key: string; value: string }>;
+  answer?: string | string[];
+  explanation?: string;
   score: string | number;
+  space_tag_id?: number | null;
+  tag_ids?: number[];
 }
 
-/**
- * 试卷题目关联
- */
 export interface QuizQuestion {
   id: number;
-  question: number;
+  source_question_id?: number | null;
   question_content: string;
   question_type: QuestionType;
   question_type_display: string;
   order: number;
   score: string;
-  resource_uuid: string;
-  version_number: number;
-  is_current: boolean;
   options?: Array<{ key: string; value: string }>;
   answer?: string | string[];
   explanation?: string;
@@ -35,13 +35,8 @@ export interface QuizQuestion {
   tags?: SimpleTag[];
 }
 
-/**
- * 试卷列表项
- */
 export interface QuizListItem {
   id: number;
-  resource_uuid: string;
-  version_number: number;
   title: string;
   question_count: number;
   total_score: string;
@@ -50,20 +45,14 @@ export interface QuizListItem {
   quiz_type_display: string;
   duration?: number | null;
   pass_score?: string | null;
-  is_current: boolean;
   created_by_name?: string;
   updated_by_name?: string;
   created_at: string;
   updated_at: string;
 }
 
-/**
- * 试卷详情
- */
 export interface QuizDetail {
   id: number;
-  resource_uuid: string;
-  version_number: number;
   title: string;
   questions: QuizQuestion[];
   question_count?: number;
@@ -72,20 +61,16 @@ export interface QuizDetail {
   quiz_type_display: string;
   duration?: number | null;
   pass_score?: number | null;
-  is_current: boolean;
   created_by_name?: string;
   updated_by_name?: string;
   created_at: string;
   updated_at: string;
 }
 
-/**
- * 创建试卷请求
- */
 export interface QuizCreateRequest {
   title: string;
   quiz_type: QuizType;
-  duration?: number | null;       // 考试类型必填
-  pass_score?: number | null;     // 考试类型必填
-  question_versions?: QuizQuestionVersionInput[];
+  duration?: number | null;
+  pass_score?: number | null;
+  questions?: QuizQuestionInput[];
 }

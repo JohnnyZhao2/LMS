@@ -13,24 +13,20 @@ import { EditorPageShell } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useTags } from '@/features/tags/api/tags';
-import { useCreateQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import {
-  buildQuestionCreatePayload,
-  buildQuestionPatchPayload,
   createBlankEditableQuestion,
   hasQuestionAnswer,
   normalizeQuestionScore,
   questionToEditableItem,
-  syncEditableQuestionItem,
 } from '@/features/questions/components/question-editor-helpers';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { PaginatedResponse, QuestionType } from '@/types/common';
+import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
 import type { QuizCreateRequest, QuizQuestion, QuizType } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
@@ -46,14 +42,32 @@ import { QuizPreviewWorkbench } from './quiz-preview-workbench';
 const COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME =
   'grid h-full min-w-0 gap-3 [grid-template-columns:minmax(14rem,15.5rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';
 
-const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => {
-  const normalizedScore = normalizeQuestionScore(score);
+const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => ({
+  ...item,
+  score: normalizeQuestionScore(score),
+});
 
-  return {
-    ...item,
-    score: normalizedScore,
-  };
-};
+const markQuizDraftItem = (item: InlineQuestionItem, saved: boolean): InlineQuestionItem => ({
+  ...item,
+  saved,
+});
+
+const buildQuizEditableItem = (quizQuestion: QuizQuestion): InlineQuestionItem => ({
+  key: `quiz_question_${quizQuestion.id}`,
+  quizQuestionId: quizQuestion.id,
+  questionId: quizQuestion.source_question_id ?? null,
+  sourceQuestionId: quizQuestion.source_question_id ?? null,
+  questionType: quizQuestion.question_type,
+  spaceTagId: quizQuestion.space_tag?.id ?? null,
+  content: quizQuestion.question_content,
+  options: quizQuestion.options ?? [],
+  answer: quizQuestion.answer ?? '',
+  explanation: quizQuestion.explanation ?? '',
+  showExplanation: Boolean(quizQuestion.explanation?.trim()),
+  score: normalizeQuestionScore(quizQuestion.score),
+  tagIds: quizQuestion.tags?.map((tag) => tag.id) ?? [],
+  saved: true,
+});
 
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +93,6 @@ export const QuizForm: React.FC = () => {
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [savingItemKey, setSavingItemKey] = useState<string | null>(null);
   const [questionBankCollapsed, setQuestionBankCollapsed] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth < 1500 : false),
   );
@@ -101,21 +114,7 @@ export const QuizForm: React.FC = () => {
 
   const createQuiz = useCreateQuiz();
   const updateQuiz = useUpdateQuiz();
-  const createQuestion = useCreateQuestion();
-  const updateQuestion = useUpdateQuestion();
   const isSubmitting = createQuiz.isPending || updateQuiz.isPending;
-
-  const buildSavedLocalItem = useCallback((item: InlineQuestionItem): InlineQuestionItem => {
-    const payload = buildQuestionCreatePayload(item);
-    const normalizedScore = normalizeQuestionScore(item.score);
-
-    return {
-      ...item,
-      score: normalizedScore,
-      original: payload,
-      saved: true,
-    };
-  }, []);
 
   const buildQuizDraft = useCallback((): QuizDraftState => ({
     quizId: id ? Number(id) : undefined,
@@ -125,115 +124,6 @@ export const QuizForm: React.FC = () => {
     passScore,
     items,
   }), [duration, id, items, passScore, quizType, title]);
-
-  const getCurrentQuestionByResourceUuid = useCallback(async (resourceUuid: string) => {
-    const response = await apiClient.get<PaginatedResponse<Question>>(
-      `/questions/?resource_uuid=${encodeURIComponent(resourceUuid)}&page=1&page_size=1`,
-    );
-    const currentQuestion = response.results[0];
-
-    if (!currentQuestion) {
-      throw new Error('未找到题目的当前版本');
-    }
-
-    return currentQuestion;
-  }, []);
-
-  const loadQuizQuestionItem = useCallback(async (
-    quizQuestion: QuizQuestion,
-  ) => {
-    const question: Question = {
-      id: quizQuestion.question,
-      resource_uuid: quizQuestion.resource_uuid,
-      version_number: quizQuestion.version_number,
-      is_current: quizQuestion.is_current,
-      content: quizQuestion.question_content,
-      question_type: quizQuestion.question_type,
-      question_type_display: quizQuestion.question_type_display,
-      options: quizQuestion.options ?? [],
-      answer: quizQuestion.answer ?? '',
-      explanation: quizQuestion.explanation ?? '',
-      space_tag: quizQuestion.space_tag,
-      tags: quizQuestion.tags ?? [],
-      usage_count: 0,
-      is_referenced: false,
-      created_at: '',
-      updated_at: '',
-    };
-
-    return applyScoreOverride(questionToEditableItem(question), quizQuestion.score);
-  }, []);
-
-  const persistItemToLibrary = useCallback(async (item: InlineQuestionItem) => {
-    const currentItem = item;
-    const payload = buildQuestionCreatePayload(currentItem);
-
-    if (currentItem.questionId) {
-      const patchData = buildQuestionPatchPayload(
-        currentItem.original ?? {},
-        payload,
-      );
-      if (Object.keys(patchData).length === 0) {
-        if (!currentItem.isCurrent && currentItem.syncToBank) {
-          const created = await createQuestion.mutateAsync({
-            ...payload,
-            source_question_id: currentItem.questionId,
-            sync_to_bank: true,
-          });
-          return {
-            item: syncEditableQuestionItem(currentItem, created),
-            changed: true,
-          };
-        }
-        return {
-          item: buildSavedLocalItem(currentItem),
-          changed: false,
-        };
-      }
-
-      if (currentItem.isCurrent) {
-        if (currentItem.syncToBank) {
-          const updated = await updateQuestion.mutateAsync({
-            id: currentItem.questionId,
-            data: { ...patchData, sync_to_bank: true },
-          });
-          return {
-            item: syncEditableQuestionItem(currentItem, updated),
-            changed: true,
-          };
-        }
-
-        const created = await createQuestion.mutateAsync({
-          ...payload,
-          source_question_id: currentItem.questionId,
-          sync_to_bank: false,
-        });
-        return {
-          item: syncEditableQuestionItem(currentItem, created),
-          changed: true,
-        };
-      }
-
-      const created = await createQuestion.mutateAsync({
-        ...payload,
-        source_question_id: currentItem.questionId,
-        sync_to_bank: currentItem.syncToBank,
-      });
-      return {
-        item: syncEditableQuestionItem(currentItem, created),
-        changed: true,
-      };
-    }
-
-    const created = await createQuestion.mutateAsync({
-      ...payload,
-      sync_to_bank: currentItem.syncToBank,
-    });
-    return {
-      item: syncEditableQuestionItem(currentItem, created),
-      changed: true,
-    };
-  }, [buildSavedLocalItem, createQuestion, updateQuestion]);
 
   useEffect(() => {
     if (initializedRef.current) return undefined;
@@ -256,9 +146,7 @@ export const QuizForm: React.FC = () => {
         if (!quizData) return;
 
         const sorted = [...(quizData.questions ?? [])].sort((a, b) => a.order - b.order);
-        const loadedItems = await Promise.all(
-          sorted.map(loadQuizQuestionItem),
-        );
+        const loadedItems = sorted.map((quizQuestion) => applyScoreOverride(buildQuizEditableItem(quizQuestion), quizQuestion.score));
 
         if (cancelled) return;
 
@@ -275,9 +163,12 @@ export const QuizForm: React.FC = () => {
       const qidParam = searchParams.get('question_ids');
       let loadedItems: InlineQuestionItem[] = [];
       if (qidParam) {
-        const qids = qidParam.split(',').map(Number).filter(Boolean);
+        const questionIds = qidParam.split(',').map(Number).filter(Boolean);
         loadedItems = await Promise.all(
-          qids.map(async (qid) => questionToEditableItem(await apiClient.get<Question>(`/questions/${qid}/`))),
+          questionIds.map(async (questionId) => {
+            const question = await apiClient.get<Question>(`/questions/${questionId}/`);
+            return markQuizDraftItem(questionToEditableItem(question), false);
+          }),
         );
         if (cancelled) return;
       }
@@ -296,43 +187,39 @@ export const QuizForm: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isEdit, loadQuizQuestionItem, quizData, quizDraft, searchParams]);
+  }, [isEdit, quizData, quizDraft, searchParams]);
 
-  useEffect(() => {
-    if (quizType !== 'PRACTICE') {
-      return;
-    }
-    setDuration(undefined);
-    setPassScore(undefined);
-  }, [quizType]);
+  const selectedSourceQuestionIds = useMemo(
+    () => new Set(items.map((item) => item.sourceQuestionId ?? item.questionId).filter((value): value is number => Boolean(value))),
+    [items],
+  );
 
   const filteredQuestionsData = useMemo(() => {
     if (!questionsData) return undefined;
-    const usedUuids = new Set(items.filter((item) => item.resourceUuid).map((item) => item.resourceUuid));
     return {
       ...questionsData,
-      results: questionsData.results.filter((question) => !usedUuids.has(question.resource_uuid)),
+      results: questionsData.results.filter((question) => !selectedSourceQuestionIds.has(question.id)),
     };
-  }, [questionsData, items]);
+  }, [questionsData, selectedSourceQuestionIds]);
 
   const workbenchClassName = questionBankCollapsed
     ? COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME
     : THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME;
 
   const handleAddQuestion = useCallback(async (question: Question) => {
-    if (items.some((item) => item.resourceUuid === question.resource_uuid)) {
+    if (selectedSourceQuestionIds.has(question.id)) {
       toast.warning('该题目已在试卷中');
       return;
     }
 
     try {
       const full = await apiClient.get<Question>(`/questions/${question.id}/`);
-      appendItemPreservingFocus(questionToEditableItem(full));
+      appendItemPreservingFocus(markQuizDraftItem(questionToEditableItem(full), false));
       toast.success('已添加到试卷');
     } catch (error) {
       showApiError(error);
     }
-  }, [appendItemPreservingFocus, items]);
+  }, [appendItemPreservingFocus, selectedSourceQuestionIds]);
 
   const handleAddBlank = useCallback((questionType: QuestionType = 'SINGLE_CHOICE') => {
     appendItemPreservingFocus(
@@ -344,14 +231,8 @@ export const QuizForm: React.FC = () => {
   }, [appendItemPreservingFocus, filterSpaceTagId]);
 
   const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
-    setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch, saved: false } : item)));
-  }, []);
-
-  const handleToggleSyncToBank = useCallback((key: string) => {
     setItems((prev) => prev.map((item) => (
-      item.key === key
-        ? { ...item, syncToBank: !item.syncToBank, saved: false }
-        : item
+      item.key === key ? { ...item, ...patch, saved: false } : item
     )));
   }, []);
 
@@ -378,45 +259,6 @@ export const QuizForm: React.FC = () => {
     }
   }, []);
 
-  const handleUpgradeToLatest = useCallback(async (key: string) => {
-    const item = items.find((current) => current.key === key);
-    if (!item?.resourceUuid) return;
-
-    try {
-      const currentQuestion = await getCurrentQuestionByResourceUuid(item.resourceUuid);
-      const upgraded = syncEditableQuestionItem(
-        { key: item.key, score: item.score, syncToBank: true },
-        currentQuestion,
-      );
-      setItems((prev) => prev.map((current) => (current.key === key ? upgraded : current)));
-      toast.success('已更新到题库最新版本');
-    } catch (error) {
-      showApiError(error);
-    }
-  }, [getCurrentQuestionByResourceUuid, items]);
-
-  const handleSaveItem = useCallback(async (key: string) => {
-    const item = items.find((current) => current.key === key);
-    if (!item) return;
-    if (!item.content.trim()) return void toast.error('请输入内容');
-    if (!hasQuestionAnswer(item.answer)) return void toast.error('请设置答案');
-
-    setSavingItemKey(key);
-    try {
-      const { item: savedItem, changed } = await persistItemToLibrary(item);
-      setItems((prev) => prev.map((current) => (current.key === key ? savedItem : current)));
-      if (!changed) {
-        toast.info('未检测到改动');
-        return;
-      }
-      toast.success('题目保存成功');
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSavingItemKey(null);
-    }
-  }, [items, persistItemToLibrary]);
-
   const handleSubmitQuiz = async () => {
     if (!title.trim()) return toast.error('请输入试卷名称');
     if (items.length === 0) return toast.warning('请添加题目');
@@ -427,28 +269,26 @@ export const QuizForm: React.FC = () => {
       if (!hasQuestionAnswer(item.answer)) return toast.error(`第${index + 1}题未设置答案`);
     }
 
+    const data: QuizCreateRequest = {
+      title,
+      quiz_type: quizType,
+      duration: quizType === 'EXAM' ? duration : null,
+      pass_score: quizType === 'EXAM' ? passScore : null,
+      questions: items.map((item) => ({
+        id: item.quizQuestionId ?? undefined,
+        source_question_id: item.sourceQuestionId ?? item.questionId ?? null,
+        content: item.content,
+        question_type: item.questionType,
+        options: item.options,
+        answer: item.answer,
+        explanation: item.explanation,
+        score: normalizeQuestionScore(item.score),
+        space_tag_id: item.spaceTagId ?? null,
+        tag_ids: item.tagIds,
+      })),
+    };
+
     try {
-      const savedItems = await Promise.all(items.map(async (item) => {
-        if (item.questionId && item.saved) {
-          return item;
-        }
-        const result = await persistItemToLibrary(item);
-        return result.item;
-      }));
-
-      setItems(savedItems);
-
-      const data: QuizCreateRequest = {
-        title,
-        quiz_type: quizType,
-        duration: quizType === 'EXAM' ? duration : null,
-        pass_score: quizType === 'EXAM' ? passScore : null,
-        question_versions: savedItems.map((item) => ({
-          question_id: item.questionId!,
-          score: normalizeQuestionScore(item.score),
-        })),
-      };
-
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data });
         toast.success('试卷更新成功');
@@ -459,6 +299,14 @@ export const QuizForm: React.FC = () => {
       }
     } catch (error) {
       showApiError(error);
+    }
+  };
+
+  const handleQuizTypeChange = (value: QuizType) => {
+    setQuizType(value);
+    if (value === 'PRACTICE') {
+      setDuration(undefined);
+      setPassScore(undefined);
     }
   };
 
@@ -504,7 +352,7 @@ export const QuizForm: React.FC = () => {
 
           <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
             <div className="relative flex h-12 shrink-0 items-center justify-between border-b border-border px-5">
-              <Select value={quizType} onValueChange={(value) => setQuizType(value as QuizType)}>
+              <Select value={quizType} onValueChange={(value) => handleQuizTypeChange(value as QuizType)}>
                 <SelectTrigger
                   className={
                     quizType === 'EXAM'
@@ -563,14 +411,10 @@ export const QuizForm: React.FC = () => {
                 activeKey={activeKey}
                 spaceTags={spaceTags}
                 onUpdateItem={handleUpdateItem}
-                onSaveItem={handleSaveItem}
                 onRemoveItem={handleRemoveItem}
                 onReorderItems={handleReorderItems}
-              onAddBlank={handleAddBlank}
-              onFocusItem={setActiveKey}
-              savingItemKey={savingItemKey}
-              onToggleSyncToBank={handleToggleSyncToBank}
-              onUpgradeToLatest={handleUpgradeToLatest}
+                onAddBlank={handleAddBlank}
+                onFocusItem={setActiveKey}
               />
             </div>
           </div>

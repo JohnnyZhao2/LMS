@@ -25,6 +25,7 @@ interface QuestionEditCardProps {
   item: QuestionEditCardValue;
   spaceTags?: Tag[];
   showScore?: boolean;
+  lockQuestionType?: boolean;
   leadingSlot?: React.ReactNode;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
   onFocus?: () => void;
@@ -40,6 +41,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
   item,
   spaceTags,
   showScore = false,
+  lockQuestionType,
   leadingSlot,
   onChange,
   onFocus,
@@ -113,7 +115,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
           metaBar={showMetaToolbar ? (
             <QuestionMetaToolbar
               questionType={item.questionType}
-              staticType={!!item.questionId}
+              staticType={lockQuestionType ?? !!item.questionId}
               onQuestionTypeChange={(value) => {
                 const normalized = normalizeQuestionTypeFields({
                   options: item.options,

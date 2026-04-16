@@ -22,8 +22,6 @@ import { QuestionEditCard, type QuestionEditCardValue } from './question-edit-ca
 
 type QuestionListItem = QuestionEditCardValue & {
   key: string;
-  isCurrent?: boolean;
-  syncToBank?: boolean;
 };
 
 interface QuestionDocumentListProps {
@@ -31,6 +29,7 @@ interface QuestionDocumentListProps {
   activeKey: string | null;
   spaceTags?: Tag[];
   showScore?: boolean;
+  lockQuestionType?: boolean;
   onChangeItem: (key: string, patch: Partial<QuestionEditCardValue>) => void;
   onSelectItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
@@ -42,8 +41,6 @@ interface QuestionDocumentListProps {
   onAddMenuOpenChange?: (open: boolean) => void;
   onAddQuestion?: (questionType: QuestionType) => void;
   emptyState?: React.ReactNode;
-  onToggleSyncToBank?: (key: string) => void;
-  onUpgradeToLatest?: (key: string) => void;
 }
 
 interface SortableQuestionListItemProps {
@@ -52,6 +49,7 @@ interface SortableQuestionListItemProps {
   isActive: boolean;
   spaceTags?: Tag[];
   showScore: boolean;
+  lockQuestionType?: boolean;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
   onSave?: () => void;
   onDelete?: () => void;
@@ -80,6 +78,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
   isActive,
   spaceTags,
   showScore,
+  lockQuestionType,
   onChange,
   onSave,
   onDelete,
@@ -140,6 +139,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
           item={item}
           spaceTags={spaceTags}
           showScore={showScore}
+          lockQuestionType={lockQuestionType}
           onChange={onChange}
           onFocus={onFocus}
           onDelete={onDelete}
@@ -159,6 +159,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
   activeKey,
   spaceTags,
   showScore = false,
+  lockQuestionType,
   onChangeItem,
   onSelectItem,
   onReorderItems,
@@ -170,8 +171,6 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
   onAddMenuOpenChange,
   onAddQuestion,
   emptyState = DefaultEmptyState,
-  onToggleSyncToBank,
-  onUpgradeToLatest,
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -231,6 +230,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     isActive={item.key === activeKey}
                     spaceTags={spaceTags}
                     showScore={showScore}
+                    lockQuestionType={lockQuestionType}
                     onChange={(patch) => onChangeItem(item.key, patch)}
                     onSave={onSaveItem ? () => onSaveItem(item.key) : undefined}
                     onDelete={onDeleteItem ? () => onDeleteItem(item.key) : undefined}
@@ -240,34 +240,6 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     }}
                     isSaving={itemSavingKey === item.key}
                     isDeleting={itemDeletingKey === item.key}
-                    headerActions={(
-                      <div className="flex items-center gap-2.5">
-                        {item.questionId && item.isCurrent === false && onUpgradeToLatest ? (
-                          <button
-                            type="button"
-                            className="text-[11px] font-medium text-warning-600 transition hover:text-warning-500"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onUpgradeToLatest(item.key);
-                            }}
-                          >
-                            更新到题库最新
-                          </button>
-                        ) : null}
-                        {onToggleSyncToBank ? (
-                          <button
-                            type="button"
-                            className="text-[11px] font-medium text-text-muted transition hover:text-foreground"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onToggleSyncToBank?.(item.key);
-                            }}
-                          >
-                            {item.syncToBank === false ? '仅当前试卷' : '同步题库'}
-                          </button>
-                        ) : null}
-                      </div>
-                    )}
                   />
                 ))}
               </div>

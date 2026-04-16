@@ -82,7 +82,7 @@ class KnowledgeListCreateView(BaseAPIView):
         summary='获取知识文档列表',
         description='''获取知识文档列表，支持按 space 和知识标签筛选。
 所有用户只能看到当前版本的知识。
-**注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
+**注意：** 保存只会更新当前知识，不会生成历史版本。
 ''',
         parameters=[
             OpenApiParameter(name='space_tag_id', type=int, description='space ID'),

@@ -190,14 +190,11 @@ export const useUserPermissionOverrideState = ({
     createOverride,
     getPermissionState,
     isPermissionSaving,
-    isScopeAwarePermission,
     normalizedSelectedPermissionRole,
     permissionCatalog,
     refetchUserOverrides,
     refreshUser,
     revokeOverride,
-    selectedPermissionScopes,
-    selectedScopeUserIds,
     userId,
   ]);
 

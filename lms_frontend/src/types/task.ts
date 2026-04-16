@@ -12,9 +12,6 @@ interface TaskActions {
   analytics: boolean;
 }
 
-/**
- * 任务分配
- */
 interface TaskAssignment {
   id: number;
   assignee: number;
@@ -25,32 +22,29 @@ interface TaskAssignment {
   updated_at: string;
 }
 
-/**
- * 任务知识项
- */
 interface TaskKnowledge {
   id: number;
-  knowledge: number;
+  knowledge?: number | null;
+  knowledge_revision_id: number;
   knowledge_title: string;
+  source_title?: string | null;
   space_tag_name?: string | null;
   content_preview?: string;
   order: number;
-  resource_uuid: string;
-  is_current: boolean;
+  revision_number: number;
 }
 
-/**
- * 任务试卷项
- */
 export interface TaskQuiz {
   id: number;
-  quiz: number;
+  task_quiz_id: number;
+  quiz?: number | null;
+  quiz_revision_id: number;
   quiz_title: string;
+  source_title?: string | null;
   question_count: number;
   total_score: number;
   order: number;
-  resource_uuid: string;
-  is_current: boolean;
+  revision_number: number;
   quiz_type: QuizType;
   quiz_type_display: string;
   duration?: number | null;
@@ -60,17 +54,12 @@ export interface TaskQuiz {
 export interface TaskResourceOption {
   id: number;
   title: string;
-  resource_uuid: string;
-  is_current: boolean;
   resource_type: 'DOCUMENT' | 'QUIZ';
   space_tag_name?: string | null;
   question_count?: number;
   quiz_type?: QuizType;
 }
 
-/**
- * 任务详情
- */
 export interface TaskDetail {
   id: number;
   title: string;
@@ -87,9 +76,6 @@ export interface TaskDetail {
   actions: TaskActions;
 }
 
-/**
- * 学员学习任务进度
- */
 interface TaskProgress {
   completed: number;
   total: number;
@@ -104,12 +90,10 @@ interface TaskProgress {
   practice_completed?: number;
 }
 
-/**
- * 学员学习任务知识项
- */
 interface LearningTaskKnowledgeItem {
   id: number;
-  knowledge_id: number;
+  knowledge_id?: number | null;
+  knowledge_revision_id: number;
   title: string;
   space_tag_name?: string | null;
   content_preview: string;
@@ -118,13 +102,12 @@ interface LearningTaskKnowledgeItem {
   completed_at?: string;
 }
 
-/**
- * 学员学习任务试卷项
- */
 export interface LearningTaskQuizItem {
   id: number;
   quiz: number;
   quiz_id: number;
+  task_quiz_id: number;
+  quiz_revision_id: number;
   quiz_title: string;
   quiz_type: string;
   quiz_type_display: string;
@@ -139,15 +122,11 @@ export interface LearningTaskQuizItem {
   latest_status?: string | null;
 }
 
-/**
- * 学员学习任务详情
- */
 export interface StudentLearningTaskDetail {
   id: number;
   task_id: number;
   task_title: string;
   task_description?: string;
-
   deadline: string;
   created_by_name: string;
   status: TaskStatus;
@@ -190,7 +169,6 @@ export interface TaskListItem {
   exam_count: number;
   practice_count: number;
   assignee_count: number;
-  /** 已完成的学员数量 */
   completed_count: number;
   pending_grading_count: number;
   abnormal_count: number;

@@ -1,7 +1,5 @@
-"""
-Task selectors.
-集中管理任务相关查询，统一预加载与过滤逻辑。
-"""
+"""Task selectors."""
+
 from typing import Any, Optional
 
 from django.db.models import Count, Prefetch, Q, QuerySet, Sum
@@ -11,13 +9,7 @@ from apps.knowledge.selectors import get_knowledge_queryset
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
 
-from .models import (
-    KnowledgeLearningProgress,
-    Task,
-    TaskAssignment,
-    TaskKnowledge,
-    TaskQuiz,
-)
+from .models import KnowledgeLearningProgress, Task, TaskAssignment, TaskKnowledge, TaskQuiz
 
 ANALYTICS_SUBMISSION_STATUSES = ['SUBMITTED', 'GRADING', 'GRADED']
 ACCURACY_SUBMISSION_STATUSES = ['SUBMITTED', 'GRADED']
@@ -40,13 +32,12 @@ SCORE_DISTRIBUTION_RANGES = [
 
 
 def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Task.objects.select_related(
-        'created_by',
-        'updated_by'
-    ).prefetch_related(
-        'task_knowledge__knowledge__space_tag',
+    qs = Task.objects.select_related('created_by', 'updated_by').prefetch_related(
+        'task_knowledge__knowledge',
+        'task_knowledge__source_knowledge',
         'task_quizzes__quiz',
-        'assignments__assignee'
+        'task_quizzes__source_quiz',
+        'assignments__assignee',
     )
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
@@ -63,9 +54,7 @@ def task_base_queryset(include_deleted: bool = False) -> QuerySet:
 def task_list_queryset(include_deleted: bool = False) -> QuerySet:
     completed_assignments_prefetch = Prefetch(
         'assignments',
-        queryset=TaskAssignment.objects.filter(
-            status='COMPLETED',
-        ).prefetch_related(
+        queryset=TaskAssignment.objects.filter(status='COMPLETED').prefetch_related(
             'knowledge_progress',
             Prefetch(
                 'submissions',
@@ -111,11 +100,11 @@ def assignment_detail_queryset() -> QuerySet:
         'task',
         'task__created_by',
         'task__updated_by',
-        'assignee'
+        'assignee',
     ).prefetch_related(
-        'task__task_knowledge__knowledge__space_tag',
+        'task__task_knowledge__knowledge',
         'task__task_quizzes__quiz',
-        'knowledge_progress__task_knowledge__knowledge__space_tag'
+        'knowledge_progress__task_knowledge__knowledge',
     )
 
 
@@ -124,86 +113,76 @@ def assignment_list_queryset() -> QuerySet:
         'task',
         'task__created_by',
         'task__updated_by',
-        'assignee'
+        'assignee',
     ).prefetch_related(
-        'task__task_knowledge__knowledge__space_tag',
+        'task__task_knowledge__knowledge',
         'task__task_quizzes',
-        'knowledge_progress'
+        'knowledge_progress',
     )
 
 
 def task_knowledge_queryset(task_id: int) -> QuerySet:
-    return TaskKnowledge.objects.filter(
-        task_id=task_id
-    ).select_related('knowledge', 'knowledge__space_tag', 'task').order_by('order')
+    return TaskKnowledge.objects.filter(task_id=task_id).select_related(
+        'knowledge',
+        'source_knowledge',
+        'task',
+    ).order_by('order')
 
 
 def task_quiz_queryset(task_id: int) -> QuerySet:
-    return TaskQuiz.objects.filter(
-        task_id=task_id
-    ).select_related('quiz', 'task').order_by('order')
+    return TaskQuiz.objects.filter(task_id=task_id).select_related(
+        'quiz',
+        'source_quiz',
+        'task',
+    ).order_by('order')
 
 
-def task_resource_options(
-    search: Optional[str] = None,
-    resource_type: str = 'ALL',
-) -> list[dict[str, Any]]:
+def task_resource_options(search: Optional[str] = None, resource_type: str = 'ALL') -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
 
     if resource_type in {'ALL', 'DOCUMENT'}:
         knowledge_rows = get_knowledge_queryset(
             search=search,
             ordering='-updated_at',
-        ).values(
-            'id',
-            'title',
-            'resource_uuid',
-            'is_current',
-            'updated_at',
-            'space_tag__name',
+        ).values('id', 'title', 'updated_at', 'space_tag__name')
+        items.extend(
+            [
+                {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'resource_type': 'DOCUMENT',
+                    'space_tag_name': row['space_tag__name'],
+                    'updated_at': row['updated_at'],
+                }
+                for row in knowledge_rows
+            ]
         )
-        items.extend([
-            {
-                'id': row['id'],
-                'title': row['title'],
-                'resource_uuid': row['resource_uuid'],
-                'is_current': row['is_current'],
-                'resource_type': 'DOCUMENT',
-                'space_tag_name': row['space_tag__name'],
-                'updated_at': row['updated_at'],
-            }
-            for row in knowledge_rows
-        ])
 
     if resource_type in {'ALL', 'QUIZ'}:
-        quiz_rows = Quiz.objects.filter(
-            is_current=True,
-        ).annotate(
+        quiz_rows = Quiz.objects.annotate(
             question_count_value=Count('quiz_questions'),
         ).values(
             'id',
             'title',
-            'resource_uuid',
-            'is_current',
             'updated_at',
             'quiz_type',
             'question_count_value',
         ).order_by('-updated_at')
         if search:
             quiz_rows = quiz_rows.filter(title__icontains=search)
-        items.extend([
-            {
-                'id': row['id'],
-                'title': row['title'],
-                'resource_uuid': row['resource_uuid'],
-                'is_current': row['is_current'],
-                'resource_type': 'QUIZ',
-                'quiz_type': row['quiz_type'],
-                'question_count': row['question_count_value'],
-                'updated_at': row['updated_at'],
-            }
-            for row in quiz_rows
-        ])
+        items.extend(
+            [
+                {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'resource_type': 'QUIZ',
+                    'quiz_type': row['quiz_type'],
+                    'question_count': row['question_count_value'],
+                    'updated_at': row['updated_at'],
+                }
+                for row in quiz_rows
+            ]
+        )
 
     items.sort(key=lambda item: item['updated_at'], reverse=True)
     for item in items:
@@ -212,33 +191,23 @@ def task_resource_options(
 
 
 def knowledge_progress_queryset(assignment_id: int) -> QuerySet:
-    return KnowledgeLearningProgress.objects.filter(
-        assignment_id=assignment_id
-    ).select_related(
+    return KnowledgeLearningProgress.objects.filter(assignment_id=assignment_id).select_related(
         'task_knowledge',
         'task_knowledge__knowledge',
-        'task_knowledge__knowledge__space_tag'
     ).order_by('task_knowledge__order')
 
 
 def analytics_assignment_queryset(task_id: int, order_desc: bool = False) -> QuerySet:
     submissions_prefetch = Prefetch(
         'submissions',
-        queryset=Submission.objects.select_related('quiz').filter(
-            status__in=ANALYTICS_SUBMISSION_STATUSES
-        )
+        queryset=Submission.objects.select_related('quiz').filter(status__in=ANALYTICS_SUBMISSION_STATUSES),
     )
     queryset = TaskAssignment.objects.filter(task_id=task_id).select_related(
         'assignee',
         'assignee__department',
         'task',
-    ).prefetch_related(
-        'knowledge_progress',
-        submissions_prefetch,
-    )
-    if order_desc:
-        return queryset.order_by('-created_at')
-    return queryset
+    ).prefetch_related('knowledge_progress', submissions_prefetch)
+    return queryset.order_by('-created_at' if order_desc else 'created_at')
 
 
 def task_submission_score_totals(task_id: int) -> dict:
@@ -261,9 +230,7 @@ def task_knowledge_completion_counts(task_id: int) -> dict[int, int]:
     rows = KnowledgeLearningProgress.objects.filter(
         task_knowledge__task_id=task_id,
         is_completed=True,
-    ).values('task_knowledge_id').annotate(
-        completed_count=Count('id')
-    )
+    ).values('task_knowledge_id').annotate(completed_count=Count('id'))
     return {row['task_knowledge_id']: row['completed_count'] for row in rows}
 
 
@@ -271,10 +238,10 @@ def task_quiz_completion_counts(task_id: int) -> dict[int, int]:
     rows = Submission.objects.filter(
         task_assignment__task_id=task_id,
         status__in=ANALYTICS_SUBMISSION_STATUSES,
-    ).values('quiz_id').annotate(
+    ).values('task_quiz_id').annotate(
         completed_count=Count('task_assignment_id', distinct=True)
     )
-    return {row['quiz_id']: row['completed_count'] for row in rows}
+    return {row['task_quiz_id']: row['completed_count'] for row in rows}
 
 
 def task_highest_score_percentages(task_id: int) -> list[float]:
@@ -291,7 +258,6 @@ def task_highest_score_percentages(task_id: int) -> list[float]:
         previous = best_percentages.get(assignment_id)
         if previous is None or percentage > previous:
             best_percentages[assignment_id] = percentage
-
     return list(best_percentages.values())
 
 
@@ -305,7 +271,6 @@ def task_exam_submissions_queryset(task_id: int) -> QuerySet:
 
 
 def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
-    """判断学员任务是否异常。"""
     for progress in assignment.knowledge_progress.all():
         if not progress.is_completed:
             continue
@@ -313,14 +278,12 @@ def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
             duration = (progress.completed_at - progress.created_at).total_seconds() / 60
             if duration < 5:
                 return True
-
     for submission in assignment.submissions.all():
         if submission.submitted_at and submission.started_at:
             duration = (submission.submitted_at - submission.started_at).total_seconds() / 60
             threshold = 30 if submission.quiz.quiz_type == 'EXAM' else 5
             if duration < threshold:
                 return True
-
     return False
 
 
@@ -342,7 +305,6 @@ def task_average_completion_minutes(task_id: int) -> float:
     )
     if not completed_assignments.exists():
         return 0.0
-
     total_time = sum(
         (assignment.completed_at - assignment.created_at).total_seconds() / 60
         for assignment in completed_assignments
@@ -353,18 +315,13 @@ def task_average_completion_minutes(task_id: int) -> float:
 def task_accuracy_stats(task_id: int) -> dict[str, Any]:
     has_quiz = task_quiz_queryset(task_id).exists()
     percentage = None
-
     if has_quiz:
         score_totals = task_submission_score_totals(task_id)
         total_score = score_totals['total_score']
         obtained_score = score_totals['obtained_score']
         if score_totals['submission_count'] > 0 and total_score > 0:
             percentage = round(float(obtained_score) / float(total_score) * 100, 1)
-
-    return {
-        'has_quiz': has_quiz,
-        'percentage': percentage,
-    }
+    return {'has_quiz': has_quiz, 'percentage': percentage}
 
 
 def task_abnormal_count(task_id: int) -> int:
@@ -383,26 +340,29 @@ def task_node_progress(task_id: int, total_count: int) -> list[dict[str, Any]]:
 
     for task_knowledge in task_knowledge_queryset(task_id):
         completed = knowledge_counts.get(task_knowledge.id, 0)
-        nodes.append({
-            'node_id': task_knowledge.id,
-            'node_name': task_knowledge.knowledge.title,
-            'category': 'KNOWLEDGE',
-            'completed_count': completed,
-            'total_count': total_count,
-            'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
-        })
+        nodes.append(
+            {
+                'node_id': task_knowledge.id,
+                'node_name': task_knowledge.knowledge.title,
+                'category': 'KNOWLEDGE',
+                'completed_count': completed,
+                'total_count': total_count,
+                'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
+            }
+        )
 
     for task_quiz in task_quiz_queryset(task_id):
-        completed = quiz_counts.get(task_quiz.quiz_id, 0)
-        nodes.append({
-            'node_id': task_quiz.id,
-            'node_name': task_quiz.quiz.title,
-            'category': task_quiz.quiz.quiz_type,
-            'completed_count': completed,
-            'total_count': total_count,
-            'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
-        })
-
+        completed = quiz_counts.get(task_quiz.id, 0)
+        nodes.append(
+            {
+                'node_id': task_quiz.id,
+                'node_name': task_quiz.quiz.title,
+                'category': task_quiz.quiz.quiz_type,
+                'completed_count': completed,
+                'total_count': total_count,
+                'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
+            }
+        )
     return nodes
 
 
@@ -412,7 +372,6 @@ def task_time_distribution(task_id: int) -> list[dict[str, int]]:
         status='COMPLETED',
         completed_at__isnull=False,
     )
-
     for assignment in completed_assignments:
         if assignment.completed_at and assignment.created_at:
             duration = (assignment.completed_at - assignment.created_at).total_seconds() / 60
@@ -420,19 +379,16 @@ def task_time_distribution(task_id: int) -> list[dict[str, int]]:
                 if minimum <= duration < maximum:
                     distribution[label] += 1
                     break
-
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
 def task_score_distribution(task_id: int) -> list[dict[str, int]]:
     distribution = {item[0]: 0 for item in SCORE_DISTRIBUTION_RANGES}
-
     for score in task_highest_score_percentages(task_id):
         for label, minimum, maximum in SCORE_DISTRIBUTION_RANGES:
             if minimum <= score < maximum:
                 distribution[label] += 1
                 break
-
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
@@ -440,11 +396,9 @@ def task_exam_pass_rate(task_id: int) -> Optional[float]:
     has_exam = task_quiz_queryset(task_id).filter(quiz__quiz_type='EXAM').exists()
     if not has_exam:
         return None
-
     exam_submissions = task_exam_submissions_queryset(task_id)
     if not exam_submissions.exists():
         return 0.0
-
     total_count = exam_submissions.count()
     passed_count = sum(
         1
@@ -457,13 +411,11 @@ def task_exam_pass_rate(task_id: int) -> Optional[float]:
 def task_analytics_payload(task_id: int) -> dict[str, Any]:
     completion = task_completion_stats(task_id)
     accuracy = task_accuracy_stats(task_id)
-
     score_distribution = None
     pass_rate = None
     if accuracy['has_quiz']:
         score_distribution = task_score_distribution(task_id)
         pass_rate = task_exam_pass_rate(task_id)
-
     return {
         'completion': completion,
         'average_time': task_average_completion_minutes(task_id),
@@ -484,7 +436,7 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
 
     for assignment in assignments:
         completed_knowledge = sum(1 for progress in assignment.knowledge_progress.all() if progress.is_completed)
-        completed_quiz_count = len({submission.quiz_id for submission in assignment.submissions.all()})
+        completed_quiz_count = len({submission.task_quiz_id for submission in assignment.submissions.all()})
         completed_nodes = completed_knowledge + completed_quiz_count
 
         time_spent = 0
@@ -492,7 +444,6 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
             time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
 
         score = float(assignment.score) if assignment.score is not None else None
-
         abnormal = is_assignment_abnormal(assignment)
         status = assignment.status
         if status != 'COMPLETED' and assignment.task.deadline < now:
@@ -500,17 +451,18 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
         if status == 'COMPLETED' and abnormal:
             status = 'COMPLETED_ABNORMAL'
 
-        results.append({
-            'student_id': assignment.assignee.id,
-            'student_name': assignment.assignee.username,
-            'avatar_key': assignment.assignee.avatar_key,
-            'employee_id': assignment.assignee.employee_id or '',
-            'department': assignment.assignee.department.name if assignment.assignee.department else '',
-            'status': status,
-            'node_progress': f'{completed_nodes}/{total_nodes}',
-            'score': score,
-            'time_spent': time_spent,
-            'is_abnormal': abnormal,
-        })
-
+        results.append(
+            {
+                'student_id': assignment.assignee.id,
+                'student_name': assignment.assignee.username,
+                'avatar_key': assignment.assignee.avatar_key,
+                'employee_id': assignment.assignee.employee_id or '',
+                'department': assignment.assignee.department.name if assignment.assignee.department else '',
+                'status': status,
+                'node_progress': f'{completed_nodes}/{total_nodes}',
+                'score': score,
+                'time_spent': time_spent,
+                'is_abnormal': abnormal,
+            }
+        )
     return results

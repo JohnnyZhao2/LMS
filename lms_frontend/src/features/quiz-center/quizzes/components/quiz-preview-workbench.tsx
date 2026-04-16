@@ -10,7 +10,7 @@ import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
-import dayjs from '@/lib/dayjs';
+import { formatListDateTime } from '@/lib/date-time';
 import { cn } from '@/lib/utils';
 import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem, QuizDraftState } from '../types';
@@ -72,16 +72,13 @@ export function QuizPreviewWorkbench({
       duration: quizDraft.duration ?? null,
       pass_score: quizDraft.passScore ?? null,
       questions: quizDraft.items.map((item, index) => ({
-        id: index + 1,
-        question: item.questionId ?? -(index + 1),
+        id: item.quizQuestionId ?? index + 1,
+        source_question_id: item.sourceQuestionId ?? item.questionId ?? null,
         question_content: item.content,
         question_type: item.questionType,
         question_type_display: item.questionType,
         order: index + 1,
         score: item.score,
-        resource_uuid: item.resourceUuid ?? `draft-${index + 1}`,
-        version_number: 0,
-        is_current: item.isCurrent,
         options: item.options,
         answer: item.answer,
         explanation: item.explanation,
@@ -102,8 +99,8 @@ export function QuizPreviewWorkbench({
       return;
     }
 
-    if (!activeQuestionId || !orderedQuestions.some((item) => item.question === activeQuestionId)) {
-      setActiveQuestionId(orderedQuestions[0].question);
+    if (!activeQuestionId || !orderedQuestions.some((item) => item.id === activeQuestionId)) {
+      setActiveQuestionId(orderedQuestions[0].id);
     }
   }, [activeQuestionId, orderedQuestions]);
 
@@ -113,11 +110,10 @@ export function QuizPreviewWorkbench({
     () =>
       orderedQuestions.map((item) => {
         return {
-          key: String(item.question),
-          questionId: item.question,
-          resourceUuid: item.resource_uuid ?? null,
-          isCurrent: item.is_current ?? true,
-          syncToBank: item.is_current ?? true,
+          key: String(item.id),
+          quizQuestionId: item.id,
+          questionId: item.source_question_id ?? null,
+          sourceQuestionId: item.source_question_id ?? null,
           questionType: item.question_type,
           spaceTagId: item.space_tag?.id ?? null,
           content: item.question_content ?? '',
@@ -134,8 +130,8 @@ export function QuizPreviewWorkbench({
   );
   const createdByName = effectiveQuiz?.created_by_name || '未知';
   const updatedByName = effectiveQuiz?.updated_by_name || effectiveQuiz?.created_by_name || '未知';
-  const createdAtText = effectiveQuiz?.created_at ? dayjs(effectiveQuiz.created_at).format('YYYY-MM-DD HH:mm') : '';
-  const updatedAtText = effectiveQuiz?.updated_at ? dayjs(effectiveQuiz.updated_at).format('YYYY-MM-DD HH:mm') : '';
+  const createdAtText = formatListDateTime(effectiveQuiz?.created_at);
+  const updatedAtText = formatListDateTime(effectiveQuiz?.updated_at);
   const isSameOperator = createdByName === updatedByName;
   const isSameTimestamp = createdAtText === updatedAtText;
   const previewSections = React.useMemo(() => {
@@ -246,9 +242,9 @@ export function QuizPreviewWorkbench({
                           key={question.id}
                           ref={(node) => {
                             if (node) {
-                              questionRefs.current.set(question.question, node);
+                              questionRefs.current.set(question.id, node);
                             } else {
-                              questionRefs.current.delete(question.question);
+                              questionRefs.current.delete(question.id);
                             }
                           }}
                           className="scroll-mt-6 py-1"

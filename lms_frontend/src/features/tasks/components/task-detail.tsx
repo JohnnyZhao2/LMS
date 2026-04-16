@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { cn } from '@/lib/utils';
@@ -40,7 +41,7 @@ const assignmentStatusLabelMap: Record<string, string> = {
 
 interface KnowledgeListViewItem {
   id: number;
-  knowledgeId: number;
+  knowledgeId?: number | null;
   title: string;
   isCompleted?: boolean;
 }
@@ -397,7 +398,7 @@ export const TaskDetail: React.FC = () => {
                             ) : null
                           }
                           tone={item.isCompleted ? 'success' : 'default'}
-                          onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`))}
+                          onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId ?? item.id}?taskKnowledgeId=${item.id}&task=${taskId}`))}
                         />
                       ))}
                     </div>
@@ -595,7 +596,7 @@ export const TaskDetail: React.FC = () => {
                     />
                     <TaskInfoRow
                       label="更新时间"
-                      value={dayjs(task.updated_at).format('YYYY-MM-DD HH:mm')}
+                      value={formatListDateTime(task.updated_at)}
                     />
                   </div>
                 </section>

@@ -4,12 +4,11 @@ export type ResourceType = 'DOCUMENT' | 'QUIZ';
 
 export interface ResourceItem {
   id: number;
-  resource_uuid: string;
-  is_current: boolean;
   title: string;
   resourceType: ResourceType;
   category?: string;
   quizType?: 'EXAM' | 'PRACTICE';
+  isMissingSource?: boolean;
 }
 
 export interface SelectedResource extends ResourceItem {
@@ -18,8 +17,6 @@ export interface SelectedResource extends ResourceItem {
 
 export const mapTaskResourceOptionToResource = (item: TaskResourceOption): ResourceItem => ({
   id: item.id,
-  resource_uuid: item.resource_uuid,
-  is_current: item.is_current,
   title: item.title,
   category: item.resource_type === 'DOCUMENT'
     ? item.space_tag_name || '未分类'

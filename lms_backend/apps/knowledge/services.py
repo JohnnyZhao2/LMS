@@ -1,17 +1,13 @@
-"""
-知识文档应用服务
-编排业务逻辑。
-版本管理说明：
-- 使用 resource_uuid + version_number + is_current 管理版本
-- is_current=True 表示当前最新版本
-"""
+"""Knowledge services."""
+
+import hashlib
+import json
 import os
 import re
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from django.db import transaction
-from django.utils.html import strip_tags
-from django.utils.html import escape
+from django.utils.html import escape, strip_tags
 
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
@@ -21,67 +17,67 @@ from apps.tags.resource_sync import (
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
-from core.versioning import (
-    derive_resource_version,
-    initialize_new_resource_version,
-    is_referenced,
-)
 
-from .models import Knowledge
+from .models import Knowledge, KnowledgeRevision
 from .selectors import get_knowledge_by_id
 
 
-class KnowledgeService(BaseService):
-    """知识文档应用服务"""
+def build_knowledge_revision_payload(knowledge: Knowledge) -> dict:
+    return {
+        'title': knowledge.title,
+        'content': knowledge.content,
+        'related_links': knowledge.related_links,
+        'space_tag_name': knowledge.space_tag.name if knowledge.space_tag else '',
+        'tags_json': [
+            {'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type}
+            for tag in knowledge.tags.order_by('id')
+        ],
+    }
 
-    # 创建新版本时需要复制的内容字段
-    # 添加新的内容字段时，只需在此列表中添加即可
-    VERSION_COPY_FIELDS = [
-        'title',
-        'content', 'related_links',
-    ]
+
+def build_knowledge_revision_hash(payload: dict) -> str:
+    normalized = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+
+
+def ensure_knowledge_revision(knowledge: Knowledge, *, actor) -> KnowledgeRevision:
+    payload = build_knowledge_revision_payload(knowledge)
+    content_hash = build_knowledge_revision_hash(payload)
+    latest = KnowledgeRevision.objects.filter(source_knowledge=knowledge).order_by('-revision_number').first()
+    if latest and latest.content_hash == content_hash:
+        return latest
+
+    next_revision_number = (latest.revision_number if latest else 0) + 1
+    return KnowledgeRevision.objects.create(
+        source_knowledge=knowledge,
+        revision_number=next_revision_number,
+        title=payload['title'],
+        content=payload['content'],
+        related_links=payload['related_links'],
+        space_tag_name=payload['space_tag_name'],
+        tags_json=payload['tags_json'],
+        content_hash=content_hash,
+        created_by=actor,
+    )
+
+
+class KnowledgeService(BaseService):
+    """知识文档应用服务。"""
 
     def get_by_id(self, pk: int) -> Knowledge:
-        """
-        获取知识文档
-        Args:
-            pk: 主键
-        Returns:
-            知识文档对象
-        Raises:
-            BusinessError: 如果不存在或无权限
-        """
         knowledge = get_knowledge_by_id(pk)
-        self.validate_not_none(
-            knowledge,
-            f'知识文档 {pk} 不存在'
-        )
-        # 权限检查：非管理员只能访问当前版本的知识
-        self.check_published_resource_access(knowledge, resource_name='知识文档')
+        self.validate_not_none(knowledge, f'知识文档 {pk} 不存在')
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'create', 'v{version_number}')
+    @log_content_action('knowledge', 'create', '')
     def create(self, data: dict) -> Knowledge:
-        """
-        创建知识文档
-        Args:
-            data: 知识文档数据
-        Returns:
-            创建的知识文档对象
-        Raises:
-            BusinessError: 如果验证失败
-        """
-        # 1. 业务验证
         self._validate_knowledge_data(data)
-        # 2. 准备数据
-        data['created_by'] = self.user
-        data['updated_by'] = self.user
-        initialize_new_resource_version(data)
-        tag_payload = pop_resource_tag_payload(data, scope='knowledge')
-        # 3. 创建知识
-        knowledge = Knowledge.objects.create(**data)
-        # 4. 设置标签
+        payload = dict(data)
+        payload['created_by'] = self.user
+        payload['updated_by'] = self.user
+        tag_payload = pop_resource_tag_payload(payload, scope='knowledge')
+        knowledge = Knowledge.objects.create(**payload)
         apply_resource_tag_changes(
             knowledge,
             space_tag_id=tag_payload.space_tag_id,
@@ -92,32 +88,11 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'update', 'v{version_number}')
+    @log_content_action('knowledge', 'update', '')
     def update(self, pk: int, data: dict) -> Knowledge:
-        """
-        更新知识文档
-        版本管理：
-        - 被任务引用的当前版本：创建新版本
-        - 未被任务引用的当前版本：原地更新
-        - 历史版本：禁止修改，确保快照不可变
-        Args:
-            pk: 主键
-            data: 更新数据
-        Returns:
-            更新后的知识文档对象
-        Raises:
-            BusinessError: 如果验证失败或无法更新
-        """
         knowledge = self.get_by_id(pk)
-        if not knowledge.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='历史版本不可修改'
-            )
-        self._validate_knowledge_data(
-            data=data,
-            fallback_content=knowledge.content,
-        )
+        self._validate_knowledge_data(data=data, fallback_content=knowledge.content)
+
         current_tag_ids = list(knowledge.tags.values_list('id', flat=True))
         update_plan = build_resource_update_plan(
             knowledge,
@@ -127,15 +102,6 @@ class KnowledgeService(BaseService):
         )
         if not update_plan.has_changes:
             return knowledge
-
-        # 当前版本且被任务引用时，分叉新版本；否则原地更新
-        if knowledge.is_current and self._is_referenced_by_task(knowledge.id):
-            new_version_data = dict(update_plan.changed_fields)
-            if update_plan.space_tag_provided:
-                new_version_data['space_tag_id'] = update_plan.space_tag_id
-            if update_plan.tag_ids_provided:
-                new_version_data['tag_ids'] = update_plan.tag_ids
-            return self._create_new_version(knowledge, new_version_data)
 
         changed_fields = dict(update_plan.changed_fields)
         changed_fields['updated_by'] = self.user
@@ -154,136 +120,53 @@ class KnowledgeService(BaseService):
     @transaction.atomic
     @log_content_action('knowledge', 'delete', '')
     def delete(self, pk: int) -> Knowledge:
-        """
-        硬删除知识文档
-        Args:
-            pk: 主键
-        Returns:
-            删除前的知识文档对象
-        Raises:
-            BusinessError: 如果被引用无法删除
-        """
-        knowledge = get_knowledge_by_id(pk)
-        self.validate_not_none(
-            knowledge,
-            f'知识文档 {pk} 不存在'
-        )
-        # 检查是否被引用
-        if self._is_referenced_by_task(pk):
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该知识文档已被任务引用，无法删除'
-            )
-        # 硬删除
+        knowledge = self.get_by_id(pk)
+        revisions = list(knowledge.revisions.all())
         knowledge.delete()
+        KnowledgeRevision.objects.filter(
+            id__in=[revision.id for revision in revisions],
+            knowledge_tasks__isnull=True,
+        ).delete()
         return knowledge
 
     def increment_view_count(self, pk: int) -> int:
-        """
-        增加知识文档的阅读次数
-        Args:
-            pk: 主键
-        Returns:
-            更新后的阅读次数
-        """
-        knowledge = self.get_by_id(pk)
-        return knowledge.increment_view_count()
+        return self.get_by_id(pk).increment_view_count()
 
     def _validate_knowledge_data(
         self,
         data: dict,
         fallback_content: Optional[str] = None,
     ) -> None:
-        """验证知识文档数据"""
         effective_content = data.get('content', fallback_content or '')
         if not strip_tags(str(effective_content)).strip():
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='知识文档必须填写正文内容'
+                message='知识文档必须填写正文内容',
             )
-
-    def _is_referenced_by_task(self, knowledge_id: int) -> bool:
-        """检查知识文档是否被任务引用"""
-        from apps.tasks.models import TaskKnowledge
-
-        return is_referenced(knowledge_id, TaskKnowledge, 'knowledge_id')
-
-    def _create_new_version(
-        self,
-        source: Knowledge,
-        data: dict
-    ) -> Knowledge:
-        """基于当前版本创建新版本"""
-        tag_payload = pop_resource_tag_payload(
-            data,
-            scope='knowledge',
-            default_space_tag_id=source.space_tag_id,
-            default_tag_ids=list(source.tags.values_list('id', flat=True)),
-        )
-
-        def finalize_new_version(new_version: Knowledge) -> None:
-            apply_resource_tag_changes(
-                new_version,
-                space_tag_id=tag_payload.space_tag_id,
-                tag_ids=tag_payload.tag_ids,
-                space_tag_provided=True,
-                tag_ids_provided=True,
-            )
-
-        return derive_resource_version(
-            source,
-            actor=self.user,
-            copy_fields=self.VERSION_COPY_FIELDS,
-            overrides=data,
-            extra_fields={
-                'view_count': source.view_count,
-            },
-            finalize=finalize_new_version,
-        )
 
 
 class DocumentParserService:
-    """
-    文档解析服务
-    支持解析 Word (.docx), PowerPoint (.pptx), PDF (.pdf) 文档
-    提取文本内容并转换为 HTML 格式
-    """
+    """文档解析服务。"""
 
     SUPPORTED_EXTENSIONS = {'.docx', '.pptx', '.pdf'}
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_FILE_SIZE = 10 * 1024 * 1024
 
     def parse(self, file) -> Tuple[str, str]:
-        """
-        解析文档，返回 (suggested_title, html_content)
-
-        Args:
-            file: Django UploadedFile 对象
-
-        Returns:
-            Tuple[str, str]: (建议标题, HTML内容)
-
-        Raises:
-            ValueError: 文件格式不支持或文件过大
-        """
-        # 检查文件大小
         if file.size > self.MAX_FILE_SIZE:
             raise ValueError(f'文件大小超过限制（最大 {self.MAX_FILE_SIZE // 1024 // 1024}MB）')
 
         filename = file.name
         ext = os.path.splitext(filename)[1].lower()
-
         if ext not in self.SUPPORTED_EXTENSIONS:
             raise ValueError(f'不支持的文件格式，仅支持 {", ".join(self.SUPPORTED_EXTENSIONS)}')
 
         if ext == '.docx':
             return self._parse_docx(file)
-        elif ext == '.pptx':
+        if ext == '.pptx':
             return self._parse_pptx(file)
-        elif ext == '.pdf':
-            return self._parse_pdf(file)
+        return self._parse_pdf(file)
 
     def _parse_docx(self, file) -> Tuple[str, str]:
-        """解析 Word 文档"""
         from docx import Document
 
         doc = Document(file)
@@ -294,38 +177,26 @@ class DocumentParserService:
             text = para.text.strip()
             if not text:
                 continue
-
-            # 检测标题样式
             style_name = para.style.name if para.style else ''
-
             if style_name.startswith('Heading'):
-                # 提取标题级别
                 level_match = re.search(r'\d+', style_name)
                 level = int(level_match.group()) if level_match else 1
-                level = min(level, 6)  # 限制最大为 h6
-
+                level = min(level, 6)
                 if title is None and level == 1:
                     title = text
-
                 html_parts.append(f'<h{level}>{escape(text)}</h{level}>')
             elif style_name == 'List Bullet':
-                # 无序列表项
                 html_parts.append(f'<ul><li>{escape(text)}</li></ul>')
             elif style_name == 'List Number':
-                # 有序列表项
                 html_parts.append(f'<ol><li>{escape(text)}</li></ol>')
             else:
-                # 普通段落
                 html_parts.append(f'<p>{escape(text)}</p>')
 
-        # 合并连续的列表项
         content = '\n'.join(html_parts)
         content = self._merge_consecutive_lists(content)
-
         return title or self._extract_title_from_filename(file.name), content
 
     def _parse_pptx(self, file) -> Tuple[str, str]:
-        """解析 PowerPoint 文档"""
         from pptx import Presentation
 
         prs = Presentation(file)
@@ -335,27 +206,19 @@ class DocumentParserService:
         for i, slide in enumerate(prs.slides, 1):
             slide_texts = []
             slide_title = None
-
             for shape in slide.shapes:
                 if hasattr(shape, 'text') and shape.text.strip():
                     text = shape.text.strip()
-                    # 第一个文本框通常是标题
                     if slide_title is None:
                         slide_title = text
                     else:
                         slide_texts.append(text)
-
             if slide_title:
-                # 第一页的标题作为文档标题
                 if title is None and i == 1:
                     title = slide_title
-
                 html_parts.append(f'<h2>第 {i} 页：{escape(slide_title)}</h2>')
-
                 for text in slide_texts:
-                    # 处理多行文本
-                    lines = text.split('\n')
-                    for line in lines:
+                    for line in text.split('\n'):
                         line = line.strip()
                         if line:
                             html_parts.append(f'<p>{escape(line)}</p>')
@@ -363,41 +226,29 @@ class DocumentParserService:
         return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
 
     def _parse_pdf(self, file) -> Tuple[str, str]:
-        """解析 PDF 文档"""
         import pdfplumber
 
         html_parts = []
         title = None
-
         with pdfplumber.open(file) as pdf:
             for i, page in enumerate(pdf.pages, 1):
                 text = page.extract_text()
                 if text:
                     text = text.strip()
                     lines = text.split('\n')
-
-                    # 第一页第一行作为标题
                     if title is None and i == 1 and lines:
                         title = lines[0].strip()
-
                     html_parts.append(f'<h2>第 {i} 页</h2>')
-
                     for line in lines:
                         line = line.strip()
                         if line:
                             html_parts.append(f'<p>{escape(line)}</p>')
-
         return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
 
     def _merge_consecutive_lists(self, html: str) -> str:
-        """合并连续的列表项"""
-        # 合并连续的 ul
         html = re.sub(r'</ul>\s*<ul>', '', html)
-        # 合并连续的 ol
         html = re.sub(r'</ol>\s*<ol>', '', html)
         return html
 
     def _extract_title_from_filename(self, filename: str) -> str:
-        """从文件名提取标题"""
-        name = os.path.splitext(filename)[0]
-        return name or '未命名文档'
+        return os.path.splitext(filename)[0] or '未命名文档'

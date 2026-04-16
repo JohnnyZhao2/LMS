@@ -22,11 +22,11 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellMutedTimestamp, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { ListTag } from '@/components/ui/list-tag';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
-import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from '@/types/task';
 import { PageHeader } from '@/components/ui/page-header';
@@ -72,49 +72,68 @@ const getTaskOwnerText = (task: TaskListItem) => {
     return `创建人 · ${task.created_by_name}`
 }
 
+const renderTaskTagLabel = (count: number | string, label: string) => (
+    <span className="inline-flex items-baseline gap-0.5">
+        <span>{count}</span>
+        <span>{label}</span>
+    </span>
+)
+
 const getTaskResourceTags = (task: TaskListItem) => {
-    const tags: Array<{ key: string; label: string; tone: 'secondary' | 'primary' | 'warning' }> = []
+    const tags: Array<{ key: string; label: React.ReactNode; tone: 'secondary' | 'primary' | 'warning' }> = []
     if (task.knowledge_count > 0) {
-        tags.push({ key: 'knowledge', label: `${task.knowledge_count}知识`, tone: 'secondary' })
+        tags.push({ key: 'knowledge', label: renderTaskTagLabel(task.knowledge_count, '知识'), tone: 'secondary' })
     }
     if (task.practice_count > 0) {
-        tags.push({ key: 'practice', label: `${task.practice_count}测验`, tone: 'primary' })
+        tags.push({ key: 'practice', label: renderTaskTagLabel(task.practice_count, '测验'), tone: 'primary' })
     }
     if (task.exam_count > 0) {
-        tags.push({ key: 'exam', label: `${task.exam_count}考试`, tone: 'warning' })
+        tags.push({ key: 'exam', label: renderTaskTagLabel(task.exam_count, '考试'), tone: 'warning' })
     }
     return tags
 }
 
 const getTaskRiskTags = (task: TaskListItem) => {
-    const tags: Array<{ key: string; label: string; tone: 'warning' | 'destructive' | 'neutral' }> = []
+    const tags: Array<{ key: string; label: React.ReactNode; tone: 'warning' | 'destructive' | 'neutral' }> = []
     if (task.pending_grading_count > 0) {
-        tags.push({ key: 'grading', label: `待批改 ${task.pending_grading_count}`, tone: 'warning' })
+        tags.push({
+            key: 'grading',
+            label: (
+                <span className="inline-flex items-baseline gap-0.5">
+                    <span>待批改</span>
+                    <span>{task.pending_grading_count}</span>
+                </span>
+            ),
+            tone: 'warning',
+        })
     }
     if (task.abnormal_count > 0) {
-        tags.push({ key: 'abnormal', label: `异常学员 ${task.abnormal_count}`, tone: 'destructive' })
+        tags.push({
+            key: 'abnormal',
+            label: (
+                <span className="inline-flex items-baseline gap-0.5">
+                    <span>异常学员</span>
+                    <span>{task.abnormal_count}</span>
+                </span>
+            ),
+            tone: 'destructive',
+        })
     }
     if (task.assignee_count === 0) {
-        tags.push({ key: 'empty', label: '0人参与', tone: 'neutral' })
+        tags.push({ key: 'empty', label: renderTaskTagLabel(0, '人参与'), tone: 'neutral' })
     }
     return tags
 }
 
 const TaskTitleCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     return (
-        <div className="flex min-w-0 items-center gap-3.5 py-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/55 text-foreground/60">
-                <ListTodo className="h-3.5 w-3.5" strokeWidth={1.8} />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-                <span className="truncate font-bold text-foreground">
-                    {task.title}
-                </span>
-                <span className="truncate text-[11px] text-text-muted">
-                    {getTaskOwnerText(task)}
-                </span>
-            </div>
-        </div>
+        <CellWithIcon
+            icon={<ListTodo className="h-3.5 w-3.5" strokeWidth={1.8} />}
+            title={task.title}
+            subtitle={getTaskOwnerText(task)}
+            iconBgClass="bg-muted/55"
+            iconColorClass="text-foreground/60"
+        />
     )
 }
 
@@ -122,13 +141,13 @@ const TaskResourceCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const resourceTags = getTaskResourceTags(task)
 
     if (resourceTags.length === 0) {
-        return <span className="text-xs text-text-muted">—</span>
+        return <span className="text-[13px] font-medium text-text-muted">—</span>
     }
 
     return (
         <div className="flex flex-wrap items-center gap-1">
             {resourceTags.map((tag) => (
-                <ListTag key={tag.key} tone={tag.tone}>
+                <ListTag key={tag.key} tone={tag.tone} size="sm" className="text-[11px] font-medium">
                     {tag.label}
                 </ListTag>
             ))}
@@ -141,24 +160,18 @@ const TaskStatusCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const meta = TASK_STATUS_META[status]
 
     return (
-        <ListTag tone={meta.tone}>
+        <ListTag tone={meta.tone} size="sm" className="text-[11px] font-medium">
             {meta.label}
         </ListTag>
     )
 }
 
 const TaskDeadlineCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
-    const date = dayjs(task.deadline)
-    const status = getTaskDisplayStatus(task)
-    const isAttention = status === 'DUE_SOON' || status === 'OVERDUE'
-
     return (
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-            <Clock className={cn("h-3.5 w-3.5", isAttention ? "text-destructive" : "text-text-muted")} />
-            <span className={cn("text-sm font-semibold", isAttention ? "text-destructive" : "text-foreground")}>
-                {date.format("MM-DD HH:mm")}
-            </span>
-        </div>
+        <CellMutedTimestamp
+            icon={<Clock className="h-3.5 w-3.5" />}
+            value={task.deadline}
+        />
     )
 }
 
@@ -170,8 +183,8 @@ const TaskProgressCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     return (
         <div className="w-full max-w-[144px] pr-4">
             <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground">{percent}%</span>
-                <span className="text-[11px] text-text-muted">{completed}/{total}</span>
+                <span className="text-[11px] font-medium text-foreground/75">{percent}%</span>
+                <span className="text-[11px] font-normal text-text-muted tabular-nums">{completed}/{total}</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
@@ -187,13 +200,13 @@ const TaskRiskCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const riskTags = getTaskRiskTags(task)
 
     if (riskTags.length === 0) {
-        return <span className="pl-2 text-xs text-text-muted">—</span>
+        return <span className="pl-2 text-[13px] font-medium text-text-muted">—</span>
     }
 
     return (
         <div className="flex flex-wrap items-center gap-1 pl-2">
             {riskTags.map((tag) => (
-                <ListTag key={tag.key} tone={tag.tone}>
+                <ListTag key={tag.key} tone={tag.tone} size="sm" className="text-[11px] font-medium">
                     {tag.label}
                 </ListTag>
             ))}

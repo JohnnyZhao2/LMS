@@ -1,7 +1,5 @@
-"""
-Knowledge selectors.
-集中管理知识相关查询与过滤规则。
-"""
+"""Knowledge selectors."""
+
 from typing import Optional
 
 from django.db.models import Q, QuerySet
@@ -14,9 +12,7 @@ def knowledge_base_queryset() -> QuerySet:
         'created_by',
         'updated_by',
         'space_tag',
-    ).prefetch_related(
-        'tags'
-    )
+    ).prefetch_related('tags')
 
 
 def get_knowledge_by_id(pk: int) -> Optional[Knowledge]:
@@ -26,19 +22,16 @@ def get_knowledge_by_id(pk: int) -> Optional[Knowledge]:
 def get_knowledge_queryset(
     filters: dict = None,
     search: str = None,
-    ordering: str = '-updated_at'
+    ordering: str = '-updated_at',
 ) -> QuerySet:
-    qs = knowledge_base_queryset().filter(is_current=True)
+    qs = knowledge_base_queryset()
     if filters:
         if filters.get('space_tag_id') is not None:
             qs = qs.filter(space_tag_id=filters['space_tag_id'])
         if filters.get('tag_id'):
             qs = qs.filter(tags__id=filters['tag_id'])
     if search:
-        qs = qs.filter(
-            Q(title__icontains=search) |
-            Q(content__icontains=search)
-        )
+        qs = qs.filter(Q(title__icontains=search) | Q(content__icontains=search))
     if ordering:
         qs = qs.order_by(ordering)
     return qs.distinct()

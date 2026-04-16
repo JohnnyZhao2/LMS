@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -8,12 +8,13 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
+import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
+
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
 import { useAssignableUsers } from '../../api/get-assignable-users';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { useTaskResourceOptions } from '../../api/get-task-resources';
 import { useUpdateTask } from '../../api/update-task';
-import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
 import { mapTaskResourceOptionToResource } from './task-form.types';
 
@@ -42,6 +43,8 @@ const buildStableUid = (seed: string, fallback: number): number => {
   return hash || fallback;
 };
 
+const buildResourceKey = (resourceType: ResourceType, id: number) => `${resourceType}:${id}`;
+
 export const useTaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -51,7 +54,6 @@ export const useTaskForm = () => {
   const taskId = isEdit ? Number(id) : 0;
   const paramQuizId = Number(searchParams.get('quiz_id'));
 
-  // Form state
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
   const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(null);
@@ -62,7 +64,6 @@ export const useTaskForm = () => {
   const [userSearch, setUserSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // API hooks
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const { data: task, isLoading: taskLoading, isError: taskError } = useTaskDetail(taskId, {
@@ -77,7 +78,6 @@ export const useTaskForm = () => {
   });
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
-  // Disabled state logic
   const hasProgress = task?.has_progress || false;
   const resourcesDisabled = isEdit && hasProgress;
   const canRemoveAssignee = !(isEdit && hasProgress);
@@ -85,48 +85,54 @@ export const useTaskForm = () => {
   const initialTitle = isEdit && task ? task.title : '';
   const initialDescription = isEdit && task ? (task.description || '') : '';
   const initialDeadline = isEdit && task?.deadline ? new Date(task.deadline) : undefined;
+
   const initialSelectedResources = useMemo<SelectedResource[]>(() => {
     if (isEdit && task) {
-      const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => ({
-        uid: buildStableUid(`DOCUMENT:${item.resource_uuid}:${idx}`, item.knowledge + idx),
-        id: item.knowledge,
-        resource_uuid: item.resource_uuid,
-        is_current: item.is_current,
-        title: item.knowledge_title || `文档 ${item.knowledge}`,
-        resourceType: 'DOCUMENT' as ResourceType,
-        category: item.space_tag_name || '文档',
-      }));
+      const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => {
+        const sourceId = item.knowledge ?? -item.knowledge_revision_id;
+        return {
+          uid: buildStableUid(`DOCUMENT:${sourceId}:${idx}`, item.knowledge_revision_id + idx),
+          id: sourceId,
+          title: item.source_title || item.knowledge_title || `文档 ${item.knowledge_revision_id}`,
+          resourceType: 'DOCUMENT',
+          category: item.space_tag_name || '文档',
+          isMissingSource: item.knowledge == null,
+        };
+      });
 
-      const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
-        uid: buildStableUid(`QUIZ:${item.resource_uuid}:${idx}`, item.quiz + idx + 1000),
-        id: item.quiz,
-        resource_uuid: item.resource_uuid,
-        is_current: item.is_current,
-        title: item.quiz_title || `试卷 ${item.quiz}`,
-        resourceType: 'QUIZ' as ResourceType,
-        category: `${(item as { question_count?: number }).question_count || 0} 个题目`,
-      }));
+      const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => {
+        const sourceId = item.quiz ?? -item.quiz_revision_id;
+        return {
+          uid: buildStableUid(`QUIZ:${sourceId}:${idx}`, item.quiz_revision_id + idx + 1000),
+          id: sourceId,
+          title: item.source_title || item.quiz_title || `试卷 ${item.quiz_revision_id}`,
+          resourceType: 'QUIZ',
+          category: `${item.question_count || 0} 个题目`,
+          quizType: item.quiz_type,
+          isMissingSource: item.quiz == null,
+        };
+      });
 
       return [...knowledgeResources, ...quizResources];
     }
 
     if (!isEdit && quizDetail && paramQuizId) {
       return [{
-        uid: buildStableUid(`QUIZ:${quizDetail.resource_uuid}:prefill`, quizDetail.id),
+        uid: buildStableUid(`QUIZ:${quizDetail.id}:prefill`, quizDetail.id),
         id: quizDetail.id,
-        resource_uuid: quizDetail.resource_uuid,
-        is_current: quizDetail.is_current,
         title: quizDetail.title,
         resourceType: 'QUIZ',
         category: `${quizDetail.question_count || 0} 个题目`,
+        quizType: quizDetail.quiz_type,
       }];
     }
 
     return [];
   }, [isEdit, task, quizDetail, paramQuizId]);
+
   const initialSelectedUserIds = useMemo<number[]>(
     () => (isEdit && task ? (task.assignments?.map((item) => item.assignee) || []) : []),
-    [isEdit, task]
+    [isEdit, task],
   );
   const originalAssigneeIds = initialSelectedUserIds;
 
@@ -136,15 +142,9 @@ export const useTaskForm = () => {
   const selectedResources = selectedResourcesDraft ?? initialSelectedResources;
   const selectedUserIds = selectedUserIdsDraft ?? initialSelectedUserIds;
 
-  const setTitle = (nextTitle: string) => {
-    setTitleDraft(nextTitle);
-  };
-  const setDescription = (nextDescription: string) => {
-    setDescriptionDraft(nextDescription);
-  };
-  const setDeadline = (nextDeadline: Date | undefined) => {
-    setDeadlineDraft(nextDeadline);
-  };
+  const setTitle = (nextTitle: string) => setTitleDraft(nextTitle);
+  const setDescription = (nextDescription: string) => setDescriptionDraft(nextDescription);
+  const setDeadline = (nextDeadline: Date | undefined) => setDeadlineDraft(nextDeadline);
   const setSelectedResources = (updater: Updater<SelectedResource[]>) => {
     setSelectedResourcesDraft((prev) => applyUpdater(updater, prev ?? initialSelectedResources));
   };
@@ -152,11 +152,14 @@ export const useTaskForm = () => {
     setSelectedUserIdsDraft((prev) => applyUpdater(updater, prev ?? initialSelectedUserIds));
   };
 
-  // Computed values for resources
   const filteredResources = useMemo(() => {
     const combined = getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource);
-    const selectedUuids = selectedResources.map(s => `${s.resourceType}-${s.resource_uuid}`);
-    return combined.filter(r => !selectedUuids.includes(`${r.resourceType}-${r.resource_uuid}`));
+    const selectedKeys = new Set(
+      selectedResources
+        .filter((item) => item.id > 0)
+        .map((item) => buildResourceKey(item.resourceType, item.id)),
+    );
+    return combined.filter((item) => !selectedKeys.has(buildResourceKey(item.resourceType, item.id)));
   }, [resourceQuery.data, selectedResources]);
 
   const totalCount = resourceQuery.data?.count ?? filteredResources.length;
@@ -166,93 +169,48 @@ export const useTaskForm = () => {
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    return users.filter(u =>
-      u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-      (u.employee_id && u.employee_id.toLowerCase().includes(userSearch.toLowerCase()))
-    );
+    return users.filter((user) => (
+      user.username.toLowerCase().includes(userSearch.toLowerCase())
+      || (user.employee_id && user.employee_id.toLowerCase().includes(userSearch.toLowerCase()))
+    ));
   }, [users, userSearch]);
 
-  // Handlers
-  const addResource = (res: ResourceItem) => {
+  const addResource = (resource: ResourceItem) => {
     if (resourcesDisabled) return;
-    setSelectedResources((prev) => [
-      ...prev,
-      {
-        ...res,
-        uid: buildStableUid(
-          `${res.resourceType}:${res.resource_uuid}:${prev.length}`,
-          res.id + prev.length
-        ),
-      },
-    ]);
+    setSelectedResources((prev) => {
+      if (prev.some((item) => item.resourceType === resource.resourceType && item.id === resource.id)) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          ...resource,
+          uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
+        },
+      ];
+    });
   };
 
   const moveResource = (idx: number, direction: 'up' | 'down') => {
-    const newResources = [...selectedResources];
+    const next = [...selectedResources];
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= newResources.length) return;
-    [newResources[idx], newResources[targetIdx]] = [newResources[targetIdx], newResources[idx]];
-    setSelectedResources(newResources);
+    if (targetIdx < 0 || targetIdx >= next.length) return;
+    [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
+    setSelectedResources(next);
   };
 
   const removeResource = (idx: number) => {
     if (resourcesDisabled) return;
-    setSelectedResources(selectedResources.filter((_, i) => i !== idx));
-  };
-
-  const upgradeResource = (idx: number) => {
-    if (resourcesDisabled) return;
-    const item = selectedResources[idx];
-    if (!item) return;
-
-    const currentResources = getPaginatedResults<TaskResourceOption>(resourceQuery.data);
-
-    if (item.resourceType === 'DOCUMENT') {
-      const latestResource = currentResources.find(
-        (resource) => resource.resource_type === 'DOCUMENT' && resource.resource_uuid === item.resource_uuid
-      );
-      if (!latestResource) {
-        toast.error('未找到最新版本');
-        return;
-      }
-      setSelectedResources(prev => prev.map((r, i) => {
-        if (i !== idx) return r;
-        return {
-          ...r,
-          id: latestResource.id,
-          is_current: latestResource.is_current,
-          title: latestResource.title,
-          category: latestResource.space_tag_name || '未分类',
-        };
-      }));
-    } else {
-      const latestResource = currentResources.find(
-        (resource) => resource.resource_type === 'QUIZ' && resource.resource_uuid === item.resource_uuid
-      );
-      if (!latestResource) {
-        toast.error('未找到最新版本');
-        return;
-      }
-      setSelectedResources(prev => prev.map((r, i) => {
-        if (i !== idx) return r;
-        return {
-          ...r,
-          id: latestResource.id,
-          is_current: latestResource.is_current,
-          title: latestResource.title,
-          category: `${latestResource.question_count || 0} 个题目`,
-          quizType: latestResource.quiz_type,
-        };
-      }));
-    }
-    toast.success('已升级到最新版本');
+    setSelectedResources(selectedResources.filter((_, index) => index !== idx));
   };
 
   const toggleUser = (userId: number) => {
     const isRemoving = selectedUserIds.includes(userId);
     const canRemove = canRemoveAssignee || !originalAssigneeIds.includes(userId);
     if (isRemoving && !canRemove) return;
-    setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+    setSelectedUserIds((prev) => (
+      prev.includes(userId) ? prev.filter((idValue) => idValue !== userId) : [...prev, userId]
+    ));
   };
 
   const toggleUsers = (userIds: number[], checked: boolean) => {
@@ -262,11 +220,11 @@ export const useTaskForm = () => {
     }
 
     if (canRemoveAssignee) {
-      setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id)));
+      setSelectedUserIds((prev) => prev.filter((idValue) => !userIds.includes(idValue)));
       return;
     }
 
-    setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id) || originalAssigneeIds.includes(id)));
+    setSelectedUserIds((prev) => prev.filter((idValue) => !userIds.includes(idValue) || originalAssigneeIds.includes(idValue)));
   };
 
   const clearUsers = () => {
@@ -276,13 +234,15 @@ export const useTaskForm = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      setSelectedResources((items) => {
-        const oldIndex = items.findIndex((item) => item.uid === active.id);
-        const newIndex = items.findIndex((item) => item.uid === over.id);
-        return arrayMove(items, oldIndex, newIndex);
+      setSelectedResources((currentItems) => {
+        const oldIndex = currentItems.findIndex((item) => item.uid === active.id);
+        const newIndex = currentItems.findIndex((item) => item.uid === over.id);
+        return arrayMove(currentItems, oldIndex, newIndex);
       });
     }
   };
+
+  const hasMissingSources = selectedResources.some((item) => item.isMissingSource);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -297,17 +257,27 @@ export const useTaskForm = () => {
       toast.error('请选择资源和指派人员');
       return;
     }
+    if (!resourcesDisabled && hasMissingSources) {
+      toast.error('存在已删除的原始资源，请先移除或替换');
+      return;
+    }
+
     try {
       const payload: TaskCreateRequest = {
         title,
         description: description || undefined,
         deadline: deadline.toISOString(),
         ...(resourcesDisabled ? {} : {
-          knowledge_ids: selectedResources.filter(s => s.resourceType === 'DOCUMENT').map(s => s.id),
-          quiz_ids: selectedResources.filter(s => s.resourceType === 'QUIZ').map(s => s.id),
+          knowledge_ids: selectedResources
+            .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
+            .map((item) => item.id),
+          quiz_ids: selectedResources
+            .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
+            .map((item) => item.id),
         }),
         assignee_ids: selectedUserIds,
       };
+
       if (isEdit) {
         await updateTask.mutateAsync({ taskId, data: payload });
         toast.success('任务更新成功');
@@ -321,13 +291,17 @@ export const useTaskForm = () => {
     }
   };
 
-  // Computed values
   const isLoading = resourceQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
-  const canSubmit = Boolean(title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0);
+  const canSubmit = Boolean(
+    title.trim()
+    && deadline
+    && selectedResources.length > 0
+    && selectedUserIds.length > 0
+    && (resourcesDisabled || !hasMissingSources)
+  );
 
   return {
-    // State
     isEdit,
     task,
     taskError,
@@ -347,8 +321,6 @@ export const useTaskForm = () => {
     setUserSearch,
     currentPage,
     setCurrentPage,
-
-    // Computed
     availableResources,
     totalResourceCount: totalCount,
     resourcePageSize: PAGE_SIZE,
@@ -362,12 +334,9 @@ export const useTaskForm = () => {
     canSubmit,
     resourcesDisabled,
     canRemoveAssignee,
-
-    // Handlers
     addResource,
     moveResource,
     removeResource,
-    upgradeResource,
     toggleUser,
     toggleUsers,
     clearUsers,

@@ -26,7 +26,6 @@ interface TaskPipelinePanelProps {
   onDragEnd: (event: DragEndEvent) => void;
   onMoveResource: (index: number, direction: 'up' | 'down') => void;
   onRemoveResource: (index: number) => void;
-  onUpgradeResource: (index: number) => void;
   embedded?: boolean;
 }
 
@@ -36,7 +35,6 @@ export function TaskPipelinePanel({
   onDragEnd,
   onMoveResource,
   onRemoveResource,
-  onUpgradeResource,
   embedded = false,
 }: TaskPipelinePanelProps) {
   const sensors = useSensors(
@@ -95,7 +93,6 @@ export function TaskPipelinePanel({
                       idx={index}
                       moveResource={onMoveResource}
                       removeResource={onRemoveResource}
-                      upgradeResource={onUpgradeResource}
                       totalResources={selectedResources.length}
                       disabled={resourcesDisabled}
                     />

@@ -1,6 +1,5 @@
-"""
-Serializers for question management.
-"""
+"""Serializers for question management."""
+
 from rest_framework import serializers
 
 from apps.tags.serializers import TagSimpleSerializer
@@ -18,25 +17,35 @@ class QuestionSerializer(serializers.ModelSerializer):
     tags = TagSimpleSerializer(many=True, read_only=True)
     usage_count = serializers.SerializerMethodField()
     is_referenced = serializers.SerializerMethodField()
+    created_from_quiz_id = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta:
         model = Question
         fields = [
-            'id', 'resource_uuid', 'version_number',
-            'content', 'question_type', 'question_type_display',
-            'options', 'answer', 'explanation',
-            'space_tag', 'tags',
-            'usage_count', 'is_referenced',
-            'is_current',
-            'created_by_name', 'updated_by_name',
-            'created_at', 'updated_at'
+            'id',
+            'content',
+            'question_type',
+            'question_type_display',
+            'options',
+            'answer',
+            'explanation',
+            'score',
+            'space_tag',
+            'tags',
+            'usage_count',
+            'is_referenced',
+            'created_from_quiz_id',
+            'created_by_name',
+            'updated_by_name',
+            'created_at',
+            'updated_at',
         ]
 
     def get_usage_count(self, obj) -> int:
         annotated_value = getattr(obj, 'usage_count', None)
         if annotated_value is not None:
             return annotated_value
-        return obj.question_quizzes.count()
+        return obj.quiz_copies.count()
 
     def get_is_referenced(self, obj) -> bool:
         annotated_value = getattr(obj, 'is_referenced', None)
@@ -44,11 +53,8 @@ class QuestionSerializer(serializers.ModelSerializer):
             return annotated_value
         return self.get_usage_count(obj) > 0
 
+
 class QuestionCreateSerializer(serializers.Serializer):
-    """
-    Serializer for creating questions.
-    业务验证（选项/答案格式）由 QuestionService.validate_question_payload 统一处理。
-    """
     content = serializers.CharField()
     question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES)
     options = serializers.JSONField(required=False)
@@ -56,16 +62,10 @@ class QuestionCreateSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, allow_blank=True, default='')
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
-    source_question_id = serializers.IntegerField(write_only=True, required=False)
-    sync_to_bank = serializers.BooleanField(write_only=True, required=False, default=True)
     score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
 
 class QuestionUpdateSerializer(serializers.Serializer):
-    """
-    Serializer for updating questions.
-    业务验证（选项/答案格式）由 QuestionService.validate_question_payload 统一处理。
-    """
     content = serializers.CharField(required=False)
     question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES, required=False)
     options = serializers.JSONField(required=False)
@@ -73,5 +73,4 @@ class QuestionUpdateSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, allow_blank=True)
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
-    sync_to_bank = serializers.BooleanField(write_only=True, required=False, default=True)
     score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)

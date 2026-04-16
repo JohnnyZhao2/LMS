@@ -1,6 +1,5 @@
-"""
-Serializers for knowledge management.
-"""
+"""Serializers for knowledge management."""
+
 from rest_framework import serializers
 
 from apps.tags.serializers import TagSimpleSerializer
@@ -9,7 +8,6 @@ from .models import Knowledge
 
 
 class RelatedLinkSerializer(serializers.Serializer):
-    """相关链接序列化器。"""
     title = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -21,24 +19,18 @@ class RelatedLinkSerializer(serializers.Serializer):
 
 
 def _normalize_related_links(related_links):
-    """标准化相关链接列表，去重并清理标题。"""
     if related_links is None:
         return None
 
     normalized_links = []
     seen_urls = set()
-
     for item in related_links:
         title = (item.get('title') or '').strip()
         url = item['url'].strip()
         if url in seen_urls:
             continue
         seen_urls.add(url)
-        normalized_links.append({
-            'title': title,
-            'url': url,
-        })
-
+        normalized_links.append({'title': title, 'url': url})
     return normalized_links
 
 
@@ -50,111 +42,95 @@ def _normalize_knowledge_payload(attrs, *, normalize_missing_title: bool = False
     if 'related_links' in attrs:
         attrs['related_links'] = _normalize_related_links(attrs['related_links'])
     return attrs
-class KnowledgeListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for knowledge list view.
-    Returns full content for mymind-style card rendering.
-    """
-    space_tag = TagSimpleSerializer(read_only=True)
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
-    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
+
+
+class KnowledgeListSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True)
+    space_tag = serializers.SerializerMethodField()
+    content = serializers.CharField(read_only=True)
+    related_links = RelatedLinkSerializer(many=True, read_only=True)
+    view_count = serializers.IntegerField(read_only=True, required=False)
     content_preview = serializers.CharField(read_only=True)
-    related_links = RelatedLinkSerializer(many=True, read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_space_tag(self, obj):
+        if hasattr(obj, 'space_tag'):
+            return TagSimpleSerializer(obj.space_tag).data if obj.space_tag else None
+        space_tag_name = getattr(obj, 'space_tag_name', '')
+        if not space_tag_name:
+            return None
+        return {'id': None, 'name': space_tag_name, 'tag_type': 'SPACE'}
+
+    def get_created_by_name(self, obj):
+        created_by = getattr(obj, 'created_by', None)
+        return created_by.username if created_by else None
+
+    def get_updated_by_name(self, obj):
+        updated_by = getattr(obj, 'updated_by', None)
+        return updated_by.username if updated_by else None
+
+
+class KnowledgeDetailSerializer(KnowledgeListSerializer):
+    tags = serializers.SerializerMethodField()
+
     class Meta:
-        model = Knowledge
         fields = [
-            'id', 'resource_uuid', 'version_number',
+            'id',
             'title',
-            'is_current',
             'space_tag',
-            'content', 'related_links',
-            'view_count', 'content_preview',
-            'created_by_name', 'updated_by_name', 'created_at', 'updated_at'
-        ]
-
-
-class KnowledgeDetailSerializer(serializers.ModelSerializer):
-    """
-    Serializer for knowledge detail view.
-    Returns full knowledge document details.
-    """
-    space_tag = TagSimpleSerializer(read_only=True)
-    tags = TagSimpleSerializer(many=True, read_only=True)
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
-    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    related_links = RelatedLinkSerializer(many=True, read_only=True)
-    class Meta:
-        model = Knowledge
-        fields = [
-            'id', 'resource_uuid', 'version_number',
-            'title',
-            'is_current',
-            'space_tag', 'tags',
-            'content', 'related_links',
-            # 元数据
+            'tags',
+            'content',
+            'related_links',
             'view_count',
-            'created_by_name', 'created_at',
-            'updated_by_name', 'updated_at'
+            'content_preview',
+            'created_by_name',
+            'created_at',
+            'updated_by_name',
+            'updated_at',
         ]
+
+    def get_tags(self, obj):
+        if hasattr(obj, 'tags'):
+            return TagSimpleSerializer(obj.tags.all(), many=True).data
+        return getattr(obj, 'tags_json', [])
 
 
 class KnowledgeCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating knowledge documents.
-    """
-    title = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        allow_null=True,
-        default='',
-    )
-    # 前端传入标签ID
+    title = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
         required=False,
-        default=list
+        default=list,
     )
     related_links = RelatedLinkSerializer(many=True, required=False, default=list)
 
     class Meta:
         model = Knowledge
-        fields = [
-            'title',
-            'space_tag_id',
-            'tag_ids',
-            'related_links',
-            'content',
-        ]
+        fields = ['title', 'space_tag_id', 'tag_ids', 'related_links', 'content']
+
     def validate(self, attrs):
         return _normalize_knowledge_payload(attrs, normalize_missing_title=True)
 
+
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating knowledge documents.
-    """
-    title = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        allow_null=True,
-    )
+    title = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
-        required=False
+        required=False,
     )
     related_links = RelatedLinkSerializer(many=True, required=False)
 
     class Meta:
         model = Knowledge
-        fields = [
-            'title',
-            'space_tag_id',
-            'tag_ids',
-            'related_links',
-            'content',
-        ]
+        fields = ['title', 'space_tag_id', 'tag_ids', 'related_links', 'content']
+
     def validate(self, attrs):
         return _normalize_knowledge_payload(attrs)

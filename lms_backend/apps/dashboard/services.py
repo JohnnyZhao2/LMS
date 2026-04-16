@@ -262,7 +262,7 @@ class TeamManagerDashboardService(BaseService):
         ).exclude(
             roles__code='DEPT_MANAGER'
         ).distinct().count()
-        platform_knowledge_count = Knowledge.objects.filter(is_current=True).count()
+        platform_knowledge_count = Knowledge.objects.count()
 
         return {
             'summary': {

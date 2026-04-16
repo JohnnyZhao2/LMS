@@ -16,9 +16,8 @@ export const normalizeQuestionScore = (value: string | number | null | undefined
 export interface EditableQuestionItem {
   key: string;
   questionId: number | null;
-  resourceUuid: string | null;
-  isCurrent: boolean;
-  syncToBank: boolean;
+  sourceQuestionId?: number | null;
+  quizQuestionId?: number | null;
   questionType: QuestionType;
   spaceTagId?: number | null;
   content: string;
@@ -115,9 +114,8 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
   return {
     key,
     questionId: question.id,
-    resourceUuid: question.resource_uuid,
-    isCurrent: question.is_current,
-    syncToBank: question.is_current,
+    sourceQuestionId: question.id,
+    quizQuestionId: null,
     questionType: question.question_type,
     spaceTagId: question.space_tag?.id ?? null,
     content: question.content,
@@ -133,7 +131,7 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
 };
 
 export const syncEditableQuestionItem = (
-  source: Pick<EditableQuestionItem, 'key' | 'score' | 'syncToBank'>,
+  source: Pick<EditableQuestionItem, 'key' | 'score'>,
   question: Question,
   scoreOverride?: string | number | null,
 ): EditableQuestionItem => {
@@ -141,7 +139,6 @@ export const syncEditableQuestionItem = (
   const resolvedScore = normalizeQuestionScore(scoreOverride ?? source.score ?? next.score);
 
   next.score = resolvedScore;
-  next.syncToBank = source.syncToBank;
 
   return next;
 };
@@ -155,9 +152,8 @@ export const createBlankEditableQuestion = (
   return {
     key: nextQuestionEditorKey(),
     questionId: null,
-    resourceUuid: null,
-    isCurrent: true,
-    syncToBank: true,
+    sourceQuestionId: null,
+    quizQuestionId: null,
     questionType,
     spaceTagId,
     content: '',

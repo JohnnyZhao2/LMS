@@ -9,9 +9,6 @@ export interface RelatedLink {
   url: string;
 }
 
-/**
- * 最新知识
- */
 export interface LatestKnowledge {
   id: number;
   title: string;
@@ -19,15 +16,9 @@ export interface LatestKnowledge {
   updated_at: string;
 }
 
-/**
- * 知识文档列表项（管理员视图）
- */
 export interface KnowledgeListItem {
   id: number;
-  resource_uuid: string;
-  version_number: number;
   title: string;
-  is_current: boolean;
   space_tag?: SimpleTag | null;
   content: string;
   content_preview?: string;
@@ -39,15 +30,9 @@ export interface KnowledgeListItem {
   updated_at: string;
 }
 
-/**
- * 知识文档详情（管理员视图）
- */
 export interface KnowledgeDetail {
   id: number;
-  resource_uuid: string;
-  version_number: number;
   title: string;
-  is_current: boolean;
   space_tag?: SimpleTag | null;
   content: string;
   tags: SimpleTag[];
@@ -59,9 +44,6 @@ export interface KnowledgeDetail {
   updated_at: string;
 }
 
-/**
- * 创建知识文档请求
- */
 export interface KnowledgeCreateRequest {
   title?: string;
   space_tag_id?: number;
@@ -70,9 +52,6 @@ export interface KnowledgeCreateRequest {
   tag_ids?: number[];
 }
 
-/**
- * 更新知识文档请求
- */
 export interface KnowledgeUpdateRequest {
   title?: string;
   space_tag_id?: number;
@@ -81,9 +60,6 @@ export interface KnowledgeUpdateRequest {
   tag_ids?: number[];
 }
 
-/**
- * 文档解析响应
- */
 export interface ParseDocumentResponse {
   suggested_title: string;
   content: string;

@@ -97,8 +97,8 @@ def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dic
     rows = Submission.objects.filter(
         task_assignment_id__in=assignment_ids,
         status__in=QUIZ_COMPLETION_STATUSES,
-    ).values_list('task_assignment_id', 'quiz_id', 'quiz__quiz_type').distinct()
-    for assignment_id, quiz_id, quiz_type in rows:
+    ).values_list('task_assignment_id', 'task_quiz_id', 'quiz__quiz_type').distinct()
+    for assignment_id, task_quiz_id, quiz_type in rows:
         bucket = grouped_quiz_ids.setdefault(
             assignment_id,
             {
@@ -107,9 +107,9 @@ def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dic
                 'PRACTICE': set(),
             },
         )
-        bucket['all'].add(quiz_id)
+        bucket['all'].add(task_quiz_id)
         if quiz_type in ('EXAM', 'PRACTICE'):
-            bucket[quiz_type].add(quiz_id)
+            bucket[quiz_type].add(task_quiz_id)
 
     for assignment_id, quiz_ids in grouped_quiz_ids.items():
         progress_map[assignment_id] = {

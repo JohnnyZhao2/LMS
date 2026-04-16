@@ -19,9 +19,7 @@ from apps.users.models import User
 
 
 def get_latest_knowledge(limit: int = 6) -> QuerySet:
-    return Knowledge.objects.filter(
-        is_current=True
-    ).select_related(
+    return Knowledge.objects.select_related(
         'created_by', 'updated_by'
     ).order_by('-updated_at')[:limit]
 

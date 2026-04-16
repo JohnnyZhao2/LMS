@@ -1,10 +1,5 @@
-"""
-Submission models for LMS.
-Implements:
-- Submission: 答题记录模型
-- Answer: 答案记录模型
-Properties: 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34
-"""
+"""Submission models for LMS."""
+
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -15,152 +10,122 @@ from core.mixins import TimestampMixin
 
 
 class Submission(TimestampMixin, models.Model):
-    """
-    答题记录模型
-    记录学员对试卷的作答情况。
-    状态:
-    - SUBMITTED: 已提交（客观题已自动评分）
-    - GRADING: 待评分（包含主观题，等待人工评分）
-    - GRADED: 已评分（所有题目评分完成）
-    Properties:
-    - Property 24: 练习允许多次提交
-    - Property 25: 练习任务自动完成
-    - Property 26: 已完成练习仍可继续
-    - Property 29: 考试单次提交限制
-    - Property 30: 客观题自动评分
-    - Property 31: 主观题待评分状态
-    - Property 32: 纯客观题直接完成
-    - Property 33: 评分完成状态转换
-    - Property 34: 未完成评分状态保持
-    """
+    """答题记录。"""
+
     STATUS_CHOICES = [
         ('IN_PROGRESS', '答题中'),
         ('SUBMITTED', '已提交'),
         ('GRADING', '待评分'),
         ('GRADED', '已评分'),
     ]
-    # 关联任务分配
+
     task_assignment = models.ForeignKey(
         'tasks.TaskAssignment',
         on_delete=models.CASCADE,
         related_name='submissions',
-        verbose_name='任务分配'
+        verbose_name='任务分配',
     )
-    # 关联试卷
-    quiz = models.ForeignKey(
-        'quizzes.Quiz',
+    task_quiz = models.ForeignKey(
+        'tasks.TaskQuiz',
         on_delete=models.PROTECT,
         related_name='submissions',
-        verbose_name='试卷'
+        null=True,
+        blank=True,
+        verbose_name='任务试卷',
     )
-    # 答题用户（冗余字段，方便查询）
+    quiz = models.ForeignKey(
+        'quizzes.QuizRevision',
+        on_delete=models.PROTECT,
+        related_name='submissions',
+        verbose_name='试卷快照',
+    )
     user = models.ForeignKey(
         'users.User',
         on_delete=models.PROTECT,
         related_name='submissions',
-        verbose_name='答题用户'
+        verbose_name='答题用户',
     )
-    # 答题次数（练习任务可多次提交）
-    attempt_number = models.PositiveIntegerField(
-        default=1,
-        verbose_name='答题次数'
-    )
-    # 状态
+    attempt_number = models.PositiveIntegerField(default=1, verbose_name='答题次数')
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='IN_PROGRESS',
-        verbose_name='状态'
+        verbose_name='状态',
     )
-    # 分数
     total_score = models.DecimalField(
         max_digits=6,
         decimal_places=2,
         default=Decimal('0'),
-        verbose_name='试卷总分'
+        verbose_name='试卷总分',
     )
     obtained_score = models.DecimalField(
         max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name='获得分数'
+        verbose_name='获得分数',
     )
-    # 时间记录
-    started_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='开始时间'
-    )
-    submitted_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='提交时间'
-    )
-    # 考试专用：剩余时间（秒）
+    started_at = models.DateTimeField(auto_now_add=True, verbose_name='开始时间')
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='提交时间')
     remaining_seconds = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name='剩余时间（秒）'
+        verbose_name='剩余时间（秒）',
     )
+
     class Meta:
         db_table = 'lms_submission'
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         ordering = ['-created_at']
-        # 考试任务每个用户只能有一次提交
-        # 练习任务可以有多次提交，通过 attempt_number 区分
+
     def __str__(self):
-        return f"{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)"
+        return f'{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)'
+
     def save(self, *args, **kwargs):
-        """保存时自动设置用户和总分"""
         if not self.pk:
-            # 新建时设置用户
             if not self.user_id:
                 self.user = self.task_assignment.assignee
-            # 设置试卷总分
             if not self.total_score:
                 self.total_score = self.quiz.total_score
+            if not self.task_quiz_id:
+                self.task_quiz = self.task_assignment.task.task_quizzes.filter(
+                    quiz_id=self.quiz_id
+                ).first()
         super().save(*args, **kwargs)
+
     @property
     def task(self):
-        """获取关联的任务"""
         return self.task_assignment.task
+
     @property
     def has_subjective_questions(self):
-        """是否包含主观题"""
         return self.quiz.has_subjective_questions
+
     @property
     def ungraded_subjective_count(self):
-        """获取未评分的主观题数量"""
         return self.answers.filter(
             question__question_type='SHORT_ANSWER',
-            graded_by__isnull=True
+            graded_by__isnull=True,
         ).count()
+
     @property
     def all_subjective_graded(self):
-        """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
 
     @property
     def pass_score(self):
-        """获取及格分数"""
         return float(self.quiz.pass_score) if self.quiz.pass_score else None
 
     @property
     def is_passed(self):
-        """是否通过（考试专用）"""
         if self.quiz.quiz_type != 'EXAM':
             return None
         if not self.quiz.pass_score or self.obtained_score is None:
             return None
         return self.obtained_score >= self.quiz.pass_score
+
     def complete_grading(self):
-        """
-        完成评分（所有主观题评分完成后调用）
-        Properties:
-        - Property 33: 评分完成状态转换
-        - Property 34: 未完成评分状态保持
-        """
         if self.status != 'GRADING':
             raise ValidationError('只能完成待评分状态的记录')
         if not self.all_subjective_graded:
@@ -171,86 +136,65 @@ class Submission(TimestampMixin, models.Model):
         self.refresh_assignment_score()
 
     def refresh_obtained_score(self):
-        """重算当前提交得分"""
         from .scoring import refresh_submission_obtained_score
 
         refresh_submission_obtained_score(self)
 
     def refresh_assignment_score(self):
-        """同步任务分配成绩为当前最高分"""
         from .scoring import refresh_assignment_score
 
         refresh_assignment_score(self.task_assignment, self.__class__)
+
+
 class Answer(TimestampMixin, models.Model):
-    """
-    答案记录模型
-    记录学员对每道题目的作答情况。
-    Properties:
-    - Property 30: 客观题自动评分
-    """
-    # 关联答题记录
+    """单题作答记录。"""
+
     submission = models.ForeignKey(
         Submission,
         on_delete=models.CASCADE,
         related_name='answers',
-        verbose_name='答题记录'
+        verbose_name='答题记录',
     )
-    # 关联题目
     question = models.ForeignKey(
-        'questions.Question',
+        'quizzes.QuizRevisionQuestion',
         on_delete=models.PROTECT,
         related_name='answers',
-        verbose_name='题目'
+        verbose_name='试卷题目快照',
     )
-    text_answer = models.TextField(
-        blank=True,
-        default='',
-        verbose_name='文本答案'
-    )
-    is_marked = models.BooleanField(
-        default=False,
-        verbose_name='是否标记'
-    )
-    # 是否正确（客观题自动判断，主观题由评分人判断）
-    is_correct = models.BooleanField(
-        null=True,
-        blank=True,
-        verbose_name='是否正确'
-    )
-    # 得分
+    text_answer = models.TextField(blank=True, default='', verbose_name='文本答案')
+    is_marked = models.BooleanField(default=False, verbose_name='是否标记')
+    is_correct = models.BooleanField(null=True, blank=True, verbose_name='是否正确')
     obtained_score = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=Decimal('0'),
-        verbose_name='得分'
+        verbose_name='得分',
     )
-    # 评分信息（主观题）
     graded_by = models.ForeignKey(
         'users.User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='graded_answers',
-        verbose_name='评分人'
+        verbose_name='评分人',
     )
-    graded_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='评分时间'
-    )
-    comment = models.TextField(
-        blank=True,
-        default='',
-        verbose_name='评语'
-    )
+    graded_at = models.DateTimeField(null=True, blank=True, verbose_name='评分时间')
+    comment = models.TextField(blank=True, default='', verbose_name='评语')
+
     class Meta:
         db_table = 'lms_answer'
         verbose_name = '答案记录'
         verbose_name_plural = '答案记录'
-        unique_together = ['submission', 'question']
         ordering = ['submission', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['submission', 'question'],
+                name='uniq_submission_revision_question',
+            ),
+        ]
+
     def __str__(self):
-        return f"{self.submission} - {self.question}"
+        return f'{self.submission} - {self.question}'
 
     def _ordered_answer_selections(self):
         cached = getattr(self, '_prefetched_objects_cache', {})
@@ -271,17 +215,16 @@ class Answer(TimestampMixin, models.Model):
 
     @property
     def is_objective(self):
-        """是否为客观题答案"""
         return self.question.is_objective
+
     @property
     def is_subjective(self):
-        """是否为主观题答案"""
         return self.question.is_subjective
+
     @property
     def is_graded(self):
-        """是否已评分"""
         if self.is_objective:
-            return True  # 客观题自动评分
+            return True
         return self.graded_by is not None
 
     @property
@@ -296,29 +239,19 @@ class Answer(TimestampMixin, models.Model):
             for selection in self._ordered_answer_selections()
             if selection.question_option_id in option_id_key_map
         ]
-
         if not selected_keys:
             return None
-
         if self.question.question_type == 'MULTIPLE_CHOICE':
             return selected_keys
-
         return selected_keys[0]
 
     @property
     def max_score(self):
-        relation = self.submission.quiz.quiz_questions.filter(
-            question_id=self.question_id
-        ).only('score').first()
-        return relation.score if relation else self.question.score
+        return self.question.score
 
     def auto_grade(self):
-        """
-        自动评分（仅适用于客观题）
-        Property 30: 客观题自动评分
-        """
         if self.is_subjective:
-            return  # 主观题不自动评分
+            return
         is_correct, score = self.question.check_answer(
             self.user_answer,
             full_score=self.max_score,
@@ -326,14 +259,8 @@ class Answer(TimestampMixin, models.Model):
         self.is_correct = is_correct
         self.obtained_score = score
         self.save(update_fields=['is_correct', 'obtained_score'])
+
     def grade(self, grader, score, comment=''):
-        """
-        人工评分（主观题）
-        Args:
-            grader: 评分人 User 实例
-            score: 给定分数
-            comment: 评语
-        """
         if self.is_objective:
             raise ValidationError('客观题不需要人工评分')
         score_decimal = Decimal(str(score))
@@ -343,11 +270,8 @@ class Answer(TimestampMixin, models.Model):
         self.graded_at = timezone.now()
         self.obtained_score = score_decimal
         self.comment = comment
-        # 主观题的正确性由评分人判断
-        # 如果得分等于满分，认为是正确的
-        self.is_correct = (self.obtained_score == self.max_score)
+        self.is_correct = self.obtained_score == self.max_score
         self.save()
-        # 检查是否所有主观题都已评分
         submission = self.submission
         if submission.status == 'GRADING':
             if submission.all_subjective_graded:
@@ -367,7 +291,7 @@ class AnswerSelection(TimestampMixin, models.Model):
         verbose_name='答案记录',
     )
     question_option = models.ForeignKey(
-        'questions.QuestionOption',
+        'quizzes.QuizRevisionQuestionOption',
         on_delete=models.PROTECT,
         related_name='answer_selections',
         verbose_name='题目选项',

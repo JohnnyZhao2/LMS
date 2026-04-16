@@ -75,29 +75,3 @@ class BaseService:
                 message=error_message
             )
         return value
-    def check_published_resource_access(
-        self,
-        resource,
-        resource_name: str = '资源',
-    ) -> None:
-        """
-        检查资源的访问权限
-        非管理员只能访问当前版本的资源。
-        
-        Args:
-            resource: 资源对象（必须有 is_current 属性）
-            resource_name: 资源名称（用于错误消息）
-        Raises:
-            BusinessError: 如果权限不足
-        """
-        effective_user = self.user
-        effective_request = self.request
-        
-        if effective_user and not _is_admin_like_role(_get_current_role(effective_user)):
-            if not hasattr(resource, 'is_current'):
-                return  # 如果资源没有这些属性，跳过检查
-            if not resource.is_current:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message=f'无权访问该{resource_name}'
-                )

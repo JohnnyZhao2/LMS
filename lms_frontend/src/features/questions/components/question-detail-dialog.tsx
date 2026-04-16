@@ -11,7 +11,7 @@ import { QuestionDetailPreview } from '@/features/questions/components/question-
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
-import dayjs from '@/lib/dayjs';
+import { formatListDateTime } from '@/lib/date-time';
 import { showApiError } from '@/utils/error-handler';
 import type { Question } from '@/types/question';
 
@@ -163,7 +163,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-[14px] w-[14px] shrink-0 text-[#aaa]" />
-                    <span>{dayjs(activeQuestion.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                    <span>{formatListDateTime(activeQuestion.updated_at)}</span>
                   </div>
                 </div>
               </div>

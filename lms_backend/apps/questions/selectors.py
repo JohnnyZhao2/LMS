@@ -1,21 +1,20 @@
-"""
-Question selectors.
-集中管理题目查询与过滤逻辑。
-"""
+"""Question selectors."""
+
 from typing import Optional
 
 from django.db.models import Count, Exists, OuterRef, Prefetch, QuerySet
 
+from apps.quizzes.models import QuizQuestion
+
 from .models import Question, QuestionOption
 
 
-def question_base_queryset(include_deleted: bool = False) -> QuerySet:
-    from apps.quizzes.models import QuizQuestion
-
-    qs = Question.objects.select_related(
+def question_base_queryset() -> QuerySet:
+    return Question.objects.select_related(
         'created_by',
         'updated_by',
         'space_tag',
+        'created_from_quiz',
     ).prefetch_related(
         Prefetch(
             'question_options',
@@ -23,34 +22,25 @@ def question_base_queryset(include_deleted: bool = False) -> QuerySet:
         ),
         'tags',
     ).annotate(
-        usage_count=Count('question_quizzes', distinct=True),
-        is_referenced=Exists(
-            QuizQuestion.objects.filter(question_id=OuterRef('pk'))
-        ),
+        usage_count=Count('quiz_copies', distinct=True),
+        is_referenced=Exists(QuizQuestion.objects.filter(question_id=OuterRef('pk'))),
     )
-    if not include_deleted:
-        qs = qs.filter(is_deleted=False)
-    return qs
 
 
-def get_question_by_id(pk: int, include_deleted: bool = False) -> Optional[Question]:
-    return question_base_queryset(include_deleted=include_deleted).filter(pk=pk).first()
+def get_question_by_id(pk: int) -> Optional[Question]:
+    return question_base_queryset().filter(pk=pk).first()
 
 
 def apply_question_filters(
     qs: QuerySet,
     filters: dict = None,
-    search: str = None
+    search: str = None,
 ) -> QuerySet:
     if filters:
-        if filters.get('resource_uuid'):
-            qs = qs.filter(resource_uuid=filters['resource_uuid'])
         if filters.get('question_type'):
             qs = qs.filter(question_type=filters['question_type'])
         if filters.get('created_by_id'):
             qs = qs.filter(created_by_id=filters['created_by_id'])
-        if filters.get('is_current') is not None:
-            qs = qs.filter(is_current=filters['is_current'])
         if filters.get('space_tag_id') is not None:
             qs = qs.filter(space_tag_id=filters['space_tag_id'])
         if filters.get('tag_id') is not None:
