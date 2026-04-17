@@ -12,6 +12,8 @@ QUESTION_TYPE_CHOICES = [
     ('SHORT_ANSWER', '简答题'),
 ]
 
+DEFAULT_QUESTION_SCORE = 5.0
+
 
 def build_choice_option_key(index: int) -> str:
     """将 0-based 索引转换为 A/B/.../Z/AA 的展示键。"""
@@ -46,7 +48,7 @@ class QuestionContentMixin(models.Model):
     score = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        default=1.0,
+        default=DEFAULT_QUESTION_SCORE,
         verbose_name='分值',
     )
 

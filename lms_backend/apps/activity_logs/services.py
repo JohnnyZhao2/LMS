@@ -47,6 +47,7 @@ _OPERATION_ACTION_SUMMARIES = {
     'batch_grade': '{actor} 批量评分',
     'start_quiz': '{actor} 开始答题《{target}》',
     'submit': '{actor} 提交了《{target}》',
+    'submit_quiz': '{actor} 提交了《{target}》',
     'complete_knowledge': '{actor} 完成了知识学习《{target}》',
 }
 

@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.tags.serializers import TagSimpleSerializer
 
 from .models import Question
+from .question_like import DEFAULT_QUESTION_SCORE
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -62,7 +63,7 @@ class QuestionCreateSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, allow_blank=True, default='')
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=DEFAULT_QUESTION_SCORE)
 
 
 class QuestionUpdateSerializer(serializers.Serializer):

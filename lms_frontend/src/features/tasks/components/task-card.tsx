@@ -13,10 +13,10 @@ interface TaskCardProps {
 }
 
 const taskCategoryBadgeClassMap = {
-  knowledge: 'border-secondary-200 text-secondary-700',
-  practice: 'border-warning-200 text-warning-700',
-  exam: 'border-primary-200 text-primary-700',
-  completed: 'border-border/80 text-muted-foreground',
+  knowledge: 'bg-secondary-100/70 text-text-muted',
+  practice: 'bg-warning-100/70 text-text-muted',
+  exam: 'bg-primary-100/70 text-text-muted',
+  completed: 'bg-muted/85 text-text-muted',
 } as const;
 
 const TaskStatusDot: React.FC<{
@@ -69,10 +69,10 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   const hasKnowledge = task.has_knowledge;
 
   const missionConfig = hasQuiz && hasKnowledge
-    ? { barClass: 'bg-primary', tagClass: 'border-primary-200 text-primary-700', label: '综合任务' }
+    ? { barClass: 'bg-primary', tagClass: 'bg-primary-100/70 text-text-muted', label: '综合任务' }
     : hasQuiz
-      ? { barClass: 'bg-primary-500', tagClass: 'border-primary-200 text-primary-700', label: '考核任务' }
-      : { barClass: 'bg-secondary', tagClass: 'border-secondary-200 text-secondary-700', label: '知识任务' };
+      ? { barClass: 'bg-primary-500', tagClass: 'bg-primary-100/70 text-text-muted', label: '考核任务' }
+      : { barClass: 'bg-secondary', tagClass: 'bg-secondary-100/70 text-text-muted', label: '知识任务' };
 
   const targetTaskId = task.task_id;
   const progress = task.progress;
@@ -116,7 +116,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
           <ListTag
             className={cn(
               isUrgent
-                ? 'border-destructive-200 text-destructive-700'
+                ? 'bg-destructive-100/70 text-text-muted'
                 : missionConfig.tagClass
             )}
           >

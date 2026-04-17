@@ -11,12 +11,6 @@ interface QuizSubmitDialogProps {
   onConfirm: () => void;
 }
 
-interface QuizTimeUpDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-}
-
 interface QuizAbandonDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,7 +33,7 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
           <div>
             {unansweredCount > 0 && (
               <div className="mb-3 text-warning">
-                ⚠️ 还有 {unansweredCount} 道题未作答
+                还有 {unansweredCount} 道题未作答
               </div>
             )}
             <div>
@@ -59,28 +53,6 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
         >
           {isPending && <Spinner size="sm" className="mr-2" />}
           确认提交
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-export const QuizTimeUpDialog: React.FC<QuizTimeUpDialogProps> = ({
-  open,
-  onOpenChange,
-  onConfirm,
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="rounded-lg">
-      <DialogHeader>
-        <DialogTitle>⏰ 时间到</DialogTitle>
-        <DialogDescription>
-          考试时间已结束，系统将自动提交
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <Button onClick={onConfirm}>
-          查看结果
         </Button>
       </DialogFooter>
     </DialogContent>

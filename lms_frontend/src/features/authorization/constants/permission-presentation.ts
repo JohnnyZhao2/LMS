@@ -1,6 +1,13 @@
+import type { PermissionOverrideScope } from '@/types/authorization';
+
 interface ModulePresentationMeta {
   label: string;
   order: number;
+}
+
+interface ScopeGroupPresentationMeta {
+  label: string;
+  description: string;
 }
 
 const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
@@ -54,9 +61,43 @@ const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
   },
 };
 
+const SCOPE_GROUP_PRESENTATION: Record<string, ScopeGroupPresentationMeta> = {
+  user_scope: {
+    label: '用户可见范围',
+    description: '决定该角色默认能查看哪些用户。',
+  },
+  task_student_scope: {
+    label: '任务学员范围',
+    description: '决定任务分配与任务分析默认作用到哪些学员。',
+  },
+  spot_check_student_scope: {
+    label: '抽查学员范围',
+    description: '决定抽查查看与创建默认作用到哪些学员。',
+  },
+};
+
+const SCOPE_TYPE_LABELS: Record<PermissionOverrideScope, string> = {
+  ALL: '全部对象',
+  SELF: '本人',
+  MENTEES: '名下学员',
+  DEPARTMENT: '同部门',
+  EXPLICIT_USERS: '指定用户',
+};
+
 export const getModulePresentation = (moduleCode: string): ModulePresentationMeta => (
   MODULE_PRESENTATION[moduleCode] ?? {
     label: moduleCode,
     order: 999,
   }
+);
+
+export const getScopeGroupPresentation = (scopeGroupKey: string): ScopeGroupPresentationMeta => (
+  SCOPE_GROUP_PRESENTATION[scopeGroupKey] ?? {
+    label: scopeGroupKey,
+    description: '决定该组能力默认作用到哪些对象。',
+  }
+);
+
+export const getScopeTypeLabel = (scopeType: PermissionOverrideScope): string => (
+  SCOPE_TYPE_LABELS[scopeType] ?? scopeType
 );

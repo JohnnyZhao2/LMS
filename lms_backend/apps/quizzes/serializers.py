@@ -156,7 +156,7 @@ class QuizQuestionValidationMixin:
         duration = attrs.get('duration', getattr(self.instance, 'duration', None))
         pass_score = attrs.get('pass_score', getattr(self.instance, 'pass_score', None))
         if not duration:
-            raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
+            raise serializers.ValidationError({'duration': '考试类型必须设置参考时间'})
         if not pass_score:
             raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
         return attrs

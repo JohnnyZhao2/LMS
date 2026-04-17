@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronsLeftRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -36,15 +36,8 @@ export const QuestionDocumentDivider: React.FC<QuestionDocumentDividerProps> = (
           onPointerDown={onResizeStart}
           className="group absolute inset-y-0 left-1/2 flex w-[42px] -translate-x-1/2 cursor-col-resize select-none items-center justify-center"
         >
-          <span className="pointer-events-none relative inline-flex h-6 w-4 items-center justify-center rounded-[10px] border border-border/85 bg-background text-text-muted shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition-colors group-hover:border-foreground/12 group-hover:text-foreground/70">
-            <span className="grid grid-cols-2 gap-[1.5px]">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="h-[1.5px] w-[1.5px] rounded-full bg-current"
-                />
-              ))}
-            </span>
+          <span className="pointer-events-none inline-flex items-center justify-center text-text-muted transition-colors group-hover:text-foreground/70">
+            <ChevronsLeftRight className="h-3.5 w-3.5" strokeWidth={1.8} />
           </span>
         </button>
       ) : null}

@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import dayjs from '@/lib/dayjs';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { QuestionSection } from '@/features/questions/question-sections';
 import type { SubmissionDetail } from '@/types/submission';
@@ -29,7 +30,6 @@ interface QuizInfoPanelProps {
   isSubmitPending: boolean;
   onAbandon: () => void;
   onSubmit: () => void;
-  onTimeUp: () => void;
 }
 
 const InfoSectionLabel: React.FC<{ label: string }> = ({ label }) => (
@@ -177,7 +177,6 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
   isSubmitPending,
   onAbandon,
   onSubmit,
-  onTimeUp,
 }) => {
   const isExam = submission.quiz_type === 'EXAM';
 
@@ -207,7 +206,6 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
           <Timer
             key={`${submission.id}-${submission.remaining_seconds}`}
             remainingSeconds={submission.remaining_seconds}
-            onTimeUp={onTimeUp}
           />
         </div>
       ) : null}
@@ -227,18 +225,18 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
               />
               <MetaItem
                 label="总分"
-                value={String(submission.total_score)}
+                value={formatScore(submission.total_score)}
               />
               {isExam ? (
                 <MetaItem
-                  label="试卷时长"
-                  value={submission.quiz_duration ? `${submission.quiz_duration} 分钟` : '不限时'}
+                  label="参考时间"
+                  value={submission.quiz_duration ? `${submission.quiz_duration} 分钟` : '未设置'}
                 />
               ) : null}
               {isExam ? (
                 <MetaItem
                   label="及格分"
-                  value={String(submission.pass_score)}
+                  value={formatScore(submission.pass_score)}
                 />
               ) : null}
             </div>

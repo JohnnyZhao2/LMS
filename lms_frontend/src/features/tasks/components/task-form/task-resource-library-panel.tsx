@@ -31,6 +31,7 @@ interface TaskResourceLibraryPanelProps {
   resourceType: 'ALL' | ResourceType;
   onResourceTypeChange: (value: 'ALL' | ResourceType) => void;
   onResourceAdd: (resource: ResourceItem) => void;
+  onDocumentPreview: (documentId: number) => void;
   onQuizPreview: (quizId: number) => void;
   resourcesDisabled: boolean;
   totalResourceCount: number;
@@ -48,6 +49,7 @@ export function TaskResourceLibraryPanel({
   resourceType,
   onResourceTypeChange,
   onResourceAdd,
+  onDocumentPreview,
   onQuizPreview,
   resourcesDisabled,
   totalResourceCount,
@@ -130,21 +132,16 @@ export function TaskResourceLibraryPanel({
                     className={cn(
                       'group flex h-[72px] w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left',
                       SUBTLE_SURFACE_HOVER_CLASSNAME,
-                      resourcesDisabled
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer',
+                      'cursor-pointer',
+                      resourcesDisabled && 'bg-muted/15',
                     )}
                     onClick={() => {
-                      if (resourcesDisabled) {
+                      if (resource.resourceType === 'DOCUMENT') {
+                        onDocumentPreview(resource.id);
                         return;
                       }
 
-                      if (resource.resourceType === 'QUIZ') {
-                        onQuizPreview(resource.id);
-                        return;
-                      }
-
-                      onResourceAdd(resource);
+                      onQuizPreview(resource.id);
                     }}
                   >
                     <div
@@ -176,25 +173,26 @@ export function TaskResourceLibraryPanel({
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {resource.resourceType === 'QUIZ' ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (!resourcesDisabled) {
-                              onQuizPreview(resource.id);
-                            }
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
                         className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (resource.resourceType === 'DOCUMENT') {
+                            onDocumentPreview(resource.id);
+                            return;
+                          }
+                          onQuizPreview(resource.id);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
+                        disabled={resourcesDisabled}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (!resourcesDisabled) {

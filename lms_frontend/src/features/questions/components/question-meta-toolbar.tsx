@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { TagInput } from '@/features/knowledge/components/shared/tag-input';
 import { getQuestionTypePresentation, QUESTION_TYPE_PICKER_OPTIONS } from '@/features/questions/constants';
 import { CompactNumberInput } from '@/features/quiz-center/quizzes/components/compact-number-input';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { QuestionType, SimpleTag, Tag } from '@/types/common';
 
@@ -209,7 +210,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               max={100}
               step={1}
               prefixClassName="whitespace-nowrap text-text-muted !text-[10.5px]"
-              inputWidthClassName="w-7"
+              inputWidthClassName="w-10"
               inputClassName="!text-[10.5px] leading-none !text-text-muted"
               className={`${SCORE_TRIGGER_WIDTH_CLASSNAME} ${META_FIELD_CLASSNAME}`}
             />
@@ -220,7 +221,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
               </span>
               <span className="h-3.5 w-px shrink-0 bg-foreground/16" aria-hidden="true" />
               <span className="truncate text-center text-[10.5px] font-semibold leading-none tracking-[-0.01em] text-text-muted">
-                {score}
+                {formatScore(score)}
               </span>
             </div>
           )

@@ -5,10 +5,12 @@ import type { Question, QuestionCreateRequest } from '@/types/question';
 
 let questionEditorKeyCounter = 0;
 
+export const DEFAULT_QUESTION_SCORE = '5';
+
 const nextQuestionEditorKey = () => `question_editor_${++questionEditorKeyCounter}`;
 
 export const normalizeQuestionScore = (value: string | number | null | undefined): string => {
-  if (value === null || value === undefined || value === '') return '1';
+  if (value === null || value === undefined || value === '') return DEFAULT_QUESTION_SCORE;
   const num = Number(value);
   return Number.isNaN(num) ? String(value) : String(num);
 };
@@ -123,7 +125,7 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
     answer: question.answer || '',
     explanation: question.explanation || '',
     showExplanation: Boolean(question.explanation?.trim()),
-    score: '1',
+    score: DEFAULT_QUESTION_SCORE,
     tagIds: question.tags?.map((tag) => tag.id) ?? [],
     original: form,
     saved: true,
@@ -161,7 +163,7 @@ export const createBlankEditableQuestion = (
     answer: '',
     explanation: '',
     showExplanation: false,
-    score: '1',
+    score: DEFAULT_QUESTION_SCORE,
     tagIds: [],
     saved: false,
   };

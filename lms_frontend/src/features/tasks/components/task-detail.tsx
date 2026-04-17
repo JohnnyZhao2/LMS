@@ -28,6 +28,7 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
@@ -325,9 +326,9 @@ export const TaskDetail: React.FC = () => {
   const getQuizMetaText = (item: TaskQuizViewItem) =>
     [
       `${item.question_count} 题`,
-      `总分 ${item.total_score}`,
-      item.duration ? `${item.duration} 分钟` : null,
-      item.quiz_type === 'EXAM' && item.pass_score ? `及格 ${item.pass_score}` : null,
+      `总分 ${formatScore(item.total_score)}`,
+      item.duration ? `参考 ${item.duration} 分钟` : null,
+      item.quiz_type === 'EXAM' && item.pass_score ? `及格 ${formatScore(item.pass_score)}` : null,
     ]
       .filter(Boolean)
       .join(' · ');

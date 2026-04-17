@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { PermissionCatalogItem } from '@/types/authorization';
+import type { RolePermissionTemplate } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { getModulePresentation } from '../constants/permission-presentation';
 import { RoleTemplateWorkbench } from './role-template-workbench';
@@ -9,6 +10,7 @@ interface RolePermissionTemplatePanelProps {
   canUpdateRoleTemplate: boolean;
   roleCodes: RoleCode[];
   permissionCatalog: PermissionCatalogItem[];
+  roleTemplatesByRole: Partial<Record<RoleCode, RolePermissionTemplate | undefined>>;
   permissionCodesByRole: Partial<Record<RoleCode, string[]>>;
   onChangeCodes: (roleCode: RoleCode, nextCodes: string[]) => void;
   isLoadingTemplate: boolean;
@@ -19,6 +21,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   canUpdateRoleTemplate,
   roleCodes,
   permissionCatalog,
+  roleTemplatesByRole,
   permissionCodesByRole,
   onChangeCodes,
   isLoadingTemplate,
@@ -66,9 +69,9 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-h-0 flex-1 flex-col">
       {isLoadingTemplate ? (
-        <div className="flex items-center justify-center gap-2 rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] px-6 py-16 text-sm text-text-muted">
+        <div className="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] px-6 py-16 text-sm text-text-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
           正在加载角色配置...
         </div>
@@ -77,6 +80,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
           permissionModules={permissionModules}
           roleCodes={roleCodes}
           permissionCatalog={permissionCatalog}
+          roleTemplatesByRole={roleTemplatesByRole}
           permissionCodesByRole={permissionCodesByRole}
           activeGroup={activeGroup}
           canUpdateRoleTemplate={canUpdateRoleTemplate}

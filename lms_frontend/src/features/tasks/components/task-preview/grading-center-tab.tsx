@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
+import { formatScore } from '@/lib/score';
 import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
@@ -455,7 +456,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                         {selectedQuestion?.question_type_display || '题目详情'}
                       </span>
                       <span className="text-sm font-medium text-text-muted">
-                        分值: {selectedQuestion?.max_score}
+                        分值: {formatScore(selectedQuestion?.max_score)}
                       </span>
                     </div>
                     <h2 className="text-lg font-semibold leading-snug text-foreground break-words">
@@ -619,7 +620,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                     onBlur={(e) => commitScore(answer.student_id, e.target.value)}
                                     className="h-9 w-16 border-border bg-background pr-2 text-right font-mono text-base font-bold focus:border-primary focus:ring-1 focus:ring-primary/20 sm:w-20"
                                   />
-                                  <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {selectedQuestion?.max_score}</span>
+                                  <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {formatScore(selectedQuestion?.max_score)}</span>
                                 </div>
                               </div>
                             </div>

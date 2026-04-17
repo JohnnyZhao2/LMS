@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { KeyRound, ShieldCheck, Users } from 'lucide-react';
+import { KeyRound, ShieldCheck, Users, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
 import { UserAvatar } from '@/components/common/user-avatar';
@@ -237,13 +237,37 @@ export const UserAuthorizationPage: React.FC = () => {
                     <div className="flex shrink-0 items-center gap-1.5">
                       {currentAssignedRoleTags.map((role) => {
                         const color = getRoleColor(role.code);
+                        const canClearRole = role.code === selectedBusinessRoleCode;
+                        if (canClearRole) {
+                          return (
+                            <button
+                              key={role.code}
+                              type="button"
+                              disabled={!hasCapability('user.authorize') || isAssigningRole}
+                              onClick={() => { void handleRoleToggle(role.code); }}
+                              aria-label={`取消${role.name}角色`}
+                              className={cn(
+                                'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
+                                color.bgClass,
+                                color.mutedTextClass,
+                                hasCapability('user.authorize') && !isAssigningRole
+                                  ? 'cursor-pointer hover:brightness-95'
+                                  : 'cursor-not-allowed opacity-55',
+                              )}
+                            >
+                              <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
+                              {role.name}
+                              <X className="h-3 w-3 opacity-70" />
+                            </button>
+                          );
+                        }
                         return (
                           <span
                             key={role.code}
                             className={cn(
                               'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
                               color.bgClass,
-                              color.textClass,
+                              color.mutedTextClass,
                             )}
                           >
                             <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
@@ -268,7 +292,7 @@ export const UserAuthorizationPage: React.FC = () => {
                             className={cn(
                               'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
                               active
-                                ? `${color.bgClass} ${color.textClass}`
+                                ? `${color.bgClass} ${color.mutedTextClass}`
                                 : mutuallyExclusive
                                   ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
                                   : 'bg-white text-text-muted hover:bg-muted/35',

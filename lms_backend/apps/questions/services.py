@@ -15,6 +15,7 @@ from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Question, QuestionOption
+from .question_like import DEFAULT_QUESTION_SCORE
 from .selectors import (
     apply_question_filters,
     get_question_by_id,
@@ -232,7 +233,7 @@ class QuestionService(BaseService):
             'options': data.get('options', source.options if source else []),
             'answer': data.get('answer', source.answer if source else None),
             'explanation': data.get('explanation', source.explanation if source else ''),
-            'score': data.get('score', source.score if source else 1),
+            'score': data.get('score', source.score if source else DEFAULT_QUESTION_SCORE),
         }
 
     def _build_storage_payload(self, merged_payload: dict) -> tuple[dict, list[dict]]:
@@ -244,7 +245,7 @@ class QuestionService(BaseService):
                 'question_type': question_type,
                 'reference_answer': answer if question_type == 'SHORT_ANSWER' else '',
                 'explanation': merged_payload.get('explanation', ''),
-                'score': merged_payload.get('score', 1),
+                'score': merged_payload.get('score', DEFAULT_QUESTION_SCORE),
             },
             self._build_option_definitions(
                 question_type=question_type,

@@ -54,7 +54,8 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)
     is_passed = serializers.ReadOnlyField()
     pass_score = serializers.ReadOnlyField()
-    task_quiz_id = serializers.IntegerField(source='task_quiz_id', read_only=True)
+    task_quiz_id = serializers.IntegerField(read_only=True)
+    remaining_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Submission
@@ -83,6 +84,9 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+    def get_remaining_seconds(self, obj):
+        return obj.get_reference_remaining_seconds()
 
 
 class SaveAnswerSerializer(serializers.Serializer):

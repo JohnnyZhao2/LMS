@@ -10,7 +10,7 @@ import { buildQuestionSections } from '@/features/questions/question-sections';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/submission';
 
-import { QuizAbandonDialog, QuizSubmitDialog, QuizTimeUpDialog } from './quiz-player-dialogs';
+import { QuizAbandonDialog, QuizSubmitDialog } from './quiz-player-dialogs';
 import { QuizPlayerMainPanel } from './quiz-player-main-panel';
 import { QuizInfoPanel, QuizProgressPanel } from './quiz-player-panels';
 import { isAnswerEmpty } from './quiz-player-utils';
@@ -30,7 +30,6 @@ export const QuizPlayer: React.FC = () => {
   const [markedQuestions, setMarkedQuestions] = useState<Record<number, boolean>>({});
   const [showAbandonDialog, setShowAbandonDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const [showTimeUpDialog, setShowTimeUpDialog] = useState(false);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const questionRefs = useRef<Record<number, HTMLElement | null>>({});
   const questionViewportRef = useRef<HTMLDivElement | null>(null);
@@ -139,19 +138,6 @@ export const QuizPlayer: React.FC = () => {
       console.error('提交答卷失败:', error);
       showApiError(error, '提交失败');
     }
-  };
-
-  const handleTimeUp = () => {
-    setShowTimeUpDialog(true);
-  };
-
-  const handleTimeUpConfirm = async () => {
-    if (!submission) {
-      return;
-    }
-    await submitMutation(submission.id);
-    setShowTimeUpDialog(false);
-    roleNavigate('tasks');
   };
 
   const handleAbandonConfirm = () => {
@@ -358,7 +344,6 @@ export const QuizPlayer: React.FC = () => {
               isSubmitPending={isSubmitPending}
               onAbandon={() => setShowAbandonDialog(true)}
               onSubmit={() => setShowSubmitDialog(true)}
-              onTimeUp={handleTimeUp}
             />
           </div>
         </div>
@@ -377,12 +362,6 @@ export const QuizPlayer: React.FC = () => {
         open={showAbandonDialog}
         onOpenChange={setShowAbandonDialog}
         onConfirm={handleAbandonConfirm}
-      />
-
-      <QuizTimeUpDialog
-        open={showTimeUpDialog}
-        onOpenChange={setShowTimeUpDialog}
-        onConfirm={handleTimeUpConfirm}
       />
     </PageShell>
   );

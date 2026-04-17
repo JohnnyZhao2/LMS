@@ -29,7 +29,7 @@ class StartQuizView(APIView):
     """
     统一的开始答题接口，根据 quiz_type 自动判断行为。
     - PRACTICE: 允许多次提交，任务完成后仍可继续
-    - EXAM: 只能提交一次，检查时间窗口
+    - EXAM: 只能提交一次，展示参考时间倒计时
     """
     permission_classes = [IsAuthenticated]
 
@@ -38,7 +38,7 @@ class StartQuizView(APIView):
         description='''
         开始答题。根据试卷类型自动判断行为：
         - PRACTICE: 允许多次提交
-        - EXAM: 只能提交一次，有时间限制
+        - EXAM: 只能提交一次，参考时间仅用于倒计时提示
         ''',
         request=StartQuizSerializer,
         responses={
@@ -76,7 +76,7 @@ class SubmitView(BaseAPIView):
         description='''
         提交答卷。根据试卷类型自动判断：
         - PRACTICE: 可多次提交
-        - EXAM: 自动评分，检查时间
+        - EXAM: 自动评分，不会因参考时间超时而强制交卷
         ''',
         responses={
             200: SubmissionDetailSerializer,

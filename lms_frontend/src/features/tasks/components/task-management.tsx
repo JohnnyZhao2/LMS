@@ -2,7 +2,6 @@ import * as React from "react"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
-    Eye,
     Trash2,
     Clock,
     ListTodo,
@@ -22,11 +21,18 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import {
+    LIST_ACTION_ICON_ANALYTICS_CLASS,
+    LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
+    LIST_ACTION_ICON_EDIT_CLASS,
+    LIST_ACTION_ICON_VIEW_CLASS,
+} from '@/components/ui/data-table/action-icon-styles';
 import { CellMutedTimestamp, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { ListTag } from '@/components/ui/list-tag';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
+import { getLastEditedByName } from '@/lib/last-edited';
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from '@/types/task';
 import { PageHeader } from '@/components/ui/page-header';
@@ -34,17 +40,18 @@ import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 
 type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'OVERDUE' | 'ENDED'
 type ResponsiveColumnMeta = {
-    width: string
+    width?: string
+    minWidth?: string
 }
 
 const TASK_STATUS_META: Record<TaskDisplayStatus, {
     label: string
-    tone: 'neutral' | 'secondary' | 'warning' | 'destructive' | 'primary'
+    className: string
 }> = {
-    IN_PROGRESS: { label: '进行中', tone: 'secondary' },
-    DUE_SOON: { label: '即将截止', tone: 'warning' },
-    OVERDUE: { label: '已逾期', tone: 'destructive' },
-    ENDED: { label: '已结束', tone: 'primary' },
+    IN_PROGRESS: { label: '进行中', className: 'bg-secondary-100/70 text-text-muted' },
+    DUE_SOON: { label: '即将截止', className: 'bg-warning-100/70 text-text-muted' },
+    OVERDUE: { label: '已逾期', className: 'bg-destructive-100/70 text-text-muted' },
+    ENDED: { label: '已结束', className: 'bg-primary-100/70 text-text-muted' },
 }
 
 const getTaskDisplayStatus = (task: TaskListItem): TaskDisplayStatus => {
@@ -65,13 +72,6 @@ const getTaskDisplayStatus = (task: TaskListItem): TaskDisplayStatus => {
     return 'IN_PROGRESS'
 }
 
-const getTaskOwnerText = (task: TaskListItem) => {
-    if (task.updated_by_name && task.updated_by_name !== task.created_by_name) {
-        return `最近编辑 · ${task.updated_by_name}`
-    }
-    return `创建人 · ${task.created_by_name}`
-}
-
 const renderTaskTagLabel = (count: number | string, label: string) => (
     <span className="inline-flex items-baseline gap-0.5">
         <span>{count}</span>
@@ -80,21 +80,21 @@ const renderTaskTagLabel = (count: number | string, label: string) => (
 )
 
 const getTaskResourceTags = (task: TaskListItem) => {
-    const tags: Array<{ key: string; label: React.ReactNode; tone: 'secondary' | 'primary' | 'warning' }> = []
+    const tags: Array<{ key: string; label: React.ReactNode; className: string }> = []
     if (task.knowledge_count > 0) {
-        tags.push({ key: 'knowledge', label: renderTaskTagLabel(task.knowledge_count, '知识'), tone: 'secondary' })
+        tags.push({ key: 'knowledge', label: renderTaskTagLabel(task.knowledge_count, '知识'), className: 'bg-secondary-100/70 text-text-muted' })
     }
     if (task.practice_count > 0) {
-        tags.push({ key: 'practice', label: renderTaskTagLabel(task.practice_count, '测验'), tone: 'primary' })
+        tags.push({ key: 'practice', label: renderTaskTagLabel(task.practice_count, '测验'), className: 'bg-primary-100/70 text-text-muted' })
     }
     if (task.exam_count > 0) {
-        tags.push({ key: 'exam', label: renderTaskTagLabel(task.exam_count, '考试'), tone: 'warning' })
+        tags.push({ key: 'exam', label: renderTaskTagLabel(task.exam_count, '考试'), className: 'bg-warning-100/70 text-text-muted' })
     }
     return tags
 }
 
 const getTaskRiskTags = (task: TaskListItem) => {
-    const tags: Array<{ key: string; label: React.ReactNode; tone: 'warning' | 'destructive' | 'neutral' }> = []
+    const tags: Array<{ key: string; label: React.ReactNode; className: string }> = []
     if (task.pending_grading_count > 0) {
         tags.push({
             key: 'grading',
@@ -104,7 +104,7 @@ const getTaskRiskTags = (task: TaskListItem) => {
                     <span>{task.pending_grading_count}</span>
                 </span>
             ),
-            tone: 'warning',
+            className: 'bg-warning-100/70 text-text-muted',
         })
     }
     if (task.abnormal_count > 0) {
@@ -116,11 +116,11 @@ const getTaskRiskTags = (task: TaskListItem) => {
                     <span>{task.abnormal_count}</span>
                 </span>
             ),
-            tone: 'destructive',
+            className: 'bg-destructive-100/70 text-text-muted',
         })
     }
     if (task.assignee_count === 0) {
-        tags.push({ key: 'empty', label: renderTaskTagLabel(0, '人参与'), tone: 'neutral' })
+        tags.push({ key: 'empty', label: renderTaskTagLabel(0, '人参与'), className: 'bg-muted/85 text-text-muted' })
     }
     return tags
 }
@@ -130,7 +130,7 @@ const TaskTitleCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
         <CellWithIcon
             icon={<ListTodo className="h-3.5 w-3.5" strokeWidth={1.8} />}
             title={task.title}
-            subtitle={getTaskOwnerText(task)}
+            subtitle={getLastEditedByName(task.updated_by_name, task.created_by_name)}
             iconBgClass="bg-muted/55"
             iconColorClass="text-foreground/60"
         />
@@ -145,12 +145,12 @@ const TaskResourceCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-1">
-            {resourceTags.map((tag) => (
-                <ListTag key={tag.key} tone={tag.tone} size="sm" className="text-[11px] font-medium">
-                    {tag.label}
-                </ListTag>
-            ))}
+            <div className="inline-flex flex-wrap items-center gap-1">
+                {resourceTags.map((tag) => (
+                    <ListTag key={tag.key} size="sm" className={tag.className}>
+                        {tag.label}
+                    </ListTag>
+                ))}
         </div>
     )
 }
@@ -160,7 +160,7 @@ const TaskStatusCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const meta = TASK_STATUS_META[status]
 
     return (
-        <ListTag tone={meta.tone} size="sm" className="text-[11px] font-medium">
+        <ListTag size="sm" className={meta.className}>
             {meta.label}
         </ListTag>
     )
@@ -181,7 +181,7 @@ const TaskProgressCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0
 
     return (
-        <div className="w-full max-w-[144px] pr-4">
+        <div className="w-full max-w-[116px]">
             <div className="mb-1 flex items-center justify-between">
                 <span className="text-[11px] font-medium text-foreground/75">{percent}%</span>
                 <span className="text-[11px] font-normal text-text-muted tabular-nums">{completed}/{total}</span>
@@ -200,16 +200,16 @@ const TaskRiskCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     const riskTags = getTaskRiskTags(task)
 
     if (riskTags.length === 0) {
-        return <span className="pl-2 text-[13px] font-medium text-text-muted">—</span>
+        return <span className="text-[13px] font-medium text-text-muted">—</span>
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-1 pl-2">
-            {riskTags.map((tag) => (
-                <ListTag key={tag.key} tone={tag.tone} size="sm" className="text-[11px] font-medium">
-                    {tag.label}
-                </ListTag>
-            ))}
+            <div className="inline-flex flex-wrap items-center gap-1">
+                {riskTags.map((tag) => (
+                    <ListTag key={tag.key} size="sm" className={tag.className}>
+                        {tag.label}
+                    </ListTag>
+                ))}
         </div>
     )
 }
@@ -234,13 +234,13 @@ export const TaskManagement: React.FC = () => {
     })
     const deleteTask = useDeleteTask()
     const columnMeta = React.useMemo<Record<string, ResponsiveColumnMeta>>(() => ({
-        title: { width: '22%' },
-        resources: { width: '14%' },
-        status: { width: '8%' },
-        deadline: { width: '12%' },
-        progress: { width: '12%' },
-        risk: { width: '12%' },
-        actions: { width: '16%' },
+        title: { minWidth: '300px' },
+        resources: { width: '140px' },
+        status: { width: '64px' },
+        deadline: { width: '124px' },
+        progress: { width: '120px' },
+        risk: { width: '72px' },
+        actions: { width: '120px' },
     }), [])
 
     React.useEffect(() => {
@@ -264,6 +264,13 @@ export const TaskManagement: React.FC = () => {
         } catch (error) {
             showApiError(error)
         }
+    }
+
+    const openTaskEditor = (task: Pick<TaskListItem, 'id' | 'deadline' | 'actions'>) => {
+        if (!task.actions.update || !dayjs(task.deadline).isAfter(dayjs())) {
+            return
+        }
+        roleNavigate(`${ROUTES.TASKS}/${task.id}/edit`)
     }
 
     const columns: ColumnDef<TaskListItem>[] = [
@@ -312,24 +319,14 @@ export const TaskManagement: React.FC = () => {
                 const canPreview = row.original.actions.analytics;
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="查看详情">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted soft-press"
-                                onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
-                            >
-                                <Eye className="h-4 w-4" />
-                            </Button>
-                        </Tooltip>
+                    <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         {canPreview && (
                             <>
                                 <Tooltip title="进度监控">
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-md hover:bg-secondary-100 hover:text-secondary text-text-muted soft-press"
+                                        className={LIST_ACTION_ICON_ANALYTICS_CLASS}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
@@ -339,7 +336,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted soft-press"
+                                        className={LIST_ACTION_ICON_VIEW_CLASS}
                                         onClick={() => {
                                             const searchParams = new URLSearchParams({
                                                 task: String(row.original.id),
@@ -360,9 +357,9 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted soft-press"
+                                        className={LIST_ACTION_ICON_EDIT_CLASS}
                                         disabled={!row.original.actions.update || isClosedByDeadline}
-                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
+                                        onClick={() => openTaskEditor(row.original)}
                                     >
                                         <Pencil className="h-4 w-4" />
                                     </Button>
@@ -372,7 +369,7 @@ export const TaskManagement: React.FC = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted soft-press"
+                                            className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
                                             onClick={() => setDeleteId(row.original.id)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -463,7 +460,7 @@ export const TaskManagement: React.FC = () => {
                                     },
                                 }}
                                 rowClassName="group"
-                                onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
+                                onRowClick={(row: TaskListItem) => openTaskEditor(row)}
                             />
                         </div>
                     )}

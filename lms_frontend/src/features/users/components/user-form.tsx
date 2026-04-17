@@ -508,17 +508,17 @@ const UserFormContent: React.FC<{
                       key={role.code}
                       onClick={() => !disabled && toggleRole(roleCode)}
                       className={cn(
-                        "group relative p-4 rounded-xl border transition-all duration-500 cursor-pointer overflow-hidden bg-white shadow-sm",
+                        "group relative overflow-hidden rounded-xl border p-4 shadow-sm transition-all duration-500 cursor-pointer",
                         disabled ? "opacity-20 grayscale cursor-not-allowed" : "active:scale-[0.98]",
                         active
-                          ? "border-slate-200/60"
-                          : "border-border/60 hover:border-primary-200 hover:bg-primary-50/25"
+                          ? `${colorConfig.bgClass} ${colorConfig.borderClass}`
+                          : "border-border/60 bg-white hover:bg-muted/35"
                       )}
                     >
                       {/* Background Minimal Icon */}
                       <div className={cn(
                         "absolute -right-3 -bottom-5 transition-all duration-700",
-                        active ? cn("opacity-[0.2] scale-110", colorConfig.textClass) : "opacity-[0.3] scale-100 text-slate-200"
+                        active ? cn("opacity-[0.2] scale-110", colorConfig.mutedTextClass) : "opacity-[0.3] scale-100 text-slate-200"
                       )}>
                         {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
                           role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
@@ -529,11 +529,11 @@ const UserFormContent: React.FC<{
                       <div className="relative z-10 flex flex-col gap-1">
                         <p className={cn(
                           "text-sm font-bold transition-all duration-300",
-                          active ? colorConfig.textClass : "text-slate-600"
+                          active ? colorConfig.mutedTextClass : "text-slate-600"
                         )}>{role.name}</p>
                         <p className={cn(
                           "text-[10px] font-bold transition-all duration-300 opacity-60",
-                          active ? colorConfig.textClass : "text-slate-300"
+                          active ? colorConfig.mutedTextClass : "text-slate-300"
                         )}>
                           {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? '全系统最高管理权限' :
                             role.code === 'DEPT_MANAGER' ? '部门及人员管理' :

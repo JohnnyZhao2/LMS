@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
 import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
-import { EditorPageShell } from '@/components/ui/page-shell';
+import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
@@ -14,8 +14,10 @@ import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-l
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
 import { QuizPreviewDialog } from '@/features/quiz-center/quizzes/components/quiz-preview-dialog';
+import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 
 export const TaskForm: React.FC = () => {
+  const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
     isEdit,
@@ -76,7 +78,7 @@ export const TaskForm: React.FC = () => {
 
   return (
     <EditorPageShell>
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <PageWorkbench className="min-w-0">
         <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
           <TaskResourceLibraryPanel
             availableResources={availableResources}
@@ -92,6 +94,7 @@ export const TaskForm: React.FC = () => {
               setCurrentPage(1);
             }}
             onResourceAdd={addResource}
+            onDocumentPreview={setPreviewDocumentId}
             onQuizPreview={setPreviewQuizId}
             resourcesDisabled={resourcesDisabled}
             totalResourceCount={totalResourceCount}
@@ -149,7 +152,7 @@ export const TaskForm: React.FC = () => {
             canRemoveAssignee={canRemoveAssignee}
           />
         </div>
-      </div>
+      </PageWorkbench>
 
       <QuizPreviewDialog
         open={previewQuizId !== null}
@@ -167,6 +170,14 @@ export const TaskForm: React.FC = () => {
           setPreviewQuizId(null);
         }}
       />
+
+      {previewDocumentId !== null ? (
+        <KnowledgeDetailModal
+          knowledgeId={previewDocumentId}
+          previewOnly
+          onClose={() => setPreviewDocumentId(null)}
+        />
+      ) : null}
     </EditorPageShell>
   );
 };

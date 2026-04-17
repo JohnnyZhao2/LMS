@@ -4,6 +4,7 @@ import { Bookmark, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { Answer } from '@/types/submission';
 
@@ -148,7 +149,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               {answer.is_correct ? '回答正确' : '回答错误'}
             </span>
             <span className="ml-auto text-text-muted">
-              得分: {answer.obtained_score || 0}/{answer.question_score ?? '--'}
+              得分: {formatScore(answer.obtained_score) || '0'}/{formatScore(answer.question_score) || '--'}
             </span>
           </div>
           {answer.explanation ? (

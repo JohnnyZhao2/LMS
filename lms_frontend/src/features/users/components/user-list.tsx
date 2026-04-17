@@ -10,7 +10,6 @@ import {
   Ban,
   CheckCircle,
   ShieldCheck,
-  Building2,
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
@@ -22,7 +21,14 @@ import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
 import { useAuth } from "@/features/auth/stores/auth-context"
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
+import {
+  LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
+  LIST_ACTION_ICON_EDIT_CLASS,
+  LIST_ACTION_ICON_SUCCESS_CLASS,
+  LIST_ACTION_ICON_VIEW_CLASS,
+  LIST_ACTION_ICON_WARNING_CLASS,
+} from '@/components/ui/data-table/action-icon-styles';
+import { CellWithAvatar, CellTags, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -194,17 +200,18 @@ export const UserList: React.FC = () => {
     {
       header: "用户信息",
       id: "user",
-      size: 240,
+      meta: { width: '24%' },
       cell: ({ row }) => (
         <CellWithAvatar
           name={row.original.username}
           subtitle={row.original.employee_id || 'NO ID'}
+          className="gap-3.5"
           avatar={(
             <AvatarPickerPopover
               avatarKey={row.original.avatar_key}
               name={row.original.username}
               size="md"
-               className="h-10 w-10"
+              className="h-[35px] w-[35px]"
               canEdit={canAdminEditAvatar}
               isUpdating={updateUserAvatar.isPending}
               align="start"
@@ -217,14 +224,13 @@ export const UserList: React.FC = () => {
     {
       header: "权限角色",
       id: "roles",
-      size: 200,
+      meta: { width: '18%' },
       cell: ({ row }) => (
         <CellTags
           tags={row.original.roles.map((role: Role) => ({
             key: role.code,
             label: role.name,
-            textClass: getRoleColor(role.code).textClass,
-            borderClass: getRoleColor(role.code).borderClass,
+            bgClass: getRoleColor(role.code).bgClass,
           }))}
         />
       ),
@@ -232,28 +238,25 @@ export const UserList: React.FC = () => {
     {
       header: "所属部门",
       id: "department",
-      size: 160,
       cell: ({ row }) => (
-        <CellIconText
-          icon={<Building2 className="w-4 h-4" />}
-          text={row.original.department?.name || "未分配"}
-        />
+        <span className="text-[13px] font-medium text-text-muted">
+          {row.original.department?.name || "未分配"}
+        </span>
       ),
     },
     {
       header: "指导老师",
       id: "mentor",
-      size: 140,
+      meta: { width: '12%' },
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-text-muted italic text-xs">未分配</span>
+        if (!mentor) return <span className="text-[13px] font-medium text-text-muted">未分配</span>
         return <CellSmallAvatar name={mentor.username} avatarKey={mentor.avatar_key} />
       },
     },
     {
       header: "状态",
       id: "status",
-      size: 100,
       cell: ({ row }) => (
         <CellStatus isActive={row.original.is_active} />
       ),
@@ -261,15 +264,14 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
-      size: 220,
       cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Tooltip title="编辑资料">
             <Button
               variant="ghost"
               size="icon"
               disabled={!canUpdateUser}
-              className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+              className={LIST_ACTION_ICON_EDIT_CLASS}
               onClick={() => {
                 if (!canUpdateUser) return
                 setEditingUserId(row.original.id)
@@ -284,7 +286,7 @@ export const UserList: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+                className={LIST_ACTION_ICON_VIEW_CLASS}
                 onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}
               >
                 <ShieldCheck className="h-4 w-4" />
@@ -296,7 +298,7 @@ export const UserList: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-md text-text-muted hover:bg-muted hover:text-foreground"
+                className={LIST_ACTION_ICON_WARNING_CLASS}
                 onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
               >
                 <Lock className="h-4 w-4" />
@@ -309,10 +311,10 @@ export const UserList: React.FC = () => {
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-8 w-8 rounded-md text-text-muted",
                   row.original.is_active
-                    ? "hover:bg-destructive-50 hover:text-destructive"
-                    : "hover:bg-secondary-50 hover:text-secondary",
+                    ? LIST_ACTION_ICON_DESTRUCTIVE_CLASS
+                    : LIST_ACTION_ICON_SUCCESS_CLASS,
+                  "disabled:pointer-events-none disabled:opacity-50",
                 )}
                 onClick={() => handleToggleActive(row.original)}
               >
@@ -325,7 +327,7 @@ export const UserList: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-md text-text-muted hover:bg-destructive-50 hover:text-destructive"
+                className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
                 onClick={() => {
                   if (row.original.is_active) {
                     toast.error("请先停用账号，再执行彻底删除")
@@ -394,7 +396,6 @@ export const UserList: React.FC = () => {
                 columns={columns}
                 data={filteredUsers}
                 isLoading={isLoading}
-                fillHeight
                 pagination={{
                   pageIndex: pagination.pageIndex,
                   pageSize: pagination.pageSize,

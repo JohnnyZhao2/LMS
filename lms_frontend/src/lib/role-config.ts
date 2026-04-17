@@ -6,6 +6,7 @@ import type { RoleCode } from '@/types/common';
 interface RoleColorConfig {
   bgClass: string;
   textClass: string;
+  mutedTextClass: string;
   iconBgClass?: string;
   borderClass?: string;
 }
@@ -19,48 +20,54 @@ const ROLE_VISUALS: Record<RoleCode, RoleVisualConfig> = {
   STUDENT: {
     bar: 'bg-sky-400',
     glow: 'bg-sky-400/80',
-    bgClass: 'bg-sky-50',
+    bgClass: 'bg-sky-100/70',
     textClass: 'text-sky-700',
+    mutedTextClass: 'text-sky-500',
     iconBgClass: 'bg-sky-500',
     borderClass: 'border-sky-200',
   },
   MENTOR: {
     bar: 'bg-emerald-400',
     glow: 'bg-emerald-400/80',
-    bgClass: 'bg-emerald-50',
+    bgClass: 'bg-emerald-100/70',
     textClass: 'text-emerald-700',
+    mutedTextClass: 'text-emerald-500',
     iconBgClass: 'bg-emerald-500',
     borderClass: 'border-emerald-200',
   },
   DEPT_MANAGER: {
     bar: 'bg-violet-400',
     glow: 'bg-violet-400/80',
-    bgClass: 'bg-violet-50',
+    bgClass: 'bg-violet-100/70',
     textClass: 'text-violet-700',
+    mutedTextClass: 'text-violet-500',
     iconBgClass: 'bg-violet-500',
     borderClass: 'border-violet-200',
   },
   TEAM_MANAGER: {
     bar: 'bg-amber-400',
     glow: 'bg-amber-400/80',
-    bgClass: 'bg-amber-50',
+    bgClass: 'bg-amber-100/70',
     textClass: 'text-amber-700',
+    mutedTextClass: 'text-amber-500',
     iconBgClass: 'bg-amber-500',
     borderClass: 'border-amber-200',
   },
   ADMIN: {
     bar: 'bg-rose-400',
     glow: 'bg-rose-400/80',
-    bgClass: 'bg-rose-50',
+    bgClass: 'bg-rose-100/70',
     textClass: 'text-rose-700',
+    mutedTextClass: 'text-rose-500',
     iconBgClass: 'bg-rose-500',
     borderClass: 'border-rose-200',
   },
   SUPER_ADMIN: {
     bar: 'bg-red-500',
     glow: 'bg-red-500/80',
-    bgClass: 'bg-red-50',
+    bgClass: 'bg-red-100/70',
     textClass: 'text-red-700',
+    mutedTextClass: 'text-red-500',
     iconBgClass: 'bg-red-500',
     borderClass: 'border-red-200',
   },

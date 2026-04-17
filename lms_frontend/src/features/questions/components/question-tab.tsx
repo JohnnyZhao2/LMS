@@ -7,16 +7,23 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import { getQuestionTypeLabel } from '@/features/questions/constants';
+import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import {
+    LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
+    LIST_ACTION_ICON_EDIT_CLASS,
+    LIST_ACTION_ICON_VIEW_CLASS,
+} from '@/components/ui/data-table/action-icon-styles';
 import { ListTag } from '@/components/ui/list-tag';
 import { CellMutedTimestamp, CellReferenceTag, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { Tooltip } from '@/components/ui/tooltip';
 import { richTextToPreviewText } from '@/lib/rich-text';
+import { getLastEditedByName } from '@/lib/last-edited';
+import { cn } from '@/lib/utils';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
@@ -67,18 +74,15 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'content',
             header: '题干',
-            minSize: 280,
             meta: {
-                width: '30%',
-                minWidth: '280px',
-                maxWidth: '360px',
+                width: '42%',
             },
             cell: ({ row }) => {
                 return (
                     <CellWithIcon
                         icon={<CircleHelp className="h-3.5 w-3.5" strokeWidth={1.8} />}
                         title={richTextToPreviewText(row.original.content)}
-                        subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
+                        subtitle={getLastEditedByName(row.original.updated_by_name, row.original.created_by_name)}
                         iconBgClass="bg-muted/55"
                         iconColorClass="text-foreground/60"
                     />
@@ -88,27 +92,18 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'type',
             header: '题型',
-            minSize: 88,
-            meta: {
-                width: '9%',
-                minWidth: '88px',
-                maxWidth: '104px',
-            },
-            cell: ({ row }) => (
-                <span className="whitespace-nowrap text-[13px] font-medium text-text-muted">
-                    {getQuestionTypeLabel(row.original.question_type as QuestionType)}
-                </span>
-            )
+            cell: ({ row }) => {
+                const presentation = getQuestionTypePresentation(row.original.question_type as QuestionType);
+                return (
+                    <ListTag size="sm" className={cn(presentation.bg, 'text-text-muted')}>
+                        {getQuestionTypeLabel(row.original.question_type as QuestionType)}
+                    </ListTag>
+                );
+            }
         },
         {
             id: 'space',
             header: '所属空间',
-            minSize: 112,
-            meta: {
-                width: '11%',
-                minWidth: '112px',
-                maxWidth: '144px',
-            },
             cell: ({ row }) => {
                 const spaceTag = row.original.space_tag;
                 if (!spaceTag) {
@@ -118,10 +113,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 return (
                     <ListTag
                         size="sm"
-                        className="max-w-full text-[11px] font-medium"
+                        className="max-w-full text-text-muted"
                         style={spaceTag.color ? {
-                            color: spaceTag.color,
-                            borderColor: spaceTag.color,
+                            backgroundColor: `${spaceTag.color}22`,
                         } : undefined}
                     >
                         {spaceTag.name}
@@ -132,23 +126,11 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'usage',
             header: '引用次数',
-            minSize: 96,
-            meta: {
-                width: '10%',
-                minWidth: '96px',
-                maxWidth: '120px',
-            },
             cell: ({ row }) => <CellReferenceTag count={row.original.usage_count} />,
         },
         {
             id: 'timestamp',
             header: '更新时间',
-            minSize: 156,
-            meta: {
-                width: '14%',
-                minWidth: '156px',
-                maxWidth: '172px',
-            },
             cell: ({ row }) => (
                 <CellMutedTimestamp
                     icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
@@ -159,21 +141,15 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'actions',
             header: '操作',
-            minSize: 108,
-            meta: {
-                width: '9%',
-                minWidth: '108px',
-                maxWidth: '124px',
-            },
             cell: ({ row }) => {
                 const record = row.original;
                 return (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="查看详情">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-md text-text-muted hover:bg-muted hover:text-foreground"
+                                className={LIST_ACTION_ICON_VIEW_CLASS}
                                 onClick={() => setPreviewQuestion(record)}
                             >
                                 <Eye className="h-4 w-4" strokeWidth={2} />
@@ -183,7 +159,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-md text-text-muted hover:bg-primary-50 hover:text-primary"
+                                className={LIST_ACTION_ICON_EDIT_CLASS}
                                 onClick={() => roleNavigate(`/questions/${record.id}/edit`)}
                             >
                                 <PencilLine className="h-4 w-4" strokeWidth={2} />
@@ -193,7 +169,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-md text-text-muted hover:bg-destructive-50 hover:text-destructive"
+                                className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
                                 onClick={() => setDeleteId(record.id)}
                             >
                                 <Trash2 className="h-4 w-4" strokeWidth={2} />
@@ -211,7 +187,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 columns={columns}
                 data={data?.results || []}
                 isLoading={isLoading}
-                fillHeight
                 pagination={{
                     pageIndex,
                     pageSize,

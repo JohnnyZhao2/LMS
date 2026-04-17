@@ -1,51 +1,37 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TimerProps {
   remainingSeconds: number;
-  onTimeUp?: () => void;
 }
 
 /**
- * 倒计时组件
- * 带有视觉警告效果
+ * 参考时间倒计时组件
  */
-export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
+export const Timer: React.FC<TimerProps> = ({ remainingSeconds }) => {
   const [deadline] = useState(() => Date.now() + (Math.max(remainingSeconds, 0) * 1000));
   const [now, setNow] = useState(() => Date.now());
-  const hasTriggeredRef = useRef(false);
-  const handleTimeUp = useEffectEvent(() => {
-    onTimeUp?.();
-  });
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
+  const isExceeded = remainingSeconds <= 0 || seconds === 0;
 
   useEffect(() => {
     if (remainingSeconds <= 0) {
-      if (!hasTriggeredRef.current) {
-        hasTriggeredRef.current = true;
-        handleTimeUp();
-      }
       return;
     }
 
-    hasTriggeredRef.current = false;
-
     const timer = window.setInterval(() => {
-      setNow(Date.now());
+      setNow((currentNow) => {
+        const nextNow = Date.now();
+        if (nextNow >= deadline) {
+          window.clearInterval(timer);
+        }
+        return nextNow > currentNow ? nextNow : currentNow;
+      });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [remainingSeconds]);
-
-  useEffect(() => {
-    if (seconds > 0 || hasTriggeredRef.current) {
-      return;
-    }
-
-    hasTriggeredRef.current = true;
-    handleTimeUp();
-  }, [seconds]);
+  }, [deadline, remainingSeconds]);
 
   const formatTime = (secs: number) => {
     const hours = Math.floor(secs / 3600);
@@ -57,38 +43,45 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
     return `${minutes.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const isWarning = seconds <= 300; // 5分钟以内警告
-  const isCritical = seconds <= 60; // 1分钟以内紧急
+  const isWarning = !isExceeded && seconds <= 300;
+  const timeText = formatTime(seconds);
 
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-4 py-2 rounded-lg border',
-        isCritical && 'bg-destructive-50 border-destructive-300 animate-pulse',
-        isWarning && !isCritical && 'bg-warning-50 border-warning-300',
-        !isWarning && 'bg-primary-50 border-primary-200'
+        'rounded-lg border px-4 py-2',
+        isExceeded && 'border-destructive-300 bg-destructive-50',
+        isWarning && 'border-warning-300 bg-warning-50',
+        !isWarning && !isExceeded && 'border-primary-200 bg-primary-50'
       )}
     >
-      {isCritical ? (
-        <AlertTriangle className="w-4 h-4 text-destructive-500" />
-      ) : (
-        <Clock
-          className={cn(
-            'w-4 h-4',
-            isWarning ? 'text-warning-600' : 'text-primary-600'
-          )}
-        />
-      )}
-      <span
-        className={cn(
-          'font-mono text-sm font-semibold tracking-wide',
-          isCritical && 'text-destructive-600',
-          isWarning && !isCritical && 'text-warning-600',
-          !isWarning && 'text-primary-600'
+      <div className="flex items-center gap-2">
+        {isExceeded ? (
+          <AlertTriangle className="h-4 w-4 text-destructive-500" />
+        ) : (
+          <Clock
+            className={cn(
+              'h-4 w-4',
+              isWarning ? 'text-warning-600' : 'text-primary-600'
+            )}
+          />
         )}
-      >
-        {formatTime(seconds)}
-      </span>
+        <span
+          className={cn(
+            'font-mono text-sm font-semibold tracking-wide',
+            isExceeded && 'text-destructive-600',
+            isWarning && 'text-warning-600',
+            !isWarning && !isExceeded && 'text-primary-600'
+          )}
+        >
+          {timeText}
+        </span>
+      </div>
+      {isExceeded ? (
+        <div className="mt-1 text-xs font-medium text-destructive-600">
+          你已超过参考时间
+        </div>
+      ) : null}
     </div>
   );
 };

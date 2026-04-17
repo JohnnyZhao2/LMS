@@ -107,6 +107,11 @@ python manage.py init_data --settings=config.settings.development
 python manage.py runserver
 ```
 
+说明：
+
+- `migrate` 后会自动同步权限目录与日志策略目录
+- 不需要额外手动执行 `sync_authorization`
+
 启动后可访问：
 
 - API 根路径：`http://127.0.0.1:8000/api`

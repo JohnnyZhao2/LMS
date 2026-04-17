@@ -6,7 +6,7 @@ from apps.grading.selectors import (
     get_latest_quiz_answers,
     has_answer_content,
 )
-from apps.authorization.engine import enforce
+from apps.authorization.engine import enforce, scope_filter
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -323,14 +323,17 @@ class PendingQuizzesView(GradingBaseView):
     )
     def get(self, request):
         enforce('grading.view', request, error_message='无权访问阅卷中心')
-        user = request.user
         quiz_type = request.query_params.get('quiz_type')
 
-        # 查询当前用户创建的、包含试卷的任务
-        tasks = Task.objects.filter(
-            created_by=user,
+        tasks = scope_filter(
+            'task.view',
+            request,
+            base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
+                is_deleted=False,
+                task_quizzes__isnull=False,
+            ),
+        ).filter(
             is_deleted=False,
-            task_quizzes__isnull=False
         ).distinct().order_by('-created_at')
 
         results = []
@@ -352,6 +355,8 @@ class PendingQuizzesView(GradingBaseView):
                 quiz = tq.quiz
                 # 统计待批阅数量（主观题未评分的提交）
                 pending_count = self._count_pending_grading(task, tq.id)
+                if pending_count <= 0:
+                    continue
 
                 quizzes_data.append({
                     'quiz_id': tq.id,

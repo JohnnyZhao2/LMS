@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Layers3 } from 'lucide-react';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageShell } from '@/components/ui/page-shell';
+import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { showApiError } from '@/utils/error-handler';
+import type { RolePermissionTemplate } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
 import {
@@ -25,6 +24,15 @@ export const AuthorizationCenterPage: React.FC = () => {
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({ view: 'role_template' }, shouldLoadData);
   const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
+  const roleTemplatesByRole = useMemo(
+    () => Object.fromEntries(
+      ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
+        roleCode,
+        roleTemplateQueries[index]?.data,
+      ]),
+    ) as Partial<Record<RoleCode, RolePermissionTemplate | undefined>>,
+    [roleTemplateQueries],
+  );
   const permissionCodesByRole = useMemo(
     () => Object.fromEntries(
       ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
@@ -70,28 +78,30 @@ export const AuthorizationCenterPage: React.FC = () => {
 
   if (!canViewRoleTemplate) {
     return (
-      <PageShell>
-        <PageHeader title="角色模板配置" icon={<Layers3 />} />
-        <div className="rounded-xl border border-border bg-muted p-8 text-sm text-text-muted">
-          当前账号没有角色模板配置权限，请联系管理员开通。
-        </div>
-      </PageShell>
+      <PageFillShell>
+        <PageWorkbench className="gap-0">
+          <div className="flex h-full items-center justify-center rounded-2xl border border-border bg-muted px-6 py-8 text-sm text-text-muted">
+            当前账号没有角色模板配置权限，请联系管理员开通。
+          </div>
+        </PageWorkbench>
+      </PageFillShell>
     );
   }
 
   return (
-    <PageShell>
-      <PageHeader title="角色模板配置" icon={<Layers3 />} />
-
-      <RolePermissionTemplatePanel
-        canUpdateRoleTemplate={canUpdateRoleTemplate}
-        roleCodes={ROLE_TEMPLATE_ORDER}
-        permissionCatalog={permissionCatalog}
-        permissionCodesByRole={permissionCodesByRole}
-        onChangeCodes={handleChangeRoleTemplate}
-        isLoadingTemplate={isLoadingTemplates}
-        savingRoleCodes={savingRoleCodes}
-      />
-    </PageShell>
+    <PageFillShell>
+      <PageWorkbench className="gap-0">
+        <RolePermissionTemplatePanel
+          canUpdateRoleTemplate={canUpdateRoleTemplate}
+          roleCodes={ROLE_TEMPLATE_ORDER}
+          permissionCatalog={permissionCatalog}
+          roleTemplatesByRole={roleTemplatesByRole}
+          permissionCodesByRole={permissionCodesByRole}
+          onChangeCodes={handleChangeRoleTemplate}
+          isLoadingTemplate={isLoadingTemplates}
+          savingRoleCodes={savingRoleCodes}
+        />
+      </PageWorkbench>
+    </PageFillShell>
   );
 };

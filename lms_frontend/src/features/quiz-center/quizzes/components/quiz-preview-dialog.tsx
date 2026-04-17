@@ -18,7 +18,7 @@ export function QuizPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="h-[min(88vh,860px)] max-w-[min(1380px,calc(100vw-32px))] gap-0 overflow-hidden p-3"
+        className="flex h-[min(88vh,860px)] min-h-0 w-[min(1380px,calc(100vw-32px))] max-w-none flex-col gap-0 overflow-hidden p-3"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>试卷快速预览</DialogTitle>
@@ -28,7 +28,7 @@ export function QuizPreviewDialog({
           <QuizPreviewWorkbench
             quizId={quizId}
             onPrimaryAction={onPrimaryAction}
-            className="h-full"
+            className="min-h-0 flex-1"
           />
         ) : null}
       </DialogContent>

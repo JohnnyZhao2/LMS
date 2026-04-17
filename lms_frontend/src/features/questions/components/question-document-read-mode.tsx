@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { richTextToPlainText } from '@/lib/rich-text';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 
 import { QuestionDocumentResponsePanel } from './question-document-answer-panels';
@@ -99,7 +100,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
                 <div className="mb-2 flex items-center justify-between gap-3 text-[13px] font-semibold leading-5 text-text-muted">
                   <div className="flex items-center gap-3.5">
                     <span className="tabular-nums">第 {questionNumber} 题</span>
-                    {score != null ? <span className="shrink-0 tabular-nums">{String(score)} 分</span> : null}
+                    {score != null ? <span className="shrink-0 tabular-nums">{formatScore(score)} 分</span> : null}
                   </div>
                   {headerActions}
                 </div>

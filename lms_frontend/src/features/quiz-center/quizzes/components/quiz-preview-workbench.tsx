@@ -8,9 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
+import { DEFAULT_QUESTION_SCORE } from '@/features/questions/components/question-editor-helpers';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
 import { formatListDateTime } from '@/lib/date-time';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem, QuizDraftState } from '../types';
@@ -25,7 +27,7 @@ interface QuizPreviewWorkbenchProps {
   className?: string;
 }
 
-const PANEL_CLASSNAME = 'flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-background';
+const PANEL_CLASSNAME = 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background';
 
 const quizTypeBadgeVariant = {
   EXAM: 'error' as const,
@@ -121,7 +123,7 @@ export function QuizPreviewWorkbench({
           answer: item.answer ?? '',
           explanation: item.explanation ?? '',
           showExplanation: Boolean(item.explanation?.trim()),
-          score: String(item.score ?? '1'),
+          score: String(item.score ?? DEFAULT_QUESTION_SCORE),
           tagIds: item.tags?.map((tag) => tag.id) ?? [],
           saved: true,
         };
@@ -285,10 +287,10 @@ export function QuizPreviewWorkbench({
                 {isExam ? (
                   <>
                     <MetaItem icon={<Clock3 className="h-[14px] w-[14px]" />}>
-                      {effectiveQuiz.duration || 0} 分钟
+                      参考时间 {effectiveQuiz.duration || 0} 分钟
                     </MetaItem>
                     <MetaItem icon={<BookOpenText className="h-[14px] w-[14px]" />}>
-                      {effectiveQuiz.pass_score || 0} 分及格
+                      {formatScore(effectiveQuiz.pass_score) || '0'} 分及格
                     </MetaItem>
                   </>
                 ) : null}

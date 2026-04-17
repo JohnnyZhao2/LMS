@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
-import { EditorPageShell } from '@/components/ui/page-shell';
+import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useTags } from '@/features/tags/api/tags';
@@ -18,7 +18,6 @@ import { QuestionBankPanel } from '@/features/questions/components/question-bank
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import {
   createBlankEditableQuestion,
-  hasQuestionAnswer,
   normalizeQuestionScore,
   questionToEditableItem,
 } from '@/features/questions/components/question-editor-helpers';
@@ -36,11 +35,12 @@ import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem, QuizDraftState } from '../types';
 
 import { QuizDocumentEditor } from './quiz-document-editor';
+import { buildQuizSubmitPayload, validateQuizDraft } from './quiz-form.helpers';
 import { QuizOutlinePanel } from './quiz-outline-panel';
 import { QuizPreviewWorkbench } from './quiz-preview-workbench';
 
 const COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME =
-  'grid h-full min-w-0 gap-3 [grid-template-columns:minmax(14rem,15.5rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';
+  'grid h-full min-h-0 min-w-0 items-stretch gap-3 [grid-template-columns:minmax(12rem,14rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';
 
 const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => ({
   ...item,
@@ -260,33 +260,27 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   const handleSubmitQuiz = async () => {
-    if (!title.trim()) return toast.error('请输入试卷名称');
-    if (items.length === 0) return toast.warning('请添加题目');
-    if (quizType === 'EXAM' && (!duration || !passScore)) return toast.error('考试模式需设置时长和及格分');
-
-    for (const [index, item] of items.entries()) {
-      if (!item.content.trim()) return toast.error(`第${index + 1}题未填写内容`);
-      if (!hasQuestionAnswer(item.answer)) return toast.error(`第${index + 1}题未设置答案`);
+    const validationMessage = validateQuizDraft({
+      title,
+      quizType,
+      duration,
+      passScore,
+      items,
+    });
+    if (validationMessage) {
+      if (validationMessage === '请添加题目') {
+        return toast.warning(validationMessage);
+      }
+      return toast.error(validationMessage);
     }
 
-    const data: QuizCreateRequest = {
+    const data: QuizCreateRequest = buildQuizSubmitPayload({
       title,
-      quiz_type: quizType,
-      duration: quizType === 'EXAM' ? duration : null,
-      pass_score: quizType === 'EXAM' ? passScore : null,
-      questions: items.map((item) => ({
-        id: item.quizQuestionId ?? undefined,
-        source_question_id: item.sourceQuestionId ?? item.questionId ?? null,
-        content: item.content,
-        question_type: item.questionType,
-        options: item.options,
-        answer: item.answer,
-        explanation: item.explanation,
-        score: normalizeQuestionScore(item.score),
-        space_tag_id: item.spaceTagId ?? null,
-        tag_ids: item.tagIds,
-      })),
-    };
+      quizType,
+      duration,
+      passScore,
+      items,
+    });
 
     try {
       if (isEdit) {
@@ -313,7 +307,7 @@ export const QuizForm: React.FC = () => {
   if (isPreviewRoute && isEdit) {
     return (
       <EditorPageShell>
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <PageWorkbench className="min-w-0">
           <QuizPreviewWorkbench
             quizId={Number(id)}
             quizDraft={quizDraft}
@@ -324,16 +318,16 @@ export const QuizForm: React.FC = () => {
                 })
                 : undefined
             }
-            className="h-full"
+            className="min-h-0 flex-1"
           />
-        </div>
+        </PageWorkbench>
       </EditorPageShell>
     );
   }
 
   return (
     <EditorPageShell>
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <PageWorkbench className="min-w-0">
         <div className={workbenchClassName}>
           <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
             <QuizOutlinePanel
@@ -442,7 +436,7 @@ export const QuizForm: React.FC = () => {
             />
           </div>
         </div>
-      </div>
+      </PageWorkbench>
 
       <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate(ROUTES.QUIZZES); }}>
         <DialogContent className="max-w-[400px]">

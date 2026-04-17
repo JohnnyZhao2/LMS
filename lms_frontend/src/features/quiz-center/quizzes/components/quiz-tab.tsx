@@ -9,10 +9,17 @@ import type { QuizListItem } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { formatScore } from '@/lib/score';
+import { getLastEditedByName } from '@/lib/last-edited';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import {
+  LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
+  LIST_ACTION_ICON_EDIT_CLASS,
+  LIST_ACTION_ICON_VIEW_CLASS,
+} from '@/components/ui/data-table/action-icon-styles';
 import { CellMutedTimestamp, CellReferenceTag, CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
@@ -52,15 +59,14 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'title',
       header: '试卷名称',
-      minSize: 280,
       meta: {
-        width: '28%',
-        minWidth: '280px',
+        width: '30%',
       },
       cell: ({ row }) => (
         <CellWithIcon
           icon={<FileCheck className="h-3.5 w-3.5" strokeWidth={1.8} />}
           title={row.original.title}
+          subtitle={getLastEditedByName(row.original.updated_by_name, row.original.created_by_name)}
           iconBgClass="bg-muted/55"
           iconColorClass="text-foreground/60"
         />
@@ -69,11 +75,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'quiz_type',
       header: '类型',
-      minSize: 96,
-      meta: {
-        width: '10%',
-        minWidth: '96px',
-      },
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         return (
@@ -82,10 +83,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             tags={[{
               key: row.original.quiz_type,
               label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
-              textClass: isExam ? 'text-destructive-700' : 'text-primary-700',
-              borderClass: isExam ? 'border-destructive-200' : 'border-primary-200',
+              bgClass: isExam ? 'bg-destructive-100/70' : 'bg-primary-100/70',
             }]}
-            tagClassName="font-medium"
           />
         );
       }
@@ -93,20 +92,19 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'metrics',
       header: '核心指标',
-      minSize: 260,
       meta: {
-        width: '28%',
-        minWidth: '260px',
+        width: '27%',
+        maxWidth: '320px',
       },
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         const metricItems = [
           { key: 'question-count', label: '题量', value: String(row.original.question_count) },
-          { key: 'total-score', label: '总分', value: String(row.original.total_score) },
+          { key: 'total-score', label: '总分', value: formatScore(row.original.total_score) },
           ...(isExam
             ? [
-              { key: 'duration', label: '时长', value: row.original.duration ? `${row.original.duration}min` : '' },
-              { key: 'pass-score', label: '及格线', value: row.original.pass_score ?? '' },
+              { key: 'duration', label: '参考时间', value: row.original.duration ? `${row.original.duration}min` : '' },
+              { key: 'pass-score', label: '及格线', value: formatScore(row.original.pass_score) },
             ]
             : []),
         ].filter((item) => item.value !== '');
@@ -129,11 +127,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'usage',
       header: '引用次数',
-      minSize: 96,
       meta: {
-        width: '10%',
         minWidth: '96px',
-        maxWidth: '120px',
       },
       cell: ({ row }) => (
         <CellReferenceTag count={row.original.usage_count} />
@@ -142,10 +137,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'timestamp',
       header: '更新时间',
-      minSize: 164,
       meta: {
-        width: '15%',
-        minWidth: '164px',
+        minWidth: '168px',
       },
       cell: ({ row }) => (
         <CellMutedTimestamp
@@ -157,20 +150,18 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'actions',
       header: '操作',
-      minSize: 108,
       meta: {
-        width: '6%',
-        minWidth: '108px',
+        minWidth: '120px',
       },
       cell: ({ row }) => {
         const record = row.original;
         return (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Tooltip title="预览试卷">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-text-muted hover:text-foreground hover:bg-muted"
+                className={LIST_ACTION_ICON_VIEW_CLASS}
                 onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/preview`)}
               >
                 <Eye className="w-4 h-4" />
@@ -181,7 +172,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                className={LIST_ACTION_ICON_EDIT_CLASS}
                 onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/edit`)}
               >
                 <Pencil className="w-4 h-4" />
@@ -192,7 +183,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive-500 hover:text-destructive-700 hover:bg-destructive-50"
+                className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
                 onClick={() => setDeleteId(record.id)}
               >
                 <Trash2 className="w-4 h-4" />
@@ -210,7 +201,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         columns={columns}
         data={data?.results || []}
         isLoading={isLoading}
-        fillHeight
         pagination={{
           pageIndex,
           pageSize,

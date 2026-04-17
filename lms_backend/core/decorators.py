@@ -193,6 +193,8 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         if task is not None:
             template_vars['task_title'] = task.title
     if hasattr(result, 'status'):
+        if hasattr(result, 'get_status_display'):
+            template_vars['status_display'] = result.get_status_display()
         template_vars['submission_status_detail'] = SUBMISSION_STATUS_DETAILS.get(
             result.status,
             result.status,

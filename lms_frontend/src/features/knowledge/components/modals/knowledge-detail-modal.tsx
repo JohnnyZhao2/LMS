@@ -131,6 +131,7 @@ interface KnowledgeDetailModalProps {
   startInFocus?: boolean;
   closeOnExitFocus?: boolean;
   forceFocus?: boolean;
+  previewOnly?: boolean;
   taskId?: number;
   taskKnowledgeId?: number;
   onClose: () => void;
@@ -145,6 +146,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   startInFocus = false,
   closeOnExitFocus = false,
   forceFocus = false,
+  previewOnly = false,
   taskId,
   taskKnowledgeId,
   onClose,
@@ -154,8 +156,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 }) => {
   const { currentRole, hasCapability } = useAuth();
   const isStudent = currentRole === 'STUDENT';
-  const canUpdateKnowledge = hasCapability('knowledge.update');
-  const canDeleteKnowledge = hasCapability('knowledge.delete');
+  const canUpdateKnowledge = !previewOnly && hasCapability('knowledge.update');
+  const canDeleteKnowledge = !previewOnly && hasCapability('knowledge.delete');
 
   const { data, isLoading } = useKnowledgeDetail({
     knowledgeId,

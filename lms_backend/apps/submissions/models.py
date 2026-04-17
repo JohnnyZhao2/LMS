@@ -125,6 +125,17 @@ class Submission(TimestampMixin, models.Model):
             return None
         return self.obtained_score >= self.quiz.pass_score
 
+    def get_reference_remaining_seconds(self):
+        if self.quiz.quiz_type != 'EXAM':
+            return None
+        base_seconds = self.remaining_seconds
+        if base_seconds is None:
+            if not self.quiz.duration:
+                return None
+            base_seconds = self.quiz.duration * 60
+        elapsed_seconds = max(0, int((timezone.now() - self.started_at).total_seconds()))
+        return max(base_seconds - elapsed_seconds, 0)
+
     def complete_grading(self):
         if self.status != 'GRADING':
             raise ValidationError('只能完成待评分状态的记录')
@@ -134,6 +145,7 @@ class Submission(TimestampMixin, models.Model):
         self.status = 'GRADED'
         self.save(update_fields=['status'])
         self.refresh_assignment_score()
+        self.task_assignment.check_completion()
 
     def refresh_obtained_score(self):
         from .scoring import refresh_submission_obtained_score

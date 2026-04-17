@@ -79,13 +79,6 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
-  const frameRef = React.useRef<number | null>(null)
-  const shellRef = React.useRef<HTMLDivElement | null>(null)
-  const topBarRef = React.useRef<HTMLDivElement | null>(null)
-  const headerRef = React.useRef<HTMLTableSectionElement | null>(null)
-  const bodyRef = React.useRef<HTMLTableSectionElement | null>(null)
-  const footerRef = React.useRef<HTMLDivElement | null>(null)
-  const [distributedRowPaddingY, setDistributedRowPaddingY] = React.useState<number>(0)
   const paginationState = React.useMemo<PaginationState | undefined>(
     () => (
       pagination
@@ -98,8 +91,9 @@ export function DataTable<TData, TValue>({
     [pagination],
   )
   const resolvedTotalCount = pagination?.totalCount ?? data.length
+  const shouldUsePagination = !!pagination
   const isServerPagination = !!pagination && resolvedTotalCount > data.length
-  const shouldShowPagination = !!pagination
+  const shouldShowPagination = shouldUsePagination
     && resolvedTotalCount > 0
     && (
       resolvedTotalCount > pagination.pageSize
@@ -118,7 +112,7 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(), // Always provide row model for client-side pagination support
+    getPaginationRowModel: shouldUsePagination ? getPaginationRowModel() : undefined,
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
@@ -137,8 +131,6 @@ export function DataTable<TData, TValue>({
     pageCount: pagination?.pageCount ?? -1,
   })
 
-  const visibleRowCount = table.getRowModel().rows.length
-  const targetRowCount = pagination?.pageSize
   const getColumnWidthMeta = React.useCallback((column: ColumnDef<TData, TValue>): ColumnWidthMeta => {
     const meta = (column.meta ?? {}) as ColumnWidthMeta
     return {
@@ -149,28 +141,26 @@ export function DataTable<TData, TValue>({
   }, [])
   const getColumnWidthStyle = React.useCallback((column: ColumnDef<TData, TValue>) => {
     const meta = getColumnWidthMeta(column)
+    if (meta.width) {
+      return {
+        width: meta.width,
+        minWidth: meta.minWidth,
+        maxWidth: meta.maxWidth,
+      }
+    }
     return {
-      width: meta.width ?? (column.size ? `${column.size}px` : undefined),
+      width: column.size ? `${column.size}px` : undefined,
       minWidth: meta.minWidth ?? (column.minSize ? `${column.minSize}px` : undefined),
       maxWidth: meta.maxWidth ?? (column.maxSize ? `${column.maxSize}px` : undefined),
     }
   }, [getColumnWidthMeta])
-  const hasColumnSizes = columns.some((col) => {
+  const explicitWidthColumnCount = columns.filter((col) => {
     const meta = getColumnWidthMeta(col)
     return col.size || col.minSize || col.maxSize || meta.width || meta.minWidth || meta.maxWidth
-  })
+  }).length
+  const hasColumnSizes = explicitWidthColumnCount > 0
+  const shouldUseFixedLayout = hasColumnSizes && explicitWidthColumnCount === columns.length
   const hasTopBar = Boolean(header)
-  const shouldStretchRows = fillHeight
-    && !isLoading
-    && !!targetRowCount
-    && visibleRowCount === targetRowCount
-  const shouldExpandShell = fillHeight
-    && !isLoading
-    && !!targetRowCount
-    && visibleRowCount === targetRowCount
-  const resolvedMinHeight = fillHeight
-    ? (shouldExpandShell ? minHeight : undefined)
-    : minHeight
 
   const getColumnSpacingClass = React.useCallback((index: number, total: number) => {
     if (total <= 1) {
@@ -185,83 +175,20 @@ export function DataTable<TData, TValue>({
     return 'px-3'
   }, [])
 
-  React.useLayoutEffect(() => {
-    if (!shouldStretchRows) {
-      setDistributedRowPaddingY(0)
-      return
-    }
-
-    const updateRowHeight = () => {
-      const shellHeight = shellRef.current?.clientHeight ?? 0
-      const topBarHeight = topBarRef.current?.offsetHeight ?? 0
-      const headerHeight = headerRef.current?.offsetHeight ?? 0
-      const footerHeight = footerRef.current?.offsetHeight ?? 0
-      const availableHeight = shellHeight - topBarHeight - headerHeight - footerHeight
-
-      const bodyRows = Array.from(bodyRef.current?.querySelectorAll("tr") ?? [])
-      if (availableHeight <= 0 || !targetRowCount || bodyRows.length !== targetRowCount) {
-        setDistributedRowPaddingY(0)
-        return
-      }
-
-      const measuredRowsHeight = bodyRows.reduce((sum, row) => sum + row.getBoundingClientRect().height, 0)
-      const naturalRowsHeight = measuredRowsHeight - distributedRowPaddingY * 2 * targetRowCount
-      const remainingHeight = availableHeight - naturalRowsHeight
-      const nextPaddingY = Math.max(0, Number((remainingHeight / targetRowCount / 2).toFixed(2)))
-
-      setDistributedRowPaddingY((prev) => (prev === nextPaddingY ? prev : nextPaddingY))
-    }
-
-    const scheduleUpdate = () => {
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current)
-      }
-      frameRef.current = window.requestAnimationFrame(updateRowHeight)
-    }
-
-    scheduleUpdate()
-
-    const resizeObserver = typeof ResizeObserver === "undefined"
-      ? null
-      : new ResizeObserver(scheduleUpdate)
-
-    if (resizeObserver) {
-      if (shellRef.current) resizeObserver.observe(shellRef.current)
-      if (topBarRef.current) resizeObserver.observe(topBarRef.current)
-      if (headerRef.current) resizeObserver.observe(headerRef.current)
-      if (footerRef.current) resizeObserver.observe(footerRef.current)
-    }
-
-    window.addEventListener("resize", scheduleUpdate)
-
-    return () => {
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current)
-        frameRef.current = null
-      }
-      resizeObserver?.disconnect()
-      window.removeEventListener("resize", scheduleUpdate)
-    }
-  }, [distributedRowPaddingY, shouldStretchRows, targetRowCount, shouldShowPagination])
-
   return (
     <div
-      className={cn("mt-4 flex min-h-0 flex-col", shouldExpandShell && "flex-1 max-h-full", className)}
-      style={resolvedMinHeight === undefined
-        ? undefined
-        : { minHeight: typeof resolvedMinHeight === 'number' ? `${resolvedMinHeight}px` : resolvedMinHeight }}
+      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "flex-1 max-h-full", className)}
+      style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
       <div
-        ref={shellRef}
         className={cn(
           "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-white",
-          shouldExpandShell && "flex-1 max-h-full",
+          fillHeight && "flex-1 max-h-full",
           shellClassName,
         )}
       >
         {header && (
           <div
-            ref={topBarRef}
             className={cn(
               "flex items-center justify-between gap-3 border-b border-border/60 bg-white px-5 py-3",
               headerClassName,
@@ -271,10 +198,10 @@ export function DataTable<TData, TValue>({
           </div>
         )}
         <Table
-          containerClassName={cn("min-h-0", shouldExpandShell && "flex-1", tableContainerClassName)}
-          className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
+          containerClassName={cn("min-h-0", fillHeight && "flex-1", tableContainerClassName)}
+          className={cn(shouldUseFixedLayout ? "table-fixed" : "table-auto")}
         >
-            <TableHeader ref={headerRef}>
+            <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
                   {headerGroup.headers.map((header, index) => (
@@ -301,7 +228,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody ref={bodyRef}>
+            <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
@@ -327,15 +254,7 @@ export function DataTable<TData, TValue>({
                     {row.getVisibleCells().map((cell, index, cells) => (
                       <TableCell
                         key={cell.id}
-                        style={{
-                          ...getColumnWidthStyle(cell.column.columnDef),
-                          ...(distributedRowPaddingY > 0
-                            ? {
-                                paddingTop: `${distributedRowPaddingY}px`,
-                                paddingBottom: `${distributedRowPaddingY}px`,
-                              }
-                            : {}),
-                        }}
+                        style={getColumnWidthStyle(cell.column.columnDef)}
                         className={getColumnSpacingClass(index, cells.length)}
                       >
                         {flexRender(
@@ -359,7 +278,7 @@ export function DataTable<TData, TValue>({
             </TableBody>
         </Table>
         {shouldShowPagination && (
-        <div ref={footerRef} className="mt-auto border-t border-border bg-muted/20 px-5 py-2">
+        <div className="mt-auto border-t border-border bg-muted/20 px-5 py-2">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}

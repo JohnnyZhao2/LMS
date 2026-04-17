@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
@@ -236,7 +237,7 @@ export const TaskPreviewPage: React.FC = () => {
                         </Badge>
                         <div className="flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
                           <Clock className="w-3 h-3 mr-1" />
-                          {quiz.duration ? `${quiz.duration}分` : '不限时'}
+                          {quiz.duration ? `参考${quiz.duration}分` : '未设参考时间'}
                         </div>
                       </div>
 
@@ -246,7 +247,7 @@ export const TaskPreviewPage: React.FC = () => {
 
                       <div className="mt-auto flex w-full items-center justify-between border-t border-border/50 pt-2 text-xs text-text-muted">
                         <span>{quiz.question_count} 道题目</span>
-                        <span className="font-mono font-medium">总分: {quiz.total_score}</span>
+                        <span className="font-mono font-medium">总分: {formatScore(quiz.total_score)}</span>
                       </div>
                     </button>
                   );
@@ -272,7 +273,7 @@ export const TaskPreviewPage: React.FC = () => {
                     </Badge>
                   </div>
                   <div className="mt-0.5 text-xs text-text-muted">
-                    共 {quizzes[0]?.question_count} 道题目 · 总分 {quizzes[0]?.total_score}
+                    共 {quizzes[0]?.question_count} 道题目 · 总分 {formatScore(quizzes[0]?.total_score)}
                   </div>
                 </div>
               </div>

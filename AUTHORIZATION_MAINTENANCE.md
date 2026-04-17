@@ -62,6 +62,9 @@ cd /Users/johnnyzhao/Documents/LMS/lms_backend
 python manage.py sync_authorization --settings=config.settings.development
 ```
 
+现在只要部署流程里正常执行 `python manage.py migrate`，权限目录和日志策略目录都会自动同步。
+`sync_authorization` 只在你想本地手动立即收敛时再用，不再是部署必需步骤。
+
 如果要强制把角色模板覆盖重置回代码默认值：
 
 ```bash

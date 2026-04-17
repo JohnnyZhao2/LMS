@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatScore } from '@/lib/score';
 import { usePracticeResult, useExamResult } from '../api/get-result';
 import { QuestionCard } from './question-card';
 
@@ -75,8 +76,8 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
             <div>
               <div className="text-sm text-text-muted mb-1">总分</div>
               <div className="text-2xl font-bold">
-                <span className="text-primary-500">{data.obtained_score || 0}</span>
-                <span className="text-text-muted text-lg font-normal"> / {data.total_score}</span>
+                <span className="text-primary-500">{formatScore(data.obtained_score) || '0'}</span>
+                <span className="text-text-muted text-lg font-normal"> / {formatScore(data.total_score)}</span>
               </div>
             </div>
             <div>

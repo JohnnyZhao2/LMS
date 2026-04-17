@@ -27,6 +27,9 @@ interface CellWithIconProps {
 export const PRIMARY_CELL_TITLE_CLASS =
     'truncate text-sm font-semibold leading-5 text-foreground transition-colors hover:text-primary cursor-pointer';
 
+export const PRIMARY_CELL_TEXT_CLASS =
+    'text-sm font-semibold leading-5 text-foreground';
+
 export const PRIMARY_CELL_SUBTITLE_CLASS =
     'truncate text-[11px] font-normal normal-case tracking-normal text-text-muted';
 
@@ -93,7 +96,7 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
 }) => {
     const sizeStyles = {
         sm: { avatar: 'w-6 h-6', text: 'text-[10px]', wrap: '' },
-        md: { avatar: 'w-10 h-10', text: 'text-sm', wrap: '' },
+        md: { avatar: 'w-9 h-9', text: 'text-sm', wrap: '' },
         lg: { avatar: 'w-12 h-12', text: 'text-base', wrap: '' },
     };
     const s = sizeStyles[size];
@@ -112,11 +115,11 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
                 </div>
             )}
             <div className="flex min-w-0 flex-col">
-                <span className={cn('font-bold text-foreground line-clamp-1', s.text)}>
+                <span className={cn(PRIMARY_CELL_TEXT_CLASS, 'line-clamp-1', s.text)}>
                     {name}
                 </span>
                 {subtitle && (
-                    <span className="truncate text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                    <span className={PRIMARY_CELL_SUBTITLE_CLASS}>
                         {subtitle}
                     </span>
                 )}
@@ -133,6 +136,7 @@ export interface CellTagItem {
     key: string;
     label: React.ReactNode;
     textClass?: string;
+    bgClass?: string;
     borderClass?: string;
     className?: string;
 }
@@ -150,15 +154,15 @@ export const CellTags: React.FC<CellTagsProps> = ({ tags, className, tagClassNam
     }
 
     return (
-        <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
+        <div className={cn('inline-flex flex-wrap items-center gap-1.5', className)}>
             {tags.map((tag) => (
                 <ListTag
                     key={tag.key}
                     size={tagSize}
                     className={cn(
-                        'max-w-full text-[11px] font-medium',
-                        tag.textClass || 'text-primary-700',
-                        tag.borderClass || 'border-primary-200',
+                        'max-w-full bg-primary-50/80',
+                        tag.textClass || 'text-text-muted',
+                        tag.bgClass,
                         tagClassName,
                         tag.className
                     )}
@@ -183,14 +187,14 @@ export const CellReferenceTag: React.FC<CellReferenceTagProps> = ({
     className,
     tagClassName,
 }) => (
-    <div className={className}>
+    <div className={cn('inline-flex', className)}>
         <ListTag
             size="sm"
             className={cn(
-                'text-[11px] font-medium',
+                '',
                 count > 0
-                    ? 'border-secondary-200 text-secondary-700'
-                    : 'border-border/80 text-text-muted',
+                    ? 'bg-secondary-50 text-text-muted'
+                    : 'bg-muted/70 text-text-muted',
                 tagClassName,
             )}
         >
@@ -223,12 +227,13 @@ export const CellStatus: React.FC<CellStatusProps> = ({
     inactiveText = '已停用',
     className,
 }) => (
-    <div className={className}>
+    <div className={cn('inline-flex', className)}>
         <ListTag
             className={cn(
+                '',
                 isActive
-                    ? 'border-secondary-200 text-secondary-700'
-                    : 'border-border/80 text-text-muted'
+                    ? 'bg-secondary-50 text-text-muted'
+                    : 'bg-muted/70 text-text-muted'
             )}
         >
             {isActive ? activeText : inactiveText}
@@ -251,9 +256,9 @@ export const CellIconText: React.FC<CellIconTextProps> = ({
     text,
     className,
 }) => (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('inline-flex items-center gap-2', className)}>
         <span className="text-text-muted">{icon}</span>
-        <span className="text-sm font-medium text-foreground">{text}</span>
+        <span className="text-[13px] font-medium text-text-muted">{text}</span>
     </div>
 );
 
@@ -268,7 +273,7 @@ export const CellMutedTimestamp: React.FC<CellMutedTimestampProps> = ({
     value,
     className,
 }) => (
-    <div className={cn('flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-text-muted', className)}>
+    <div className={cn('inline-flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-text-muted', className)}>
         {icon ? <span className="text-text-muted">{icon}</span> : null}
         <span className="text-text-muted">
             {formatListDateTime(value)}
@@ -291,8 +296,8 @@ export const CellSmallAvatar: React.FC<CellSmallAvatarProps> = ({
     avatarKey,
     className,
 }) => (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('inline-flex items-center gap-2 whitespace-nowrap', className)}>
         <UserAvatar avatarKey={avatarKey} name={name} size="sm" />
-        <span className="text-sm font-medium text-foreground">{name}</span>
+        <span className="text-[13px] font-medium text-text-muted">{name}</span>
     </div>
 );

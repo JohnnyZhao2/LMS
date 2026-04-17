@@ -208,14 +208,24 @@ class QuizService(BaseService):
     def delete(self, pk: int) -> Quiz:
         quiz = self.get_by_id(pk)
         stale_question_ids = list(quiz.quiz_questions.values_list('id', flat=True))
+        stale_revision_ids = list(quiz.revisions.filter(quiz_tasks__isnull=True).values_list('id', flat=True))
+        stale_source_question_ids = [
+            relation.question_id
+            for relation in quiz.quiz_questions.select_related('question')
+            if relation.question_id
+        ]
         for relation in list(quiz.quiz_questions.select_related('question')):
             self._cleanup_orphan_source_question(relation, deleting_relation=True)
         quiz.delete()
-        QuizRevision.objects.filter(
-            source_quiz_id=pk,
-            quiz_tasks__isnull=True,
-        ).delete()
+        if stale_revision_ids:
+            QuizRevision.objects.filter(id__in=stale_revision_ids).delete()
         QuizQuestionOption.objects.filter(question_id__in=stale_question_ids).delete()
+        for question in Question.objects.filter(id__in=stale_source_question_ids):
+            if question.quiz_copies.exists():
+                continue
+            if question.quiz_revision_entries.exists():
+                continue
+            question.delete()
         return quiz
 
     def _sync_quiz_questions(self, quiz: Quiz, question_payloads: List[dict[str, Any]]) -> None:

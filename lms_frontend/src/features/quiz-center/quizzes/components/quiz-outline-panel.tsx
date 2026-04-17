@@ -12,6 +12,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
+import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
 import type { QuizType } from '@/types/quiz';
@@ -54,6 +55,12 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
     if (!value) return undefined;
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  };
+  const parseDecimalValue = (value: string) => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+    return Math.round(parsed * 10) / 10;
   };
   const groupedSections = useMemo(
     () => buildQuestionSections(items, (item) => item.questionType),
@@ -163,7 +170,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           <div className={cn('flex shrink-0 flex-col items-start gap-1.5', EXAM_META_GROUP_WIDTH_CLASSNAME)}>
             <div className="flex w-full items-center justify-start gap-1.5 text-[12px] font-medium text-text-muted">
               <Clock3 className="h-3.5 w-3.5" />
-              时间限制
+              参考时间
             </div>
             {readOnly ? (
               <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
@@ -190,17 +197,18 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             </div>
             {readOnly ? (
               <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
-                {passScore || 0} 分
+                {formatScore(passScore) || '0'} 分
               </div>
             ) : (
               <CompactNumberInput
-                value={passScore ? String(passScore) : ''}
-                onChange={(value) => onPassScoreChange(parseIntegerValue(value))}
+                value={passScore ? formatScore(passScore) : ''}
+                onChange={(value) => onPassScoreChange(parseDecimalValue(value))}
                 min={1}
-                step={1}
+                mode="decimal"
+                step={0.1}
                 unit="分"
                 dividerBeforeUnit
-                inputWidthClassName="w-10"
+                inputWidthClassName="w-12"
                 inputClassName="text-[12px] font-semibold"
                 className="h-8 w-full rounded-lg px-2"
               />

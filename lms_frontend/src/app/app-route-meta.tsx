@@ -14,10 +14,11 @@ import {
   Tags,
   Users,
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import type { RoleCode } from '@/types/common';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import {
   getRolePathPrefix,
   getWorkspaceConfig,
@@ -147,7 +148,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     kind: 'business',
     path: 'tasks/:id',
     requiredPermissions: ['task.view'],
-    component: TaskDetail,
+    render: () => <TaskDetailRoutePage />,
   },
   {
     key: 'tags',
@@ -604,4 +605,17 @@ const TaskRoutePage = () => {
   }
 
   return <TaskManagement />;
+};
+
+const TaskDetailRoutePage = () => {
+  const { id, role } = useParams<{ id: string; role: string }>();
+  const { hasCapability } = useAuth();
+  const normalizedRole = normalizeRoleCode(role);
+
+  if (normalizedRole === 'STUDENT' || !hasCapability('task.update')) {
+    return <TaskDetail />;
+  }
+
+  const rolePrefix = getRolePathPrefix(normalizedRole);
+  return <Navigate to={`${rolePrefix}/tasks/${id}/edit`} replace />;
 };
