@@ -20,7 +20,11 @@ import { KeyRound } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PermissionModuleSections } from '@/features/authorization/components/permission-module-sections';
 import { PermissionToggleCard } from '@/features/authorization/components/permission-toggle-card';
-import { getModulePresentation } from '@/features/authorization/constants/permission-presentation';
+import {
+  buildPermissionModuleSections,
+  buildScopeAwarePermissionCodeSet,
+  buildScopeGroupPermissionCodeMap,
+} from '@/features/authorization/utils/permission-sections';
 
 import { useUsers } from '../api/get-users';
 import { UserPermissionScopePopover } from './user-permission-scope-popover';
@@ -158,19 +162,12 @@ export function UserPermissionSection({
     ))?.name ?? userDetail?.department?.name
   ), [departments, departmentId, userDetail?.department?.id, userDetail?.department?.name]);
 
-  const scopeGroupPermissionCodeMap = useMemo(() => {
-    const groupMap = new Map<string, string[]>();
-    permissionCatalog.forEach((permission) => {
-      if (!permission.scope_group_key) {
-        return;
-      }
-      const currentCodes = groupMap.get(permission.scope_group_key) ?? [];
-      groupMap.set(permission.scope_group_key, [...currentCodes, permission.code]);
-    });
-    return groupMap;
-  }, [permissionCatalog]);
+  const scopeGroupPermissionCodeMap = useMemo(
+    () => buildScopeGroupPermissionCodeMap(permissionCatalog),
+    [permissionCatalog],
+  );
   const scopeAwarePermissionCodeSet = useMemo(
-    () => new Set(permissionCatalog.filter((permission) => permission.scope_aware).map((permission) => permission.code)),
+    () => buildScopeAwarePermissionCodeSet(permissionCatalog),
     [permissionCatalog],
   );
   const userPermissionOverrides = useMemo<PermissionOverrideEntry[]>(() => {
@@ -198,15 +195,13 @@ export function UserPermissionSection({
   }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
   const ownerUserId = userId ?? userDetail?.id ?? null;
   const ownerDepartmentId = departmentId ?? userDetail?.department?.id ?? null;
+  const permissionSections = useMemo(
+    () => buildPermissionModuleSections(permissionCatalog),
+    [permissionCatalog],
+  );
   const moduleSectionsBase = useMemo(() => {
-    const groupedPermissions = new Map<string, typeof permissionCatalog>();
-    permissionCatalog.forEach((permission) => {
-      const currentPermissions = groupedPermissions.get(permission.module) ?? [];
-      groupedPermissions.set(permission.module, [...currentPermissions, permission]);
-    });
-
-    return Array.from(groupedPermissions.entries())
-      .map(([module, permissions]) => {
+    return permissionSections
+      .map(({ module, permissions }) => {
         const scopeGroupKey = permissions
           .map((permission) => permission.scope_group_key)
           .find((groupKey): groupKey is string => Boolean(groupKey))
@@ -267,21 +262,13 @@ export function UserPermissionSection({
             selectedDepartmentName,
           }) : null,
         };
-      })
-      .sort((left, right) => {
-        const leftPresentation = getModulePresentation(left.module);
-        const rightPresentation = getModulePresentation(right.module);
-        if (leftPresentation.order !== rightPresentation.order) {
-          return leftPresentation.order - rightPresentation.order;
-        }
-        return leftPresentation.label.localeCompare(rightPresentation.label, 'zh-Hans-CN');
       });
   }, [
     departments,
     normalizedSelectedPermissionRole,
     ownerDepartmentId,
     ownerUserId,
-    permissionCatalog,
+    permissionSections,
     roleTemplateDefaultScopeMap,
     roleTemplateScopeGroupMap,
     scopeGroupPermissionCodeMap,
@@ -364,12 +351,6 @@ export function UserPermissionSection({
     refreshUser,
     refetchUserOverrides,
   });
-  const permissionSections = useMemo(
-    () => moduleSectionsBase.map((section) => ({
-      ...section,
-    })),
-    [getPermissionState, moduleSectionsBase],
-  );
   if (!canManageUserAuthorization) {
     return null;
   }
@@ -400,7 +381,7 @@ export function UserPermissionSection({
 
         <div className="relative">
           <PermissionModuleSections
-            sections={permissionSections.map((section) => ({
+            sections={moduleSectionsBase.map((section) => ({
               module: section.module,
               permissions: section.permissions,
               sectionAction: section.scopeGroupKey ? (

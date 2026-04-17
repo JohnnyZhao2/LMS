@@ -1,16 +1,11 @@
 import * as React from 'react';
-import { KeyRound, ShieldCheck, Users, X } from 'lucide-react';
+import { ShieldCheck, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
-import { UserAvatar } from '@/components/common/user-avatar';
 import { UserSelectList } from '@/components/common/user-select-list';
-import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
-import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/stores/auth-context';
-import { ASSIGNABLE_ROLES, getRoleColor } from '@/lib/role-config';
-import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/common';
 
@@ -18,8 +13,9 @@ import { useDepartments, useRoles, useUserDetail, useUsers } from '../api/get-us
 import { useAssignRoles } from '../api/manage-users';
 import { UserDirectoryFilters } from '../components/user-directory-filters';
 import {
-  UserPermissionSection,
-} from '../components/user-permission-section';
+  getSelectedBusinessRoleCode,
+} from '../components/user-role-assignment-chips';
+import { UserPermissionWorkbench } from '../components/user-permission-workbench';
 
 export const UserAuthorizationPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -99,35 +95,8 @@ export const UserAuthorizationPage: React.FC = () => {
     [selectedUserDetail],
   );
   const selectedBusinessRoleCode = React.useMemo<RoleCode | null>(
-    () => selectedRoleCodes[0] ?? null,
-    [selectedRoleCodes],
-  );
-  const hasStudentRole = React.useMemo(
-    () => selectedUserDetail?.roles.some((role) => role.code === 'STUDENT') ?? false,
+    () => getSelectedBusinessRoleCode(selectedUserDetail?.roles ?? []),
     [selectedUserDetail],
-  );
-  const currentAssignedRoleTags = React.useMemo(
-    () => {
-      const tags: Array<{ code: RoleCode; name: string }> = [];
-      if (hasStudentRole) {
-        tags.push({
-          code: 'STUDENT',
-          name: roleNameMap.get('STUDENT') ?? '学员',
-        });
-      }
-      if (selectedBusinessRoleCode) {
-        tags.push({
-          code: selectedBusinessRoleCode,
-          name: roleNameMap.get(selectedBusinessRoleCode) ?? selectedBusinessRoleCode,
-        });
-      }
-      return tags;
-    },
-    [hasStudentRole, roleNameMap, selectedBusinessRoleCode],
-  );
-  const remainingAssignableRoles = React.useMemo(
-    () => ASSIGNABLE_ROLES.filter((roleCode) => roleCode !== selectedBusinessRoleCode),
-    [selectedBusinessRoleCode],
   );
   const panelItems = React.useMemo(
     () => authorizationUsers.map((user) => ({
@@ -208,122 +177,18 @@ export const UserAuthorizationPage: React.FC = () => {
           </section>
 
           <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/60 bg-white">
-            <Spinner spinning={isLoading} className="min-h-0 flex-1">
-              {!resolvedSelectedUserId || !selectedUserDetail ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center">
-                  <EmptyState
-                    icon={KeyRound}
-                    description="请选择一个用户开始配置权限。"
-                  />
-                </div>
-              ) : (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border/60 px-6 py-2">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <UserAvatar
-                        avatarKey={selectedUserDetail.avatar_key}
-                        name={selectedUserDetail.username}
-                        size="md"
-                        className="h-9 w-9 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <h2 className="truncate text-sm font-semibold text-foreground">{selectedUserDetail.username}</h2>
-                        <p className="truncate text-xs text-text-muted">
-                          {selectedUserDetail.employee_id || '未填写工号'}
-                          {selectedUserDetail.department?.name ? ` · ${selectedUserDetail.department.name}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {currentAssignedRoleTags.map((role) => {
-                        const color = getRoleColor(role.code);
-                        const canClearRole = role.code === selectedBusinessRoleCode;
-                        if (canClearRole) {
-                          return (
-                            <button
-                              key={role.code}
-                              type="button"
-                              disabled={!hasCapability('user.authorize') || isAssigningRole}
-                              onClick={() => { void handleRoleToggle(role.code); }}
-                              aria-label={`取消${role.name}角色`}
-                              className={cn(
-                                'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
-                                color.bgClass,
-                                color.mutedTextClass,
-                                hasCapability('user.authorize') && !isAssigningRole
-                                  ? 'cursor-pointer hover:brightness-95'
-                                  : 'cursor-not-allowed opacity-55',
-                              )}
-                            >
-                              <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                              {role.name}
-                              <X className="h-3 w-3 opacity-70" />
-                            </button>
-                          );
-                        }
-                        return (
-                          <span
-                            key={role.code}
-                            className={cn(
-                              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
-                              color.bgClass,
-                              color.mutedTextClass,
-                            )}
-                          >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                            {role.name}
-                          </span>
-                        );
-                      })}
-                      {currentAssignedRoleTags.length > 0 && remainingAssignableRoles.length > 0 ? (
-                        <span className="mx-1 h-4 w-px bg-border/80" />
-                      ) : null}
-                      {remainingAssignableRoles.map((roleCode) => {
-                        const active = selectedBusinessRoleCode === roleCode;
-                        const color = getRoleColor(roleCode);
-                        const roleName = roleNameMap.get(roleCode) ?? roleCode;
-                        const mutuallyExclusive = selectedBusinessRoleCode !== null && !active;
-                        return (
-                          <button
-                            key={roleCode}
-                            type="button"
-                            disabled={!hasCapability('user.authorize') || isAssigningRole}
-                            onClick={() => { void handleRoleToggle(roleCode); }}
-                            className={cn(
-                              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
-                              active
-                                ? `${color.bgClass} ${color.mutedTextClass}`
-                                : mutuallyExclusive
-                                  ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
-                                  : 'bg-white text-text-muted hover:bg-muted/35',
-                              (!hasCapability('user.authorize') || isAssigningRole) && 'cursor-not-allowed opacity-55',
-                            )}
-                          >
-                            {active ? (
-                              <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                            ) : null}
-                            {roleName}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-6">
-                    <UserPermissionSection
-                      key={selectedUserDetail.id}
-                      userId={selectedUserDetail.id}
-                      userDetail={selectedUserDetail}
-                      departments={departments}
-                      selectedRoleCodes={selectedRoleCodes}
-                      departmentId={selectedUserDetail.department?.id}
-                      isSuperuserAccount={Boolean(selectedUserDetail.is_superuser)}
-                      dialogContentElement={pageContainerElement}
-                    />
-                  </div>
-                </div>
-              )}
-            </Spinner>
+            <UserPermissionWorkbench
+              userDetail={selectedUserDetail}
+              departments={departments}
+              selectedRoleCodes={selectedRoleCodes}
+              dialogContentElement={pageContainerElement}
+              roleNameMap={roleNameMap}
+              canManageRoles={hasCapability('user.authorize')}
+              isRoleBusy={isAssigningRole}
+              onToggleRole={(roleCode) => { void handleRoleToggle(roleCode); }}
+              isLoading={isLoading}
+              emptyDescription="请选择一个用户开始配置权限。"
+            />
           </section>
         </PageSplit>
       </PageWorkbench>

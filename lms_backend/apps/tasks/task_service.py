@@ -25,7 +25,7 @@ class TaskService(BaseService):
     MANAGEMENT_SIDE_ROLES = ['ADMIN', SUPER_ADMIN_ROLE]
 
     def get_task_queryset_for_user(self) -> QuerySet:
-        qs = task_list_queryset(include_deleted=False)
+        qs = task_list_queryset()
         return scope_filter('task.view', self.request, base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(
@@ -46,8 +46,8 @@ class TaskService(BaseService):
             message='creator_side 参数无效，仅支持 all、management、non_management',
         )
 
-    def get_task_by_id(self, pk: int, include_deleted: bool = False) -> Task:
-        task = task_detail_queryset(include_deleted=include_deleted).filter(pk=pk).first()
+    def get_task_by_id(self, pk: int) -> Task:
+        task = task_detail_queryset().filter(pk=pk).first()
         self.validate_not_none(task, f'任务 {pk} 不存在')
         return task
 

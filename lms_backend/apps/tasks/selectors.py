@@ -31,7 +31,7 @@ SCORE_DISTRIBUTION_RANGES = [
 ]
 
 
-def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
+def task_detail_queryset() -> QuerySet:
     return Task.objects.select_related('created_by', 'updated_by').prefetch_related(
         'task_knowledge__knowledge',
         'task_knowledge__source_knowledge',
@@ -41,11 +41,7 @@ def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
     )
 
 
-def task_base_queryset(include_deleted: bool = False) -> QuerySet:
-    return Task.objects.select_related('created_by', 'updated_by')
-
-
-def task_list_queryset(include_deleted: bool = False) -> QuerySet:
+def task_list_queryset() -> QuerySet:
     completed_assignments_prefetch = Prefetch(
         'assignments',
         queryset=TaskAssignment.objects.filter(status='COMPLETED').prefetch_related(

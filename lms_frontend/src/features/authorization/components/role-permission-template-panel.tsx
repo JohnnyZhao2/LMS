@@ -1,11 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { Loader2, RotateCcw, X } from 'lucide-react';
+import { Loader2, RotateCcw } from 'lucide-react';
 import { ROLE_FULL_LABELS } from '@/config/role-constants';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { UserAvatar } from '@/components/common/user-avatar';
 import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/features/users/api/get-users';
 import { useAssignRoles } from '@/features/users/api/manage-users';
 import { useAuth } from '@/features/auth/stores/auth-context';
@@ -16,16 +15,19 @@ import {
   useUserScopeGroupOverrides,
 } from '@/features/authorization/api/authorization';
 import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
-import { UserPermissionSection } from '@/features/users/components/user-permission-section';
-import { ASSIGNABLE_ROLES, getRoleColor } from '@/lib/role-config';
-import { cn } from '@/lib/utils';
+import { UserPermissionWorkbench } from '@/features/users/components/user-permission-workbench';
+import { ASSIGNABLE_ROLES } from '@/lib/role-config';
 import { showApiError } from '@/utils/error-handler';
-import { getModulePresentation } from '../constants/permission-presentation';
 import { applyPermissionSelectionChange } from '../utils/permission-dependencies';
+import { buildPermissionModuleSections } from '../utils/permission-sections';
 import { PermissionModuleSections } from './permission-module-sections';
 import { PermissionToggleCard } from './permission-toggle-card';
 import { RoleTemplateMemberPanel } from './role-template-member-panel';
 import type { UserList } from '@/types/common';
+import {
+  getManagedRoleCodes,
+  getSelectedBusinessRoleCode,
+} from '@/features/users/components/user-role-assignment-chips';
 
 interface RolePermissionTemplatePanelProps {
   canUpdateRoleTemplate: boolean;
@@ -66,28 +68,6 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
 
-  const permissionGroups = useMemo(() => {
-    const groups: Record<string, PermissionCatalogItem[]> = {};
-    permissionCatalog.forEach((permission) => {
-      if (!groups[permission.module]) {
-        groups[permission.module] = [];
-      }
-      groups[permission.module].push(permission);
-    });
-    return Object.entries(groups)
-      .map(([module, permissions]) => ({
-        module,
-        permissions,
-        modulePresentation: getModulePresentation(module),
-      }))
-      .sort((a, b) => {
-        if (a.modulePresentation.order !== b.modulePresentation.order) {
-          return a.modulePresentation.order - b.modulePresentation.order;
-        }
-        return a.modulePresentation.label.localeCompare(b.modulePresentation.label, 'zh-Hans-CN');
-      });
-  }, [permissionCatalog]);
-
   const resolvedActiveRole = useMemo(
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
     [activeRole, roleCodes],
@@ -101,11 +81,8 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     [selectedRolePermissionCodes],
   );
   const permissionSections = useMemo(
-    () => permissionGroups.map((group) => ({
-      module: group.module,
-      permissions: group.permissions,
-    })),
-    [permissionGroups],
+    () => buildPermissionModuleSections(permissionCatalog),
+    [permissionCatalog],
   );
   const isSavingCurrentRole = resolvedActiveRole ? savingRoleCodes.includes(resolvedActiveRole) : false;
   const { data: allVisibleUsers = [], isLoading: isLoadingMembers } = useUsers(
@@ -131,9 +108,6 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     () => new Map(roles.map((role) => [role.code, role.name])),
     [roles],
   );
-  const getManagedRoleCodes = (user: UserList): RoleCode[] => user.roles
-    .map((role) => role.code)
-    .filter((roleCode): roleCode is RoleCode => ASSIGNABLE_ROLES.includes(roleCode as RoleCode));
   const roleMembers = useMemo(
     () => allVisibleUsers
       .filter((user) => user.roles.some((role) => role.code === resolvedActiveRole))
@@ -208,37 +182,8 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     [selectedUserDetail],
   );
   const selectedBusinessRoleCode = useMemo<RoleCode | null>(
-    () => selectedUserDetail?.roles
-      .filter((role) => role.code !== 'STUDENT' && role.code !== 'SUPER_ADMIN')
-      .map((role) => role.code as RoleCode)[0] ?? null,
+    () => getSelectedBusinessRoleCode(selectedUserDetail?.roles ?? []),
     [selectedUserDetail],
-  );
-  const hasStudentRole = useMemo(
-    () => selectedUserDetail?.roles.some((role) => role.code === 'STUDENT') ?? false,
-    [selectedUserDetail],
-  );
-  const currentAssignedRoleTags = useMemo(
-    () => {
-      const tags: Array<{ code: RoleCode; name: string }> = [];
-      if (hasStudentRole) {
-        tags.push({
-          code: 'STUDENT',
-          name: roleNameMap.get('STUDENT') ?? '学员',
-        });
-      }
-      if (selectedBusinessRoleCode) {
-        tags.push({
-          code: selectedBusinessRoleCode,
-          name: roleNameMap.get(selectedBusinessRoleCode) ?? selectedBusinessRoleCode,
-        });
-      }
-      return tags;
-    },
-    [hasStudentRole, roleNameMap, selectedBusinessRoleCode],
-  );
-  const remainingAssignableRoles = useMemo(
-    () => ASSIGNABLE_ROLES.filter((roleCode) => roleCode !== selectedBusinessRoleCode),
-    [selectedBusinessRoleCode],
   );
   const currentRolePermissionOverrides = useMemo(
     () => selectedUserPermissionOverrides.filter((override) => (
@@ -300,7 +245,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     if (!canManageRoleMembers || !resolvedActiveRole) {
       return;
     }
-    const nextRoles = getManagedRoleCodes(user).filter((roleCode) => roleCode !== resolvedActiveRole);
+    const nextRoles = getManagedRoleCodes(user.roles).filter((roleCode) => roleCode !== resolvedActiveRole);
     setMutatingUserId(user.id);
     try {
       await assignRoles.mutateAsync({
@@ -321,9 +266,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
       return;
     }
     const nextRoles = selectedBusinessRoleCode === roleCode ? [] : [roleCode];
-    const currentRoleCodes = selectedUserDetail.roles
-      .filter((role) => role.code !== 'STUDENT' && role.code !== 'SUPER_ADMIN')
-      .map((role) => role.code as RoleCode);
+    const currentRoleCodes = getManagedRoleCodes(selectedUserDetail.roles);
     if (
       nextRoles.length === currentRoleCodes.length
       && nextRoles.every((code) => currentRoleCodes.includes(code))
@@ -397,29 +340,36 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
           </aside>
 
           <div ref={setWorkbenchElement} className="flex min-h-0 flex-col">
-            <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+            {!isViewingUserOverrides ? (
+              <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+                <>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}
+                  </h3>
+                  {isSavingCurrentRole ? (
+                    <span className="text-xs font-medium text-primary">保存中...</span>
+                  ) : null}
+                </>
+              </div>
+            ) : null}
+
+            <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
               {isViewingUserOverrides ? (
-                <div className="flex w-full flex-wrap items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <UserAvatar
-                      avatarKey={selectedUserDetail?.avatar_key}
-                      name={selectedUserDetail?.username ?? ''}
-                      size="md"
-                      className="h-9 w-9 shrink-0"
-                    />
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-foreground">
-                      {selectedUserDetail?.username ?? ''}
-                      </h3>
-                      <p className="truncate text-xs text-text-muted">
-                        {selectedUserDetail?.employee_id || '未填写工号'}
-                        {selectedUserDetail?.department?.name ? ` · ${selectedUserDetail.department.name}` : ''}
-                        {' · '}
-                        {ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <UserPermissionWorkbench
+                  userDetail={selectedUserDetail}
+                  departments={departments}
+                  selectedRoleCodes={selectedUserRoleCodes}
+                  dialogContentElement={workbenchElement}
+                  roleNameMap={roleNameMap}
+                  canManageRoles={canManageRoleMembers}
+                  isRoleBusy={assignRoles.isPending}
+                  onToggleRole={(roleCode) => { void handleUserRoleToggle(roleCode); }}
+                  isLoading={isLoadingSelectedUser}
+                  emptyDescription="请选择一个角色成员开始配置权限。"
+                  metaSuffix={ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole ?? ''}
+                  headerClassName="border-b-0 px-0 py-0 pb-4"
+                  contentClassName="px-0 pt-0 pb-0"
+                  headerActions={(
                     <Button
                       type="button"
                       variant="outline"
@@ -431,110 +381,8 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                       <RotateCcw className="h-3.5 w-3.5" />
                       重置为模板
                     </Button>
-                    {currentAssignedRoleTags.map((role) => {
-                      const color = getRoleColor(role.code);
-                      const canClearRole = role.code === selectedBusinessRoleCode;
-                      if (canClearRole) {
-                        return (
-                          <button
-                            key={role.code}
-                            type="button"
-                            disabled={!canManageRoleMembers || assignRoles.isPending}
-                            onClick={() => { void handleUserRoleToggle(role.code); }}
-                            aria-label={`取消${role.name}角色`}
-                            className={cn(
-                              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
-                              color.bgClass,
-                              color.mutedTextClass,
-                              canManageRoleMembers && !assignRoles.isPending
-                                ? 'cursor-pointer hover:brightness-95'
-                                : 'cursor-not-allowed opacity-55',
-                            )}
-                          >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                            {role.name}
-                            <X className="h-3 w-3 opacity-70" />
-                          </button>
-                        );
-                      }
-                      return (
-                        <span
-                          key={role.code}
-                          className={cn(
-                            'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
-                            color.bgClass,
-                            color.mutedTextClass,
-                          )}
-                        >
-                          <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                          {role.name}
-                        </span>
-                      );
-                    })}
-                    {currentAssignedRoleTags.length > 0 && remainingAssignableRoles.length > 0 ? (
-                      <span className="mx-1 h-4 w-px bg-border/80" />
-                    ) : null}
-                    {remainingAssignableRoles.map((roleCode) => {
-                      const active = selectedBusinessRoleCode === roleCode;
-                      const color = getRoleColor(roleCode);
-                      const roleName = roleNameMap.get(roleCode) ?? roleCode;
-                      const mutuallyExclusive = selectedBusinessRoleCode !== null && !active;
-                      return (
-                        <button
-                          key={roleCode}
-                          type="button"
-                          disabled={!canManageRoleMembers || assignRoles.isPending}
-                          onClick={() => { void handleUserRoleToggle(roleCode); }}
-                          className={cn(
-                            'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
-                            active
-                              ? `${color.bgClass} ${color.mutedTextClass}`
-                              : mutuallyExclusive
-                                ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
-                                : 'bg-white text-text-muted hover:bg-muted/35',
-                            (!canManageRoleMembers || assignRoles.isPending) && 'cursor-not-allowed opacity-55',
-                          )}
-                        >
-                          {active ? (
-                            <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-                          ) : null}
-                          {roleName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}
-                  </h3>
-                  {isSavingCurrentRole ? (
-                    <span className="text-xs font-medium text-primary">保存中...</span>
-                  ) : null}
-                </>
-              )}
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
-              {isViewingUserOverrides ? (
-                isLoadingSelectedUser ? (
-                  <div className="flex h-full min-h-[240px] items-center justify-center gap-2 text-sm text-text-muted">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    正在加载用户授权...
-                  </div>
-                ) : selectedUserDetail ? (
-                  <UserPermissionSection
-                    key={selectedUserDetail.id}
-                    userId={selectedUserDetail.id}
-                    userDetail={selectedUserDetail}
-                    departments={departments}
-                    selectedRoleCodes={selectedUserRoleCodes}
-                    departmentId={selectedUserDetail.department?.id}
-                    isSuperuserAccount={Boolean(selectedUserDetail.is_superuser)}
-                    dialogContentElement={workbenchElement}
-                  />
-                ) : null
+                  )}
+                />
               ) : (
                 <PermissionModuleSections
                   sections={permissionSections}
