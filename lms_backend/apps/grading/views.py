@@ -329,11 +329,8 @@ class PendingQuizzesView(GradingBaseView):
             'task.view',
             request,
             base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
-                is_deleted=False,
                 task_quizzes__isnull=False,
             ),
-        ).filter(
-            is_deleted=False,
         ).distinct().order_by('-created_at')
 
         results = []

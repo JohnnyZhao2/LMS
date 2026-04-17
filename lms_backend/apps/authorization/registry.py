@@ -282,8 +282,5 @@ def build_permission_constraint_summaries(
     for permission_code, rules in scope_rules_by_permission.items():
         if permission_code in summaries:
             continue
-        scope_labels = sorted({rule.scope_type for rule in rules})
-        summaries[permission_code] = (
-            f"按默认范围 {', '.join(scope_labels)} 生效，可通过用户授权按对象范围增删。"
-        )
+        summaries[permission_code] = '对象范围'
     return summaries

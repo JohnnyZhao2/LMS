@@ -4,12 +4,15 @@ import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import type { UserList, Mentor, Role, Department } from '@/types/common';
 
-const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
-const allowedDepartmentCodes = new Set(allowedDepartmentOrder);
+export const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
+export const allowedDepartmentCodes = new Set(allowedDepartmentOrder);
 const departmentDisplayNameMap: Record<string, string> = {
   DEPT1: '一室',
   DEPT2: '二室',
 };
+
+export const isAllowedDepartmentCode = (code?: string | null): code is Department['code'] =>
+  Boolean(code) && allowedDepartmentCodes.has(code as Department['code']);
 
 /**
  * 仅保留需求定义的一室/二室，并强制其显示名称

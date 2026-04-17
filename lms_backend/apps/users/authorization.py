@@ -73,7 +73,7 @@ AUTHORIZATION_SPECS = (
                 permission_code='user.view',
                 resource_model=User,
                 filter_queryset=_filter_viewable_users,
-                constraint_summary='默认按角色范围生效（名下学员/本室成员/全部），可通过用户授权按对象范围增删。',
+                constraint_summary='角色范围',
             ),
         ),
     ),

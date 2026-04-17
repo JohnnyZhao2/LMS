@@ -38,20 +38,17 @@ export const ActivityLogPolicyCategorySection: React.FC<ActivityLogPolicyCategor
   isUpdating,
   onTogglePolicy,
 }) => (
-  <div className="space-y-6">
-    {groups.map(([group, items], index) => (
+  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+    {groups.map(([group, items]) => (
       <section
         key={group}
-        className={cn(index > 0 && 'border-t border-border/60 pt-6')}
+        className="overflow-hidden rounded-[18px] border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,0.98))]"
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="border-b border-border/60 px-4 py-3">
           <div className="text-sm font-semibold text-foreground">{group}</div>
-          <div className="text-[12px] text-text-muted">
-            {items.filter((policy) => policy.enabled).length}/{items.length}
-          </div>
         </div>
 
-        <div className="overflow-hidden rounded-[18px] border border-border/70 bg-muted/[0.28]">
+        <div className="bg-white/75">
           {items.map((policy, itemIndex) => (
             <div key={policy.key} className={cn(itemIndex > 0 && 'border-t border-border/60')}>
               <PolicyToggle

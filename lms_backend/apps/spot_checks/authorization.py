@@ -19,7 +19,7 @@ MANAGER_DEFAULT_PERMISSIONS = (
     'spot_check.delete',
 )
 
-SPOT_CHECK_SCOPE_SUMMARY = '默认按学员范围生效，可通过用户授权按学员范围增删。'
+SPOT_CHECK_SCOPE_SUMMARY = '学员范围'
 
 
 def _authorize_spot_check(engine, permission_code, *, resource=None, context=None, error_message=None):
@@ -188,8 +188,8 @@ AUTHORIZATION_SPECS = (
                 constraint_summaries={
                     'spot_check.view': SPOT_CHECK_SCOPE_SUMMARY,
                     'spot_check.create': SPOT_CHECK_SCOPE_SUMMARY,
-                    'spot_check.update': '仅可编辑自己创建且当前可见的抽查记录。',
-                    'spot_check.delete': '仅可删除自己创建且当前可见的抽查记录。',
+                    'spot_check.update': '仅自己创建且可见',
+                    'spot_check.delete': '仅自己创建且可见',
                 },
             ),
         ),

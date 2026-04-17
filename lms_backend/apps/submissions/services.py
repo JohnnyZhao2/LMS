@@ -164,7 +164,6 @@ class SubmissionService(BaseService):
         assignment = TaskAssignment.objects.select_related('task').filter(
             id=assignment_id,
             assignee=user,
-            task__is_deleted=False,
         ).first()
         if not assignment:
             raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='任务不存在或未分配给您')

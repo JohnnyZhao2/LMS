@@ -1,5 +1,6 @@
 """Task management service."""
 
+from types import SimpleNamespace
 from typing import Any, Callable, List, Optional, Tuple
 
 from django.db import transaction
@@ -285,6 +286,24 @@ class TaskService(BaseService):
         to_add = new_ids - existing_ids
         self._bulk_create_assignments(task_id=task.id, assignee_ids=list(to_add))
 
+    @staticmethod
+    def hard_delete_tasks(task_ids: List[int]) -> None:
+        normalized_ids = []
+        seen = set()
+        for task_id in task_ids:
+            if not task_id or task_id in seen:
+                continue
+            seen.add(task_id)
+            normalized_ids.append(task_id)
+        if not normalized_ids:
+            return
+
+        from apps.submissions.models import Submission
+
+        with transaction.atomic():
+            Submission.objects.filter(task_assignment__task_id__in=normalized_ids).delete()
+            Task.objects.filter(id__in=normalized_ids).delete()
+
     @log_operation(
         'task_management',
         'delete_task',
@@ -292,8 +311,16 @@ class TaskService(BaseService):
         target_type='task',
         target_title_template='{result.title}',
     )
-    def delete_task(self, task: Task) -> None:
-        task.soft_delete()
+    def delete_task(self, task: Task) -> SimpleNamespace:
+        snapshot = SimpleNamespace(
+            id=task.id,
+            title=task.title,
+            knowledge_count=task.task_knowledge.count(),
+            quiz_count=task.task_quizzes.count(),
+            assignee_count=task.assignments.count(),
+        )
+        self.hard_delete_tasks([task.id])
+        return snapshot
 
     @staticmethod
     def _validate_current_resources(resource_ids: List[int], resource_model: Any) -> Tuple[bool, List[int]]:

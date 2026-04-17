@@ -28,20 +28,14 @@ def get_student_assignments(
     user_id: int,
     task_deleted: bool = False
 ) -> QuerySet:
-    qs = TaskAssignment.objects.filter(assignee_id=user_id)
-    if not task_deleted:
-        qs = qs.filter(task__is_deleted=False)
-    return qs
+    return TaskAssignment.objects.filter(assignee_id=user_id)
 
 
 def get_assignments_by_students(
     student_ids: List[int],
     task_deleted: bool = False
 ) -> QuerySet:
-    qs = TaskAssignment.objects.filter(assignee_id__in=student_ids)
-    if not task_deleted:
-        qs = qs.filter(task__is_deleted=False)
-    return qs.select_related('task')
+    return TaskAssignment.objects.filter(assignee_id__in=student_ids).select_related('task')
 
 
 def calculate_task_stats(assignments: QuerySet) -> Dict[str, Any]:
@@ -83,8 +77,6 @@ def get_student_dashboard_metrics(
     }
 
     assignment_qs = TaskAssignment.objects.filter(assignee_id__in=student_ids)
-    if not task_deleted:
-        assignment_qs = assignment_qs.filter(task__is_deleted=False)
 
     assignment_rows = assignment_qs.values('assignee_id').annotate(
         total_tasks=Count('id'),
@@ -130,8 +122,6 @@ def get_student_dashboard_metrics(
         user_id__in=student_ids,
         status='GRADED',
     )
-    if not task_deleted:
-        score_qs = score_qs.filter(task_assignment__task__is_deleted=False)
 
     score_rows = score_qs.values('user_id').annotate(avg_score=Avg('obtained_score'))
 
@@ -154,8 +144,6 @@ def calculate_average_completion_rate_by_students(
         return 0.0
 
     assignments = TaskAssignment.objects.filter(assignee_id__in=student_ids)
-    if not task_deleted:
-        assignments = assignments.filter(task__is_deleted=False)
 
     per_student_stats = assignments.values('assignee_id').annotate(
         total=Count('id'),
@@ -192,8 +180,6 @@ def calculate_avg_score(
     task_deleted: bool = False
 ) -> Optional[float]:
     qs = Submission.objects.filter(status='GRADED')
-    if not task_deleted:
-        qs = qs.filter(task_assignment__task__is_deleted=False)
     if student_ids:
         qs = qs.filter(user_id__in=student_ids)
     elif user_id:
@@ -244,7 +230,6 @@ def get_monthly_tasks_count() -> int:
 
     from apps.tasks.models import Task
     return Task.objects.filter(
-        is_deleted=False,
         created_at__gte=start_dt
     ).count()
 
@@ -270,7 +255,6 @@ def get_student_all_tasks(user_id: int, limit: int = 10) -> QuerySet:
     """
     return TaskAssignment.objects.filter(
         assignee_id=user_id,
-        task__is_deleted=False,
     ).select_related(
         'task', 'task__created_by'
     ).prefetch_related(
@@ -286,7 +270,6 @@ def get_urgent_tasks_count(user_id: int, hours: int = 48) -> int:
     return TaskAssignment.objects.filter(
         assignee_id=user_id,
         status='IN_PROGRESS',
-        task__is_deleted=False,
         task__deadline__lte=deadline_threshold,
         task__deadline__gt=timezone.now()
     ).count()
@@ -297,7 +280,6 @@ def get_student_exam_avg_score(user_id: int) -> Optional[float]:
     result = Submission.objects.filter(
         user_id=user_id,
         status='GRADED',
-        task_assignment__task__is_deleted=False,
         quiz__quiz_type='EXAM'
     ).aggregate(avg_score=Avg('obtained_score'))
     return float(result['avg_score']) if result['avg_score'] is not None else None
@@ -330,7 +312,6 @@ def get_pending_grading_count(student_ids: List[int]) -> int:
     return Submission.objects.filter(
         user_id__in=student_ids,
         status='GRADING',
-        task_assignment__task__is_deleted=False
     ).count()
 
 
@@ -410,7 +391,6 @@ def get_score_distribution(student_ids: List[int]) -> Dict[str, int]:
         user_id__in=student_ids,
         status='GRADED',
         quiz__quiz_type='EXAM',
-        task_assignment__task__is_deleted=False,
         obtained_score__isnull=False
     ).values_list(
         'obtained_score',
@@ -465,7 +445,6 @@ def get_task_participants_progress(
     """
     assignments = TaskAssignment.objects.filter(
         task_id=task_id,
-        task__is_deleted=False
     ).select_related(
         'assignee', 'task'
     ).prefetch_related(

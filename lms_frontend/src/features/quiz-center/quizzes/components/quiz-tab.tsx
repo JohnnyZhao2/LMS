@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
+import { Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
@@ -18,7 +18,6 @@ import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
-  LIST_ACTION_ICON_VIEW_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
 import { CellMutedTimestamp, CellReferenceTag, CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -60,7 +59,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       id: 'title',
       header: '试卷名称',
       meta: {
-        width: '30%',
+        width: '26%',
+        minWidth: '260px',
       },
       cell: ({ row }) => (
         <CellWithIcon
@@ -75,6 +75,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     {
       id: 'quiz_type',
       header: '类型',
+      meta: {
+        width: '88px',
+      },
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         return (
@@ -93,7 +96,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       id: 'metrics',
       header: '核心指标',
       meta: {
-        width: '27%',
+        width: '24%',
+        minWidth: '220px',
         maxWidth: '320px',
       },
       cell: ({ row }) => {
@@ -128,7 +132,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       id: 'usage',
       header: '引用次数',
       meta: {
-        minWidth: '96px',
+        width: '96px',
       },
       cell: ({ row }) => (
         <CellReferenceTag count={row.original.usage_count} />
@@ -138,7 +142,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       id: 'timestamp',
       header: '更新时间',
       meta: {
-        minWidth: '168px',
+        width: '168px',
       },
       cell: ({ row }) => (
         <CellMutedTimestamp
@@ -151,23 +155,12 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       id: 'actions',
       header: '操作',
       meta: {
-        minWidth: '120px',
+        width: '88px',
       },
       cell: ({ row }) => {
         const record = row.original;
         return (
           <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Tooltip title="预览试卷">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={LIST_ACTION_ICON_VIEW_CLASS}
-                onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/preview`)}
-              >
-                <Eye className="w-4 h-4" />
-              </Button>
-            </Tooltip>
-
             <Tooltip title="编辑试卷">
               <Button
                 variant="ghost"

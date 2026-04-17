@@ -25,7 +25,6 @@ import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
   LIST_ACTION_ICON_SUCCESS_CLASS,
-  LIST_ACTION_ICON_VIEW_CLASS,
   LIST_ACTION_ICON_WARNING_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
 import { CellWithAvatar, CellTags, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
@@ -40,21 +39,18 @@ import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
-import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { hasCapability } = useAuth()
-  const { roleNavigate } = useRoleNavigate()
   const canCreateUser = hasCapability('user.create')
   const canUpdateUser = hasCapability('user.update')
   const canManageUserAccount = hasCapability('user.activate')
-  const canManageUserAuthorization = hasCapability('user.authorize')
   const canDeleteUser = hasCapability('user.delete')
   const canResetPassword = canManageUserAccount
-  const canOpenUserEditor = canUpdateUser || canManageUserAuthorization
+  const canOpenUserEditor = canUpdateUser || hasCapability('user.authorize')
   const canAdminEditAvatar = hasCapability('user.avatar.update')
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
@@ -200,7 +196,7 @@ export const UserList: React.FC = () => {
     {
       header: "用户信息",
       id: "user",
-      meta: { width: '24%' },
+      meta: { width: '28%', minWidth: '240px' },
       cell: ({ row }) => (
         <CellWithAvatar
           name={row.original.username}
@@ -224,7 +220,7 @@ export const UserList: React.FC = () => {
     {
       header: "权限角色",
       id: "roles",
-      meta: { width: '18%' },
+      meta: { width: '22%', minWidth: '180px' },
       cell: ({ row }) => (
         <CellTags
           tags={row.original.roles.map((role: Role) => ({
@@ -238,6 +234,7 @@ export const UserList: React.FC = () => {
     {
       header: "所属部门",
       id: "department",
+      meta: { minWidth: '140px' },
       cell: ({ row }) => (
         <span className="text-[13px] font-medium text-text-muted">
           {row.original.department?.name || "未分配"}
@@ -247,7 +244,7 @@ export const UserList: React.FC = () => {
     {
       header: "指导老师",
       id: "mentor",
-      meta: { width: '12%' },
+      meta: { width: '120px' },
       cell: ({ row }) => {
         const mentor = row.original.mentor
         if (!mentor) return <span className="text-[13px] font-medium text-text-muted">未分配</span>
@@ -257,6 +254,7 @@ export const UserList: React.FC = () => {
     {
       header: "状态",
       id: "status",
+      meta: { width: '88px' },
       cell: ({ row }) => (
         <CellStatus isActive={row.original.is_active} />
       ),
@@ -264,6 +262,7 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
+      meta: { minWidth: '184px' },
       cell: ({ row }) => (
         <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Tooltip title="编辑资料">
@@ -281,18 +280,6 @@ export const UserList: React.FC = () => {
               <Pencil className="h-4 w-4" />
             </Button>
           </Tooltip>
-          {canManageUserAuthorization && !row.original.is_superuser && (
-            <Tooltip title="权限配置">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={LIST_ACTION_ICON_VIEW_CLASS}
-                onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}
-              >
-                <ShieldCheck className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-          )}
           {canResetPassword && (
             <Tooltip title="重置密码">
               <Button

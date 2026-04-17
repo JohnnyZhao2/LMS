@@ -145,7 +145,8 @@ def purge_user_related_business_data(
     from apps.quizzes.models import Quiz, QuizRevision
     from apps.spot_checks.models import SpotCheck
     from apps.submissions.models import Submission
-    from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+    from apps.tasks.models import TaskAssignment, TaskKnowledge, TaskQuiz
+    from apps.tasks.task_service import TaskService
 
     created_quiz_ids = created_resource_ids['quiz_ids']
     created_question_ids = created_resource_ids['question_ids']
@@ -166,7 +167,7 @@ def purge_user_related_business_data(
 
     # 3) 删除该用户创建的任务与当前资源
     if created_task_ids:
-        Task.objects.filter(id__in=created_task_ids).delete()
+        TaskService.hard_delete_tasks(created_task_ids)
     if created_quiz_ids:
         Quiz.objects.filter(id__in=created_quiz_ids).delete()
     if created_knowledge_ids:

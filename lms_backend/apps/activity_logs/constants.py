@@ -180,13 +180,6 @@ LOG_ACTIONS = [
         'default_enabled': True,
     },
     {
-        'key': 'operation.submission.submit',
-        'category': 'operation',
-        'group': '答题/考试',
-        'label': '提交答卷',
-        'default_enabled': True,
-    },
-    {
         'key': 'operation.submission.submit_quiz',
         'category': 'operation',
         'group': '答题/考试',

@@ -3,12 +3,12 @@
 from django.db import models
 from django.utils import timezone
 
-from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+from core.mixins import CreatorMixin, TimestampMixin
 
 from .progress import build_assignment_progress, is_assignment_completed
 
 
-class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+class Task(TimestampMixin, CreatorMixin, models.Model):
     """任务主模型。"""
 
     title = models.CharField(max_length=200, verbose_name='任务标题')

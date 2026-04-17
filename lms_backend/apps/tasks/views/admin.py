@@ -279,7 +279,7 @@ class TaskDetailView(BaseAPIView):
 
     @extend_schema(
         summary='删除任务',
-        description='删除任务（软删除）。',
+        description='删除任务（硬删除）。',
         responses={
             200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),

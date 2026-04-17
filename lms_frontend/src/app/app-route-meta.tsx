@@ -8,7 +8,6 @@ import {
   HelpCircle,
   LayoutGrid,
   Settings,
-  ShieldCheck,
   SquareCheck,
   SquareTerminal,
   Tags,
@@ -50,7 +49,6 @@ const SpotCheckList = lazy(() => import('@/features/spot-checks/components/spot-
 const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-check-form').then(m => ({ default: m.SpotCheckForm })));
 
 const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
-const UserAuthorizationPage = lazy(() => import('@/features/users/pages/user-authorization-page').then(m => ({ default: m.UserAuthorizationPage })));
 
 const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 const ActivityLogsPanel = lazy(() => import('@/features/activity-logs/components/activity-logs-panel').then(m => ({ default: m.ActivityLogsPanel })));
@@ -322,25 +320,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     component: UserList,
   },
   {
-    key: 'user-authorization',
-    kind: 'business',
-    path: 'users/authorization',
-    requiredPermissions: ['user.authorize'],
-    showInMenu: true,
-    menu: {
-      section: 'main',
-      label: '用户授权',
-      group: {
-        key: 'users',
-        label: '用户管理',
-        icon: Users,
-        order: 70,
-      },
-      order: 20,
-    },
-    component: UserAuthorizationPage,
-  },
-  {
     key: 'audit-log-policy',
     kind: 'business',
     path: 'audit-logs/policy',
@@ -386,10 +365,15 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     permissionMode: 'any',
     showInMenu: true,
     menu: {
-      section: 'settings',
-      label: '角色模板',
-      icon: ShieldCheck,
-      order: 10,
+      section: 'main',
+      label: '用户授权',
+      group: {
+        key: 'users',
+        label: '用户管理',
+        icon: Users,
+        order: 70,
+      },
+      order: 20,
     },
     component: AuthorizationCenterPage,
   },

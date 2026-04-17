@@ -42,6 +42,7 @@ type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'OVERDUE' | 'ENDED'
 type ResponsiveColumnMeta = {
     width?: string
     minWidth?: string
+    maxWidth?: string
 }
 
 const TASK_STATUS_META: Record<TaskDisplayStatus, {
@@ -234,13 +235,13 @@ export const TaskManagement: React.FC = () => {
     })
     const deleteTask = useDeleteTask()
     const columnMeta = React.useMemo<Record<string, ResponsiveColumnMeta>>(() => ({
-        title: { minWidth: '300px' },
-        resources: { width: '140px' },
-        status: { width: '64px' },
-        deadline: { width: '124px' },
-        progress: { width: '120px' },
-        risk: { width: '72px' },
-        actions: { width: '120px' },
+        title: { width: '21%', minWidth: '300px' },
+        resources: { minWidth: '148px' },
+        status: { width: '88px' },
+        deadline: { width: '168px' },
+        progress: { width: '132px' },
+        risk: { minWidth: '152px' },
+        actions: { minWidth: '136px' },
     }), [])
 
     React.useEffect(() => {

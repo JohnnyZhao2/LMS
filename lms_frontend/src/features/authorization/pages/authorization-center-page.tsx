@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { showApiError } from '@/utils/error-handler';
-import type { RolePermissionTemplate } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
 import {
@@ -15,24 +15,22 @@ import { RolePermissionTemplatePanel } from '../components/role-permission-templ
 const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');
 
 export const AuthorizationCenterPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const { hasCapability, refreshUser } = useAuth();
   const canViewRoleTemplate = hasCapability('authorization.role_template.view') || hasCapability('authorization.role_template.update');
   const canUpdateRoleTemplate = hasCapability('authorization.role_template.update');
+  const initialRoleCode = searchParams.get('role_code');
+  const initialUserIdParam = searchParams.get('user_id');
+  const initialSelectedRole = ROLE_TEMPLATE_ORDER.includes(initialRoleCode as (typeof ROLE_TEMPLATE_ORDER)[number])
+    ? (initialRoleCode as (typeof ROLE_TEMPLATE_ORDER)[number])
+    : null;
+  const initialSelectedUserId = initialUserIdParam ? Number(initialUserIdParam) : null;
 
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({ view: 'role_template' }, shouldLoadData);
   const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
-  const roleTemplatesByRole = useMemo(
-    () => Object.fromEntries(
-      ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
-        roleCode,
-        roleTemplateQueries[index]?.data,
-      ]),
-    ) as Partial<Record<RoleCode, RolePermissionTemplate | undefined>>,
-    [roleTemplateQueries],
-  );
   const permissionCodesByRole = useMemo(
     () => Object.fromEntries(
       ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
@@ -95,11 +93,12 @@ export const AuthorizationCenterPage: React.FC = () => {
           canUpdateRoleTemplate={canUpdateRoleTemplate}
           roleCodes={ROLE_TEMPLATE_ORDER}
           permissionCatalog={permissionCatalog}
-          roleTemplatesByRole={roleTemplatesByRole}
           permissionCodesByRole={permissionCodesByRole}
           onChangeCodes={handleChangeRoleTemplate}
           isLoadingTemplate={isLoadingTemplates}
           savingRoleCodes={savingRoleCodes}
+          initialRoleCode={initialSelectedRole}
+          initialSelectedUserId={initialSelectedUserId}
         />
       </PageWorkbench>
     </PageFillShell>

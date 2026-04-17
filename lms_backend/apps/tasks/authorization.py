@@ -14,7 +14,7 @@ from apps.users.models import User
 
 
 TASK_OWNER_ROLES = {'MENTOR', 'DEPT_MANAGER'}
-TASK_SCOPE_SUMMARY = '默认按学员范围生效，可通过用户授权按学员范围增删。'
+TASK_SCOPE_SUMMARY = '学员范围'
 
 
 def _authorize_task_resource(engine, permission_code, *, resource=None, context=None, error_message=None):
@@ -202,12 +202,12 @@ AUTHORIZATION_SPECS = (
                 ),
                 authorize=_authorize_task_resource,
                 constraint_summaries={
-                    'task.view': '非管理员仅可查看自己创建或已分配给自己的任务。',
-                    'task.update': '非管理员仅可编辑自己创建的任务。',
-                    'task.delete': '非管理员仅可删除自己创建的任务。',
+                    'task.view': '自己创建或已分配',
+                    'task.update': '仅自己创建',
+                    'task.delete': '仅自己创建',
                     'task.analytics.view': TASK_SCOPE_SUMMARY,
-                    'grading.view': '具备阅卷权限且可见该任务时才可进入阅卷。',
-                    'grading.score': '具备评分权限且可见该任务时才可提交评分。',
+                    'grading.view': '任务可见后可阅卷',
+                    'grading.score': '任务可见后可评分',
                 },
             ),
         ),
@@ -217,7 +217,7 @@ AUTHORIZATION_SPECS = (
                 permission_code='task.view',
                 resource_model=Task,
                 filter_queryset=_filter_task_queryset,
-                constraint_summary='非管理员仅可看到自己创建或已分配给自己的任务。',
+                constraint_summary='自己创建或已分配',
             ),
             ScopeFilterHandler(
                 key='tasks.scope_filter.assignable_students',

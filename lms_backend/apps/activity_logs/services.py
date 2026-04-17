@@ -95,8 +95,11 @@ class ActivityLogService:
 
     @classmethod
     def sync_policies(cls) -> None:
+        valid_keys = set(LOG_ACTION_INDEX)
+        ActivityLogPolicy.objects.exclude(key__in=valid_keys).delete()
+
         existing_keys = set(
-            ActivityLogPolicy.objects.filter(key__in=LOG_ACTION_INDEX).values_list('key', flat=True)
+            ActivityLogPolicy.objects.filter(key__in=valid_keys).values_list('key', flat=True)
         )
         missing_policies = [
             ActivityLogPolicy(key=action_key, **cls._get_policy_defaults(action_key))

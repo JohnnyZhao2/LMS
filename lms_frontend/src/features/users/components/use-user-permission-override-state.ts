@@ -23,11 +23,13 @@ interface UseUserPermissionOverrideStateParams {
   canManageOverride: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   permissionCatalog: PermissionCatalogItem[];
-  selectedPermissionScopes: PermissionOverrideScope[];
-  selectedScopeUserIds: number[];
   roleTemplatePermissionCodes: Set<string>;
   userOverrides: PermissionOverrideEntry[];
   isScopeAwarePermission: (permissionCode: string) => boolean;
+  getScopeSelectionForPermission: (permissionCode: string) => {
+    selectedPermissionScopes: PermissionOverrideScope[];
+    selectedScopeUserIds: number[];
+  };
   createOverride: (params: {
     userId: number;
     data: CreateUserPermissionOverrideRequest;
@@ -51,11 +53,10 @@ export const useUserPermissionOverrideState = ({
   canManageOverride,
   normalizedSelectedPermissionRole,
   permissionCatalog,
-  selectedPermissionScopes,
-  selectedScopeUserIds,
   roleTemplatePermissionCodes,
   userOverrides,
   isScopeAwarePermission,
+  getScopeSelectionForPermission,
   createOverride,
   revokeOverride,
   refreshUser,
@@ -74,6 +75,10 @@ export const useUserPermissionOverrideState = ({
 
   const getPermissionState = useCallback((permissionCode: string): PermissionState => {
     const fromTemplate = roleTemplatePermissionCodes.has(permissionCode);
+    const {
+      selectedPermissionScopes,
+      selectedScopeUserIds,
+    } = getScopeSelectionForPermission(permissionCode);
 
     return resolvePermissionState({
       allowOverrides: activeScopeAllowOverrides.get(permissionCode) ?? [],
@@ -88,10 +93,9 @@ export const useUserPermissionOverrideState = ({
     activeScopeAllowOverrides,
     activeScopeDenyOverrides,
     canManageOverride,
+    getScopeSelectionForPermission,
     isScopeAwarePermission,
     roleTemplatePermissionCodes,
-    selectedPermissionScopes,
-    selectedScopeUserIds,
   ]);
 
   const handlePermissionToggle = useCallback(async (permissionCode: string, nextChecked: boolean) => {

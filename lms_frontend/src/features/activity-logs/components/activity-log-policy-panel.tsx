@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { ShieldCheck, Zap } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Activity, BookOpenText, ShieldCheck, UserRound, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { showApiError } from '@/utils/error-handler';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy, ActivityLogType } from '../types';
 import { ActivityLogPolicyCategorySection } from './activity-log-policy-category-section';
-import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
 
 const CATEGORY_LABELS: Record<ActivityLogType, string> = {
   user: '用户日志',
@@ -14,19 +13,19 @@ const CATEGORY_LABELS: Record<ActivityLogType, string> = {
   operation: '操作日志',
 };
 
+const CATEGORY_ICONS: Record<ActivityLogType, React.ComponentType<{ className?: string }>> = {
+  user: UserRound,
+  content: BookOpenText,
+  operation: Activity,
+};
+
 export const ActivityLogPolicyPanel: React.FC = () => {
   const { hasCapability } = useAuth();
   const canUpdatePolicies = hasCapability('activity_log.policy.update');
   const { data: policies = [], isLoading } = useActivityLogPolicies(canUpdatePolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
-  const [activeCategory, setActiveCategory] = useState<ActivityLogType | ''>('');
 
-  const {
-    categoryModules,
-    categoryCounts,
-    resolvedActiveCategory,
-    activeCategorySummary,
-  } = useMemo(() => {
+  const categorySummaries = useMemo(() => {
     const grouped: Partial<Record<ActivityLogType, Record<string, ActivityLogPolicy[]>>> = {};
     for (const policy of policies) {
       const categoryGroups = grouped[policy.category] ?? (grouped[policy.category] = {});
@@ -34,37 +33,17 @@ export const ActivityLogPolicyPanel: React.FC = () => {
       groupPolicies.push(policy);
     }
 
-    const categorySummaries = (['user', 'content', 'operation'] as const).flatMap((category) => {
+    return (['user', 'content', 'operation'] as const).flatMap((category) => {
       const categoryGroups = grouped[category];
       if (!categoryGroups) return [];
 
       const groups = Object.entries(categoryGroups) as [string, ActivityLogPolicy[]][];
-      const items = groups.flatMap(([, records]) => records);
-
       return [{
         category,
         groups,
-        total: items.length,
-        enabled: items.reduce((count, policy) => count + (policy.enabled ? 1 : 0), 0),
       }];
     });
-
-    const categoryModules = categorySummaries.map(({ category }) => category);
-    const categoryCounts = Object.fromEntries(
-      categorySummaries.map(({ category, total, enabled }) => [category, { total, enabled }])
-    ) as Record<string, { total: number; enabled: number }>;
-    const resolvedActiveCategory = activeCategory && categoryModules.includes(activeCategory)
-      ? activeCategory
-      : categoryModules[0] ?? null;
-
-    return {
-      categoryModules,
-      categoryCounts,
-      resolvedActiveCategory,
-      activeCategorySummary:
-        categorySummaries.find(({ category }) => category === resolvedActiveCategory) ?? null,
-    };
-  }, [activeCategory, policies]);
+  }, [policies]);
 
   const handleTogglePolicy = async (policy: ActivityLogPolicy) => {
     try {
@@ -92,34 +71,31 @@ export const ActivityLogPolicyPanel: React.FC = () => {
           正在同步审计策略架构...
         </div>
       ) : (
-        activeCategorySummary ? (
-          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-            <section className="rounded-2xl border border-border/70 bg-white p-3">
-              <UserPermissionModuleSidebar
-                permissionModules={categoryModules}
-                activePermissionModule={resolvedActiveCategory ?? ''}
-                moduleCounts={categoryCounts}
-                onSelectModule={(moduleName) => setActiveCategory(moduleName as ActivityLogType)}
-                getModuleLabel={(moduleName) => CATEGORY_LABELS[moduleName as ActivityLogType] ?? moduleName}
-              />
-            </section>
+        categorySummaries.length > 0 ? (
+          <section className="space-y-5">
+            {categorySummaries.map((summary) => {
+              const Icon = CATEGORY_ICONS[summary.category];
 
-            <section className="rounded-2xl border border-border/70 bg-white">
-              <div className="px-5 py-4">
-                <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
-                  {CATEGORY_LABELS[activeCategorySummary.category]}
-                </h3>
-              </div>
+              return (
+                <div key={summary.category} className="rounded-[20px] border border-border/70 bg-white px-4 py-5">
+                  <div className="mb-4 flex items-center gap-3 px-1">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                      <Icon className="h-4.5 w-4.5" />
+                    </span>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {CATEGORY_LABELS[summary.category]}
+                    </h3>
+                  </div>
 
-              <div className="px-5 pb-5">
-                <ActivityLogPolicyCategorySection
-                  groups={activeCategorySummary.groups}
-                  isUpdating={isUpdating}
-                  onTogglePolicy={handleTogglePolicy}
-                />
-              </div>
-            </section>
-          </div>
+                  <ActivityLogPolicyCategorySection
+                    groups={summary.groups}
+                    isUpdating={isUpdating}
+                    onTogglePolicy={handleTogglePolicy}
+                  />
+                </div>
+              );
+            })}
+          </section>
         ) : (
           <div className="rounded-[22px] border border-dashed border-border/60 bg-muted/50 px-6 py-14 text-center">
             <ShieldCheck size={32} className="mx-auto mb-4 text-text-muted/40" />

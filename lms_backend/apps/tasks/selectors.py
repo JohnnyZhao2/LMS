@@ -32,23 +32,17 @@ SCORE_DISTRIBUTION_RANGES = [
 
 
 def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Task.objects.select_related('created_by', 'updated_by').prefetch_related(
+    return Task.objects.select_related('created_by', 'updated_by').prefetch_related(
         'task_knowledge__knowledge',
         'task_knowledge__source_knowledge',
         'task_quizzes__quiz',
         'task_quizzes__source_quiz',
         'assignments__assignee',
     )
-    if not include_deleted:
-        qs = qs.filter(is_deleted=False)
-    return qs
 
 
 def task_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Task.objects.select_related('created_by', 'updated_by')
-    if not include_deleted:
-        qs = qs.filter(is_deleted=False)
-    return qs
+    return Task.objects.select_related('created_by', 'updated_by')
 
 
 def task_list_queryset(include_deleted: bool = False) -> QuerySet:
@@ -65,7 +59,7 @@ def task_list_queryset(include_deleted: bool = False) -> QuerySet:
         ),
         to_attr='completed_assignments_for_abnormal',
     )
-    qs = Task.objects.select_related('created_by', 'updated_by').annotate(
+    return Task.objects.select_related('created_by', 'updated_by').annotate(
         knowledge_count_value=Count('task_knowledge', distinct=True),
         quiz_count_value=Count('task_quizzes', distinct=True),
         exam_count_value=Count(
@@ -90,9 +84,6 @@ def task_list_queryset(include_deleted: bool = False) -> QuerySet:
             distinct=True,
         ),
     ).prefetch_related(completed_assignments_prefetch)
-    if not include_deleted:
-        qs = qs.filter(is_deleted=False)
-    return qs
 
 
 def assignment_detail_queryset() -> QuerySet:

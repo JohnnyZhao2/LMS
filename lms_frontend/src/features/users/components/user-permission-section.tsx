@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -19,10 +18,11 @@ import type { RoleCode } from '@/types/common';
 import type { Department, UserList as UserDetail } from '@/types/common';
 import { KeyRound } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PermissionModuleSections } from '@/features/authorization/components/permission-module-sections';
+import { PermissionToggleCard } from '@/features/authorization/components/permission-toggle-card';
+import { getModulePresentation } from '@/features/authorization/constants/permission-presentation';
 
 import { useUsers } from '../api/get-users';
-import { UserPermissionCard } from './user-permission-card';
-import { UserPermissionModuleSidebar } from './user-permission-module-sidebar';
 import { UserPermissionScopePopover } from './user-permission-scope-popover';
 import {
   DEFAULT_ROLE_SCOPE_TYPES,
@@ -37,6 +37,13 @@ import type { PermissionOverrideEntry, ScopeGroupOverrideEntry } from './user-pe
 import { useUserPermissionOverrideState } from './use-user-permission-override-state';
 import { useUserPermissionScopeState } from './use-user-permission-scope-state';
 import { useUserScopeGroupOverrideState } from './use-user-scope-group-override-state';
+import {
+  formatScopeSummaryForDisplay as formatPersistedScopeSummary,
+  getPresetMatchedScopeUserIds,
+  getSelectableScopeUsers,
+  resolveRoleScopeSelection,
+  STUDENT_ONLY_SCOPE_PERMISSION_CODES,
+} from './user-permission-scope.utils';
 
 interface UserPermissionSectionProps {
   userId?: number;
@@ -88,7 +95,7 @@ export function UserPermissionSection({
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const createUserScopeGroupOverride = useCreateUserScopeGroupOverride();
   const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
-  const [selectedPermissionModule, setSelectedPermissionModule] = useState('');
+  const [openScopeGroupKey, setOpenScopeGroupKey] = useState<string | null>(null);
 
   const { data: scopeUsers = [], isLoading: isScopeUsersLoading } = useUsers(
     {},
@@ -151,10 +158,6 @@ export function UserPermissionSection({
     ))?.name ?? userDetail?.department?.name
   ), [departments, departmentId, userDetail?.department?.id, userDetail?.department?.name]);
 
-  const permissionModules = useMemo(
-    () => Array.from(new Set(permissionCatalog.map((item) => item.module).filter(Boolean))),
-    [permissionCatalog],
-  );
   const scopeGroupPermissionCodeMap = useMemo(() => {
     const groupMap = new Map<string, string[]>();
     permissionCatalog.forEach((permission) => {
@@ -193,68 +196,108 @@ export function UserPermissionSection({
     }
     return new Set(roleTemplatePermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []);
   }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
-  const activePermissionModule = useMemo(() => {
-    if (selectedPermissionModule && permissionModules.includes(selectedPermissionModule)) {
-      return selectedPermissionModule;
-    }
-    return permissionModules[0] ?? '';
-  }, [permissionModules, selectedPermissionModule]);
-  const activeModulePermissions = useMemo(
-    () => permissionCatalog.filter((permission) => permission.module === activePermissionModule),
-    [permissionCatalog, activePermissionModule],
-  );
-  const activeModuleScopeGroupKeys = useMemo(
-    () => Array.from(new Set(
-      activeModulePermissions
-        .map((permission) => permission.scope_group_key)
-        .filter((scopeGroupKey): scopeGroupKey is string => Boolean(scopeGroupKey)),
-    )),
-    [activeModulePermissions],
-  );
-  const activeScopeGroupKey = useMemo(
-    () => activeModuleScopeGroupKeys[0] ?? null,
-    [activeModuleScopeGroupKeys],
-  );
-  const activeScopeGroupPermissionCodes = useMemo(
-    () => (activeScopeGroupKey ? (scopeGroupPermissionCodeMap.get(activeScopeGroupKey) ?? []) : []),
-    [activeScopeGroupKey, scopeGroupPermissionCodeMap],
-  );
-  const activeModuleScopeAwarePermissionCodes = useMemo(
-    () => activeModulePermissions
-      .filter((permission) => permission.scope_aware)
-      .map((permission) => permission.code),
-    [activeModulePermissions],
-  );
-  const selectedRoleDefaultScopeTypes = useMemo(
-    () => normalizeScopeTypes(
-      (
-        activeScopeGroupKey
-          ? roleTemplateScopeGroupMap.get(normalizedSelectedPermissionRole)?.get(activeScopeGroupKey)
-          : roleTemplateDefaultScopeMap.get(normalizedSelectedPermissionRole)
-      )
-        ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
-        ?? [],
-    ),
-    [
-      activeScopeGroupKey,
-      normalizedSelectedPermissionRole,
-      roleTemplateDefaultScopeMap,
-      roleTemplateScopeGroupMap,
-    ],
-  );
-  const scopePoolPermissionCode = useMemo(
-    () => (
-      activeScopeGroupPermissionCodes.find((permissionCode) => activeModuleScopeAwarePermissionCodes.includes(permissionCode))
-      ?? activeModulePermissions.find((permission) => permission.scope_aware)?.code
-      ?? null
-    ),
-    [activeModulePermissions, activeModuleScopeAwarePermissionCodes, activeScopeGroupPermissionCodes],
+  const ownerUserId = userId ?? userDetail?.id ?? null;
+  const ownerDepartmentId = departmentId ?? userDetail?.department?.id ?? null;
+  const moduleSectionsBase = useMemo(() => {
+    const groupedPermissions = new Map<string, typeof permissionCatalog>();
+    permissionCatalog.forEach((permission) => {
+      const currentPermissions = groupedPermissions.get(permission.module) ?? [];
+      groupedPermissions.set(permission.module, [...currentPermissions, permission]);
+    });
+
+    return Array.from(groupedPermissions.entries())
+      .map(([module, permissions]) => {
+        const scopeGroupKey = permissions
+          .map((permission) => permission.scope_group_key)
+          .find((groupKey): groupKey is string => Boolean(groupKey))
+          ?? null;
+        const scopeAwarePermissionCodes = permissions
+          .filter((permission) => permission.scope_aware)
+          .map((permission) => permission.code);
+        const scopePoolPermissionCode = (
+          scopeGroupKey
+            ? (scopeGroupPermissionCodeMap.get(scopeGroupKey) ?? []).find((permissionCode) => (
+              scopeAwarePermissionCodes.includes(permissionCode)
+            ))
+            : null
+        ) ?? permissions.find((permission) => permission.scope_aware)?.code ?? null;
+        const selectedRoleDefaultScopeTypes = normalizeScopeTypes(
+          (
+            scopeGroupKey
+              ? roleTemplateScopeGroupMap.get(normalizedSelectedPermissionRole)?.get(scopeGroupKey)
+              : roleTemplateDefaultScopeMap.get(normalizedSelectedPermissionRole)
+          )
+            ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
+            ?? [],
+        );
+        const shouldRestrictToStudents = Boolean(
+          scopePoolPermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePoolPermissionCode),
+        );
+        const selectableScopeUsers = getSelectableScopeUsers(scopeUsers, shouldRestrictToStudents);
+        const selectableScopeUserIdSet = new Set(selectableScopeUsers.map((scopeUser) => scopeUser.id));
+        const getPresetMatchedScopeUserIdsForSelection = (scopeTypes: PermissionOverrideScope[]) => getPresetMatchedScopeUserIds({
+          departmentId: ownerDepartmentId,
+          scopeTypes,
+          selectableScopeUsers,
+          userId: ownerUserId,
+        });
+        const scopeSelection = resolveRoleScopeSelection({
+          cachedSelection: undefined,
+          getPresetMatchedScopeUserIdsForSelection,
+          scopeGroupKey,
+          roleCode: normalizedSelectedPermissionRole,
+          selectableScopeUserIdSet,
+          selectedRoleDefaultScopeTypes,
+          scopeGroupOverrides: userScopeGroupOverrides,
+        });
+
+        return {
+          module,
+          permissions,
+          scopeGroupKey,
+          scopePoolPermissionCode,
+          selectedRoleDefaultScopeTypes,
+          scopeSelection,
+          scopeSummary: scopeGroupKey ? formatPersistedScopeSummary({
+            departments,
+            getPresetMatchedScopeUserIdsForSelection,
+            scopeTypes: scopeSelection.scopeTypes,
+            scopeUserIds: scopeSelection.scopeUserIds,
+            selectableScopeUsers,
+            selectedDepartmentName,
+          }) : null,
+        };
+      })
+      .sort((left, right) => {
+        const leftPresentation = getModulePresentation(left.module);
+        const rightPresentation = getModulePresentation(right.module);
+        if (leftPresentation.order !== rightPresentation.order) {
+          return leftPresentation.order - rightPresentation.order;
+        }
+        return leftPresentation.label.localeCompare(rightPresentation.label, 'zh-Hans-CN');
+      });
+  }, [
+    departments,
+    normalizedSelectedPermissionRole,
+    ownerDepartmentId,
+    ownerUserId,
+    permissionCatalog,
+    roleTemplateDefaultScopeMap,
+    roleTemplateScopeGroupMap,
+    scopeGroupPermissionCodeMap,
+    scopeUsers,
+    selectedDepartmentName,
+    userScopeGroupOverrides,
+  ]);
+  const activeScopeSection = useMemo(
+    () => moduleSectionsBase.find((section) => section.scopeGroupKey === openScopeGroupKey) ?? null,
+    [moduleSectionsBase, openScopeGroupKey],
   );
   const { persistSelection } = useUserScopeGroupOverrideState({
     userId,
-    scopeGroupKey: activeScopeGroupKey,
+    scopeGroupKey: activeScopeSection?.scopeGroupKey,
     normalizedSelectedPermissionRole,
-    selectedRoleDefaultScopeTypes,
+    selectedRoleDefaultScopeTypes: activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
     scopeGroupOverrides: userScopeGroupOverrides,
     createOverride: createUserScopeGroupOverride.mutateAsync,
     revokeOverride: revokeUserScopeGroupOverride.mutateAsync,
@@ -290,9 +333,9 @@ export function UserPermissionSection({
     selectedDepartmentName,
     hasConfigurablePermissionRoles,
     normalizedSelectedPermissionRole,
-    selectedRoleDefaultScopeTypes,
-    scopeGroupKey: activeScopeGroupKey ?? undefined,
-    scopePermissionCode: scopePoolPermissionCode,
+    selectedRoleDefaultScopeTypes: activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
+    scopeGroupKey: activeScopeSection?.scopeGroupKey ?? undefined,
+    scopePermissionCode: activeScopeSection?.scopePoolPermissionCode ?? null,
     scopeUsers,
     scopeGroupOverrides: userScopeGroupOverrides,
     onSelectionChange: persistSelection,
@@ -303,34 +346,30 @@ export function UserPermissionSection({
     canManageOverride: canManageUserAuthorization,
     normalizedSelectedPermissionRole,
     permissionCatalog,
-    selectedPermissionScopes,
-    selectedScopeUserIds,
     roleTemplatePermissionCodes,
     userOverrides: userPermissionOverrides,
     isScopeAwarePermission: (permissionCode) => scopeAwarePermissionCodeSet.has(permissionCode),
+    getScopeSelectionForPermission: (permissionCode) => {
+      const scopeSelection = moduleSectionsBase.find((section) => (
+        section.permissions.some((permission) => permission.code === permissionCode)
+      ))?.scopeSelection;
+
+      return {
+        selectedPermissionScopes: scopeSelection?.scopeTypes ?? [],
+        selectedScopeUserIds: scopeSelection?.scopeUserIds ?? [],
+      };
+    },
     createOverride: createUserOverride.mutateAsync,
     revokeOverride: revokeUserOverride.mutateAsync,
     refreshUser,
     refetchUserOverrides,
   });
-
-  useEffect(() => {
-    setShowScopeAdjustPanel(false);
-  }, [activePermissionModule, activeScopeGroupKey, setShowScopeAdjustPanel, userId]);
-
-  const modulePermissionCounts: Record<string, { enabled: number; total: number }> = {};
-  permissionModules.forEach((moduleName) => {
-    modulePermissionCounts[moduleName] = { enabled: 0, total: 0 };
-  });
-  permissionCatalog.forEach((permission) => {
-    if (!permission.module || !modulePermissionCounts[permission.module]) {
-      return;
-    }
-    modulePermissionCounts[permission.module].total += 1;
-    if (getPermissionState(permission.code).checked) {
-      modulePermissionCounts[permission.module].enabled += 1;
-    }
-  });
+  const permissionSections = useMemo(
+    () => moduleSectionsBase.map((section) => ({
+      ...section,
+    })),
+    [getPermissionState, moduleSectionsBase],
+  );
   if (!canManageUserAuthorization) {
     return null;
   }
@@ -350,35 +389,41 @@ export function UserPermissionSection({
 
   return (
     <div>
-      <div className="mt-6 grid grid-cols-1 gap-8 items-start relative xl:grid-cols-[200px_1fr]">
-        <UserPermissionModuleSidebar
-          permissionModules={permissionModules}
-          activePermissionModule={activePermissionModule}
-          moduleCounts={modulePermissionCounts}
-          onSelectModule={setSelectedPermissionModule}
-        />
+      <div className="mt-6 space-y-6">
+        {!canViewRoleTemplate && (
+          <div className="px-1">
+            <p className="text-[11px] text-slate-400">
+              当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
+            </p>
+          </div>
+        )}
 
-        <div className="relative space-y-4">
-          {!canViewRoleTemplate && (
-            <div className="px-2">
-              <p className="text-[11px] text-slate-400">
-                当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
-              </p>
-            </div>
-          )}
-
-          <div>
-            {activeScopeGroupKey ? (
-              <div className="mb-3 flex justify-end">
-                <div className="w-full max-w-[220px]">
+        <div className="relative">
+          <PermissionModuleSections
+            sections={permissionSections.map((section) => ({
+              module: section.module,
+              permissions: section.permissions,
+              sectionAction: section.scopeGroupKey ? (
+                <div className="w-full lg:w-[220px]">
                   <UserPermissionScopePopover
-                    open={showScopeAdjustPanel}
-                    onOpenChange={setShowScopeAdjustPanel}
-                    summary={formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)}
+                    open={showScopeAdjustPanel && openScopeGroupKey === section.scopeGroupKey}
+                    onOpenChange={(open) => {
+                      setOpenScopeGroupKey(open ? section.scopeGroupKey : null);
+                      setShowScopeAdjustPanel(open);
+                    }}
+                    summary={
+                      openScopeGroupKey === section.scopeGroupKey
+                        ? formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)
+                        : (section.scopeSummary ?? '设置范围')
+                    }
                     scopeFilterOptions={scopeFilterOptions}
                     scopeUserFilter={scopeUserFilter}
                     onScopeFilterChange={handleScopeFilterChange}
-                    showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
+                    showReset={openScopeGroupKey === section.scopeGroupKey
+                      && !sameScopeTypes(
+                        selectedPermissionScopes,
+                        activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
+                      )}
                     onReset={() => {
                       applyDefaultScopePreset();
                       setScopeUserFilter('all');
@@ -398,29 +443,30 @@ export function UserPermissionSection({
                     dialogContentElement={dialogContentElement}
                   />
                 </div>
-              </div>
-            ) : null}
-            {activeModulePermissions.length === 0 ? (
-              <div className="py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
-                {activeModulePermissions.map((permission) => {
-                  const permissionState = getPermissionState(permission.code);
-                  return (
-                    <UserPermissionCard
-                      key={permission.code}
-                      permission={permission}
-                      permissionState={permissionState}
-                      isSaving={isPermissionSaving(permission.code)}
-                      onToggle={(nextChecked) => void handlePermissionToggle(permission.code, nextChecked)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+              ) : null,
+            }))}
+            renderPermissionCard={(permission) => {
+              const permissionState = getPermissionState(permission.code);
+              const disabled = Boolean(
+                isPermissionSaving(permission.code)
+                || (permissionState.checked
+                  ? permissionState.disableBlockedReason
+                  : permissionState.enableBlockedReason),
+              );
 
+              return (
+                <PermissionToggleCard
+                  key={permission.code}
+                  permission={permission}
+                  checked={permissionState.checked}
+                  disabled={disabled}
+                  isSaving={isPermissionSaving(permission.code)}
+                  onToggle={(nextChecked) => void handlePermissionToggle(permission.code, nextChecked)}
+                />
+              );
+            }}
+          />
+        </div>
       </div>
     </div>
   );

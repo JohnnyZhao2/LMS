@@ -2,7 +2,6 @@ import {
   AlertCircle,
   BookOpen,
   ClipboardList,
-  Eye,
   LayoutGrid,
   Plus,
 } from 'lucide-react';
@@ -173,21 +172,6 @@ export function TaskResourceLibraryPanel({
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (resource.resourceType === 'DOCUMENT') {
-                            onDocumentPreview(resource.id);
-                            return;
-                          }
-                          onQuizPreview(resource.id);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

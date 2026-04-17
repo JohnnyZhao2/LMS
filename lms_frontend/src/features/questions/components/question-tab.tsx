@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Eye, PencilLine, Clock3, CircleHelp } from 'lucide-react';
+import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/questions/api/create-question';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
@@ -16,7 +16,6 @@ import { DataTable } from '@/components/ui/data-table/data-table';
 import {
     LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
     LIST_ACTION_ICON_EDIT_CLASS,
-    LIST_ACTION_ICON_VIEW_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
 import { ListTag } from '@/components/ui/list-tag';
 import { CellMutedTimestamp, CellReferenceTag, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
@@ -75,7 +74,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
             id: 'content',
             header: '题干',
             meta: {
-                width: '42%',
+                width: '34%',
+                minWidth: '280px',
             },
             cell: ({ row }) => {
                 return (
@@ -92,6 +92,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'type',
             header: '题型',
+            meta: {
+                width: '96px',
+            },
             cell: ({ row }) => {
                 const presentation = getQuestionTypePresentation(row.original.question_type as QuestionType);
                 return (
@@ -104,6 +107,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'space',
             header: '所属空间',
+            meta: {
+                minWidth: '140px',
+            },
             cell: ({ row }) => {
                 const spaceTag = row.original.space_tag;
                 if (!spaceTag) {
@@ -126,11 +132,17 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'usage',
             header: '引用次数',
+            meta: {
+                width: '96px',
+            },
             cell: ({ row }) => <CellReferenceTag count={row.original.usage_count} />,
         },
         {
             id: 'timestamp',
             header: '更新时间',
+            meta: {
+                width: '168px',
+            },
             cell: ({ row }) => (
                 <CellMutedTimestamp
                     icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
@@ -141,20 +153,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'actions',
             header: '操作',
+            meta: {
+                width: '88px',
+            },
             cell: ({ row }) => {
                 const record = row.original;
                 return (
                     <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="查看详情">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={LIST_ACTION_ICON_VIEW_CLASS}
-                                onClick={() => setPreviewQuestion(record)}
-                            >
-                                <Eye className="h-4 w-4" strokeWidth={2} />
-                            </Button>
-                        </Tooltip>
                         <Tooltip title="编辑题目">
                             <Button
                                 variant="ghost"

@@ -30,7 +30,6 @@ class StudentTaskService(BaseService):
         assignment = assignment_detail_queryset().filter(
             task_id=task_id,
             assignee_id=self.user.id,
-            task__is_deleted=False,
         ).first()
         self.validate_not_none(assignment, '任务不存在或未分配给您')
         assignment.check_and_update_overdue()
@@ -154,7 +153,7 @@ class StudentTaskService(BaseService):
         status_filter: str = None,
         search: str = None,
     ) -> QuerySet:
-        qs = assignment_list_queryset().filter(assignee_id=self.user.id, task__is_deleted=False)
+        qs = assignment_list_queryset().filter(assignee_id=self.user.id)
         if status_filter:
             qs = qs.filter(status=status_filter)
         if search:
