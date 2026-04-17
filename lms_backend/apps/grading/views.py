@@ -2,6 +2,8 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 
 from apps.grading.selectors import (
+    OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
+    REVIEWABLE_SUBMISSION_STATUSES,
     calculate_question_pass_rate,
     get_latest_quiz_answers,
     has_answer_content,
@@ -145,7 +147,16 @@ class GradingAnswersView(GradingBaseView):
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='未找到对应题目或题目不属于该试卷'
             )
-        answers = list(get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id).select_related(
+        answer_statuses = (
+            OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES
+            if relation.is_objective
+            else REVIEWABLE_SUBMISSION_STATUSES
+        )
+        answers = list(get_latest_quiz_answers(
+            task,
+            quiz_id,
+            submission_statuses=answer_statuses,
+        ).filter(question_id=question_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
@@ -303,11 +314,11 @@ class GradingSubmitView(GradingBaseView):
 
 
 class PendingQuizzesView(GradingBaseView):
-    """获取当前用户待阅卷的任务和试卷列表"""
+    """获取当前用户可在阅卷中心查看的任务和试卷列表"""
 
     @extend_schema(
-        summary='获取待阅卷任务列表',
-        description='获取当前用户创建的所有任务中包含试卷的任务列表，支持按试卷类型筛选',
+        summary='获取阅卷中心任务列表',
+        description='获取当前用户可在阅卷中心查看的任务与试卷列表，支持按试卷类型筛选',
         parameters=[
             OpenApiParameter(
                 name='quiz_type',
@@ -350,9 +361,9 @@ class PendingQuizzesView(GradingBaseView):
             quizzes_data = []
             for tq in task_quizzes:
                 quiz = tq.quiz
-                # 统计待批阅数量（主观题未评分的提交）
                 pending_count = self._count_pending_grading(task, tq.id)
-                if pending_count <= 0:
+                has_analysis_data = self._has_analysis_data(task, tq.id)
+                if pending_count <= 0 and not has_analysis_data:
                     continue
 
                 quizzes_data.append({
@@ -375,6 +386,21 @@ class PendingQuizzesView(GradingBaseView):
 
         serializer = PendingTaskSerializer(results, many=True)
         return list_response(serializer.data)
+
+    def _has_analysis_data(self, task, quiz_id):
+        objective_answers = get_latest_quiz_answers(
+            task,
+            quiz_id,
+            submission_statuses=OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
+        ).exclude(question__question_type='SHORT_ANSWER')
+        if any(has_answer_content(answer.user_answer) for answer in objective_answers):
+            return True
+
+        return get_latest_quiz_answers(
+            task,
+            quiz_id,
+            submission_statuses=REVIEWABLE_SUBMISSION_STATUSES,
+        ).filter(question__question_type='SHORT_ANSWER').exists()
 
     def _count_pending_grading(self, task, quiz_id):
         """统计待批阅的主观题答案数量（仅统计最新提交）"""

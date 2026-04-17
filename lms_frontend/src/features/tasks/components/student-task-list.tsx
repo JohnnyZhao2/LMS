@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Inbox, Activity } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import type { TaskStatus } from '@/types/common';
@@ -37,15 +36,9 @@ export const StudentTaskList: React.FC = () => {
     const totalCount = data?.count ?? tasks.length;
 
     return (
-        <PageShell className="pb-4">
-            <PageHeader
-                title="任务中心"
-                icon={<Activity />}
-            />
-
+        <PageShell className="gap-0 pb-4">
             <div className="flex min-h-0 flex-1 flex-col">
-                {/* 分段筛选器 - Flat Design */}
-                <div className="mb-1 flex flex-col gap-4 pb-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="mb-6 flex flex-col gap-4 pb-1 xl:flex-row xl:items-center xl:justify-between">
                     <SegmentedControl
                         value={statusFilter}
                         onChange={(val: string) => setStatusFilter(val)}
@@ -60,21 +53,20 @@ export const StudentTaskList: React.FC = () => {
                             className="w-full xl:w-[20rem] xl:max-w-full xl:shrink-0"
                         />
                         <span className="text-xs font-bold uppercase tracking-widest text-text-muted xl:whitespace-nowrap">
-                            当前共 <span className="text-primary text-base ml-1">{totalCount}</span> 个任务
+                            当前共 <span className="ml-1 text-base text-primary">{totalCount}</span> 个任务
                         </span>
                     </div>
                 </div>
 
-                {/* 任务列表网格 */}
                 <div className="pb-1">
                     {isLoading && !data ? (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                             {[1, 2, 3, 4, 5, 6].map(i => (
-                                <Skeleton key={i} className="h-80 rounded-lg" />
+                                <Skeleton key={i} className="h-[188px] rounded-2xl" />
                             ))}
                         </div>
                     ) : tasks.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                             {tasks.map((task) => (
                                 <TaskCard key={task.id} task={task} />
                             ))}

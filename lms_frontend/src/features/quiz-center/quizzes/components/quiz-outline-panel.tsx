@@ -28,6 +28,7 @@ interface QuizOutlinePanelProps {
   quizType: QuizType;
   itemDisplayMode?: 'card' | 'plain';
   title?: string;
+  showScoreSummary?: boolean;
   duration?: number;
   passScore?: number;
   readOnly?: boolean;
@@ -43,6 +44,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   quizType,
   itemDisplayMode = 'card',
   title = '试卷结构',
+  showScoreSummary = true,
   duration,
   passScore,
   readOnly = false,
@@ -291,13 +293,19 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         )}
       </ScrollContainer>
       <div className="border-t border-border bg-background px-5 py-4">
-        <div className="mb-3.5 flex items-end justify-between">
-          <div className="flex items-baseline gap-1">
-            <span className="text-[15px] font-bold tabular-nums leading-none text-foreground">{totalScoreText}</span>
-            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">分</span>
+        {showScoreSummary ? (
+          <div className="mb-3.5 flex items-end justify-between">
+            <div className="flex items-baseline gap-1">
+              <span className="text-[15px] font-bold tabular-nums leading-none text-foreground">{totalScoreText}</span>
+              <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">分</span>
+            </div>
+            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
           </div>
-          <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
-        </div>
+        ) : (
+          <div className="mb-3.5 flex items-center justify-end">
+            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
+          </div>
+        )}
 
         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           {distribution.length > 0 ? (

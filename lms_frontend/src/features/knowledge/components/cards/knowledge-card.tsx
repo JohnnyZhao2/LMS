@@ -22,6 +22,10 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   const long = isLong(item.content);
   const text = plain(item.content);
   const short = !long && text.length < 80;
+  const previewClassName = [
+    'card-rich',
+    short ? 'card-rich--short' : 'card-rich--regular',
+  ].join(' ');
 
   const getSourceHost = React.useCallback((url?: string) => {
     if (!url) return '';
@@ -73,30 +77,17 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
         )}
 
         {/* 内容显示 */}
-        {long ? (
-          <div
-            className="card-rich"
-            style={{
-              maxHeight: 400,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 15,
-              WebkitBoxOrient: 'vertical',
-            }}
-            dangerouslySetInnerHTML={{ __html: bionicHtml(item.content) }}
-          />
-        ) : (
-          <p
-            className="text-foreground"
-            style={{
-              margin: 0,
-              fontSize: short ? 18 : 14.5,
-              lineHeight: short ? 1.48 : 1.68,
-              letterSpacing: short ? '-0.015em' : '-0.008em',
-            }}
-            dangerouslySetInnerHTML={{ __html: bionicHtml(text) }}
-          />
-        )}
+        <div
+          className={previewClassName}
+          style={{
+            maxHeight: long ? 400 : undefined,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: long ? 15 : short ? 6 : 8,
+            WebkitBoxOrient: 'vertical',
+          }}
+          dangerouslySetInnerHTML={{ __html: bionicHtml(item.content) }}
+        />
 
         {sourceHost && firstRelatedLink?.url && (
           <a

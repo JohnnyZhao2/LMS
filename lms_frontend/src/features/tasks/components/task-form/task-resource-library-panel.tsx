@@ -1,7 +1,6 @@
 import {
-  AlertCircle,
   BookOpen,
-  ClipboardList,
+  FileCheck,
   LayoutGrid,
   Plus,
 } from 'lucide-react';
@@ -19,7 +18,13 @@ import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 
-import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
+import {
+  TASK_FORM_PANEL_CLASSNAME,
+  TASK_FORM_PANEL_HEADER_CLASSNAME,
+  TASK_FORM_SEGMENTED_CONTROL_CLASSNAME,
+  TASK_FORM_WARNING_ALERT_CLASSNAME,
+  TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
+} from './task-form.constants';
 import type { ResourceItem, ResourceType } from './task-form.types';
 
 interface TaskResourceLibraryPanelProps {
@@ -65,13 +70,13 @@ export function TaskResourceLibraryPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="space-y-4 px-5 py-4">
+        <div className="space-y-3 px-4 py-3">
           <SearchInput
             placeholder="搜索文档/测验..."
             value={resourceSearch}
             onChange={onResourceSearchChange}
             inputClassName={cn(
-              'h-10 rounded-lg text-[12px] placeholder:text-text-muted/50',
+              'h-9 rounded-lg text-[11px] placeholder:text-text-muted/50',
               QUIET_OUTLINE_FIELD_CLASSNAME,
             )}
           />
@@ -85,24 +90,23 @@ export function TaskResourceLibraryPanel({
               { label: '试卷', value: 'QUIZ' },
             ]}
             size="sm"
-            className="w-full [&>div]:grid [&>div]:h-9 [&>div]:w-full [&>div]:grid-cols-3 [&_button]:h-full [&_button]:px-0"
+            className={`${TASK_FORM_SEGMENTED_CONTROL_CLASSNAME} [&>div]:grid-cols-3`}
           />
 
           {resourcesDisabled ? (
-            <Alert variant="warning">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+            <Alert variant="warning" className={TASK_FORM_WARNING_ALERT_CLASSNAME}>
+              <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
                 任务已有学员开始学习，无法修改资源
               </AlertDescription>
             </Alert>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 px-5 pb-4">
-          <ScrollContainer className="h-full overflow-y-auto">
+        <div className="min-h-0 flex-1 pl-4 pr-0 pb-3">
+          <ScrollContainer className="h-full overflow-y-auto pr-4">
             {isLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 8 }).map((_, index) => (
+                {Array.from({ length: pageSize }).map((_, index) => (
                   <div
                     key={index}
                     className="flex h-[72px] items-center gap-3 rounded-xl border border-border bg-muted/70 px-4 animate-pulse"
@@ -116,12 +120,12 @@ export function TaskResourceLibraryPanel({
                 ))}
               </div>
             ) : availableResources.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-text-muted">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                  <ClipboardList className="h-5 w-5" />
+                <div className="flex h-full flex-col items-center justify-center text-text-muted">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <FileCheck className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm font-medium">暂无匹配资源</span>
                 </div>
-                <span className="text-sm font-medium">暂无匹配资源</span>
-              </div>
             ) : (
               <div className="space-y-3">
                 {availableResources.map((resource) => (
@@ -129,7 +133,7 @@ export function TaskResourceLibraryPanel({
                     key={`${resource.resourceType}-${resource.id}-${resource.title}`}
                     type="button"
                     className={cn(
-                      'group flex h-[72px] w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left',
+                      'group flex h-[64px] w-full items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
                       SUBTLE_SURFACE_HOVER_CLASSNAME,
                       'cursor-pointer',
                       resourcesDisabled && 'bg-muted/15',
@@ -145,7 +149,7 @@ export function TaskResourceLibraryPanel({
                   >
                     <div
                       className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105',
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-transform group-hover:scale-105',
                         resource.resourceType === 'DOCUMENT'
                           ? 'bg-secondary-50 text-secondary'
                           : resource.quizType === 'EXAM'
@@ -156,13 +160,13 @@ export function TaskResourceLibraryPanel({
                       {resource.resourceType === 'DOCUMENT' ? (
                         <BookOpen className="h-5 w-5" />
                       ) : (
-                        <ClipboardList className="h-5 w-5" />
+                        <FileCheck className="h-5 w-5" />
                       )}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 truncate text-sm font-bold text-foreground">{resource.title}</div>
-                      <div className="flex items-center gap-2 text-[11px] font-medium text-text-muted">
+                      <div className="mb-0.5 truncate text-[13px] font-semibold text-foreground">{resource.title}</div>
+                      <div className="flex items-center gap-2 text-[10px] font-medium text-text-muted">
                         <span className="text-text-muted">
                           {resource.resourceType === 'DOCUMENT' ? '文档' : resource.quizType === 'EXAM' ? '考试' : '测验'}
                         </span>
@@ -175,7 +179,10 @@ export function TaskResourceLibraryPanel({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
+                        className={cn(
+                          'h-7 w-7 rounded-full !opacity-0 group-hover:!opacity-100 disabled:!opacity-0 group-hover:disabled:!opacity-100',
+                          GHOST_ACCENT_HOVER_CLASSNAME,
+                        )}
                         disabled={resourcesDisabled}
                         onClick={(event) => {
                           event.stopPropagation();
@@ -195,7 +202,7 @@ export function TaskResourceLibraryPanel({
         </div>
 
         {showPagination && totalResourceCount > pageSize ? (
-          <div className="border-t border-border px-5 py-3">
+          <div className="border-t border-border px-4 py-2.5">
             <Pagination
               current={safeCurrentPage}
               total={totalResourceCount}

@@ -25,7 +25,7 @@ const TaskStatusDot: React.FC<{
 }> = ({ color, animate = false }) => (
   <div
     className={cn(
-      'h-2 w-2 rounded-full',
+      'h-1.5 w-1.5 rounded-full',
       color,
       animate && 'animate-pulse'
     )}
@@ -38,6 +38,7 @@ const TaskCategoryBadge: React.FC<{
   variant: keyof typeof taskCategoryBadgeClassMap;
 }> = ({ count, label, variant }) => (
   <ListTag
+    size="xs"
     className={cn(
       'transition-colors',
       taskCategoryBadgeClassMap[variant]
@@ -67,12 +68,11 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   const { roleNavigate } = useRoleNavigate();
   const hasQuiz = task.has_quiz;
   const hasKnowledge = task.has_knowledge;
-
-  const missionConfig = hasQuiz && hasKnowledge
-    ? { barClass: 'bg-primary', tagClass: 'bg-primary-100/70 text-text-muted', label: '综合任务' }
+  const progressBarClass = hasQuiz && hasKnowledge
+    ? 'bg-primary'
     : hasQuiz
-      ? { barClass: 'bg-primary-500', tagClass: 'bg-primary-100/70 text-text-muted', label: '考核任务' }
-      : { barClass: 'bg-secondary', tagClass: 'bg-secondary-100/70 text-text-muted', label: '知识任务' };
+      ? 'bg-primary-500'
+      : 'bg-secondary';
 
   const targetTaskId = task.task_id;
   const progress = task.progress;
@@ -106,50 +106,39 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   return (
     <div
       className={cn(
-        'group relative flex h-[210px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background p-6 transition-all duration-300 hover:-translate-y-1',
+        'group relative flex h-[188px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background p-5 transition-all duration-200 hover:-translate-y-0.5',
         task.status === 'COMPLETED' && 'border-transparent bg-muted'
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ListTag
-            className={cn(
-              isUrgent
-                ? 'bg-destructive-100/70 text-text-muted'
-                : missionConfig.tagClass
-            )}
-          >
-            <TaskStatusDot
-              color={isUrgent ? 'bg-destructive-500' : missionConfig.barClass}
-              animate={isUrgent}
-            />
-            {isUrgent ? '紧急任务' : missionConfig.label}
-          </ListTag>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-[11px] font-bold text-text-muted">
-            {task.created_by_name || '发布人'}
-          </div>
-          <div className="text-[11px] font-bold text-text-muted">
-            {dayjs(task.deadline).format('YYYY-MM-DD')}
-          </div>
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1">
-        <h3 className="mb-1 truncate text-xl font-black leading-tight text-foreground transition-colors group-hover:text-primary-600">
-          {task.task_title}
-        </h3>
-        <p className="truncate text-[14px] font-medium text-text-muted/80">
+        <div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <h3 className="line-clamp-2 text-[17px] font-semibold leading-[1.35] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary-600">
+            {task.task_title}
+          </h3>
+          <div className="flex shrink-0 items-center gap-2.5 text-[10.5px] font-semibold tracking-[0.01em] text-text-muted">
+            <div className="max-w-[5.5rem] truncate">
+              {task.created_by_name || '发布人'}
+            </div>
+            <div className="shrink-0">
+              {dayjs(task.deadline).format('YYYY-MM-DD')}
+            </div>
+            {isUrgent ? (
+              <div className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-destructive-600">
+                <TaskStatusDot color="bg-destructive-500" animate />
+                紧急
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <p className="line-clamp-2 text-[13px] font-medium leading-[1.5] text-text-muted/80">
           {task.task_description || '此任务暂无描述...'}
         </p>
       </div>
 
-      <div className="mt-auto space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-wrap gap-2">
+      <div className="mt-auto space-y-3.5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
             {progressBadges.map((item) => {
               const isCompleted = item.completed >= item.total;
               return (
@@ -162,16 +151,16 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
               );
             })}
           </div>
-          <span className="text-base font-black text-foreground">
+          <span className="shrink-0 text-[15px] font-semibold leading-none text-foreground">
             {progress.percentage ?? 0}
-            <span className="ml-0.5 text-xs">%</span>
+            <span className="ml-0.5 text-[11px] font-medium">%</span>
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-700 ease-out',
-              missionConfig.barClass
+              progressBarClass
             )}
             style={{ width: `${progress.percentage ?? 0}%` }}
           />

@@ -124,14 +124,24 @@ def task_quiz_queryset(task_id: int) -> QuerySet:
     ).order_by('order')
 
 
-def task_resource_options(search: Optional[str] = None, resource_type: str = 'ALL') -> list[dict[str, Any]]:
+def task_resource_options(
+    search: Optional[str] = None,
+    resource_type: str = 'ALL',
+    exclude_document_ids: Optional[set[int]] = None,
+    exclude_quiz_ids: Optional[set[int]] = None,
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
+    exclude_document_ids = exclude_document_ids or set()
+    exclude_quiz_ids = exclude_quiz_ids or set()
 
     if resource_type in {'ALL', 'DOCUMENT'}:
         knowledge_rows = get_knowledge_queryset(
             search=search,
             ordering='-updated_at',
-        ).values('id', 'title', 'updated_at', 'space_tag__name')
+        )
+        if exclude_document_ids:
+            knowledge_rows = knowledge_rows.exclude(id__in=exclude_document_ids)
+        knowledge_rows = knowledge_rows.values('id', 'title', 'updated_at', 'space_tag__name')
         items.extend(
             [
                 {
@@ -148,7 +158,10 @@ def task_resource_options(search: Optional[str] = None, resource_type: str = 'AL
     if resource_type in {'ALL', 'QUIZ'}:
         quiz_rows = Quiz.objects.annotate(
             question_count_value=Count('quiz_questions'),
-        ).values(
+        )
+        if exclude_quiz_ids:
+            quiz_rows = quiz_rows.exclude(id__in=exclude_quiz_ids)
+        quiz_rows = quiz_rows.values(
             'id',
             'title',
             'updated_at',

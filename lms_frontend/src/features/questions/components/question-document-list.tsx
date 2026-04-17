@@ -133,7 +133,10 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
 
       <div
         onClick={onFocus}
-        className={cn('min-w-0 flex-1 transition-all', isOverlay && 'shadow-[0_18px_40px_rgba(15,23,42,0.18)]')}
+        className={cn(
+          'min-w-0 flex-1 transition-all',
+          isOverlay && 'overflow-hidden rounded-xl shadow-[0_18px_40px_rgba(15,23,42,0.18)]',
+        )}
       >
         <QuestionEditCard
           item={item}

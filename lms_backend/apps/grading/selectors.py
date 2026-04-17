@@ -2,6 +2,9 @@ from django.db.models import F, OuterRef, Prefetch, Subquery
 
 from apps.submissions.models import Answer, AnswerSelection, Submission
 
+REVIEWABLE_SUBMISSION_STATUSES = ('GRADING', 'SUBMITTED', 'GRADED')
+OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES = ('IN_PROGRESS', 'GRADING', 'SUBMITTED', 'GRADED')
+
 
 def has_answer_content(user_answer):
     if user_answer is None:
@@ -13,19 +16,20 @@ def has_answer_content(user_answer):
     return True
 
 
-def _get_latest_submission_subquery():
+def _get_latest_submission_subquery(submission_statuses):
     return Submission.objects.filter(
         task_assignment_id=OuterRef('submission__task_assignment_id'),
         task_quiz_id=OuterRef('submission__task_quiz_id'),
-        status__in=['GRADING', 'SUBMITTED', 'GRADED'],
+        status__in=submission_statuses,
     ).order_by('-attempt_number', '-submitted_at', '-id').values('id')[:1]
 
 
-def get_latest_quiz_answers(task, quiz_id):
+def get_latest_quiz_answers(task, quiz_id, *, submission_statuses=REVIEWABLE_SUBMISSION_STATUSES):
+    resolved_statuses = tuple(submission_statuses)
     base_answers = Answer.objects.filter(
         submission__task_assignment__task=task,
         submission__task_quiz_id=quiz_id,
-        submission__status__in=['GRADING', 'SUBMITTED', 'GRADED'],
+        submission__status__in=resolved_statuses,
     ).select_related('question').prefetch_related(
         'question__question_options',
         Prefetch(
@@ -34,24 +38,48 @@ def get_latest_quiz_answers(task, quiz_id):
         ),
     )
     return base_answers.annotate(
-        latest_submission_id=Subquery(_get_latest_submission_subquery())
+        latest_submission_id=Subquery(_get_latest_submission_subquery(resolved_statuses))
     ).filter(submission_id=F('latest_submission_id'))
 
 
+def _is_objective_answer_correct(answer):
+    if answer.is_correct is not None:
+        return bool(answer.is_correct)
+
+    user_answer = answer.user_answer
+    if not has_answer_content(user_answer):
+        return False
+
+    is_correct, _ = answer.question.check_answer(user_answer, full_score=answer.max_score)
+    return bool(is_correct)
+
+
 def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objective):
-    answers = get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id)
+    submission_statuses = (
+        OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES
+        if is_objective
+        else REVIEWABLE_SUBMISSION_STATUSES
+    )
+    answers = list(
+        get_latest_quiz_answers(
+            task,
+            quiz_id,
+            submission_statuses=submission_statuses,
+        ).filter(question_id=question_id)
+    )
     if is_objective:
-        total_count = answers.count()
+        answered_answers = [answer for answer in answers if has_answer_content(answer.user_answer)]
+        total_count = len(answered_answers)
         if total_count == 0:
             return None
-        correct_count = answers.filter(is_correct=True).count()
+        correct_count = sum(1 for answer in answered_answers if _is_objective_answer_correct(answer))
         return round(correct_count / total_count * 100, 1)
 
-    graded_answers = answers.filter(graded_by__isnull=False)
-    total_count = graded_answers.count()
+    graded_answers = [answer for answer in answers if answer.graded_by_id is not None]
+    total_count = len(graded_answers)
     if total_count == 0:
         return None
 
     score_threshold = float(max_score) * 0.6
-    correct_count = graded_answers.filter(obtained_score__gte=score_threshold).count()
+    correct_count = sum(1 for answer in graded_answers if float(answer.obtained_score) >= score_threshold)
     return round(correct_count / total_count * 100, 1)

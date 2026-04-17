@@ -1,4 +1,5 @@
 import importlib
+from typing import Optional
 
 import pytest
 from django.apps import apps
@@ -37,7 +38,20 @@ def _create_superuser(*, employee_id: str, username: str) -> User:
     )
 
 
-def _login_and_get_payload(client: APIClient, *, employee_id: str) -> dict:
+def _switch_role(client: APIClient, *, role_code: str) -> dict:
+    response = client.post(
+        '/api/auth/switch-role/',
+        {'role_code': role_code},
+        format='json',
+    )
+    assert response.status_code == 200
+    assert response.data['code'] == 'SUCCESS'
+    payload = response.data['data']
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {payload['access_token']}")
+    return payload
+
+
+def _login_and_get_payload(client: APIClient, *, employee_id: str, role_code: Optional[str] = None) -> dict:
     cache.clear()
     response = client.post(
         '/api/auth/login/',
@@ -46,13 +60,15 @@ def _login_and_get_payload(client: APIClient, *, employee_id: str) -> dict:
     )
     assert response.status_code == 200
     assert response.data['code'] == 'SUCCESS'
-    return response.data['data']
-
-
-def _authenticate(client: APIClient, *, employee_id: str) -> dict:
-    payload = _login_and_get_payload(client, employee_id=employee_id)
+    payload = response.data['data']
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {payload['access_token']}")
+    if role_code and payload['current_role'] != role_code:
+        return _switch_role(client, role_code=role_code)
     return payload
+
+
+def _authenticate(client: APIClient, *, employee_id: str, role_code: Optional[str] = None) -> dict:
+    return _login_and_get_payload(client, employee_id=employee_id, role_code=role_code)
 
 
 def _allowed_capabilities(payload: dict) -> set[str]:
@@ -68,7 +84,7 @@ def test_admin_capabilities_follow_default_menu_and_system_rules():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_ADMIN', username='Admin User', role_code='ADMIN')
 
-    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_ADMIN')
+    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_ADMIN', role_code='ADMIN')
     permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
@@ -113,7 +129,7 @@ def test_mentor_capabilities_follow_default_menu():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_MENTOR', username='Mentor User', role_code='MENTOR')
 
-    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_MENTOR')
+    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_MENTOR', role_code='MENTOR')
     permissions = _allowed_capabilities(payload)
 
     assert 'quiz.view' in permissions
@@ -166,7 +182,7 @@ def test_team_manager_capabilities_follow_default_menu():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_TM', username='Team Manager User', role_code='TEAM_MANAGER')
 
-    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_TM')
+    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_TM', role_code='TEAM_MANAGER')
     permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
@@ -221,8 +237,8 @@ def test_permission_catalog_supports_view_filter():
     assert user_authorization_response.status_code == 200
     assert 'task.view' in {item['code'] for item in role_template_response.data['data']}
     assert 'task.view' in {item['code'] for item in user_authorization_response.data['data']}
-    assert 'activity_log.view' not in {item['code'] for item in role_template_response.data['data']}
-    assert 'activity_log.view' not in {item['code'] for item in user_authorization_response.data['data']}
+    assert 'activity_log.view' in {item['code'] for item in role_template_response.data['data']}
+    assert 'activity_log.view' in {item['code'] for item in user_authorization_response.data['data']}
 
 
 @pytest.mark.django_db
@@ -245,7 +261,7 @@ def test_admin_cannot_access_role_permission_template():
         username='Role Template Admin',
         role_code='ADMIN',
     )
-    _authenticate(client, employee_id=admin_user.employee_id)
+    _authenticate(client, employee_id=admin_user.employee_id, role_code='ADMIN')
 
     response = client.get('/api/authorization/roles/MENTOR/permissions/')
 
@@ -262,7 +278,7 @@ def test_admin_cannot_access_activity_log_policy():
         username='Policy Admin',
         role_code='ADMIN',
     )
-    _authenticate(client, employee_id=admin_user.employee_id)
+    _authenticate(client, employee_id=admin_user.employee_id, role_code='ADMIN')
 
     response = client.get('/api/logs/policies/')
 
@@ -319,7 +335,7 @@ def test_non_scope_permission_override_is_normalized_to_all_and_takes_effect():
     assert override_response.data['data']['scope_type'] == 'ALL'
     assert override_response.data['data']['scope_user_ids'] == []
 
-    payload = _authenticate(client, employee_id=mentor_user.employee_id)
+    payload = _authenticate(client, employee_id=mentor_user.employee_id, role_code='MENTOR')
     assert payload['capabilities']['knowledge.update']['allowed'] is True
 
     knowledge = Knowledge.objects.create(
@@ -411,7 +427,7 @@ def test_student_current_role_ignores_user_permission_overrides():
     )
     assert create_response.status_code == 201
 
-    mentor_payload = _authenticate(client, employee_id=mentor_user.employee_id)
+    mentor_payload = _authenticate(client, employee_id=mentor_user.employee_id, role_code='MENTOR')
     assert mentor_payload['current_role'] == 'MENTOR'
     assert mentor_payload['capabilities']['knowledge.update']['allowed'] is True
 
@@ -429,7 +445,7 @@ def test_student_current_role_ignores_user_permission_overrides():
 def test_submission_endpoints_require_student_current_role():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_SUB_MENTOR', username='Submission Mentor', role_code='MENTOR')
-    payload = _authenticate(client, employee_id='EMP_AUTH_SUB_MENTOR')
+    payload = _authenticate(client, employee_id='EMP_AUTH_SUB_MENTOR', role_code='MENTOR')
 
     assert payload['current_role'] == 'MENTOR'
 
@@ -550,7 +566,7 @@ def test_replace_team_manager_permissions_keeps_team_manager_dashboard_permissio
 
 
 @pytest.mark.django_db
-def test_replace_non_admin_role_permissions_rejects_config_module_requests():
+def test_replace_non_admin_role_permissions_allows_log_management_requests():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_CFG_TEMPLATE', username='Cfg Template Super')
     _create_user_with_role(employee_id='EMP_AUTH_CFG_TEMPLATE_M', username='Cfg Template Mentor', role_code='MENTOR')
@@ -568,9 +584,10 @@ def test_replace_non_admin_role_permissions_rejects_config_module_requests():
         format='json',
     )
 
-    assert response.status_code == 400
-    assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '配置管理权限仅支持管理员角色' in response.data['message']
+    assert response.status_code == 200
+    permission_codes = set(response.data['data']['permission_codes'])
+    assert 'task.view' in permission_codes
+    assert 'activity_log.view' in permission_codes
 
 
 @pytest.mark.django_db
@@ -637,7 +654,7 @@ def test_self_scoped_override_does_not_grant_global_page_access_without_target_u
 
 
 @pytest.mark.django_db
-def test_non_admin_role_cannot_create_config_permission_override():
+def test_non_admin_role_can_create_log_management_permission_override():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_CFG_OVERRIDE_ADMIN', username='Cfg Override Super')
     mentor_user = _create_user_with_role(
@@ -654,15 +671,14 @@ def test_non_admin_role_cannot_create_config_permission_override():
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
             'scope_type': 'ALL',
-            'reason': 'config should not be in user authorization scope',
+            'reason': 'grant log management access',
         },
         format='json',
     )
 
-    assert response.status_code == 400
-    assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '配置管理模块不在用户授权范围内' in response.data['message']
-    assert not UserPermissionOverride.objects.filter(
+    assert response.status_code == 201
+    assert response.data['data']['permission_code'] == 'activity_log.view'
+    assert UserPermissionOverride.objects.filter(
         user=mentor_user,
         permission__code='activity_log.view',
         applies_to_role='MENTOR',
@@ -791,7 +807,7 @@ def test_scope_group_migration_preserves_legacy_all_scope_override():
 def test_dashboard_endpoints_follow_current_role_system_permissions():
     client = APIClient()
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_M_DASH', username='Mentor Dash', role_code='MENTOR')
-    _authenticate(client, employee_id=mentor_user.employee_id)
+    _authenticate(client, employee_id=mentor_user.employee_id, role_code='MENTOR')
 
     student_dashboard_response = client.get('/api/dashboard/student/')
 
@@ -806,33 +822,25 @@ def test_dashboard_permissions_and_endpoints_switch_with_current_role():
     student_role, _ = Role.objects.get_or_create(code='STUDENT', defaults={'name': 'STUDENT'})
     UserRole.objects.get_or_create(user=user, role=student_role)
 
-    mentor_payload = _authenticate(client, employee_id=user.employee_id)
-    assert mentor_payload['current_role'] == 'MENTOR'
-    assert mentor_payload['capabilities']['dashboard.mentor.view']['allowed'] is True
-    assert mentor_payload['capabilities']['dashboard.student.view']['allowed'] is False
+    student_payload = _authenticate(client, employee_id=user.employee_id)
+    assert student_payload['current_role'] == 'STUDENT'
+    assert student_payload['capabilities']['dashboard.student.view']['allowed'] is True
+    assert student_payload['capabilities']['dashboard.mentor.view']['allowed'] is False
 
-    mentor_dashboard_response = client.get('/api/dashboard/mentor/')
     student_dashboard_response = client.get('/api/dashboard/student/')
-    assert mentor_dashboard_response.status_code == 200
-    assert student_dashboard_response.status_code == 403
+    mentor_dashboard_response = client.get('/api/dashboard/mentor/')
+    assert student_dashboard_response.status_code == 200
+    assert mentor_dashboard_response.status_code == 403
 
-    switch_response = client.post(
-        '/api/auth/switch-role/',
-        {'role_code': 'STUDENT'},
-        format='json',
-    )
+    switch_payload = _switch_role(client, role_code='MENTOR')
+    assert switch_payload['current_role'] == 'MENTOR'
+    assert switch_payload['capabilities']['dashboard.mentor.view']['allowed'] is True
+    assert switch_payload['capabilities']['dashboard.student.view']['allowed'] is False
 
-    assert switch_response.status_code == 200
-    switch_payload = switch_response.data['data']
-    assert switch_payload['current_role'] == 'STUDENT'
-    assert switch_payload['capabilities']['dashboard.student.view']['allowed'] is True
-    assert switch_payload['capabilities']['dashboard.mentor.view']['allowed'] is False
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {switch_payload['access_token']}")
-
-    switched_student_dashboard_response = client.get('/api/dashboard/student/')
     switched_mentor_dashboard_response = client.get('/api/dashboard/mentor/')
-    assert switched_student_dashboard_response.status_code == 200
-    assert switched_mentor_dashboard_response.status_code == 403
+    switched_student_dashboard_response = client.get('/api/dashboard/student/')
+    assert switched_mentor_dashboard_response.status_code == 200
+    assert switched_student_dashboard_response.status_code == 403
 
 
 @pytest.mark.django_db

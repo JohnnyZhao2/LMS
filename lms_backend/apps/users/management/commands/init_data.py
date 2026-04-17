@@ -7,18 +7,19 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.authorization.services import AuthorizationService
-from apps.users.models import Department, Role, User
+from apps.users.models import Department, Role
 
 
 class Command(BaseCommand):
-    help = '初始化系统基础数据（部门、角色、管理员账号）'
+    help = '初始化系统基础数据（部门、角色、权限）'
+
     def handle(self, *args, **options):
         with transaction.atomic():
             self.create_departments()
             self.create_roles()
-            self.create_admin_user()
             AuthorizationService.ensure_defaults(sync_role_templates=True)
         self.stdout.write(self.style.SUCCESS('✅ 初始化数据完成！'))
+
     def create_departments(self):
         """创建部门"""
         departments = [
@@ -32,6 +33,7 @@ class Command(BaseCommand):
             )
             status = '创建' if created else '已存在'
             self.stdout.write(f"  部门 {dept.name}: {status}")
+
     def create_roles(self):
         """创建角色"""
         roles = [
@@ -48,21 +50,3 @@ class Command(BaseCommand):
             )
             status = '创建' if created else '已存在'
             self.stdout.write(f"  角色 {role.name}: {status}")
-    def create_admin_user(self):
-        """创建超管账号"""
-        dept = Department.objects.filter(code='DEPT1').first()
-        admin, created = User.objects.get_or_create(
-            employee_id='ADMIN001',
-            defaults={
-                'username': '系统超管',  # username 字段存储显示名称
-                'department': dept,
-                'is_staff': True,
-                'is_superuser': True,
-            }
-        )
-        if created:
-            admin.set_password('admin123')
-            admin.save()
-            self.stdout.write(f"  超管账号: 创建 (工号: ADMIN001, 密码: admin123)")
-        else:
-            self.stdout.write(f"  超管账号: 已存在")

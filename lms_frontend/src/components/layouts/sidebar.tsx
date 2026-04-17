@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, ChevronLeft, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
-import { type MenuItem, useRoleMenu, useRoleSettingsMenu } from '@/hooks/use-role-menu'
+import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
 import { RoleIndicatorDot } from '@/components/layouts/workspace-user-controls'
 import { useWorkspaceUserControls } from '@/components/layouts/use-workspace-user-controls'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
-  const settingsItems = useRoleSettingsMenu(currentRole)
 
   const handleLogout = async () => {
     await logout()
@@ -88,15 +87,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
     return findActiveKey(menuItems)
   }
-
-  const hasActiveSettingsItem = settingsItems.some((item) => isMenuItemActive(item))
-  const [isSettingsExpanded, setIsSettingsExpanded] = React.useState(hasActiveSettingsItem)
-
-  React.useEffect(() => {
-    if (hasActiveSettingsItem) {
-      setIsSettingsExpanded(true)
-    }
-  }, [hasActiveSettingsItem])
 
   const selectedNavKey = getSelectedNavKey()
 
@@ -275,56 +265,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                   {menuItems.map((item) => renderWorkspaceItem(item))}
                 </div>
               </section>
-
-              {settingsItems.length > 0 && (
-                <section className="space-y-1">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setIsSettingsExpanded((current) => !current)}
-                      className={cn(
-                        'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
-                        hasActiveSettingsItem
-                          ? 'text-black'
-                          : 'text-text-muted hover:bg-muted'
-                      )}
-                    >
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-                        {renderMenuIcon(<Settings className="h-5 w-5" />, hasActiveSettingsItem)}
-                      </span>
-                      <span className={labelClassName(hasActiveSettingsItem)}>
-                        设置
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          'h-4 w-4 shrink-0 transition-transform duration-300',
-                          isSettingsExpanded
-                            ? `rotate-180 ${hasActiveSettingsItem ? 'text-black' : 'text-text-muted'}`
-                            : `${hasActiveSettingsItem ? 'text-black' : 'text-text-muted'}`
-                        )}
-                      />
-                    </button>
-
-                    <div
-                      className={cn(
-                        'grid transition-all duration-300 ease-out',
-                        isSettingsExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                      )}
-                    >
-                      <div className="overflow-hidden">
-                        {renderSubMenuTree(
-                          settingsItems.map((item) => ({
-                            key: item.key,
-                            label: item.label,
-                            isActive: isMenuItemActive(item),
-                            onClick: () => item.key && handleNavClick(item.key),
-                          }))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
           </ScrollContainer>
           <div className="mt-5">

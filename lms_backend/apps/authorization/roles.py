@@ -32,10 +32,13 @@ def get_default_role(role_codes: Iterable[str]) -> str:
     if SUPER_ADMIN_ROLE in normalized_codes:
         return SUPER_ADMIN_ROLE
 
+    if 'STUDENT' in normalized_codes:
+        return 'STUDENT'
+
     from apps.users.models import Role
 
     for role_code in Role.ROLE_PRIORITY_ORDER:
-        if role_code in normalized_codes:
+        if role_code != 'STUDENT' and role_code in normalized_codes:
             return role_code
     return 'STUDENT'
 

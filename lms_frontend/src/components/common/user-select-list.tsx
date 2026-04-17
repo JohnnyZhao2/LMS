@@ -28,6 +28,7 @@ interface UserSelectListProps {
   className?: string;
   listClassName?: string;
   itemsClassName?: string;
+  showGridSelectionIndicator?: boolean;
 }
 
 function renderTrailing(
@@ -104,11 +105,13 @@ export function UserSelectList({
   className,
   listClassName,
   itemsClassName,
+  showGridSelectionIndicator = true,
 }: UserSelectListProps) {
   return (
     <ScrollContainer
+      scrollbar="inherit"
       className={cn(
-        'min-h-0 flex-1 overflow-y-auto',
+        'min-h-0 flex-1 overflow-y-auto overscroll-contain',
         appearance === 'panel'
           ? layout === 'grid'
             ? 'px-0 py-0'
@@ -118,7 +121,7 @@ export function UserSelectList({
           : 'overscroll-contain px-2.5 py-2',
         className,
       )}
-      onWheel={appearance === 'plain' ? (event) => event.stopPropagation() : undefined}
+      onWheel={(event) => event.stopPropagation()}
     >
       {isLoading ? (
         appearance === 'panel' ? (
@@ -174,7 +177,9 @@ export function UserSelectList({
                 className={cn(
                   'group relative flex w-full items-center text-left transition-all duration-150',
                   layout === 'grid'
-                    ? 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
+                    ? density === 'compact'
+                      ? 'min-h-[56px] rounded-lg border border-border/70 px-2.5 py-2'
+                      : 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
                     : appearance === 'panel'
                       ? density === 'compact'
                         ? 'gap-2.5 rounded-md px-2.5 py-1.5'
@@ -184,7 +189,7 @@ export function UserSelectList({
                     ? layout === 'grid'
                       ? (
                         checked
-                          ? 'border-primary/20 bg-primary-50/55 shadow-[0_10px_24px_rgba(37,99,235,0.08)]'
+                          ? 'border-primary/25 bg-primary-50/35'
                           : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
                       )
                       : (checked ? 'bg-primary-50/70' : 'hover:bg-muted')
@@ -202,31 +207,42 @@ export function UserSelectList({
                       avatarKey={item.avatarKey}
                       name={item.name}
                       size="sm"
-                      className="mt-0.5 h-8 w-8 shrink-0 ring-1 ring-border/60"
+                      className={cn(
+                        'mt-0.5 shrink-0 ring-1 ring-border/60',
+                        density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
+                      )}
                     />
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-semibold leading-tight text-foreground">
+                      <p className={cn(
+                        'truncate font-semibold leading-tight text-foreground',
+                        density === 'compact' ? 'text-[12px]' : 'text-[12px]',
+                      )}>
                         {item.name}
                       </p>
-                      <p className="mt-1 truncate text-[10px] leading-tight text-text-muted">
+                      <p className={cn(
+                        'mt-0.5 truncate leading-tight text-text-muted',
+                        density === 'compact' ? 'text-[10px]' : 'text-[10px]',
+                      )}>
                         {item.meta ?? '未填写工号'}
                       </p>
                     </div>
 
-                    <div
-                      aria-hidden="true"
-                      className={cn(
-                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                        disabled
-                          ? 'opacity-0'
-                          : checked
-                            ? 'border-primary bg-primary text-white opacity-100'
-                            : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
-                      )}
-                    >
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </div>
+                    {showGridSelectionIndicator ? (
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                          disabled
+                            ? 'opacity-0'
+                            : checked
+                              ? 'border-primary bg-primary text-white opacity-100'
+                              : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
+                        )}
+                      >
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <>

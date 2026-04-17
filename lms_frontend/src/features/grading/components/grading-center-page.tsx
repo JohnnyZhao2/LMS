@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '../api/pending-quizzes';
 import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/tasks/components/task-preview/grading-center-tab';
+import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 export const GradingCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,30 +17,60 @@ export const GradingCenterPage: React.FC = () => {
   const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
   const lockedTaskTitle = searchParams.get('taskTitle')?.trim() || '';
 
-  const { data: tasks, isLoading } = usePendingQuizzes();
+  const { data: tasks, isLoading: pendingTasksLoading } = usePendingQuizzes({
+    enabled: !isTaskManagementEntry,
+  });
+  const { data: lockedTask, isLoading: lockedTaskLoading } = useTaskDetail(preferredTaskId, {
+    enabled: isTaskManagementEntry && preferredTaskId > 0,
+  });
+  const selectorTasks = React.useMemo<PendingTask[]>(() => {
+    if (!isTaskManagementEntry) {
+      return tasks ?? [];
+    }
+
+    if (!lockedTask) {
+      return [];
+    }
+
+    return [{
+      task_id: lockedTask.id,
+      task_title: lockedTask.title,
+      deadline: lockedTask.deadline,
+      quizzes: lockedTask.quizzes.map((quiz) => ({
+        quiz_id: quiz.task_quiz_id,
+        quiz_title: quiz.quiz_title,
+        quiz_type: quiz.quiz_type,
+        quiz_type_display: quiz.quiz_type_display,
+        question_count: quiz.question_count,
+        duration: quiz.duration ?? null,
+        pending_count: 0,
+      })),
+    }];
+  }, [isTaskManagementEntry, lockedTask, tasks]);
+  const isLoading = isTaskManagementEntry ? lockedTaskLoading : pendingTasksLoading;
   const resolvedTaskId = React.useMemo(() => {
-    if (!tasks || tasks.length === 0) {
+    if (selectorTasks.length === 0) {
       return null;
     }
 
     if (isTaskManagementEntry) {
-      return preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)
+      return preferredTaskId > 0 && selectorTasks.some((task) => task.task_id === preferredTaskId)
         ? preferredTaskId
-        : null;
+        : selectorTasks[0].task_id;
     }
 
-    if (selectedTaskId !== null && tasks.some((task) => task.task_id === selectedTaskId)) {
+    if (selectedTaskId !== null && selectorTasks.some((task) => task.task_id === selectedTaskId)) {
       return selectedTaskId;
     }
 
-    if (preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)) {
+    if (preferredTaskId > 0 && selectorTasks.some((task) => task.task_id === preferredTaskId)) {
       return preferredTaskId;
     }
 
-    return tasks[0].task_id;
-  }, [isTaskManagementEntry, preferredTaskId, selectedTaskId, tasks]);
+    return selectorTasks[0].task_id;
+  }, [isTaskManagementEntry, preferredTaskId, selectedTaskId, selectorTasks]);
 
-  const selectedTask = tasks?.find((task) => task.task_id === resolvedTaskId) ?? null;
+  const selectedTask = selectorTasks.find((task) => task.task_id === resolvedTaskId) ?? null;
   const resolvedQuizId = React.useMemo(() => {
     if (!selectedTask) {
       return null;
@@ -79,12 +110,12 @@ export const GradingCenterPage: React.FC = () => {
     setSelectedQuizId(quiz.quiz_id);
   };
 
-  const selectorConfig: GradingCenterSelectorConfig | undefined = tasks && tasks.length > 0
+  const selectorConfig: GradingCenterSelectorConfig | undefined = selectorTasks.length > 0
     ? {
-      tasks,
+      tasks: selectorTasks,
       selectedTaskId: resolvedTaskId,
       selectedQuizId: resolvedQuizId,
-      selectedTaskTitle: selectedTask?.task_title || lockedTaskTitle || '当前任务',
+      selectedTaskTitle: selectedTask?.task_title || lockedTaskTitle || lockedTask?.title || '当前任务',
       isTaskLocked: isTaskManagementEntry,
       onTaskSelect: handleTaskSelect,
       onQuizSelect: handleQuizSelect,
@@ -120,21 +151,21 @@ export const GradingCenterPage: React.FC = () => {
               quizId={resolvedQuizId}
               selectorConfig={selectorConfig}
             />
-          ) : (
-            <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
-              <EmptyState
-                icon={FileCheck}
-                title="当前任务暂无待阅卷试卷"
-                description="当前入口已锁定任务，如需切换任务，请从阅卷中心主页进入"
-              />
-            </div>
-          )
-        ) : !tasks || tasks.length === 0 ? (
+        ) : (
           <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
             <EmptyState
               icon={FileCheck}
-              title="暂无待阅卷任务"
-              description="当前没有需要批阅的试卷"
+              title="当前任务暂无可分析试卷"
+              description="当前入口已锁定任务，如需切换任务，请从阅卷中心主页进入"
+            />
+          </div>
+        )
+        ) : selectorTasks.length === 0 ? (
+          <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
+            <EmptyState
+              icon={FileCheck}
+              title="暂无可分析任务"
+              description="当前没有可在阅卷中心查看的试卷数据"
             />
           </div>
         ) : selectedTask && resolvedQuizId ? (

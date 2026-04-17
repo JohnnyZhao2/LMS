@@ -5,8 +5,8 @@ from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='activity_logs.config',
-        module='config',
+        key='activity_logs.log_management',
+        module='log_management',
         permissions=(
             PermissionDefinition(
                 code='activity_log.view',

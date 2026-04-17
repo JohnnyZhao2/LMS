@@ -62,7 +62,7 @@ class GradingSubmitSerializer(serializers.Serializer):
 
 
 class PendingQuizSerializer(serializers.Serializer):
-    """待阅卷试卷序列化器"""
+    """阅卷中心试卷序列化器"""
     quiz_id = serializers.IntegerField()
     quiz_title = serializers.CharField()
     quiz_type = serializers.CharField()
@@ -73,7 +73,7 @@ class PendingQuizSerializer(serializers.Serializer):
 
 
 class PendingTaskSerializer(serializers.Serializer):
-    """待阅卷任务序列化器"""
+    """阅卷中心任务序列化器"""
     task_id = serializers.IntegerField()
     task_title = serializers.CharField()
     deadline = serializers.DateTimeField()

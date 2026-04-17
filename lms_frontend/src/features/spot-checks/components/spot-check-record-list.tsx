@@ -1,7 +1,8 @@
-import { CalendarDays, ListChecks, Pencil, Star, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
+import { CalendarDays, ListChecks, Pencil, Plus, Star, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
 
 import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
+import { CircleButton } from '@/components/ui/circle-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -18,6 +19,8 @@ interface SpotCheckRecordListProps {
   page: number;
   pageSize: number;
   isLoading: boolean;
+  canCreateSpotCheck: boolean;
+  onCreateSpotCheck: () => void;
   onEditRecord: (record: SpotCheck) => void;
   onDeleteRecord: (record: SpotCheck) => void;
   onPageChange: (page: number) => void;
@@ -119,6 +122,8 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
   page,
   pageSize,
   isLoading,
+  canCreateSpotCheck,
+  onCreateSpotCheck,
   onEditRecord,
   onDeleteRecord,
   onPageChange,
@@ -155,8 +160,20 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
             </p>
           </div>
         </div>
-        <div className="rounded-lg bg-muted px-2.5 py-1 text-[12px] font-medium text-text-muted">
-          共 {totalCount} 条
+        <div className="flex items-center gap-2">
+          {canCreateSpotCheck ? (
+            <Tooltip title="新建抽查">
+              <CircleButton
+                onClick={onCreateSpotCheck}
+                label="新建抽查"
+                className="h-9 w-9 bg-primary-600 text-white hover:bg-primary-700"
+                icon={<Plus className="h-4 w-4" />}
+              />
+            </Tooltip>
+          ) : null}
+          <div className="rounded-lg bg-muted px-2.5 py-1 text-[12px] font-medium text-text-muted">
+            共 {totalCount} 条
+          </div>
         </div>
       </div>
 

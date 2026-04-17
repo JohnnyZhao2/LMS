@@ -9,16 +9,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
   const { hasCapability, hasAnyCapability } = useAuth();
 
   return useMemo(
-    () => getMenuItemsBySection(currentRole, hasCapability, hasAnyCapability, 'main'),
-    [currentRole, hasCapability, hasAnyCapability],
-  );
-};
-
-export const useRoleSettingsMenu = (currentRole: RoleCode | null): MenuItem[] => {
-  const { hasCapability, hasAnyCapability } = useAuth();
-
-  return useMemo(
-    () => getMenuItemsBySection(currentRole, hasCapability, hasAnyCapability, 'settings'),
+    () => getMenuItemsBySection(currentRole, hasCapability, hasAnyCapability),
     [currentRole, hasCapability, hasAnyCapability],
   );
 };

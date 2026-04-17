@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -18,14 +17,15 @@ import { useUpdateTask } from '../../api/update-task';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
 import { mapTaskResourceOptionToResource } from './task-form.types';
 import {
-  buildResourceKey,
   buildStableUid,
   buildTaskFormInitialSelectedResources,
   buildTaskSubmitPayload,
   hasMissingTaskResourceSources,
+  insertSelectedResourceByGroup,
+  reorderSelectedResourcesWithinGroup,
 } from './use-task-form.helpers';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 9;
 
 const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
   if (!data) return [];
@@ -67,12 +67,6 @@ export const useTaskForm = () => {
     enabled: isEdit && Number.isFinite(taskId) && taskId > 0,
   });
   const { data: quizDetail } = useQuizDetail(paramQuizId);
-  const resourceQuery = useTaskResourceOptions({
-    search: resourceSearch,
-    page: currentPage,
-    page_size: PAGE_SIZE,
-    resource_type: resourceType,
-  });
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   const hasProgress = task?.has_progress || false;
@@ -114,20 +108,39 @@ export const useTaskForm = () => {
     setSelectedUserIdsDraft((prev) => applyUpdater(updater, prev ?? initialSelectedUserIds));
   };
 
-  const filteredResources = useMemo(() => {
-    const combined = getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource);
-    const selectedKeys = new Set(
+  const excludedDocumentIds = useMemo(() => {
+    return Array.from(new Set(
       selectedResources
-        .filter((item) => item.id > 0)
-        .map((item) => buildResourceKey(item.resourceType, item.id)),
-    );
-    return combined.filter((item) => !selectedKeys.has(buildResourceKey(item.resourceType, item.id)));
-  }, [resourceQuery.data, selectedResources]);
+        .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
+        .map((item) => item.id),
+    )).sort((left, right) => left - right);
+  }, [selectedResources]);
 
-  const totalCount = resourceQuery.data?.count ?? filteredResources.length;
+  const excludedQuizIds = useMemo(() => {
+    return Array.from(new Set(
+      selectedResources
+        .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
+        .map((item) => item.id),
+    )).sort((left, right) => left - right);
+  }, [selectedResources]);
+
+  const resourceQuery = useTaskResourceOptions({
+    search: resourceSearch,
+    page: currentPage,
+    page_size: PAGE_SIZE,
+    resource_type: resourceType,
+    exclude_document_ids: excludedDocumentIds,
+    exclude_quiz_ids: excludedQuizIds,
+  });
+
+  const availableResources = useMemo(
+    () => getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource),
+    [resourceQuery.data],
+  );
+
+  const totalCount = resourceQuery.data?.count ?? availableResources.length;
   const totalPages = resourceQuery.data?.total_pages ?? Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safeCurrentPage = resourceQuery.data?.current_page ?? Math.min(currentPage, totalPages);
-  const availableResources = filteredResources;
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -143,27 +156,16 @@ export const useTaskForm = () => {
       if (prev.some((item) => item.resourceType === resource.resourceType && item.id === resource.id)) {
         return prev;
       }
-      return [
-        ...prev,
-        {
-          ...resource,
-          uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
-        },
-      ];
+      return insertSelectedResourceByGroup(prev, {
+        ...resource,
+        uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
+      });
     });
   };
 
-  const moveResource = (idx: number, direction: 'up' | 'down') => {
-    const next = [...selectedResources];
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= next.length) return;
-    [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
-    setSelectedResources(next);
-  };
-
-  const removeResource = (idx: number) => {
+  const removeResource = (uid: number) => {
     if (resourcesDisabled) return;
-    setSelectedResources(selectedResources.filter((_, index) => index !== idx));
+    setSelectedResources((prev) => prev.filter((item) => item.uid !== uid));
   };
 
   const toggleUser = (userId: number) => {
@@ -197,9 +199,7 @@ export const useTaskForm = () => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setSelectedResources((currentItems) => {
-        const oldIndex = currentItems.findIndex((item) => item.uid === active.id);
-        const newIndex = currentItems.findIndex((item) => item.uid === over.id);
-        return arrayMove(currentItems, oldIndex, newIndex);
+        return reorderSelectedResourcesWithinGroup(currentItems, String(active.id), String(over.id));
       });
     }
   };
@@ -291,7 +291,6 @@ export const useTaskForm = () => {
     resourcesDisabled,
     canRemoveAssignee,
     addResource,
-    moveResource,
     removeResource,
     toggleUser,
     toggleUsers,

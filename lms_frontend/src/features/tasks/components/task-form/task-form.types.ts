@@ -1,6 +1,7 @@
 import type { TaskResourceOption } from '@/types/task';
 
 export type ResourceType = 'DOCUMENT' | 'QUIZ';
+export type ResourceGroup = 'DOCUMENT' | 'PRACTICE' | 'EXAM';
 
 export interface ResourceItem {
   id: number;

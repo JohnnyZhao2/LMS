@@ -100,6 +100,7 @@ cp lms_backend/.env.prod lms_backend/.env   # 生产
 ### 3. 启动后端
 
 ```bash
+conda activate lms
 cd lms_backend
 pip install -r requirements.txt
 python manage.py migrate --settings=config.settings.development
@@ -110,6 +111,7 @@ python manage.py runserver
 说明：
 
 - `migrate` 后会自动同步权限目录与日志策略目录
+- `init_data` 只初始化部门、角色和权限，不会创建默认超管账号
 - 不需要额外手动执行 `sync_authorization`
 
 启动后可访问：

@@ -121,7 +121,10 @@ export function SearchableSelect<T>({
                             />
                         </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto p-1.5 scrollbar-hide">
+                    <div
+                        className="max-h-72 overflow-y-auto overscroll-contain p-1.5"
+                        onWheel={(event) => event.stopPropagation()}
+                    >
                         {onCreate && searchValue.trim() && !exactMatch && (
                             <button
                                 onClick={handleCreate}

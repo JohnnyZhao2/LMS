@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {
-  BookOpen,
-  SquareCheck,
+  FileCheck,
+  ListTodo,
   ThumbsDown,
   ThumbsUp,
   Check,
@@ -79,6 +79,9 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
     acc[answer.student_id] = answer.score !== null && answer.score !== undefined ? answer.score.toString() : '';
     return acc;
   }, {});
+
+const SELECTOR_TRIGGER_CLASSNAME = 'h-10 rounded-xl border-border/70 bg-background/90 px-3 shadow-none';
+const SELECTOR_ICON_CLASSNAME = 'h-4 w-4 shrink-0 text-primary-500';
 
 export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   taskId,
@@ -246,7 +249,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
         <div className="flex min-h-0 h-full flex-col rounded-2xl border border-border bg-background p-4 space-y-4">
           <Skeleton className="h-10 w-full rounded-lg" />
           <div className="flex-1 space-y-2 overflow-hidden">
-            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
           </div>
         </div>
         <div className="flex min-h-0 h-full flex-col rounded-2xl border border-border bg-background p-6 space-y-6">
@@ -287,14 +290,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
         <div className="border-b border-border bg-background p-3 sm:p-4">
           {selectorConfig ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
-                  <SquareCheck className="h-3.5 w-3.5 shrink-0 text-primary-500" />
-                  <span>任务</span>
-                </div>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="min-w-0">
                 {selectorConfig.isTaskLocked ? (
                   <div className="flex h-10 min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-primary-100 bg-primary-50/70 px-3">
+                    <ListTodo className={SELECTOR_ICON_CLASSNAME} />
                     <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
                       {selectorConfig.selectedTaskTitle}
                     </span>
@@ -312,8 +312,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-background px-3">
-                      <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择任务" />
+                    <SelectTrigger className={SELECTOR_TRIGGER_CLASSNAME}>
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+                        <ListTodo className={SELECTOR_ICON_CLASSNAME} />
+                        <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择任务" />
+                      </div>
                     </SelectTrigger>
                     <SelectContent>
                       {selectorConfig.tasks.map((task) => (
@@ -326,11 +329,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                 )}
               </div>
 
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
-                  <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary-500" />
-                  <span>试卷</span>
-                </div>
+              <div className="min-w-0">
                 <Select
                   value={selectedQuiz ? String(selectedQuiz.quiz_id) : undefined}
                   onValueChange={(value) => {
@@ -341,8 +340,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   }}
                   disabled={!selectedTask || selectedTask.quizzes.length === 0}
                 >
-                  <SelectTrigger className="bg-background px-3">
-                    <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择试卷" />
+                  <SelectTrigger className={SELECTOR_TRIGGER_CLASSNAME}>
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+                      <FileCheck className={SELECTOR_ICON_CLASSNAME} />
+                      <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择试卷" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     {(selectedTask?.quizzes ?? []).map((quiz) => (
@@ -357,34 +359,28 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
           ) : null}
         </div>
 
-        <div className="bg-background px-3 py-2.5">
-          <div className="space-y-2">
-            <SegmentedControl
-              value={questionFilter}
-              onChange={(value) => setQuestionFilter(value as QuestionType)}
-              onClear={() => setQuestionFilter(null)}
-              options={questionFilters.map((filter) => ({
-                ...filter,
-                disabled: filter.value ? !availableQuestionTypes.has(filter.value) : false,
-              }))}
-              className="w-full"
-              size="default"
-              fill
-              allowDeselect
-              showClearOnSelected
-              inactiveOptionClassName="text-foreground hover:text-foreground"
-              disabledOptionClassName="cursor-not-allowed text-text-muted"
-            />
-            {activeFilterMeta ? (
-              <span className="text-[12px] font-medium text-text-muted">
-                当前筛选: {activeFilterMeta.fullLabel}
-              </span>
-            ) : (
-              <span className="text-[12px] font-medium text-text-muted">
-                当前显示: 全部题目
-              </span>
-            )}
-          </div>
+        <div className="bg-background px-3 py-3 sm:px-4">
+          <SegmentedControl
+            value={questionFilter}
+            onChange={(value) => setQuestionFilter(value as QuestionType)}
+            onClear={() => setQuestionFilter(null)}
+            options={questionFilters.map((filter) => ({
+              ...filter,
+              disabled: filter.value ? !availableQuestionTypes.has(filter.value) : false,
+            }))}
+            className="w-full"
+            size="default"
+            fill
+            allowDeselect
+            showClearOnSelected
+            inactiveOptionClassName="text-foreground hover:text-foreground"
+            disabledOptionClassName="cursor-not-allowed text-text-muted"
+          />
+          {activeFilterMeta ? (
+            <span className="mt-1.5 block text-[12px] font-medium text-text-muted">
+              当前筛选: {activeFilterMeta.fullLabel}
+            </span>
+          ) : null}
         </div>
 
         <ScrollContainer className="min-h-0 flex-1 overflow-y-auto">
@@ -393,7 +389,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
               <p>没有找到相关题目</p>
             </div>
           )}
-          <div className="space-y-4 px-3 py-4">
+          <div className="space-y-4 px-3 py-4 sm:px-4">
             {groupedQuestions.map((section) => (
               <div key={section.type} className="space-y-2">
                 <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5">
@@ -403,7 +399,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   </span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {section.entries.map(({ item: question, number }) => {
                     const isActive = question.question_id === effectiveQuestionId;
                     const passRateColor = getPassRateColor(question.pass_rate);
@@ -413,26 +409,21 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                         key={question.question_id}
                         onClick={() => setSelectedQuestionId(question.question_id)}
                         className={cn(
-                          'group relative flex min-h-[82px] w-full flex-col rounded-xl border px-3 py-2 text-left transition-all duration-200',
+                          'group relative flex w-full items-baseline gap-3 rounded-lg border px-3 py-2 text-left transition-all duration-200',
                           isActive
                             ? 'border-primary-200 bg-primary-50/60 ring-1 ring-primary-100'
                             : 'border-transparent bg-background hover:border-primary-200 hover:bg-primary-50/40'
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="w-4 shrink-0 text-center text-[13px] font-medium leading-[1.375rem] tabular-nums text-text-muted">
-                            {number}
-                          </span>
-                          <h3 className="min-w-0 flex-1 line-clamp-2 text-[14px] font-medium leading-[1.375rem] text-foreground">
-                            {question.question_text}
-                          </h3>
-                        </div>
-
-                        <div className="mt-1 flex justify-end">
-                          <span className={cn('text-[11px] font-semibold tabular-nums', passRateColor)}>
-                            {formatPassRate(question.pass_rate)}
-                          </span>
-                        </div>
+                        <span className="w-4 shrink-0 text-center text-[13px] font-medium leading-5 tabular-nums text-text-muted">
+                          {number}
+                        </span>
+                        <h3 className="min-w-0 flex-1 line-clamp-2 text-[13px] font-medium leading-5 text-foreground">
+                          {question.question_text}
+                        </h3>
+                        <span className={cn('shrink-0 text-[11px] font-semibold leading-5 tabular-nums', passRateColor)}>
+                          {formatPassRate(question.pass_rate)}
+                        </span>
                       </button>
                     );
                   })}

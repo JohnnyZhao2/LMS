@@ -313,7 +313,6 @@
     html {
         scroll-behavior: smooth;
         overflow-y: auto;
-        scrollbar-gutter: stable;
     }
 
     /*
@@ -492,6 +491,12 @@
     font-size: 14.5px;
 }
 
+.card-rich--short h1,
+.card-rich--short h2 {
+    font-size: 18px;
+    line-height: 1.4;
+}
+
 .card-rich h3,
 .card-rich h4,
 .card-rich h5,
@@ -512,6 +517,13 @@
     letter-spacing: -0.005em;
 }
 
+.card-rich--short p {
+    font-size: 17px;
+    line-height: 1.5;
+    color: #2f2f2f;
+    letter-spacing: -0.015em;
+}
+
 .card-rich p:last-child {
     margin-bottom: 0;
 }
@@ -527,6 +539,14 @@
     line-height: 1.6;
     color: #555;
     margin-bottom: 2px;
+}
+
+.card-rich--short li {
+    font-size: 17px;
+    line-height: 1.5;
+    color: #2f2f2f;
+    letter-spacing: -0.015em;
+    margin-bottom: 4px;
 }
 
 .card-rich strong {

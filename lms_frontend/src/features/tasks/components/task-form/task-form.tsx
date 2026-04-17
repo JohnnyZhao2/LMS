@@ -50,7 +50,6 @@ export const TaskForm: React.FC = () => {
     resourcesDisabled,
     canRemoveAssignee,
     addResource,
-    moveResource,
     removeResource,
     toggleUser,
     toggleUsers,
@@ -63,7 +62,7 @@ export const TaskForm: React.FC = () => {
     id: user.id,
     name: user.username,
     avatarKey: user.avatar_key,
-    meta: `${user.employee_id || '-'} | ${user.department?.name || '无部门'}`,
+    meta: `${user.employee_id || '-'} · ${user.department?.name || '无部门'}`,
   }));
 
   if (taskError) {
@@ -105,14 +104,14 @@ export const TaskForm: React.FC = () => {
           />
 
           <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="relative flex h-12 shrink-0 items-center justify-end border-b border-border px-5">
-              <div className="absolute left-1/2 top-1/2 w-[clamp(13rem,48%,22rem)] -translate-x-1/2 -translate-y-1/2">
+            <div className="relative flex h-11 shrink-0 items-center justify-end border-b border-border px-4">
+              <div className="absolute left-1/2 top-1/2 w-[clamp(12rem,44%,20rem)] -translate-x-1/2 -translate-y-1/2">
                 <Input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="输入任务标题..."
                   className={cn(
-                    'h-10 rounded-lg px-5 text-center text-[14px] font-semibold placeholder:text-text-muted/50',
+                    'h-9 rounded-lg px-4 text-center text-[13px] font-semibold placeholder:text-text-muted/50',
                     FILLED_PLAIN_FIELD_CLASSNAME,
                   )}
                 />
@@ -120,7 +119,7 @@ export const TaskForm: React.FC = () => {
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-3.5 text-[12px] font-semibold text-background hover:bg-foreground/90"
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                 {isEdit ? '保存修改' : '发布任务'}
@@ -131,7 +130,6 @@ export const TaskForm: React.FC = () => {
               selectedResources={selectedResources}
               resourcesDisabled={resourcesDisabled}
               onDragEnd={handleDragEnd}
-              onMoveResource={moveResource}
               onRemoveResource={removeResource}
               embedded
             />

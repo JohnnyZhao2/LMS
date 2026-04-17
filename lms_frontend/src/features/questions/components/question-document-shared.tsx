@@ -45,6 +45,52 @@ export const QuestionDocumentDivider: React.FC<QuestionDocumentDividerProps> = (
   );
 };
 
+export const QuestionChoiceIndicator: React.FC<{
+  selected: boolean;
+  shape?: 'circle' | 'square';
+  className?: string;
+  selectedClassName?: string;
+  unselectedClassName?: string;
+  iconClassName?: string;
+  dotClassName?: string;
+}> = ({
+  selected,
+  shape = 'circle',
+  className,
+  selectedClassName = 'border-primary-500 bg-primary-500',
+  unselectedClassName = 'border-border bg-background',
+  iconClassName,
+  dotClassName,
+}) => (
+  <span
+    className={cn(
+      'inline-flex h-4 w-4 shrink-0 items-center justify-center border-2 transition-colors',
+      shape === 'circle' ? 'rounded-full' : 'rounded-[4px]',
+      selected ? selectedClassName : unselectedClassName,
+      className,
+    )}
+    aria-hidden="true"
+  >
+    {shape === 'square' ? (
+      <Check
+        className={cn(
+          'h-[10px] w-[10px] text-white transition-all',
+          selected ? 'opacity-100' : 'opacity-0',
+          iconClassName,
+        )}
+      />
+    ) : (
+      <span
+        className={cn(
+          'block rounded-full bg-white transition-all',
+          selected ? 'h-[6px] w-[6px]' : 'h-0 w-0',
+          dotClassName,
+        )}
+      />
+    )}
+  </span>
+);
+
 export const QuestionChoiceRow: React.FC<{
   optionKey: string;
   label: React.ReactNode;
@@ -86,32 +132,11 @@ export const QuestionChoiceRow: React.FC<{
         <div className="flex min-h-[18px] w-0 min-w-0 flex-1 items-start whitespace-pre-wrap break-all text-[14px] leading-[1.45] text-foreground">
           {label || optionKey || '未填写选项内容'}
         </div>
-        <span
-          className={cn(
-            'ml-auto inline-flex h-4 w-4 shrink-0 items-center justify-center self-center border-2 transition-colors',
-            indicatorShape === 'circle' ? 'rounded-full' : 'rounded-[4px]',
-            selected
-              ? 'border-primary-500 bg-primary-500'
-              : 'border-border bg-background',
-          )}
-          aria-hidden="true"
-        >
-          {indicatorShape === 'square' ? (
-            <Check
-              className={cn(
-                'h-[10px] w-[10px] text-white transition-all',
-                selected ? 'opacity-100' : 'opacity-0',
-              )}
-            />
-          ) : (
-            <span
-              className={cn(
-                'block rounded-full bg-white transition-all',
-                selected ? 'h-[6px] w-[6px]' : 'h-0 w-0',
-              )}
-            />
-          )}
-        </span>
+        <QuestionChoiceIndicator
+          selected={selected}
+          shape={indicatorShape}
+          className="ml-auto self-center"
+        />
       </div>
     </Comp>
   );

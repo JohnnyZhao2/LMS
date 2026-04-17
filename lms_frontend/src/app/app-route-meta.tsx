@@ -7,8 +7,8 @@ import {
   FileSearch,
   HelpCircle,
   LayoutGrid,
+  ListTodo,
   Settings,
-  SquareCheck,
   SquareTerminal,
   Tags,
   Users,
@@ -60,11 +60,9 @@ const AnswerReview = lazy(() => import('@/features/submissions/components/answer
 const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
 
 type PermissionMode = 'all' | 'any';
-type MenuSection = 'main' | 'settings';
 type MenuLabelResolver = string | ((workspace: WorkspaceConfig, role: RoleCode) => string);
 
 type MenuMeta = {
-  section: MenuSection;
   label: MenuLabelResolver;
   icon?: LucideIcon;
   group?: {
@@ -112,9 +110,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['task.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: (workspace) => (workspace.menuVariant === 'admin' ? '任务管理' : '任务中心'),
-      icon: SquareCheck,
+      icon: ListTodo,
       order: 50,
     },
     render: () => <TaskRoutePage />,
@@ -155,7 +152,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['tag.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '标签管理',
       icon: Tags,
       order: 20,
@@ -169,7 +165,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['knowledge.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: (workspace) => (workspace.menuVariant === 'student' ? '知识中心' : '知识管理'),
       icon: BookOpen,
       order: 10,
@@ -205,7 +200,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     permissionMode: 'any',
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '试卷管理',
       group: {
         key: 'assessment',
@@ -246,7 +240,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     permissionMode: 'any',
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '题目管理',
       group: {
         key: 'assessment',
@@ -279,7 +272,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['spot_check.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '抽查管理',
       icon: FileSearch,
       order: 60,
@@ -307,7 +299,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['user.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '用户列表',
       group: {
         key: 'users',
@@ -326,9 +317,13 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['activity_log.policy.update'],
     showInMenu: true,
     menu: {
-      section: 'settings',
       label: '日志策略',
-      icon: Settings,
+      group: {
+        key: 'log-management',
+        label: '日志管理',
+        icon: SquareTerminal,
+        order: 80,
+      },
       order: 20,
     },
     render: () => (
@@ -345,10 +340,14 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['activity_log.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '日志审计',
-      icon: SquareTerminal,
-      order: 80,
+      group: {
+        key: 'log-management',
+        label: '日志管理',
+        icon: SquareTerminal,
+        order: 80,
+      },
+      order: 10,
     },
     render: () => (
       <PageFillShell>
@@ -365,7 +364,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     permissionMode: 'any',
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '用户授权',
       group: {
         key: 'users',
@@ -405,7 +403,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['grading.view'],
     showInMenu: true,
     menu: {
-      section: 'main',
       label: '阅卷中心',
       group: {
         key: 'assessment',
@@ -471,7 +468,6 @@ export const getMenuItemsBySection = (
   role: RoleCode | null,
   hasCapability: (permissionCode: string) => boolean,
   hasAnyCapability: (permissionCodes: string[]) => boolean,
-  section: MenuSection,
 ): MenuItem[] => {
   if (!role) {
     return [];
@@ -489,17 +485,15 @@ export const getMenuItemsBySection = (
 
   const items: Array<MenuItem & { order: number; group?: string }> = [];
 
-  if (section === 'main') {
-    items.push({
-      key: `${rolePrefix}/dashboard`,
-      icon: <LayoutGrid className="w-4 h-4" />,
-      label: '概览',
-      order: 0,
-    });
-  }
+  items.push({
+    key: `${rolePrefix}/dashboard`,
+    icon: <LayoutGrid className="w-4 h-4" />,
+    label: '概览',
+    order: 0,
+  });
 
   BUSINESS_ROUTE_META.forEach((route) => {
-    if (!route.showInMenu || !route.menu || route.menu.section !== section) {
+    if (!route.showInMenu || !route.menu) {
       return;
     }
     if (route.allowedRoles && !route.allowedRoles.includes(role)) {

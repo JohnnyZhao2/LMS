@@ -1,10 +1,7 @@
 import React from 'react';
-import { ArrowLeft, FilePenLine } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
-import { EditorPageShell, PageFillShell } from '@/components/ui/page-shell';
+import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { useTags } from '@/features/tags/api/tags';
 import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useQuestionDetail } from '@/features/questions/api/get-questions';
@@ -30,20 +27,9 @@ export const QuestionFormPage: React.FC = () => {
     : [createBlankEditableQuestion()];
 
   return (
-    <PageFillShell>
-      <PageHeader
-        title={isEdit ? '编辑题目' : '新建题目'}
-        icon={<FilePenLine />}
-        extra={(
-          <Button variant="outline" onClick={() => roleNavigate('/questions')}>
-            <ArrowLeft className="h-4 w-4" />
-            返回列表
-          </Button>
-        )}
-      />
-
+    <div className="flex w-full min-h-0 flex-1 flex-col">
       <EditorPageShell>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <PageWorkbench className="min-w-0">
           {isEdit && isLoading ? null : (
             <QuestionBatchEditor
               key={isEdit ? `question-edit-${questionId}` : 'question-create-page'}
@@ -58,9 +44,9 @@ export const QuestionFormPage: React.FC = () => {
               onEmpty={() => roleNavigate('/questions')}
             />
           )}
-        </div>
+        </PageWorkbench>
       </EditorPageShell>
-    </PageFillShell>
+    </div>
   );
 };
 

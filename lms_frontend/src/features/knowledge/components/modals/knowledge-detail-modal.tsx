@@ -1033,14 +1033,19 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           position: fixed; inset: 0; z-index: 400;
           background: rgba(0,0,0,0.6);
           display: flex; align-items: center; justify-content: center;
+          padding: 24px;
+          box-sizing: border-box;
           animation: kdFadeIn .18s ease;
         }
         .kd-container {
           display: flex;
-          width: min(1640px, 96vw); height: min(900px, 94vh);
-          border-radius: 6px; overflow: hidden;
-          padding: 10px;
-          gap: 10px;
+          width: min(1480px, calc(100vw - 64px));
+          height: min(840px, calc(100dvh - 64px));
+          max-width: 100%;
+          max-height: 100%;
+          border-radius: 12px; overflow: hidden;
+          padding: 8px;
+          gap: 8px;
           box-shadow: 0 40px 100px rgba(0,0,0,0.35);
           animation: kdPopIn .22s cubic-bezier(.4,0,.2,1);
           background: #f1f3f6;
@@ -1105,11 +1110,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           background: #fff;
           border-radius: 6px;
           box-shadow: 0 10px 24px rgba(21, 38, 61, 0.07);
-          padding: 60px 92px 80px;
+          padding: 52px 72px 64px;
           display: flex; flex-direction: column;
+          min-width: 0;
         }
         .kd-right {
-          width: 320px; background: #eef2f6;
+          width: clamp(272px, 22vw, 304px); background: #eef2f6;
           border-radius: 6px;
           box-shadow: 0 10px 24px rgba(21, 38, 61, 0.08);
           display: flex; flex-direction: column; flex-shrink: 0;
@@ -1455,7 +1461,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           font-family: var(--theme-font-sans);
           flex: 1; min-height: 100%;
           width: 100%;
-          max-width: 860px;
+          max-width: 820px;
           margin: 0 auto;
         }
         .kd-content-shell .ql-container {
@@ -1558,6 +1564,121 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         @keyframes kdFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes kdPopIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
         @keyframes kdOrbSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        @media (max-width: 1360px) {
+          .kd-overlay {
+            padding: 20px;
+          }
+          .kd-container {
+            width: min(1320px, calc(100vw - 40px));
+            height: min(800px, calc(100dvh - 40px));
+          }
+          .kd-left {
+            padding: 44px 56px 52px;
+          }
+          .kd-right {
+            width: 288px;
+          }
+        }
+
+        @media (max-width: 1100px) {
+          .kd-overlay {
+            padding: 16px;
+          }
+          .kd-container {
+            width: calc(100vw - 32px);
+            height: min(760px, calc(100dvh - 32px));
+          }
+          .kd-left {
+            padding: 36px 40px 44px;
+          }
+          .kd-right {
+            width: 260px;
+          }
+          .kd-right-header {
+            padding: 18px 16px 14px;
+          }
+          .kd-right-body {
+            padding: 16px;
+          }
+          .kd-bottom {
+            padding: 12px 16px 14px;
+          }
+          .kd-content {
+            max-width: 100%;
+          }
+        }
+
+        @media (max-width: 860px) {
+          .kd-overlay {
+            padding: 12px;
+          }
+          .kd-container {
+            flex-direction: column;
+            width: min(100%, 760px);
+            height: min(760px, calc(100dvh - 24px));
+            padding: 6px;
+            gap: 6px;
+          }
+          .kd-focus-btn {
+            left: 12px;
+            top: 12px;
+          }
+          .kd-left {
+            padding: 28px 22px 32px;
+          }
+          .kd-right {
+            width: 100%;
+            max-height: min(260px, 34dvh);
+          }
+          .kd-right-body {
+            padding: 14px 16px;
+          }
+          .kd-link-edit-head,
+          .kd-link-edit-row {
+            grid-template-columns: minmax(0, 92px) minmax(0, 1fr) 28px;
+            gap: 8px;
+          }
+          .kd-link-input-title {
+            max-width: 92px;
+          }
+          .kd-action-group,
+          .kd-edit-actions {
+            gap: 18px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .kd-overlay {
+            padding: 10px;
+          }
+          .kd-container {
+            width: 100%;
+            height: calc(100dvh - 20px);
+            border-radius: 10px;
+          }
+          .kd-left {
+            padding: 24px 18px 28px;
+          }
+          .kd-right {
+            max-height: min(280px, 38dvh);
+          }
+          .kd-content-shell .ql-editor h1 {
+            font-size: 28px;
+            margin-bottom: 22px;
+          }
+          .kd-content-shell .ql-editor h2 {
+            font-size: 21px;
+          }
+          .kd-content-shell .ql-editor p,
+          .kd-content-shell .ql-editor li {
+            font-size: 14px;
+            line-height: 1.75;
+          }
+          .kd-focus-btn::after {
+            display: none;
+          }
+        }
       `}</style>
     </div>
   );

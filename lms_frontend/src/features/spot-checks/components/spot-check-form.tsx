@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ListChecks, Loader2, Plus, UserRound } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ListChecks, Loader2, Plus, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 
@@ -7,7 +7,9 @@ import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSplit } from '@/components/ui/page-shell';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SearchInput } from '@/components/ui/search-input';
+import { UserSelectList } from '@/components/common/user-select-list';
 import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -106,6 +108,8 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
   const [studentId, setStudentId] = useState(() => (!isEdit && initialStudentId ? String(initialStudentId) : ''));
+  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -129,6 +133,26 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
         }
       : null)
     : (users || []).find((user) => String(user.id) === studentId) ?? null;
+  const filteredUsers = useMemo(() => {
+    const keyword = studentSearch.trim().toLowerCase();
+    if (!keyword) {
+      return users || [];
+    }
+
+    return (users || []).filter((user) => {
+      const username = user.username.toLowerCase();
+      const employeeId = (user.employee_id || '').toLowerCase();
+      return username.includes(keyword) || employeeId.includes(keyword);
+    });
+  }, [studentSearch, users]);
+  const studentPanelItems = filteredUsers.map((user) => ({
+    id: user.id,
+    name: user.username,
+    avatarKey: user.avatar_key,
+    meta: user.department?.name
+      ? `${user.employee_id || '未填写工号'} · ${user.department.name}`
+      : (user.employee_id || '未填写工号'),
+  }));
 
   const averageScore = calculateAverageScore(items);
 
@@ -248,18 +272,55 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
               ) : null
             ) : (
               <div className="space-y-2">
-                <SearchableSelect
-                  items={users || []}
-                  value={studentId}
-                  onSelect={(value) => setStudentId(String(value))}
-                  placeholder={usersLoading ? '加载学员中...' : '搜索学员'}
-                  searchPlaceholder="姓名或工号"
-                  icon={<UserRound className="h-4 w-4" />}
-                  className="h-10 rounded-lg bg-white/74 [&_span]:text-[13px]"
-                  getLabel={(user) => `${user.username} · ${user.employee_id || '未填写工号'}`}
-                  getValue={(user) => String(user.id)}
-                  emptyMessage="没有匹配的学员"
-                />
+                <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-10 w-full items-center justify-between rounded-lg border border-border/60 bg-white/74 px-3 text-left shadow-none"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <UserRound className="h-4 w-4 shrink-0 text-text-muted" />
+                        <span className="truncate text-[13px] font-medium text-foreground">
+                          {selectedStudent ? `${selectedStudent.username} · ${selectedStudent.employee_id || '未填写工号'}` : (usersLoading ? '加载学员中...' : '搜索学员')}
+                        </span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${studentPickerOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-xl border-transparent bg-background p-0 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+                  >
+                    <div className="px-3 py-3">
+                      <SearchInput
+                        value={studentSearch}
+                        onChange={setStudentSearch}
+                        placeholder="姓名或工号"
+                        className="w-full"
+                        inputClassName="h-9 rounded-lg"
+                      />
+                    </div>
+                    <div className="max-h-72">
+                      <UserSelectList
+                        items={studentPanelItems}
+                        selectedIds={studentId ? [Number(studentId)] : []}
+                        onSelect={(nextId) => {
+                          setStudentId(String(nextId));
+                          setStudentPickerOpen(false);
+                          setStudentSearch('');
+                        }}
+                        selectionMode="single"
+                        appearance="panel"
+                        density="compact"
+                        isLoading={usersLoading}
+                        emptyText="没有匹配的学员"
+                        loadingText="加载学员中..."
+                        className="max-h-72 py-2 pl-2 pr-0"
+                        listClassName="space-y-[6px]"
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 {errors.student ? <p className="text-sm text-destructive-500">{errors.student}</p> : null}
               </div>
             )}

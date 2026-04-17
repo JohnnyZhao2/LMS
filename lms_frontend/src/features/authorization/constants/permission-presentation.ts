@@ -48,8 +48,12 @@ const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     order: 70,
   },
   config: {
-    label: '配置管理',
+    label: '系统配置',
     order: 80,
+  },
+  log_management: {
+    label: '日志管理',
+    order: 85,
   },
   submission: {
     label: '作答流程',

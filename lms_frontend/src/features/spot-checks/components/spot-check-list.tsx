@@ -1,8 +1,7 @@
 import { startTransition, useDeferredValue, useState } from 'react';
-import { ListChecks, Plus, Trash2 } from 'lucide-react';
+import { ListChecks, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
@@ -115,14 +114,6 @@ export const SpotCheckList: React.FC = () => {
         <PageHeader
           title="抽查管理"
           icon={<ListChecks className="h-5 w-5" />}
-          extra={
-            canCreateSpotCheck ? (
-              <Button onClick={() => setIsCreateDialogOpen(true)} className="h-10 rounded-lg px-4">
-                <Plus className="h-4 w-4" />
-                新建抽查
-              </Button>
-            ) : null
-          }
         />
 
         <PageWorkbench>
@@ -149,6 +140,8 @@ export const SpotCheckList: React.FC = () => {
               page={page}
               pageSize={pageSize}
               isLoading={recordsLoading}
+              canCreateSpotCheck={canCreateSpotCheck}
+              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
               onEditRecord={setEditingRecord}
               onDeleteRecord={setDeleteTarget}
               onPageChange={(nextPage) => updatePagination({ page: nextPage })}

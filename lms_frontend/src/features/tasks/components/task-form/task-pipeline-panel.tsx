@@ -1,6 +1,9 @@
+import React from 'react';
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -8,101 +11,192 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import {
+  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Send } from 'lucide-react';
+import { BookOpen, ClipboardList, LayoutList, Trophy } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { cn } from '@/lib/utils';
+
+import { getTaskResourceGroup } from './use-task-form.helpers';
 import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
 import { SortableResourceItem } from './sortable-resource-item';
-import type { SelectedResource } from './task-form.types';
+import type { ResourceGroup, SelectedResource } from './task-form.types';
 
 interface TaskPipelinePanelProps {
   selectedResources: SelectedResource[];
   resourcesDisabled: boolean;
   onDragEnd: (event: DragEndEvent) => void;
-  onMoveResource: (index: number, direction: 'up' | 'down') => void;
-  onRemoveResource: (index: number) => void;
+  onRemoveResource: (uid: number) => void;
   embedded?: boolean;
 }
+
+const SECTION_ORDER: ResourceGroup[] = ['DOCUMENT', 'PRACTICE', 'EXAM'];
+
+const SECTION_CONFIG: Record<ResourceGroup, {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = {
+  DOCUMENT: { title: '学习资料', icon: BookOpen },
+  PRACTICE: { title: '测验', icon: ClipboardList },
+  EXAM: { title: '考试', icon: Trophy },
+};
 
 export function TaskPipelinePanel({
   selectedResources,
   resourcesDisabled,
   onDragEnd,
-  onMoveResource,
   onRemoveResource,
   embedded = false,
 }: TaskPipelinePanelProps) {
+  const dragCleanupFrameRef = React.useRef<number | null>(null);
+  const [draggingItemUid, setDraggingItemUid] = React.useState<number | null>(null);
+  const [draggingItemWidth, setDraggingItemWidth] = React.useState<number | null>(null);
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
+  React.useEffect(() => () => {
+    if (dragCleanupFrameRef.current !== null) {
+      cancelAnimationFrame(dragCleanupFrameRef.current);
+    }
+  }, []);
+
+  const groupedResources = React.useMemo(
+    () => SECTION_ORDER.map((group) => ({
+      group,
+      items: selectedResources.filter((item) => getTaskResourceGroup(item) === group),
+    })),
+    [selectedResources],
+  );
+
+  const draggingItem = React.useMemo(
+    () => selectedResources.find((item) => item.uid === draggingItemUid) ?? null,
+    [draggingItemUid, selectedResources],
+  );
+
+  const clearDragState = React.useCallback(() => {
+    if (dragCleanupFrameRef.current !== null) {
+      cancelAnimationFrame(dragCleanupFrameRef.current);
+      dragCleanupFrameRef.current = null;
+    }
+    setDraggingItemUid(null);
+    setDraggingItemWidth(null);
+  }, []);
+
+  const handleDragStart = React.useCallback(({ active }: DragStartEvent) => {
+    setDraggingItemUid(Number(active.id));
+    setDraggingItemWidth(active.rect.current.initial?.width ?? null);
+  }, []);
+
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    onDragEnd(event);
+    dragCleanupFrameRef.current = requestAnimationFrame(clearDragState);
+  }, [clearDragState, onDragEnd]);
+
   return (
     <div className={cn(embedded ? 'flex min-h-0 flex-1 flex-col overflow-hidden bg-background' : TASK_FORM_PANEL_CLASSNAME)}>
       {embedded ? null : (
         <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
-          <Send className="h-4 w-4 -rotate-45 text-primary-500" />
-          <span>任务流程</span>
+          <LayoutList className="h-4 w-4 text-foreground" />
+          <span>任务结构</span>
         </div>
       )}
 
-      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto bg-muted/35 p-6">
-        {selectedResources.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-xl border border-border/60 bg-background shadow-sm">
-              <Send className="h-9 w-9 -rotate-45 text-primary-500" />
-            </div>
-            <h3 className="mb-3 text-xl font-bold tracking-tight text-foreground">开启你的学习任务</h3>
-            <p className="max-w-sm text-sm font-medium leading-relaxed text-text-muted">
-              从左侧资源库中挑选内容，通过拖动确定步骤顺序。
-            </p>
-            <div className="mt-8 rounded-full border border-primary-100 bg-primary-50 px-4 py-2">
-              <span className="text-xs font-bold text-primary-600">点击左侧资源开始</span>
-            </div>
-          </div>
-        ) : (
-          <div className="relative mx-auto w-full max-w-[520px] pl-12">
-            {selectedResources.length > 1 ? (
-              <div
-                className="absolute left-[17px] top-[18px] w-0.5 bg-border"
-                style={{ height: 'calc(100% - 36px)' }}
+      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto bg-muted/15 p-5">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragCancel={clearDragState}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex min-h-full w-full flex-col gap-4">
+            {groupedResources.map(({ group, items }) => (
+              <TaskPipelineSection
+                key={group}
+                group={group}
+                items={items}
+                resourcesDisabled={resourcesDisabled}
+                onRemoveResource={onRemoveResource}
               />
-            ) : null}
-
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={onDragEnd}
-            >
-              <SortableContext
-                items={selectedResources.map((item) => item.uid)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-4">
-                  {selectedResources.map((item, index) => (
-                    <SortableResourceItem
-                      key={item.uid}
-                      item={item}
-                      idx={index}
-                      moveResource={onMoveResource}
-                      removeResource={onRemoveResource}
-                      totalResources={selectedResources.length}
-                      disabled={resourcesDisabled}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            ))}
           </div>
-        )}
+
+          <DragOverlay>
+            {draggingItem ? (
+              <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
+                <SortableResourceItem
+                  item={draggingItem}
+                  indexInGroup={groupedResources.find(({ group }) => group === getTaskResourceGroup(draggingItem))?.items
+                    .findIndex((item) => item.uid === draggingItem.uid) ?? 0}
+                  removeResource={onRemoveResource}
+                  disabled={resourcesDisabled}
+                  isOverlay
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </ScrollContainer>
     </div>
   );
 }
+
+interface TaskPipelineSectionProps {
+  group: ResourceGroup;
+  items: SelectedResource[];
+  resourcesDisabled: boolean;
+  onRemoveResource: (uid: number) => void;
+}
+
+const TaskPipelineSection: React.FC<TaskPipelineSectionProps> = ({
+  group,
+  items,
+  resourcesDisabled,
+  onRemoveResource,
+}) => {
+  const { title, icon: Icon } = SECTION_CONFIG[group];
+
+  return (
+    <section className="flex min-h-[calc((100%-2rem)/3)] flex-none flex-col overflow-hidden rounded-xl border border-border bg-background">
+      <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <Icon className="h-4 w-4 text-text-muted" />
+          <span className="text-[13px] font-semibold text-foreground">{title}</span>
+        </div>
+        <span className="text-[11px] font-medium text-text-muted">{items.length}</span>
+      </div>
+
+      <div className="px-4 py-3">
+        <SortableContext items={items.map((item) => String(item.uid))} strategy={rectSortingStrategy}>
+          {items.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {items.map((item, index) => (
+                <SortableResourceItem
+                  key={item.uid}
+                  item={item}
+                  indexInGroup={index}
+                  removeResource={onRemoveResource}
+                  disabled={resourcesDisabled}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-[92px] items-center justify-center rounded-lg border border-dashed border-border/80 text-[12px] font-medium text-text-muted">
+              点击左侧资源添加
+            </div>
+          )}
+        </SortableContext>
+      </div>
+    </section>
+  );
+};

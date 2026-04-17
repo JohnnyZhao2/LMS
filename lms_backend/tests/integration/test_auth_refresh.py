@@ -14,6 +14,35 @@ def clear_auth_throttle_cache():
 
 
 @pytest.mark.django_db
+def test_multi_role_login_defaults_to_student():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Default Role', code='DEPT_DEFAULT_ROLE')
+    mentor_role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+
+    user = User.objects.create_user(
+        employee_id='EMP_DEFAULT_ROLE',
+        username='Default Role User',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=user, role=mentor_role)
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP_DEFAULT_ROLE', 'password': 'password123'},
+        format='json',
+    )
+
+    assert login_response.status_code == 200
+    payload = login_response.data['data']
+    assert payload['current_role'] == 'STUDENT'
+    assert {item['code'] for item in payload['available_roles']} == {'STUDENT', 'MENTOR'}
+    assert payload['capabilities']['dashboard.student.view']['allowed'] is True
+    assert payload['capabilities']['dashboard.mentor.view']['allowed'] is False
+
+
+@pytest.mark.django_db
 def test_refresh_token_should_rotate_and_invalidate_old_token():
     client = APIClient()
 
@@ -118,6 +147,13 @@ def test_knowledge_view_permission_can_be_denied_by_override():
     access_token = login_response.data['data']['access_token']
 
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    switch_response = client.post(
+        '/api/auth/switch-role/',
+        {'role_code': 'ADMIN'},
+        format='json',
+    )
+    assert switch_response.status_code == 200
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {switch_response.data['data']['access_token']}")
     response = client.get('/api/knowledge/')
     assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'

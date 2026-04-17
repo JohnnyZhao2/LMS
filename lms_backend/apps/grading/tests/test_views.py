@@ -2,6 +2,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.grading.selectors import calculate_question_pass_rate
 from apps.grading.views import GradingAnswersView, PendingQuizzesView
 from apps.questions.models import Question, QuestionOption
 from apps.submissions.models import Answer, AnswerSelection
@@ -89,15 +90,62 @@ def test_objective_distribution_counts_answered_students_once():
 
 
 @pytest.mark.django_db
-def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkeypatch):
+def test_objective_analysis_includes_in_progress_answers():
+    mentor = UserFactory()
+    task = TaskFactory(created_by=mentor)
+    task_quiz = TaskQuizFactory(task=task)
+
+    question = create_choice_question(
+        created_by=mentor,
+        content='进行中多选题',
+        correct_keys=['A', 'B'],
+    )
+    quiz_question = QuizRevisionQuestionFactory(
+        quiz=task_quiz.quiz,
+        question=question,
+        question_type='MULTIPLE_CHOICE',
+        content='进行中多选题',
+        score=2,
+    )
+
+    assignment = TaskAssignmentFactory(task=task)
+    submission = SubmissionFactory(
+        task_assignment=assignment,
+        task_quiz=task_quiz,
+        quiz=task_quiz.quiz,
+        status='IN_PROGRESS',
+    )
+
+    answer = Answer.objects.create(
+        submission=submission,
+        question=quiz_question,
+    )
+    key_map = quiz_question.get_option_key_map()
+    AnswerSelection.objects.create(answer=answer, question_option_id=key_map['A']['id'])
+    AnswerSelection.objects.create(answer=answer, question_option_id=key_map['B']['id'])
+
+    payload = GradingAnswersView()._get_grading_answers(task, quiz_question.id, task_quiz.id)
+    option_map = {option['option_key']: option for option in payload['options']}
+    pass_rate = calculate_question_pass_rate(task, quiz_question.id, task_quiz.id, quiz_question.score, True)
+
+    assert payload['answered_count'] == 1
+    assert option_map['A']['selected_count'] == 1
+    assert option_map['B']['selected_count'] == 1
+    assert pass_rate == 100.0
+
+
+@pytest.mark.django_db
+def test_pending_quizzes_view_returns_quizzes_with_analysis_data(monkeypatch):
     reviewer = UserFactory(username='reviewer')
     owner = UserFactory(username='owner')
 
     visible_pending_task = TaskFactory(created_by=owner, updated_by=owner, created_role='ADMIN')
-    visible_graded_task = TaskFactory(created_by=owner, updated_by=owner, created_role='ADMIN')
+    visible_objective_task = TaskFactory(created_by=owner, updated_by=owner, created_role='ADMIN')
+    visible_empty_task = TaskFactory(created_by=owner, updated_by=owner, created_role='ADMIN')
 
     pending_task_quiz = TaskQuizFactory(task=visible_pending_task)
-    graded_task_quiz = TaskQuizFactory(task=visible_graded_task)
+    objective_task_quiz = TaskQuizFactory(task=visible_objective_task)
+    TaskQuizFactory(task=visible_empty_task)
 
     pending_question = QuestionFactory(
         created_by=owner,
@@ -105,11 +153,10 @@ def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkey
         reference_answer='参考答案',
         with_default_options=False,
     )
-    graded_question = QuestionFactory(
+    objective_question = create_choice_question(
         created_by=owner,
-        question_type='SHORT_ANSWER',
-        reference_answer='参考答案',
-        with_default_options=False,
+        content='客观题',
+        correct_keys=['A', 'B'],
     )
 
     pending_revision_question = QuizRevisionQuestionFactory(
@@ -121,18 +168,16 @@ def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkey
         score=5,
         with_default_options=False,
     )
-    graded_revision_question = QuizRevisionQuestionFactory(
-        quiz=graded_task_quiz.quiz,
-        question=graded_question,
-        question_type='SHORT_ANSWER',
-        content='已批简答题',
-        reference_answer='参考答案',
-        score=5,
-        with_default_options=False,
+    objective_revision_question = QuizRevisionQuestionFactory(
+        quiz=objective_task_quiz.quiz,
+        question=objective_question,
+        question_type='MULTIPLE_CHOICE',
+        content='客观题',
+        score=2,
     )
 
     pending_assignment = TaskAssignmentFactory(task=visible_pending_task)
-    graded_assignment = TaskAssignmentFactory(task=visible_graded_task)
+    objective_assignment = TaskAssignmentFactory(task=visible_objective_task)
 
     pending_submission = SubmissionFactory(
         task_assignment=pending_assignment,
@@ -142,13 +187,12 @@ def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkey
         status='GRADING',
         submitted_at=timezone.now(),
     )
-    graded_submission = SubmissionFactory(
-        task_assignment=graded_assignment,
-        task_quiz=graded_task_quiz,
-        quiz=graded_task_quiz.quiz,
-        user=graded_assignment.assignee,
-        status='GRADED',
-        submitted_at=timezone.now(),
+    objective_submission = SubmissionFactory(
+        task_assignment=objective_assignment,
+        task_quiz=objective_task_quiz,
+        quiz=objective_task_quiz.quiz,
+        user=objective_assignment.assignee,
+        status='IN_PROGRESS',
     )
 
     Answer.objects.create(
@@ -156,20 +200,18 @@ def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkey
         question=pending_revision_question,
         text_answer='待评分答案',
     )
-    Answer.objects.create(
-        submission=graded_submission,
-        question=graded_revision_question,
-        text_answer='已评分答案',
-        graded_by=reviewer,
-        graded_at=timezone.now(),
-        obtained_score=5,
+    create_objective_answer(
+        submission=objective_submission,
+        question=objective_revision_question,
+        selected_keys=['A', 'B'],
+        is_correct=True,
     )
 
     monkeypatch.setattr('apps.grading.views.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr(
         'apps.grading.views.scope_filter',
         lambda permission_code, request, **kwargs: kwargs['base_queryset'].filter(
-            id__in=[visible_pending_task.id, visible_graded_task.id]
+            id__in=[visible_pending_task.id, visible_objective_task.id, visible_empty_task.id]
         ),
     )
 
@@ -179,18 +221,29 @@ def test_pending_quizzes_view_uses_task_visibility_and_skips_zero_pending(monkey
     response = PendingQuizzesView.as_view()(request)
 
     assert response.status_code == 200
-    assert len(response.data['data']) == 1
+    assert len(response.data['data']) == 2
 
-    task_payload = response.data['data'][0]
-    assert task_payload['task_id'] == visible_pending_task.id
-    assert task_payload['task_title'] == visible_pending_task.title
-    assert len(task_payload['quizzes']) == 1
+    task_payloads = {item['task_id']: item for item in response.data['data']}
+    assert visible_empty_task.id not in task_payloads
 
-    quiz_payload = task_payload['quizzes'][0]
-    assert quiz_payload['quiz_id'] == pending_task_quiz.id
-    assert quiz_payload['quiz_title'] == pending_task_quiz.quiz.title
-    assert quiz_payload['quiz_type'] == pending_task_quiz.quiz.quiz_type
-    assert quiz_payload['quiz_type_display'] == pending_task_quiz.quiz.get_quiz_type_display()
-    assert quiz_payload['question_count'] == pending_task_quiz.quiz.question_count
-    assert quiz_payload['duration'] == pending_task_quiz.quiz.duration
-    assert quiz_payload['pending_count'] == 1
+    pending_task_payload = task_payloads[visible_pending_task.id]
+    assert pending_task_payload['task_title'] == visible_pending_task.title
+    assert len(pending_task_payload['quizzes']) == 1
+
+    pending_quiz_payload = pending_task_payload['quizzes'][0]
+    assert pending_quiz_payload['quiz_id'] == pending_task_quiz.id
+    assert pending_quiz_payload['quiz_title'] == pending_task_quiz.quiz.title
+    assert pending_quiz_payload['quiz_type'] == pending_task_quiz.quiz.quiz_type
+    assert pending_quiz_payload['quiz_type_display'] == pending_task_quiz.quiz.get_quiz_type_display()
+    assert pending_quiz_payload['question_count'] == pending_task_quiz.quiz.question_count
+    assert pending_quiz_payload['duration'] == pending_task_quiz.quiz.duration
+    assert pending_quiz_payload['pending_count'] == 1
+
+    objective_task_payload = task_payloads[visible_objective_task.id]
+    assert objective_task_payload['task_title'] == visible_objective_task.title
+    assert len(objective_task_payload['quizzes']) == 1
+
+    objective_quiz_payload = objective_task_payload['quizzes'][0]
+    assert objective_quiz_payload['quiz_id'] == objective_task_quiz.id
+    assert objective_quiz_payload['quiz_title'] == objective_task_quiz.quiz.title
+    assert objective_quiz_payload['pending_count'] == 0

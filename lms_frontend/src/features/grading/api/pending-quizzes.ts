@@ -19,12 +19,17 @@ export interface PendingTask {
   quizzes: PendingQuiz[];
 }
 
-export const usePendingQuizzes = () => {
+interface UsePendingQuizzesOptions {
+  enabled?: boolean;
+}
+
+export const usePendingQuizzes = (options: UsePendingQuizzesOptions = {}) => {
   const currentRole = useCurrentRole();
+  const { enabled = true } = options;
 
   return useQuery({
     queryKey: ['grading', 'pending', currentRole ?? 'UNKNOWN'],
     queryFn: () => apiClient.get<PendingTask[]>('/grading/pending/'),
-    enabled: currentRole !== null,
+    enabled: currentRole !== null && enabled,
   });
 };

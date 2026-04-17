@@ -1,7 +1,6 @@
 import * as React from "react"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
-    FileText,
     Trash2,
     Clock,
     ListTodo,
@@ -389,7 +388,7 @@ export const TaskManagement: React.FC = () => {
         <PageFillShell>
             <PageHeader
                 title="任务中心"
-                icon={<FileText />}
+                icon={<ListTodo />}
             />
 
             {/* 列表主体 */}

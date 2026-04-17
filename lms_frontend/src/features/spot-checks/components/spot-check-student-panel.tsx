@@ -43,7 +43,6 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />
           <span className="text-[13px] font-semibold text-foreground">学员</span>
-          <span className="text-[12px] text-text-muted">({panelItems.length})</span>
         </div>
       </div>
 

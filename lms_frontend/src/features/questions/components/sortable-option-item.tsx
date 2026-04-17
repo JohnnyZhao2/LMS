@@ -1,11 +1,12 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, GripVertical, X } from 'lucide-react';
+import { GripVertical, X } from 'lucide-react';
 
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
+import { QuestionChoiceIndicator } from './question-document-shared';
 
 interface SortableOptionItemProps {
   id: string;
@@ -54,26 +55,20 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         onClick={onToggleAnswer}
         disabled={disabled}
         aria-label={`${selected ? '取消' : '设为'}${isSingleChoice ? '正确答案' : '正确选项'} ${optionKey}`}
-        className={cn(
-          'flex h-[14px] w-[14px] shrink-0 self-center items-center justify-center border transition-all duration-150',
-          disabled ? 'cursor-default' : 'cursor-pointer',
-          isSingleChoice ? 'rounded-full' : 'rounded-[7px]',
-          selected
-            ? 'border-primary-500 bg-primary-500 text-white shadow-[0_0_0_2px_var(--theme-interaction-outline)]'
-            : 'border-gray-300 bg-transparent text-text-muted hover:border-gray-400 hover:bg-transparent',
-        )}
+        className={cn(disabled ? 'cursor-default' : 'cursor-pointer')}
       >
-        {isSingleChoice ? (
-          <span
-            className={cn(
-              'block rounded-full transition-all duration-150',
-              selected ? 'h-[5px] w-[5px] bg-white' : 'h-0 w-0',
-            )}
-            aria-hidden="true"
-          />
-        ) : selected ? (
-          <Check className="h-[8px] w-[8px]" strokeWidth={4.4} />
-        ) : null}
+        <QuestionChoiceIndicator
+          selected={selected}
+          shape={isSingleChoice ? 'circle' : 'square'}
+          className={cn(
+            'h-[14px] w-[14px] border transition-all duration-150',
+            selected && 'shadow-[0_0_0_2px_var(--theme-interaction-outline)]',
+          )}
+          selectedClassName="border-primary-500 bg-primary-500"
+          unselectedClassName="border-gray-300 bg-transparent"
+          iconClassName="h-[8px] w-[8px]"
+          dotClassName={selected ? 'h-[5px] w-[5px] bg-white' : 'h-0 w-0'}
+        />
       </button>
 
       <div

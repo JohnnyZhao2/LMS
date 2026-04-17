@@ -5,6 +5,18 @@ from apps.authorization.models import Permission, Role, UserScopeGroupOverride
 from apps.users.models import Department, User, UserRole
 
 
+def _switch_role(client: APIClient, role_code: str) -> dict:
+    response = client.post(
+        '/api/auth/switch-role/',
+        {'role_code': role_code},
+        format='json',
+    )
+    assert response.status_code == 200
+    payload = response.data['data']
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {payload['access_token']}")
+    return payload
+
+
 @pytest.mark.django_db
 def test_scope_allow_override_marks_user_view_capability_as_allowed():
     client = APIClient()
@@ -44,7 +56,8 @@ def test_scope_allow_override_marks_user_view_capability_as_allowed():
     )
 
     assert login_response.status_code == 200
-    payload = login_response.data['data']
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login_response.data['data']['access_token']}")
+    payload = _switch_role(client, 'MENTOR')
     assert payload['current_role'] == 'MENTOR'
     assert payload['capabilities']['user.view']['allowed'] is True
     assert payload['capabilities']['user.view']['scope_types'] == ['MENTEES']
@@ -102,8 +115,8 @@ def test_scope_allow_override_allows_user_list_access_with_scoped_results():
     )
     assert login_response.status_code == 200
 
-    access_token = login_response.data['data']['access_token']
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login_response.data['data']['access_token']}")
+    _switch_role(client, 'MENTOR')
 
     list_response = client.get('/api/users/')
     assert list_response.status_code == 200

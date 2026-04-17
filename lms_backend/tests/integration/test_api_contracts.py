@@ -1486,6 +1486,18 @@ class TestTaskResourceOptionApiContracts:
         assert ('DOCUMENT', historical_knowledge.id) not in result_ids
         assert ('QUIZ', historical_quiz.id) not in result_ids
 
+    def test_task_resource_options_support_excluding_selected_resources(self, api_client, mentor_user, sample_knowledge, sample_quiz):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get(
+            f'/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10'
+            f'&exclude_document_ids={sample_knowledge.id}&exclude_quiz_ids={sample_quiz.id}'
+        )
+
+        assert response.status_code == 200, response.data
+        result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
+        assert ('DOCUMENT', sample_knowledge.id) not in result_ids
+        assert ('QUIZ', sample_quiz.id) not in result_ids
+
 
 @pytest.mark.django_db
 class TestSpotCheckApiContracts:

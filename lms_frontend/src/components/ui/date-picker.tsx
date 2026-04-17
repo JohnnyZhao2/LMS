@@ -20,6 +20,7 @@ interface DatePickerProps {
   align?: "start" | "center" | "end"
   disabled?: boolean
   appearance?: "default" | "search"
+  hideLeadingIcon?: boolean
 }
 
 const DATE_PICKER_TRIGGER_CLASSNAME = [
@@ -47,6 +48,7 @@ function DatePicker({
   align = "start",
   disabled = false,
   appearance = "default",
+  hideLeadingIcon = false,
 }: DatePickerProps) {
   const dateLabel = date ? format(date, "yyyy.MM.dd", { locale: zhCN }) : placeholder
 
@@ -64,7 +66,7 @@ function DatePicker({
             )}
           >
             <span className="flex min-w-0 items-center gap-2.5">
-              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              {!hideLeadingIcon ? <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" /> : null}
               <span className="truncate">{dateLabel}</span>
             </span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
@@ -80,7 +82,7 @@ function DatePicker({
             )}
           >
             <span className="flex min-w-0 items-center gap-2.5">
-              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              {!hideLeadingIcon ? <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" /> : null}
               <span className="truncate">{dateLabel}</span>
             </span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />

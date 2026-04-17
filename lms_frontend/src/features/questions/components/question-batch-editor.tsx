@@ -161,6 +161,8 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
             items={items}
             activeKey={activeKey}
             quizType="PRACTICE"
+            itemDisplayMode="plain"
+            showScoreSummary={false}
             onSelectItem={setActiveKey}
             onReorderItems={handleReorderItems}
             onDurationChange={() => undefined}

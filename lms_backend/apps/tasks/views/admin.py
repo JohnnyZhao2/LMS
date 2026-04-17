@@ -4,6 +4,9 @@ Implements:
 - Task CRUD
 - Assignable user list
 """
+from math import ceil
+from typing import Optional
+
 from django.db.models import Q
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -33,6 +36,33 @@ from core.responses import (
     paginated_response,
     success_response,
 )
+
+
+def _parse_positive_int_list_query_param(request, name: str) -> list[int]:
+    raw_value = (request.query_params.get(name) or '').strip()
+    if not raw_value:
+        return []
+
+    values: list[int] = []
+    for raw_item in raw_value.split(','):
+        item = raw_item.strip()
+        if not item:
+            continue
+        try:
+            value = int(item)
+        except (TypeError, ValueError):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'参数 {name} 必须是逗号分隔的正整数列表',
+            )
+        if value < 1:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'参数 {name} 必须是逗号分隔的正整数列表',
+            )
+        values.append(value)
+
+    return sorted(set(values))
 
 
 class AssignableUserListView(APIView):
@@ -97,6 +127,8 @@ class TaskResourceOptionListView(APIView):
             OpenApiParameter(name='search', type=str, description='搜索资源标题；知识同时支持内容搜索'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
+            OpenApiParameter(name='exclude_document_ids', type=str, description='排除的知识 ID，逗号分隔'),
+            OpenApiParameter(name='exclude_quiz_ids', type=str, description='排除的试卷 ID，逗号分隔'),
         ],
         responses={200: TaskResourceOptionSerializer(many=True)},
         tags=['任务管理']
@@ -117,11 +149,51 @@ class TaskResourceOptionListView(APIView):
                 message='参数 resource_type 仅支持 ALL、DOCUMENT、QUIZ'
             )
         search = request.query_params.get('search')
-        items = task_resource_options(search=search, resource_type=resource_type)
-        paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(items, request)
-        serializer = TaskResourceOptionSerializer(page, many=True)
-        return paginated_response(page, serializer.data, paginator)
+        exclude_document_ids = _parse_positive_int_list_query_param(request, 'exclude_document_ids')
+        exclude_quiz_ids = _parse_positive_int_list_query_param(request, 'exclude_quiz_ids')
+        items = task_resource_options(
+            search=search,
+            resource_type=resource_type,
+            exclude_document_ids=set(exclude_document_ids),
+            exclude_quiz_ids=set(exclude_quiz_ids),
+        )
+
+        page = parse_int_query_param(request=request, name='page', default=1, minimum=1) or 1
+        page_size = parse_int_query_param(
+            request=request,
+            name='page_size',
+            default=StandardResultsSetPagination.page_size,
+            minimum=1,
+            maximum=StandardResultsSetPagination.max_page_size,
+        ) or StandardResultsSetPagination.page_size
+
+        total_count = len(items)
+        total_pages = max(1, ceil(total_count / page_size))
+        current_page = min(page, total_pages)
+        start = (current_page - 1) * page_size
+        end = start + page_size
+        page_items = items[start:end]
+
+        query_params = request.query_params.copy()
+
+        def build_page_url(target_page: Optional[int]) -> Optional[str]:
+            if target_page is None or target_page < 1 or target_page > total_pages:
+                return None
+            next_query_params = query_params.copy()
+            next_query_params['page'] = str(target_page)
+            next_query_params['page_size'] = str(page_size)
+            return request.build_absolute_uri(f'{request.path}?{next_query_params.urlencode()}')
+
+        serializer = TaskResourceOptionSerializer(page_items, many=True)
+        return success_response(data={
+            'count': total_count,
+            'total_pages': total_pages,
+            'current_page': current_page,
+            'page_size': page_size,
+            'next': build_page_url(current_page + 1 if current_page < total_pages else None),
+            'previous': build_page_url(current_page - 1 if current_page > 1 else None),
+            'results': serializer.data,
+        })
 
 
 class TaskCreateView(APIView):
