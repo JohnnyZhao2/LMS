@@ -82,6 +82,7 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
 
 const SELECTOR_TRIGGER_CLASSNAME = 'h-10 rounded-xl border-border/70 bg-background/90 px-3 shadow-none';
 const SELECTOR_ICON_CLASSNAME = 'h-4 w-4 shrink-0 text-primary-500';
+const QUESTION_LIST_GRID_CLASSNAME = 'grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem] items-center gap-x-2';
 
 export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   taskId,
@@ -392,11 +393,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
           <div className="space-y-4 px-3 py-4 sm:px-4">
             {groupedQuestions.map((section) => (
               <div key={section.type} className="space-y-2">
-                <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5">
-                  <QuestionTypeBadge type={section.type} variant="plain" />
-                  <span className="shrink-0 text-[11px] font-medium text-text-muted">
-                    {section.entries.length} 题
-                  </span>
+                <div className={cn('mx-1.5', QUESTION_LIST_GRID_CLASSNAME)}>
+                  <div className="col-span-2 min-w-0">
+                    <QuestionTypeBadge type={section.type} variant="plain" />
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -409,19 +409,20 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                         key={question.question_id}
                         onClick={() => setSelectedQuestionId(question.question_id)}
                         className={cn(
-                          'group relative flex w-full items-baseline gap-3 rounded-lg border px-3 py-2 text-left transition-all duration-200',
+                          'group relative w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-200',
+                          QUESTION_LIST_GRID_CLASSNAME,
                           isActive
                             ? 'border-primary-200 bg-primary-50/60 ring-1 ring-primary-100'
                             : 'border-transparent bg-background hover:border-primary-200 hover:bg-primary-50/40'
                         )}
                       >
-                        <span className="w-4 shrink-0 text-center text-[13px] font-medium leading-5 tabular-nums text-text-muted">
+                        <span className="text-left text-[13px] font-medium leading-5 tabular-nums text-text-muted">
                           {number}
                         </span>
-                        <h3 className="min-w-0 flex-1 line-clamp-2 text-[13px] font-medium leading-5 text-foreground">
+                        <h3 className="min-w-0 line-clamp-2 text-[13px] font-medium leading-5 text-foreground">
                           {question.question_text}
                         </h3>
-                        <span className={cn('shrink-0 text-[11px] font-semibold leading-5 tabular-nums', passRateColor)}>
+                        <span className={cn('w-[4.5rem] justify-self-end text-right text-[11px] font-semibold leading-5 tabular-nums', passRateColor)}>
                           {formatPassRate(question.pass_rate)}
                         </span>
                       </button>
