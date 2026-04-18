@@ -1,8 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Navigate, Route, useParams } from 'react-router-dom';
-import { ProtectedRoute } from '@/components/route-guard';
+import { ProtectedRoute } from '@/app/guards/route-guard';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import {
   BUSINESS_ROUTE_META,
   getBusinessRouteElement,

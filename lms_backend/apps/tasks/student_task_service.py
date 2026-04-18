@@ -10,6 +10,7 @@ from apps.submissions.models import Submission
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
+from .assignment_workflow import sync_assignment_overdue_status
 from .models import KnowledgeLearningProgress, TaskAssignment
 from .selectors import (
     assignment_detail_queryset,
@@ -32,7 +33,7 @@ class StudentTaskService(BaseService):
             assignee_id=self.user.id,
         ).first()
         self.validate_not_none(assignment, '任务不存在或未分配给您')
-        assignment.check_and_update_overdue()
+        sync_assignment_overdue_status(assignment)
         return assignment
 
     def ensure_knowledge_progress(self, assignment: TaskAssignment) -> None:
@@ -63,7 +64,7 @@ class StudentTaskService(BaseService):
         assignment: TaskAssignment,
         task_knowledge_id: int,
     ) -> KnowledgeLearningProgress:
-        assignment.check_and_update_overdue()
+        sync_assignment_overdue_status(assignment)
         if assignment.status == 'COMPLETED':
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已完成')
         if assignment.status == 'OVERDUE':

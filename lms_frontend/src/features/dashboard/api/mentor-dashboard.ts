@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { useCurrentRole } from '@/hooks/use-current-role';
+import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { MentorDashboard } from '@/types/dashboard';
 
 /**

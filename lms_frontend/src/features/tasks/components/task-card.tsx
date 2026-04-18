@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 

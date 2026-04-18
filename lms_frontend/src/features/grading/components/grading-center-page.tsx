@@ -5,9 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '../api/pending-quizzes';
-import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/tasks/components/task-preview/grading-center-tab';
-import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/entities/grading/api/pending-quizzes';
+import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/entities/grading/components/grading-center-tab';
+import { useTaskDetail } from '@/entities/task/api/get-task-detail';
 
 export const GradingCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();

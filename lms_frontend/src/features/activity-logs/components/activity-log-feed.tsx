@@ -1,6 +1,6 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
 import type { ActivityLogItem } from '../types';
 

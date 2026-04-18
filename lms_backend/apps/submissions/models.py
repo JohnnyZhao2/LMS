@@ -2,7 +2,6 @@
 
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -136,28 +135,6 @@ class Submission(TimestampMixin, models.Model):
         elapsed_seconds = max(0, int((timezone.now() - self.started_at).total_seconds()))
         return max(base_seconds - elapsed_seconds, 0)
 
-    def complete_grading(self):
-        if self.status != 'GRADING':
-            raise ValidationError('只能完成待评分状态的记录')
-        if not self.all_subjective_graded:
-            raise ValidationError('还有未评分的主观题')
-        self.refresh_obtained_score()
-        self.status = 'GRADED'
-        self.save(update_fields=['status'])
-        self.refresh_assignment_score()
-        self.task_assignment.check_completion()
-
-    def refresh_obtained_score(self):
-        from .scoring import refresh_submission_obtained_score
-
-        refresh_submission_obtained_score(self)
-
-    def refresh_assignment_score(self):
-        from .scoring import refresh_assignment_score
-
-        refresh_assignment_score(self.task_assignment, self.__class__)
-
-
 class Answer(TimestampMixin, models.Model):
     """单题作答记录。"""
 
@@ -272,25 +249,13 @@ class Answer(TimestampMixin, models.Model):
         self.obtained_score = score
         self.save(update_fields=['is_correct', 'obtained_score'])
 
-    def grade(self, grader, score, comment=''):
-        if self.is_objective:
-            raise ValidationError('客观题不需要人工评分')
-        score_decimal = Decimal(str(score))
-        if score_decimal < 0 or score_decimal > self.max_score:
-            raise ValidationError(f'分数必须在 0 到 {self.max_score} 之间')
+    def apply_manual_grade(self, grader, score: Decimal, comment=''):
         self.graded_by = grader
         self.graded_at = timezone.now()
-        self.obtained_score = score_decimal
+        self.obtained_score = score
         self.comment = comment
         self.is_correct = self.obtained_score == self.max_score
         self.save()
-        submission = self.submission
-        if submission.status == 'GRADING':
-            if submission.all_subjective_graded:
-                submission.complete_grading()
-        elif submission.status in ['SUBMITTED', 'GRADED']:
-            submission.refresh_obtained_score()
-            submission.refresh_assignment_score()
 
 
 class AnswerSelection(TimestampMixin, models.Model):

@@ -2,7 +2,7 @@ import React from 'react';
 import { Bookmark, CheckCircle, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
+import { QuestionDocumentReadMode } from '@/entities/question/components/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';

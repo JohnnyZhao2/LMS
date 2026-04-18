@@ -13,8 +13,8 @@ import { TaskConfigurationPanel } from './task-configuration-panel';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
-import { QuizPreviewDialog } from '@/features/quiz-center/quizzes/components/quiz-preview-dialog';
-import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
+import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
+import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
 
 export const TaskForm: React.FC = () => {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);

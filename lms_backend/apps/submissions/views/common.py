@@ -18,7 +18,7 @@ from ..serializers import (
     StartQuizSerializer,
     SubmissionDetailSerializer,
 )
-from ..services import SubmissionService
+from ..services import SubmissionService, UNSET
 
 
 def enforce_student_submission_role(request) -> None:
@@ -56,10 +56,14 @@ class StartQuizView(APIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        submission = serializer.save()
+        service = SubmissionService(request)
+        submission, created = service.start_or_resume_quiz(
+            assignment_id=serializer.validated_data['assignment_id'],
+            quiz_id=serializer.validated_data['quiz_id'],
+            user=request.user,
+        )
         response_serializer = SubmissionDetailSerializer(submission)
-        # Return 200 if returning existing submission (exam in progress), 201 if new
-        if serializer.validated_data.get('in_progress_submission'):
+        if not created:
             return success_response(response_serializer.data)
         return created_response(response_serializer.data)
 
@@ -150,7 +154,12 @@ class SaveAnswerView(BaseAPIView):
             context={'request': request, 'submission': submission}
         )
         serializer.is_valid(raise_exception=True)
-        answer = serializer.save()
+        answer = self.service.save_answer(
+            submission=submission,
+            question_id=serializer.validated_data['question_id'],
+            user_answer=serializer.validated_data.get('user_answer', UNSET),
+            is_marked=serializer.validated_data.get('is_marked', UNSET),
+        )
         return success_response(
             data={
                 'question_id': answer.question_id,

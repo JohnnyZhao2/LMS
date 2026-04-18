@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import type { MentorDashboardScoreDistribution, MentorDashboardSpotCheckStats, MentorDashboardStudent } from '@/types/dashboard';
 

@@ -180,59 +180,6 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         validate_mentor(value)
         return value
 
-    def create(self, validated_data):
-        """
-        创建用户并设置密码、导师和角色（在一个事务中）。
-        Args:
-            validated_data: 已验证的数据字典
-        Returns:
-            User: 创建的用户对象
-        """
-        from django.db import transaction
-
-        # 提取特殊字段
-        department_id = validated_data.pop('department_id')
-        password = validated_data.pop('password')
-        employee_id = validated_data.pop('employee_id')
-        username = validated_data.pop('username')
-        mentor_id = validated_data.pop('mentor_id', None)
-        role_codes = validated_data.pop('role_codes', [])
-
-        with transaction.atomic():
-            # 设置部门
-            validated_data['department_id'] = department_id
-
-            # 直接创建 User 对象（不传递不存在的字段）
-            user = User(
-                username=username,
-                employee_id=employee_id,
-                **validated_data
-            )
-            # 手动设置密码（会自动哈希）
-            user.set_password(password)
-            user.save()
-
-            # 如果提供了导师ID，设置导师
-            if mentor_id is not None:
-                user.mentor = validate_mentor(mentor_id)
-                user.save(update_fields=['mentor'])
-
-            # 分配角色（统一走 service，保证约束与日志一致）
-            from .services import UserManagementService
-
-            request = self.context.get('request')
-            if not request or not getattr(request, 'user', None) or not request.user.is_authenticated:
-                raise serializers.ValidationError({'role_codes': '缺少请求上下文，无法分配角色'})
-            assigned_by = request.user
-            service = UserManagementService(request)
-            service.assign_roles(
-                user_id=user.id,
-                role_codes=role_codes,
-                assigned_by=assigned_by,
-            )
-
-        return user
-
 
 class AvatarUpdateSerializer(serializers.Serializer):
     avatar_key = serializers.CharField(required=True, max_length=32, help_text='默认头像标识')
@@ -278,44 +225,6 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
 
     def validate_department_id(self, value):
         return self.validate_department_id_field(value)
-
-    def update(self, instance, validated_data):
-        """Update user information including roles."""
-        from django.db import transaction
-        from .services import UserManagementService
-
-        department_id = validated_data.pop('department_id', None)
-        username = validated_data.pop('username', None)
-        employee_id = validated_data.pop('employee_id', None)
-        role_codes = validated_data.pop('role_codes', None)
-
-        with transaction.atomic():
-            # 更新基本信息
-            if department_id is not None:
-                instance.department_id = department_id
-            if username is not None:
-                instance.username = username
-            if employee_id is not None:
-                instance.employee_id = employee_id
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            instance.save()
-
-            # 更新角色（如果提供了 role_codes）
-            if role_codes is not None:
-                request = self.context.get('request')
-                if not request:
-                    raise serializers.ValidationError({
-                        'role_codes': '缺少请求上下文，无法记录角色分配人'
-                    })
-                service = UserManagementService(request)
-                instance = service.assign_roles(
-                    user_id=instance.id,
-                    role_codes=role_codes,
-                    assigned_by=request.user
-                )
-
-        return instance
 class AssignRolesSerializer(serializers.Serializer):
     """
     Serializer for assigning roles to a user.

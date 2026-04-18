@@ -5,29 +5,29 @@ import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/features/users/api/get-users';
-import { useAssignRoles } from '@/features/users/api/manage-users';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { useAssignRoles } from '@/entities/user/api/manage-users';
+import { useAuth } from '@/session/auth/auth-context';
 import {
   useRevokeUserPermissionOverride,
   useRevokeUserScopeGroupOverride,
   useUserPermissionOverrides,
   useUserScopeGroupOverrides,
-} from '@/features/authorization/api/authorization';
-import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
-import { UserPermissionWorkbench } from '@/features/users/components/user-permission-workbench';
+} from '@/entities/authorization/api/authorization';
+import { UserPermissionModuleSidebar } from '@/entities/authorization/components/user-permission-module-sidebar';
+import { UserPermissionWorkbench } from '@/entities/authorization/components/user-permission-workbench';
 import { ASSIGNABLE_ROLES } from '@/lib/role-config';
 import { showApiError } from '@/utils/error-handler';
-import { applyPermissionSelectionChange } from '../utils/permission-dependencies';
-import { buildPermissionModuleSections } from '../utils/permission-sections';
-import { PermissionModuleSections } from './permission-module-sections';
-import { PermissionToggleCard } from './permission-toggle-card';
+import { applyPermissionSelectionChange } from '@/entities/authorization/utils/permission-dependencies';
+import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
+import { PermissionModuleSections } from '@/entities/authorization/components/permission-module-sections';
+import { PermissionToggleCard } from '@/entities/authorization/components/permission-toggle-card';
 import { RoleTemplateMemberPanel } from './role-template-member-panel';
 import type { UserList } from '@/types/common';
 import {
   getManagedRoleCodes,
   getSelectedBusinessRoleCode,
-} from '@/features/users/components/user-role-assignment-chips';
+} from '@/entities/authorization/utils/user-role-assignment';
 
 interface RolePermissionTemplatePanelProps {
   canUpdateRoleTemplate: boolean;

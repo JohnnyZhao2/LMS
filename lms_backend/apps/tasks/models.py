@@ -5,9 +5,6 @@ from django.utils import timezone
 
 from core.mixins import CreatorMixin, TimestampMixin
 
-from .progress import build_assignment_progress, is_assignment_completed
-
-
 class Task(TimestampMixin, CreatorMixin, models.Model):
     """任务主模型。"""
 
@@ -169,22 +166,6 @@ class TaskAssignment(TimestampMixin, models.Model):
         if self.status == 'COMPLETED':
             return False
         return timezone.now() > self.task.deadline
-
-    def check_and_update_overdue(self):
-        if self.is_overdue and self.status not in ['COMPLETED', 'OVERDUE']:
-            self.mark_overdue()
-
-    def get_progress_data(self):
-        return build_assignment_progress(self)
-
-    def check_completion(self):
-        progress = self.get_progress_data()
-        if is_assignment_completed(progress):
-            if self.status != 'COMPLETED':
-                self.mark_completed()
-            return True
-        return False
-
 
 class TaskKnowledge(TimestampMixin, models.Model):
     """任务与知识快照的关联。"""

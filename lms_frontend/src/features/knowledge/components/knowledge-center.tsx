@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { SelectionIndicator } from '@/components/common/selection-indicator';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/common';
 
@@ -21,8 +21,8 @@ import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
-import { useCreateTag, useDeleteTag, useTags } from '@/features/tags/api/tags';
-import { SpaceTagQuickCreateDialog } from '@/features/tags/components/space-tag-quick-create-dialog';
+import { useCreateTag, useDeleteTag, useTags } from '@/entities/tag/api/tags';
+import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
 import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';

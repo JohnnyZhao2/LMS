@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout } from 'lucide-react';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';

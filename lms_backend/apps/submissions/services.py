@@ -186,6 +186,28 @@ class SubmissionService(BaseService):
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='您已提交过此考试，无法重新作答')
         return self._get_in_progress(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
 
+    def start_or_resume_quiz(
+        self,
+        assignment_id: int,
+        quiz_id: int,
+        user: User,
+    ) -> tuple[Submission, bool]:
+        assignment, task_quiz, quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
+        is_exam = quiz.quiz_type == 'EXAM'
+        if is_exam:
+            in_progress = self.check_exam_constraints(assignment, quiz_id)
+        else:
+            in_progress = self.get_in_progress(task_assignment_id=assignment.id, quiz_id=quiz_id)
+        if in_progress:
+            return in_progress, False
+        submission = self.start_quiz(
+            assignment=assignment,
+            task_quiz=task_quiz,
+            user=user,
+            is_exam=is_exam,
+        )
+        return submission, True
+
     @transaction.atomic
     @log_operation(
         'submission',
@@ -276,10 +298,10 @@ class SubmissionService(BaseService):
 
         submission.obtained_score = calculate_submission_obtained_score(submission)
         submission.save(update_fields=['status', 'submitted_at', 'obtained_score'])
+        refresh_assignment_score(submission.task_assignment, Submission)
         if submission.status == 'SUBMITTED':
-            refresh_assignment_score(submission.task_assignment, Submission)
-            submission.task_assignment.check_completion()
-        else:
-            refresh_assignment_score(submission.task_assignment, Submission)
+            from apps.tasks.assignment_workflow import sync_assignment_completion_status
+
+            sync_assignment_completion_status(submission.task_assignment)
         submission.refresh_from_db()
         return submission

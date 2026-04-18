@@ -6,8 +6,8 @@ import { Route, Navigate, createBrowserRouter, createRoutesFromElements } from '
 import { Suspense } from 'react';
 import { Agentation } from 'agentation';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
-import { RoleRouteWrapper } from '@/components/route-guard';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { RoleRouteWrapper } from '@/app/guards/route-guard';
+import { useAuth } from '@/session/auth/auth-context';
 import { LoginPage } from '@/app/routes/auth/login';
 import { OidcCallbackPage } from '@/app/routes/auth/oidc-callback';
 import { roleRoutes } from './routes/role-routes';

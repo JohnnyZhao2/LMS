@@ -21,6 +21,7 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
+from apps.submissions.workflows import grade_subjective_answer
 
 
 class GradingBaseView(BaseAPIView):
@@ -310,7 +311,7 @@ class GradingSubmitView(GradingBaseView):
                 message=f'分数必须在 0 到 {answer.max_score} 之间'
             )
 
-        answer.grade(grader=grader, score=score, comment=comments)
+        grade_subjective_answer(answer, grader=grader, score=score, comment=comments)
 
 
 class PendingQuizzesView(GradingBaseView):

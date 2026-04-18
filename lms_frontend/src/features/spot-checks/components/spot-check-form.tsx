@@ -3,7 +3,7 @@ import { ChevronDown, ListChecks, Loader2, Plus, UserRound } from 'lucide-react'
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSplit } from '@/components/ui/page-shell';
@@ -11,8 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SearchInput } from '@/components/ui/search-input';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { ROUTES } from '@/config/routes';
-import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
 import type { SpotCheckItem } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';

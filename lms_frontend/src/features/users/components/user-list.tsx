@@ -13,13 +13,13 @@ import {
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
-import { useUsers, useDepartments, useMentors } from "../api/get-users"
-import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword, useUpdateUserAvatar } from "../api/manage-users"
+import { useUsers, useDepartments, useMentors } from '@/entities/user/api/get-users'
+import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
 import { UserForm } from "./user-form"
-import { AvatarPickerPopover } from "./avatar-picker-popover"
+import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
-import { useAuth } from "@/features/auth/stores/auth-context"
+import { useAuth } from "@/session/auth/auth-context"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,

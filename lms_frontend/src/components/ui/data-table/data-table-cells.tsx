@@ -3,7 +3,7 @@
  * 提供统一的表格单元格渲染样式，确保跨页面一致性
  */
 import * as React from 'react';
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { formatListDateTime } from '@/lib/date-time';
 import { cn } from '@/lib/utils';
 import { ListTag } from '@/components/ui/list-tag';

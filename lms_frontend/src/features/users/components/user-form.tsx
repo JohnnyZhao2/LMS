@@ -23,13 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 
-import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
-import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
+import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
+import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/common';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';

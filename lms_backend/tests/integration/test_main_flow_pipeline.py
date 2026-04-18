@@ -10,6 +10,8 @@ from apps.grading.views import GradingAnswersView, PendingQuizzesView
 from apps.questions.services import QuestionService
 from apps.quizzes.services import QuizService
 from apps.submissions.services import SubmissionService
+from apps.submissions.workflows import grade_subjective_answer
+from apps.tasks.assignment_workflow import get_assignment_progress_data
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import UserFactory
 
@@ -68,6 +70,7 @@ def build_short_answer_payload(
 def test_start_quiz_api_returns_submission_payload(api_client, monkeypatch):
     monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.tasks.policies.scope_filter', lambda *args, **kwargs: kwargs['resource_model'].objects.all())
     monkeypatch.setattr('apps.submissions.views.common.enforce', lambda *args, **kwargs: True)
 
     admin_user = UserFactory(username='答题入口管理员')
@@ -126,6 +129,7 @@ def test_start_quiz_api_returns_submission_payload(api_client, monkeypatch):
 def test_main_flow_pipeline_with_32_students(monkeypatch):
     monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.tasks.policies.scope_filter', lambda *args, **kwargs: kwargs['resource_model'].objects.all())
 
     admin_user = UserFactory(username='主流程管理员')
     question_service = QuestionService(build_request(admin_user))
@@ -243,7 +247,7 @@ def test_main_flow_pipeline_with_32_students(monkeypatch):
     graded_assignment = assignment_map[graded_student.id]
     graded_submission = graded_assignment.submissions.select_related('quiz').get(status='GRADING')
     subjective_answer = graded_submission.answers.select_related('question').get(question__question_type='SHORT_ANSWER')
-    subjective_answer.grade(grader=admin_user, score='5', comment='主流程人工阅卷通过')
+    grade_subjective_answer(subjective_answer, grader=admin_user, score='5', comment='主流程人工阅卷通过')
     graded_submission.refresh_from_db()
     graded_assignment.refresh_from_db()
 
@@ -265,14 +269,14 @@ def test_main_flow_pipeline_with_32_students(monkeypatch):
     assert graded_submission.status == 'GRADED'
     assert graded_assignment.status == 'COMPLETED'
     assert float(graded_submission.obtained_score) == 9.0
-    assert graded_assignment.get_progress_data()['percentage'] == 100.0
-    assert graded_assignment.get_progress_data()['quiz_completed'] == 1
+    assert get_assignment_progress_data(graded_assignment)['percentage'] == 100.0
+    assert get_assignment_progress_data(graded_assignment)['quiz_completed'] == 1
 
     untouched_assignment = assignment_map[students[-1].id]
     in_progress_assignment = assignment_map[students[27].id]
 
-    assert untouched_assignment.get_progress_data()['percentage'] == 0
-    assert in_progress_assignment.get_progress_data()['quiz_completed'] == 0
+    assert get_assignment_progress_data(untouched_assignment)['percentage'] == 0
+    assert get_assignment_progress_data(in_progress_assignment)['quiz_completed'] == 0
     assert task.assignments.filter(submissions__status='GRADING').distinct().count() == 24
     assert task.assignments.filter(submissions__status='GRADED').distinct().count() == 1
     assert task.assignments.filter(submissions__status='IN_PROGRESS').distinct().count() == 4

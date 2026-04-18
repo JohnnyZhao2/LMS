@@ -1,6 +1,6 @@
 import { CalendarDays, ListChecks, Pencil, Plus, Star, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
 
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
 import { EmptyState } from '@/components/ui/empty-state';

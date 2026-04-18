@@ -1,6 +1,6 @@
 import { Check, Loader2, Users } from 'lucide-react';
 
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { cn } from '@/lib/utils';
 

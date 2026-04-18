@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useRoleNavigate } from "@/hooks/use-role-navigate"
+import { useRoleNavigate } from "@/session/hooks/use-role-navigate"
 import {
     Trash2,
     Clock,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
-import { useAuth } from "@/features/auth/stores/auth-context"
+import { useAuth } from "@/session/auth/auth-context"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';

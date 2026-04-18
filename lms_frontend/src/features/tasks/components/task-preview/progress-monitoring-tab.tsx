@@ -18,9 +18,9 @@ import type {
   StudentExecution,
   TaskAnalytics,
 } from '@/types/task-analytics';
-import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
+import { useTaskAnalytics, useStudentExecutions } from '@/entities/grading/api/task-analytics';
 import { IconBox } from '@/components/common/icon-box';
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { StatCard } from '@/components/ui/stat-card';
 import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
 

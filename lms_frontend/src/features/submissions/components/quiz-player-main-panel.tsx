@@ -1,5 +1,5 @@
-import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
-import type { QuestionSection, QuestionSectionEntry } from '@/features/questions/question-sections';
+import { QuestionTypeBadge } from '@/entities/question/components/question-type-badge';
+import type { QuestionSection, QuestionSectionEntry } from '@/entities/question/question-sections';
 import type { MutableRefObject } from 'react';
 
 import type { SubmissionDetail } from '@/types/submission';

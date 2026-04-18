@@ -1,7 +1,7 @@
-import { hasQuestionAnswer, normalizeQuestionScore } from '@/features/questions/components/question-editor-helpers';
+import { hasQuestionAnswer, normalizeQuestionScore } from '@/entities/question/components/question-editor-helpers';
 import type { QuizCreateRequest, QuizType } from '@/types/quiz';
 
-import type { InlineQuestionItem } from '../types';
+import type { InlineQuestionItem } from '@/entities/quiz/types';
 
 export interface QuizDraftValidationParams {
   title: string;

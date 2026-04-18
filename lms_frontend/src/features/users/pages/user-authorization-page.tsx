@@ -5,17 +5,15 @@ import { useSearchParams } from 'react-router-dom';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/common';
 
-import { useDepartments, useRoles, useUserDetail, useUsers } from '../api/get-users';
-import { useAssignRoles } from '../api/manage-users';
+import { useDepartments, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { useAssignRoles } from '@/entities/user/api/manage-users';
+import { UserPermissionWorkbench } from '@/entities/authorization/components/user-permission-workbench';
+import { getSelectedBusinessRoleCode } from '@/entities/authorization/utils/user-role-assignment';
 import { UserDirectoryFilters } from '../components/user-directory-filters';
-import {
-  getSelectedBusinessRoleCode,
-} from '../components/user-role-assignment-chips';
-import { UserPermissionWorkbench } from '../components/user-permission-workbench';
 
 export const UserAuthorizationPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();

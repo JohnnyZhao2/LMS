@@ -1,10 +1,9 @@
 from rest_framework import serializers
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+from .policies import get_task_actions_payload
 from .selectors import is_assignment_abnormal
-from .serializer_utils import get_task_actions, validate_assignee_scope
 from .student_task_service import extract_knowledge_preview
-from .task_service import TaskService
 
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
@@ -127,7 +126,7 @@ class TaskListSerializer(serializers.ModelSerializer):
         return len(abnormal_ids)
 
     def get_actions(self, obj):
-        return get_task_actions(self.context.get('request'), obj)
+        return get_task_actions_payload(self.context.get('request'), obj)
 
 
 class TaskDetailSerializer(serializers.ModelSerializer):
@@ -161,7 +160,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         return obj.has_student_progress
 
     def get_actions(self, obj):
-        return get_task_actions(self.context.get('request'), obj)
+        return get_task_actions_payload(self.context.get('request'), obj)
 
 
 class TaskCreateSerializer(serializers.Serializer):
@@ -172,47 +171,15 @@ class TaskCreateSerializer(serializers.Serializer):
     quiz_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     assignee_ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
 
-    def validate_knowledge_ids(self, value):
-        if value:
-            is_valid, invalid_ids = TaskService.validate_knowledge_ids(value)
-            if not is_valid:
-                raise serializers.ValidationError(f'知识文档不可用: {invalid_ids}')
-        return value
-
-    def validate_quiz_ids(self, value):
-        if value:
-            is_valid, invalid_ids = TaskService.validate_quiz_ids(value)
-            if not is_valid:
-                raise serializers.ValidationError(f'试卷不存在: {invalid_ids}')
-        return value
-
     def validate_assignee_ids(self, value):
         if not value:
             raise serializers.ValidationError('请至少选择一个学员')
-        is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
-        if not is_valid:
-            raise serializers.ValidationError(f'学员不存在、已停用或无学员身份: {invalid_ids}')
         return value
 
     def validate(self, attrs):
         if not attrs.get('knowledge_ids', []) and not attrs.get('quiz_ids', []):
             raise serializers.ValidationError('请至少选择一个知识文档或试卷')
-        request = self.context.get('request')
-        if not request or not request.user:
-            raise serializers.ValidationError('无法获取当前用户信息')
-        validate_assignee_scope(attrs.get('assignee_ids', []), request)
         return attrs
-
-    def create(self, validated_data):
-        service = TaskService(self.context.get('request'))
-        return service.create_task(
-            title=validated_data['title'],
-            description=validated_data.get('description', ''),
-            deadline=validated_data['deadline'],
-            knowledge_ids=validated_data.get('knowledge_ids', []),
-            quiz_ids=validated_data.get('quiz_ids', []),
-            assignee_ids=validated_data.get('assignee_ids', []),
-        )
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
@@ -227,28 +194,11 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         model = Task
         fields = ['title', 'description', 'deadline', 'knowledge_ids', 'quiz_ids', 'assignee_ids']
 
-    def validate_knowledge_ids(self, value):
-        if value is not None and value:
-            is_valid, invalid_ids = TaskService.validate_knowledge_ids(value)
-            if not is_valid:
-                raise serializers.ValidationError(f'以下知识文档不可用: {invalid_ids}')
-        return value
-
-    def validate_quiz_ids(self, value):
-        if value is not None and value:
-            is_valid, invalid_ids = TaskService.validate_quiz_ids(value)
-            if not is_valid:
-                raise serializers.ValidationError(f'以下试卷不存在: {invalid_ids}')
-        return value
-
     def validate_assignee_ids(self, value):
         if value is None:
             return value
         if not value:
             raise serializers.ValidationError('请至少选择一个学员')
-        is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
-        if not is_valid:
-            raise serializers.ValidationError(f'学员不存在、已停用或无学员身份: {invalid_ids}')
         return value
 
     def validate(self, attrs):
@@ -256,26 +206,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         quiz_ids = attrs.get('quiz_ids')
         if knowledge_ids is not None and quiz_ids is not None and not knowledge_ids and not quiz_ids:
             raise serializers.ValidationError('请至少选择一个知识文档或试卷')
-        assignee_ids = attrs.get('assignee_ids')
-        if assignee_ids is not None:
-            request = self.context.get('request')
-            if not request or not request.user:
-                raise serializers.ValidationError('无法获取当前用户信息')
-            validate_assignee_scope(assignee_ids, request)
         return attrs
-
-    def update(self, instance, validated_data):
-        knowledge_ids = validated_data.pop('knowledge_ids', None)
-        quiz_ids = validated_data.pop('quiz_ids', None)
-        assignee_ids = validated_data.pop('assignee_ids', None)
-        service = TaskService(self.context.get('request'))
-        return service.update_task(
-            task=instance,
-            knowledge_ids=knowledge_ids,
-            quiz_ids=quiz_ids,
-            assignee_ids=assignee_ids,
-            **validated_data,
-        )
 
 
 class TaskResourceOptionSerializer(serializers.Serializer):

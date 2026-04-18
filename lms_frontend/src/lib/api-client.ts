@@ -1,4 +1,4 @@
-import { config } from '@/config';
+import { config } from '@/config/app-config';
 import { tokenStorage } from './token-storage';
 import { clearStoredAuthSession, commitAuthSession, getStoredRefreshToken } from './auth-session';
 import { ROUTES } from '@/config/routes';

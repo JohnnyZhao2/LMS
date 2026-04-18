@@ -1,5 +1,7 @@
 import type { RoleCode } from '@/types/common';
-export { ROLE_INDICATOR_CLASSES } from '@/lib/role-config'
+import { ROLE_INDICATOR_CLASSES } from '@/lib/role-config'
+
+export { ROLE_INDICATOR_CLASSES }
 
 const ROLE_CODES: RoleCode[] = [
   'STUDENT',

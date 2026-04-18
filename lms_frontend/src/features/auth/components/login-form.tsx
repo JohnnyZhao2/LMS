@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
-import { getWorkspaceHome } from '@/app/workspace-config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,8 +16,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
+import { useAuth } from '@/session/auth/auth-context';
+import { getWorkspaceHome } from '@/session/workspace/role-paths';
 import { showApiError } from '@/utils/error-handler';
-import { useAuth } from '../stores/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { beginOidcLogin } from '../utils/oidc-session';
 

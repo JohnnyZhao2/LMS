@@ -5,7 +5,7 @@ import type { RelatedLink } from '@/types/knowledge';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { TagInput } from '../shared/tag-input';
+import { TagInput } from '@/entities/tag/components/tag-input';
 import { sanitizeRelatedLinks } from '../../utils/related-links';
 
 interface KnowledgeFocusMetadataBarProps {

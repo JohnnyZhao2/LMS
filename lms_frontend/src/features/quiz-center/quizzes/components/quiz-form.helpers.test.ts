@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createBlankEditableQuestion } from '@/features/questions/components/question-editor-helpers';
+import { createBlankEditableQuestion } from '@/entities/question/components/question-editor-helpers';
 
 import { buildQuizSubmitPayload, validateQuizDraft } from './quiz-form.helpers';
 

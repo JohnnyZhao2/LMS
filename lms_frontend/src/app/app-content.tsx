@@ -1,6 +1,6 @@
-import { AppLayout } from '@/components/layouts/app-layout';
-import { useAuth } from '@/features/auth/stores/auth-context';
-import { useCurrentRole } from '@/hooks/use-current-role';
+import { AppLayout } from '@/app/layouts/app-layout';
+import { useAuth } from '@/session/auth/auth-context';
+import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';

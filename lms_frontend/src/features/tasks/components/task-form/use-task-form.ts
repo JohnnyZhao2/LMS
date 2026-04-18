@@ -3,15 +3,15 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
-import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
+import { useQuizDetail } from '@/entities/quiz/api/get-quizzes';
+import { useTaskDetail } from '@/entities/task/api/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
-import { useAssignableUsers } from '../../api/get-assignable-users';
-import { useTaskDetail } from '../../api/get-task-detail';
+import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
 import { useTaskResourceOptions } from '../../api/get-task-resources';
 import { useUpdateTask } from '../../api/update-task';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';

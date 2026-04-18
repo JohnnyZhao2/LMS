@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import type { RelatedLink } from '@/types/knowledge';
 
-import { useTags } from '@/features/tags/api/tags';
+import { useTags } from '@/entities/tag/api/tags';
 import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
 import { useCreateKnowledge } from '../../api/manage-knowledge';
 import { useParseDocument } from '../../api/parse-document';

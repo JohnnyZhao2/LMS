@@ -14,12 +14,8 @@ from core.exceptions import BusinessError, ErrorCodes
 from .avatar_constants import validate_avatar_key
 from .models import Role, User, UserRole
 from .role_constraints import validate_role_assignment_constraints
-from .selectors import (
-    get_user_by_id,
-    get_valid_mentor_by_id,
-    get_user_created_resource_ids,
-    purge_user_related_business_data,
-)
+from .selectors import get_user_by_id, get_valid_mentor_by_id
+from .workflows.delete_user import hard_delete_user_business_data
 
 
 class UserManagementService(BaseService):
@@ -91,6 +87,58 @@ class UserManagementService(BaseService):
                 message='仅可删除离职（已停用）用户，请先停用该账号'
             )
 
+    def create_user(self, validated_data: dict) -> User:
+        department_id = validated_data['department_id']
+        password = validated_data['password']
+        employee_id = validated_data['employee_id']
+        username = validated_data['username']
+        mentor_id = validated_data.get('mentor_id')
+        role_codes = validated_data.get('role_codes', [])
+
+        user = User(
+            username=username,
+            employee_id=employee_id,
+            department_id=department_id,
+        )
+        user.set_password(password)
+
+        with transaction.atomic():
+            user.save()
+            if mentor_id is not None:
+                user.mentor = get_valid_mentor_by_id(mentor_id)
+                user.save(update_fields=['mentor'])
+            self.assign_roles(
+                user_id=user.id,
+                role_codes=role_codes,
+                assigned_by=self.user,
+            )
+
+        return user
+
+    def update_user(self, user: User, validated_data: dict) -> User:
+        department_id = validated_data.get('department_id')
+        username = validated_data.get('username')
+        employee_id = validated_data.get('employee_id')
+        role_codes = validated_data.get('role_codes')
+
+        with transaction.atomic():
+            if department_id is not None:
+                user.department_id = department_id
+            if username is not None:
+                user.username = username
+            if employee_id is not None:
+                user.employee_id = employee_id
+            user.save()
+
+            if role_codes is not None:
+                user = self.assign_roles(
+                    user_id=user.id,
+                    role_codes=role_codes,
+                    assigned_by=self.user,
+                )
+
+        return user
+
     def _delete_user_safely(self, user: User) -> None:
         """
         删除用户主记录，并将未知 PROTECT 依赖转换为业务错误。
@@ -117,11 +165,7 @@ class UserManagementService(BaseService):
         self._validate_user_can_be_deleted(user)
 
         with transaction.atomic():
-            created_resource_ids = get_user_created_resource_ids(user.id)
-            purge_user_related_business_data(
-                user_id=user.id,
-                created_resource_ids=created_resource_ids,
-            )
+            hard_delete_user_business_data(user.id)
             self._delete_user_safely(user)
 
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:

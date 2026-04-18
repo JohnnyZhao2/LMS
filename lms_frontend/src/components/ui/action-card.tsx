@@ -1,6 +1,6 @@
 import React from 'react';
 import { type LucideIcon } from 'lucide-react';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight } from 'lucide-react';
 

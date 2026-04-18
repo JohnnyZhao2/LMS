@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, Plus, Search, UserPlus, X } from 'lucide-react';
 import { ROLE_FULL_LABELS } from '@/config/role-constants';
-import { UserAvatar } from '@/components/common/user-avatar';
+import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';

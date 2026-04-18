@@ -22,9 +22,9 @@ import { MicroLabel } from '@/components/common/micro-label';
 import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/features/auth/stores/auth-context';
-import { useCurrentRole } from '@/hooks/use-current-role';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useAuth } from '@/session/auth/auth-context';
+import { useCurrentRole } from '@/session/hooks/use-current-role';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
@@ -32,7 +32,7 @@ import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
-import { useStudentLearningTaskDetail, useTaskDetail } from '../api/get-task-detail';
+import { useStudentLearningTaskDetail, useTaskDetail } from '@/entities/task/api/get-task-detail';
 
 const assignmentStatusLabelMap: Record<string, string> = {
   IN_PROGRESS: '进行中',

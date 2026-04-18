@@ -3,11 +3,11 @@ import { FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
+import { QuestionTypeBadge } from '@/entities/question/components/question-type-badge';
 import dayjs from '@/lib/dayjs';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
-import type { QuestionSection } from '@/features/questions/question-sections';
+import type { QuestionSection } from '@/entities/question/question-sections';
 import type { SubmissionDetail } from '@/types/submission';
 
 import { Timer } from './timer';

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Activity, BookOpenText, ShieldCheck, UserRound, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import { showApiError } from '@/utils/error-handler';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy, ActivityLogType } from '../types';

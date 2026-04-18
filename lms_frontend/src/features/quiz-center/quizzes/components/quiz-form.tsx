@@ -12,17 +12,17 @@ import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useTags } from '@/features/tags/api/tags';
-import { useQuestions } from '@/features/questions/api/get-questions';
-import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
-import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
+import { useTags } from '@/entities/tag/api/tags';
+import { useQuestions } from '@/entities/question/api/get-questions';
+import { QuestionBankPanel } from '@/entities/question/components/question-bank-panel';
+import { QuestionDetailDialog } from '@/entities/question/components/question-detail-dialog';
 import {
   createBlankEditableQuestion,
   normalizeQuestionScore,
   questionToEditableItem,
-} from '@/features/questions/components/question-editor-helpers';
-import { useAuth } from '@/features/auth/stores/auth-context';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+} from '@/entities/question/components/question-editor-helpers';
+import { useAuth } from '@/session/auth/auth-context';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
@@ -31,13 +31,13 @@ import type { QuizCreateRequest, QuizQuestion, QuizType } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
-import { useQuizDetail } from '../api/get-quizzes';
-import type { InlineQuestionItem, QuizDraftState } from '../types';
+import { useQuizDetail } from '@/entities/quiz/api/get-quizzes';
+import type { InlineQuestionItem, QuizDraftState } from '@/entities/quiz/types';
 
-import { QuizDocumentEditor } from './quiz-document-editor';
+import { QuizDocumentEditor } from '@/entities/quiz/components/quiz-document-editor';
 import { buildQuizSubmitPayload, validateQuizDraft } from './quiz-form.helpers';
-import { QuizOutlinePanel } from './quiz-outline-panel';
-import { QuizPreviewWorkbench } from './quiz-preview-workbench';
+import { QuizOutlinePanel } from '@/entities/quiz/components/quiz-outline-panel';
+import { QuizPreviewWorkbench } from '@/entities/quiz/components/quiz-preview-workbench';
 
 const COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME =
   'grid h-full min-h-0 min-w-0 items-stretch gap-3 [grid-template-columns:minmax(12rem,14rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';

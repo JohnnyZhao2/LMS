@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
-import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
+import { useQuizzes } from '@/entities/quiz/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
 import { ROUTES } from '@/config/routes';
 import type { QuizListItem } from '@/types/quiz';

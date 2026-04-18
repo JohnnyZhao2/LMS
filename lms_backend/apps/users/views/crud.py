@@ -69,7 +69,7 @@ class UserListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes'):
             enforce('user.authorize', request, error_message='只有管理员可以分配角色')
-        user = serializer.save()
+        user = UserManagementService(request).create_user(dict(serializer.validated_data))
         return created_response(UserDetailSerializer(user).data)
 
 
@@ -134,7 +134,7 @@ class UserDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes') is not None:
             enforce('user.authorize', request, error_message='只有管理员可以分配角色')
-        user = serializer.save()
+        user = UserManagementService(request).update_user(user, dict(serializer.validated_data))
         return success_response(UserDetailSerializer(user).data)
 
     @extend_schema(

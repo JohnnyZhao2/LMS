@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
@@ -9,7 +9,7 @@ import {
   useReplaceRolePermissionTemplate,
   useRolePermissionTemplates,
   usePermissionCatalog,
-} from '../api/authorization';
+} from '@/entities/authorization/api/authorization';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
 const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');

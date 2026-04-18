@@ -16,13 +16,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { useTaskDetail } from '@/entities/task/api/get-task-detail';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
-import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
-import { GradingCenterTab } from './grading-center-tab';
+import { GradingCenterTab } from '@/entities/grading/components/grading-center-tab';
 import dayjs from '@/lib/dayjs';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 
 export const TaskPreviewPage: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();

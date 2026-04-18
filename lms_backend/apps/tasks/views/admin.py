@@ -224,7 +224,7 @@ class TaskCreateView(APIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        task = serializer.save()
+        task = TaskService(request).create_task(**dict(serializer.validated_data))
         response_serializer = TaskDetailSerializer(task, context={'request': request})
         return created_response(response_serializer.data)
 
@@ -345,7 +345,7 @@ class TaskDetailView(BaseAPIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        updated_task = serializer.save()
+        updated_task = self.service.update_task(task=task, **dict(serializer.validated_data))
         response_serializer = TaskDetailSerializer(updated_task, context={'request': request})
         return success_response(response_serializer.data)
 

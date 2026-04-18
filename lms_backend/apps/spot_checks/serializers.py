@@ -4,10 +4,10 @@ Properties: 35, 36
 """
 from rest_framework import serializers
 
-from apps.authorization.engine import authorize
 from apps.users.models import User
 
 from .models import SpotCheck, SpotCheckItem
+from .policies import get_spot_check_actions_payload
 
 
 class SpotCheckItemWriteSerializer(serializers.Serializer):
@@ -42,13 +42,7 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
     actions = serializers.SerializerMethodField()
 
     def get_actions(self, obj):
-        request = self.context.get('request')
-        if request is None:
-            return {'update': False, 'delete': False}
-        return {
-            'update': authorize('spot_check.update', request, resource=obj).allowed,
-            'delete': authorize('spot_check.delete', request, resource=obj).allowed,
-        }
+        return get_spot_check_actions_payload(self.context.get('request'), obj)
 
     class Meta:
         model = SpotCheck
@@ -98,13 +92,7 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
     actions = serializers.SerializerMethodField()
 
     def get_actions(self, obj):
-        request = self.context.get('request')
-        if request is None:
-            return {'update': False, 'delete': False}
-        return {
-            'update': authorize('spot_check.update', request, resource=obj).allowed,
-            'delete': authorize('spot_check.delete', request, resource=obj).allowed,
-        }
+        return get_spot_check_actions_payload(self.context.get('request'), obj)
 
     class Meta:
         model = SpotCheck

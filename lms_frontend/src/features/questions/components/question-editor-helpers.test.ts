@@ -4,7 +4,7 @@ import {
   buildQuestionPatchPayload,
   normalizeQuestionScore,
   questionToEditableItem,
-} from './question-editor-helpers';
+} from '@/entities/question/components/question-editor-helpers';
 
 
 describe('question-editor-helpers', () => {

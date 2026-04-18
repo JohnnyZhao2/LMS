@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/common';
@@ -38,9 +38,9 @@ import {
   useReorderSpaceTags,
   useTags,
   useUpdateTag,
-} from '../api/tags';
+} from '@/entities/tag/api/tags';
 import { SortableSpaceTagItem } from './sortable-space-tag-item';
-import { SpaceTagQuickCreateDialog } from './space-tag-quick-create-dialog';
+import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
 import { TagFormDialog } from './tag-form-dialog';
 
 

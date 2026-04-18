@@ -18,6 +18,7 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+from .policies import enforce_assignable_students_scope
 from .selectors import task_detail_queryset, task_list_queryset
 
 
@@ -80,6 +81,7 @@ class TaskService(BaseService):
         quiz_ids = quiz_ids or []
         assignee_ids = assignee_ids or []
         enforce('task.create', self.request, error_message='无权创建任务')
+        self._validate_create_payload(knowledge_ids, quiz_ids, assignee_ids)
 
         current_role = resolve_current_role(self.user)
         created_role = 'ADMIN' if current_role == SUPER_ADMIN_ROLE else (current_role or 'ADMIN')
@@ -189,6 +191,7 @@ class TaskService(BaseService):
         assignee_ids: List[int] = None,
         **kwargs,
     ) -> Task:
+        self._validate_update_payload(knowledge_ids, quiz_ids, assignee_ids)
         has_progress = task.has_student_progress
         if has_progress:
             if knowledge_ids is not None:
@@ -321,6 +324,70 @@ class TaskService(BaseService):
         )
         self.hard_delete_tasks([task.id])
         return snapshot
+
+    def _ensure_valid_resource_ids(self, resource_ids: List[int], resource_model: Any, resource_label: str) -> List[int]:
+        normalized_ids = self._dedupe_resource_ids(resource_ids)
+        is_valid, invalid_ids = self._validate_current_resources(normalized_ids, resource_model)
+        if not is_valid:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message=f'{resource_label}不存在: {invalid_ids}',
+            )
+        return normalized_ids
+
+    def _ensure_valid_assignee_ids(self, assignee_ids: List[int]) -> List[int]:
+        normalized_ids = self._dedupe_resource_ids(assignee_ids)
+        is_valid, invalid_ids = self.validate_assignee_ids(normalized_ids)
+        if not is_valid:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'学员不存在、已停用或无学员身份: {invalid_ids}',
+            )
+        enforce_assignable_students_scope(normalized_ids, self.request)
+        return normalized_ids
+
+    def _validate_create_payload(
+        self,
+        knowledge_ids: List[int],
+        quiz_ids: List[int],
+        assignee_ids: List[int],
+    ) -> None:
+        if not knowledge_ids and not quiz_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='请至少选择一个知识文档或试卷',
+            )
+        if not assignee_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='请至少选择一个学员',
+            )
+        self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
+        self._ensure_valid_resource_ids(quiz_ids, Quiz, '试卷')
+        self._ensure_valid_assignee_ids(assignee_ids)
+
+    def _validate_update_payload(
+        self,
+        knowledge_ids: List[int] = None,
+        quiz_ids: List[int] = None,
+        assignee_ids: List[int] = None,
+    ) -> None:
+        if knowledge_ids is not None:
+            self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
+        if quiz_ids is not None:
+            self._ensure_valid_resource_ids(quiz_ids, Quiz, '试卷')
+        if knowledge_ids is not None and quiz_ids is not None and not knowledge_ids and not quiz_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='请至少选择一个知识文档或试卷',
+            )
+        if assignee_ids is not None:
+            if not assignee_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='请至少选择一个学员',
+                )
+            self._ensure_valid_assignee_ids(assignee_ids)
 
     @staticmethod
     def _validate_current_resources(resource_ids: List[int], resource_model: Any) -> Tuple[bool, List[int]]:

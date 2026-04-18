@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { getWorkspaceHome } from '@/app/workspace-config';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/session/auth/auth-context';
+import { getWorkspaceHome } from '@/session/workspace/role-paths';
 import { consumeOidcCallbackCode } from '@/features/auth/utils/oidc-session';
 
 export const OidcCallbackPage: React.FC = () => {
