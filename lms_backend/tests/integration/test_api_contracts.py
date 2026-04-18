@@ -6,9 +6,11 @@ from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
+from apps.knowledge.services import ensure_knowledge_revision
 from apps.questions.models import Question, QuestionOption
 from apps.quizzes.models import Quiz, QuizQuestion
-from apps.submissions.models import Answer, AnswerSelection, Submission
+from apps.quizzes.services import ensure_quiz_revision
+from apps.submissions.models import Answer, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
@@ -83,6 +85,7 @@ def mentor_user(department, mentor_role):
         department=department,
     )
     UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.current_role = 'MENTOR'
     return user
 
 
@@ -95,6 +98,7 @@ def admin_user(department, admin_role):
         department=department,
     )
     UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.current_role = 'ADMIN'
     return user
 
 
@@ -201,7 +205,6 @@ def sample_knowledge(mentor_user, space_tag):
         content='契约测试正文内容',
         created_by=mentor_user,
         updated_by=mentor_user,
-        is_current=True,
         space_tag=space_tag,
     )
 
@@ -222,14 +225,47 @@ def student_assignment(student_user, mentor_user):
     )
 
 
+def _ensure_task_quiz(task, quiz, *, actor, order: int) -> TaskQuiz:
+    if not quiz.quiz_questions.exists():
+        question = create_single_choice_question(
+            created_by=actor,
+            content=f'{quiz.title} 题目',
+        )
+        QuizQuestion.objects.create(
+            quiz=quiz,
+            question=question,
+            content=question.content,
+            question_type=question.question_type,
+            reference_answer=question.reference_answer,
+            explanation=question.explanation,
+            score=question.score,
+            order=1,
+        )
+    quiz_revision = ensure_quiz_revision(quiz, actor=actor)
+    task_quiz, _ = TaskQuiz.objects.get_or_create(
+        task=task,
+        quiz=quiz_revision,
+        defaults={'source_quiz': quiz, 'order': order},
+    )
+    return task_quiz
+
+
+def _create_submission_answers(submission: Submission) -> None:
+    for revision_question in submission.quiz.quiz_questions.order_by('order', 'id'):
+        Answer.objects.get_or_create(
+            submission=submission,
+            question=revision_question,
+        )
+
+
 @pytest.fixture
-def practice_task_quiz(student_assignment, sample_quiz):
-    TaskQuiz.objects.get_or_create(
+def practice_task_quiz(student_assignment, sample_quiz, mentor_user):
+    return _ensure_task_quiz(
         task=student_assignment.task,
         quiz=sample_quiz,
-        defaults={'order': 1},
+        actor=mentor_user,
+        order=1,
     )
-    return sample_quiz
 
 
 def create_activity_log(
@@ -261,29 +297,33 @@ def create_activity_log(
 
 @pytest.fixture
 def exam_task_quiz(student_assignment, sample_exam_quiz):
-    TaskQuiz.objects.get_or_create(
+    return _ensure_task_quiz(
         task=student_assignment.task,
         quiz=sample_exam_quiz,
-        defaults={'order': 2},
+        actor=student_assignment.task.created_by,
+        order=2,
     )
-    return sample_exam_quiz
 
 
 @pytest.fixture
 def in_progress_submission(student_assignment, practice_task_quiz):
-    return Submission.objects.create(
+    submission = Submission.objects.create(
         task_assignment=student_assignment,
-        quiz=practice_task_quiz,
+        task_quiz=practice_task_quiz,
+        quiz=practice_task_quiz.quiz,
         user=student_assignment.assignee,
         status='IN_PROGRESS',
     )
+    _create_submission_answers(submission)
+    return submission
 
 
 @pytest.fixture
 def submitted_practice_submission(student_assignment, practice_task_quiz):
     return Submission.objects.create(
         task_assignment=student_assignment,
-        quiz=practice_task_quiz,
+        task_quiz=practice_task_quiz,
+        quiz=practice_task_quiz.quiz,
         user=student_assignment.assignee,
         status='GRADED',
         submitted_at=timezone.now(),
@@ -294,7 +334,8 @@ def submitted_practice_submission(student_assignment, practice_task_quiz):
 def submitted_exam_submission(student_assignment, exam_task_quiz):
     return Submission.objects.create(
         task_assignment=student_assignment,
-        quiz=exam_task_quiz,
+        task_quiz=exam_task_quiz,
+        quiz=exam_task_quiz.quiz,
         user=student_assignment.assignee,
         status='GRADED',
         submitted_at=timezone.now(),
@@ -321,21 +362,30 @@ class TestQuestionApiContracts:
         assert sample_question.id in result_ids
 
     def test_question_list_hides_history_versions(self, api_client, mentor_user, sample_question):
-        historical_version = create_single_choice_question(
+        quiz = Quiz.objects.create(
+            title='题目快照容器',
+            quiz_type='PRACTICE',
             created_by=mentor_user,
-            content='旧版本题目',
-            resource_uuid=sample_question.resource_uuid,
-            version_number=2,
-            is_current=False,
+            updated_by=mentor_user,
         )
+        QuizQuestion.objects.create(
+            quiz=quiz,
+            question=sample_question,
+            content=sample_question.content,
+            question_type=sample_question.question_type,
+            reference_answer=sample_question.reference_answer,
+            explanation=sample_question.explanation,
+            score=sample_question.score,
+            order=1,
+        )
+        ensure_quiz_revision(quiz, actor=mentor_user)
 
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/questions/?page=1&page_size=10')
 
         assert response.status_code == 200, response.data
         result_ids = [item['id'] for item in response.data['data']['results']]
-        assert sample_question.id in result_ids
-        assert historical_version.id not in result_ids
+        assert result_ids == [sample_question.id]
 
     def test_question_list_includes_usage_stats(self, api_client, mentor_user, sample_question, sample_quiz):
         QuizQuestion.objects.create(
@@ -353,29 +403,12 @@ class TestQuestionApiContracts:
         assert result['usage_count'] == 1
         assert result['is_referenced'] is True
 
-    def test_question_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
-        current = create_single_choice_question(
-            created_by=mentor_user,
-            content='当前题目',
-            space_tag=space_tag,
-            version_number=2,
-            is_current=True,
-        )
-        historical_version = create_single_choice_question(
-            created_by=mentor_user,
-            content='历史题目',
-            space_tag=space_tag,
-            resource_uuid=current.resource_uuid,
-            version_number=1,
-            is_current=False,
-        )
-
+    def test_question_detail_returns_current_question(self, api_client, mentor_user, sample_question):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/questions/{historical_version.id}/')
+        response = api_client.get(f'/api/questions/{sample_question.id}/')
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
-        assert '无权访问该题目' in response.data['message']
+        assert response.status_code == 200
+        assert response.data['data']['id'] == sample_question.id
 
     def test_question_list_rejects_invalid_created_by(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -476,9 +509,7 @@ class TestQuestionApiContracts:
         assert response.data['data']['id'] == sample_question.id
 
         sample_question.refresh_from_db()
-        assert sample_question.is_current is True
         assert sample_question.space_tag_id is None
-        assert Question.objects.filter(resource_uuid=sample_question.resource_uuid).count() == 1
 
     def test_question_patch_logs_tag_update_with_question_identity(
         self,
@@ -584,23 +615,14 @@ class TestQuizApiContracts:
         assert sample_quiz.id in result_ids
 
     def test_quiz_list_hides_history_versions(self, api_client, mentor_user, sample_quiz):
-        historical_version = Quiz.objects.create(
-            title='旧版本试卷',
-            quiz_type='PRACTICE',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            resource_uuid=sample_quiz.resource_uuid,
-            version_number=2,
-            is_current=False,
-        )
+        ensure_quiz_revision(sample_quiz, actor=mentor_user)
 
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/quizzes/?page=1&page_size=10')
 
         assert response.status_code == 200, response.data
         result_ids = [item['id'] for item in response.data['data']['results']]
-        assert sample_quiz.id in result_ids
-        assert historical_version.id not in result_ids
+        assert result_ids == [sample_quiz.id]
 
     def test_quiz_list_rejects_invalid_created_by(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -959,24 +981,14 @@ class TestKnowledgeApiContracts:
         assert sample_knowledge.id in result_ids
 
     def test_knowledge_list_hides_history_versions(self, api_client, mentor_user, sample_knowledge):
-        historical_version = Knowledge.objects.create(
-            title='旧版本知识',
-            content='旧版本正文',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            space_tag=sample_knowledge.space_tag,
-            resource_uuid=sample_knowledge.resource_uuid,
-            version_number=2,
-            is_current=False,
-        )
+        ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
 
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/knowledge/?page=1&page_size=10')
 
         assert response.status_code == 200, response.data
         result_ids = [item['id'] for item in response.data['data']['results']]
-        assert sample_knowledge.id in result_ids
-        assert historical_version.id not in result_ids
+        assert result_ids == [sample_knowledge.id]
 
     def test_knowledge_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -995,33 +1007,12 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == 'success'
         assert response.data['data']['id'] == sample_knowledge.id
 
-    def test_knowledge_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
-        current = Knowledge.objects.create(
-            title='当前知识',
-            content='当前正文',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            space_tag=space_tag,
-            version_number=2,
-            is_current=True,
-        )
-        historical_version = Knowledge.objects.create(
-            title='历史知识',
-            content='历史正文',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            space_tag=space_tag,
-            resource_uuid=current.resource_uuid,
-            version_number=1,
-            is_current=False,
-        )
-
+    def test_knowledge_detail_returns_current_document(self, api_client, mentor_user, sample_knowledge):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/knowledge/{historical_version.id}/')
+        response = api_client.get(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
-        assert '无权访问该知识文档' in response.data['message']
+        assert response.status_code == 200
+        assert response.data['data']['id'] == sample_knowledge.id
 
     def test_knowledge_increment_view_count_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
         api_client.force_authenticate(user=mentor_user)
@@ -1156,12 +1147,8 @@ class TestKnowledgeApiContracts:
         assert data['id'] == sample_knowledge.id
 
         sample_knowledge.refresh_from_db()
-        assert sample_knowledge.is_current is True
-        assert Knowledge.objects.filter(
-            resource_uuid=sample_knowledge.resource_uuid,
-            is_current=True
-        ).count() == 1
-        assert Knowledge.objects.filter(resource_uuid=sample_knowledge.resource_uuid).count() == 1
+        assert sample_knowledge.space_tag_id is not None
+        assert set(sample_knowledge.tags.values_list('id', flat=True)) == {target_tag.id}
 
     def test_knowledge_patch_only_space_tag_inherits_unprovided_tags(
         self,
@@ -1200,12 +1187,8 @@ class TestKnowledgeApiContracts:
         assert data['id'] == sample_knowledge.id
 
         sample_knowledge.refresh_from_db()
-        assert sample_knowledge.is_current is True
-        assert Knowledge.objects.filter(
-            resource_uuid=sample_knowledge.resource_uuid,
-            is_current=True
-        ).count() == 1
-        assert Knowledge.objects.filter(resource_uuid=sample_knowledge.resource_uuid).count() == 1
+        assert sample_knowledge.space_tag_id == target_space_tag.id
+        assert set(sample_knowledge.tags.values_list('id', flat=True)) == {source_tag.id}
 
     def test_knowledge_patch_only_related_links_inherits_existing_content(
         self,
@@ -1363,14 +1346,17 @@ class TestTaskListApiContracts:
             status='COMPLETED',
             completed_at=timezone.now(),
         )
-        TaskQuiz.objects.create(
+        quiz_revision = ensure_quiz_revision(sample_quiz, actor=mentor_user)
+        task_quiz = TaskQuiz.objects.create(
             task=task,
-            quiz=sample_quiz,
+            quiz=quiz_revision,
+            source_quiz=sample_quiz,
             order=1,
         )
         submission = Submission.objects.create(
             task_assignment=assignment,
-            quiz=sample_quiz,
+            task_quiz=task_quiz,
+            quiz=quiz_revision,
             user=student_user,
             status='GRADING',
         )
@@ -1456,25 +1442,8 @@ class TestTaskResourceOptionApiContracts:
         assert ('QUIZ', sample_quiz.id) in result_ids
 
     def test_task_resource_options_hide_historical_versions(self, api_client, mentor_user, sample_knowledge, sample_quiz):
-        historical_knowledge = Knowledge.objects.create(
-            title='历史知识版本',
-            content='历史知识正文',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            resource_uuid=sample_knowledge.resource_uuid,
-            version_number=2,
-            is_current=False,
-            space_tag=sample_knowledge.space_tag,
-        )
-        historical_quiz = Quiz.objects.create(
-            title='历史试卷版本',
-            quiz_type='PRACTICE',
-            created_by=mentor_user,
-            updated_by=mentor_user,
-            resource_uuid=sample_quiz.resource_uuid,
-            version_number=2,
-            is_current=False,
-        )
+        ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
+        ensure_quiz_revision(sample_quiz, actor=mentor_user)
 
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
@@ -1483,8 +1452,7 @@ class TestTaskResourceOptionApiContracts:
         result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
         assert ('DOCUMENT', sample_knowledge.id) in result_ids
         assert ('QUIZ', sample_quiz.id) in result_ids
-        assert ('DOCUMENT', historical_knowledge.id) not in result_ids
-        assert ('QUIZ', historical_quiz.id) not in result_ids
+        assert len(result_ids) == 2
 
     def test_task_resource_options_support_excluding_selected_resources(self, api_client, mentor_user, sample_knowledge, sample_quiz):
         api_client.force_authenticate(user=mentor_user)
@@ -1663,13 +1631,10 @@ class TestSubmissionApiContracts:
         api_client,
         student_user,
         in_progress_submission,
-        sample_question,
     ):
         api_client.force_authenticate(user=student_user)
-        target_answer = Answer.objects.create(
-            submission=in_progress_submission,
-            question=sample_question,
-        )
+        target_answer = in_progress_submission.answers.order_by('id').first()
+        assert target_answer is not None
 
         response = api_client.post(
             f'/api/submissions/{in_progress_submission.id}/save-answer/',

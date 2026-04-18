@@ -35,6 +35,7 @@ def admin_user(department, roles):
     )
     admin_role = roles['ADMIN']
     UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.current_role = 'ADMIN'
     permission_ids = Permission.objects.filter(
         code__in=['user.view', 'user.create', 'user.update', 'user.authorize'],
     ).values_list('id', flat=True)
@@ -57,6 +58,7 @@ def normal_user(department, roles):
         department=department,
     )
     UserRole.objects.get_or_create(user=user, role=roles['MENTOR'])
+    user.current_role = 'MENTOR'
     return user
 
 
@@ -70,6 +72,7 @@ def super_admin_user(department, roles):
         is_staff=True,
         is_superuser=True,
     )
+    user.current_role = 'SUPER_ADMIN'
     return user
 
 

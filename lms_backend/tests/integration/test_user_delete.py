@@ -6,8 +6,10 @@ from django.utils import timezone
 
 from apps.authorization.models import Permission, RolePermission
 from apps.knowledge.models import Knowledge
+from apps.knowledge.services import ensure_knowledge_revision
 from apps.questions.models import Question, QuestionOption
-from apps.quizzes.models import Quiz, QuizQuestion
+from apps.quizzes.models import Quiz, QuizQuestion, QuizQuestionOption
+from apps.quizzes.services import ensure_quiz_revision
 from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Answer, AnswerSelection, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
@@ -35,6 +37,7 @@ def admin_user(department, admin_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=admin_role)
+    user.current_role = 'ADMIN'
     permission = Permission.objects.filter(code='user.delete').first()
     if permission:
         RolePermission.objects.get_or_create(role=admin_role, permission=permission)
@@ -88,6 +91,7 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
         updated_by=inactive_user,
         space_tag=space_tag,
     )
+    knowledge_revision = ensure_knowledge_revision(knowledge, actor=inactive_user)
     question = Question.objects.create(
         content='测试题目',
         question_type='SINGLE_CHOICE',
@@ -113,7 +117,29 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
         created_by=inactive_user,
         updated_by=inactive_user,
     )
-    QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
+    quiz_question = QuizQuestion.objects.create(
+        quiz=quiz,
+        question=question,
+        content=question.content,
+        question_type=question.question_type,
+        reference_answer=question.reference_answer,
+        explanation=question.explanation,
+        score=question.score,
+        order=1,
+    )
+    QuizQuestionOption.objects.create(
+        question=quiz_question,
+        sort_order=1,
+        content=option_a.content,
+        is_correct=option_a.is_correct,
+    )
+    QuizQuestionOption.objects.create(
+        question=quiz_question,
+        sort_order=2,
+        content='选项B',
+        is_correct=False,
+    )
+    quiz_revision = ensure_quiz_revision(quiz, actor=inactive_user)
 
     shared_task = Task.objects.create(
         title='共享任务',
@@ -122,8 +148,18 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
         created_by=admin_user,
         updated_by=admin_user,
     )
-    TaskKnowledge.objects.create(task=shared_task, knowledge=knowledge, order=1)
-    TaskQuiz.objects.create(task=shared_task, quiz=quiz, order=1)
+    task_knowledge = TaskKnowledge.objects.create(
+        task=shared_task,
+        knowledge=knowledge_revision,
+        source_knowledge=knowledge,
+        order=1,
+    )
+    task_quiz = TaskQuiz.objects.create(
+        task=shared_task,
+        quiz=quiz_revision,
+        source_quiz=quiz,
+        order=1,
+    )
 
     shared_assignment = TaskAssignment.objects.create(
         task=shared_task,
@@ -132,18 +168,21 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
     )
     submission = Submission.objects.create(
         task_assignment=shared_assignment,
-        quiz=quiz,
+        task_quiz=task_quiz,
+        quiz=quiz_revision,
         user=other_user,
         status='SUBMITTED',
     )
+    revision_question = quiz_revision.quiz_questions.get(order=1)
     answer = Answer.objects.create(
         submission=submission,
-        question=question,
+        question=revision_question,
         is_correct=True,
         obtained_score=1,
         graded_by=admin_user,
     )
-    AnswerSelection.objects.create(answer=answer, question_option=option_a)
+    revision_option = revision_question.question_options.get(sort_order=option_a.sort_order)
+    AnswerSelection.objects.create(answer=answer, question_option=revision_option)
 
     created_task = Task.objects.create(
         title='离职用户任务',
@@ -188,8 +227,8 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
     assert not SpotCheck.objects.filter(id=spot_check_as_student.id).exists()
     assert not SpotCheck.objects.filter(id=spot_check_as_checker.id).exists()
 
-    assert not TaskKnowledge.objects.filter(task=shared_task).exists()
-    assert not TaskQuiz.objects.filter(task=shared_task).exists()
+    assert not TaskKnowledge.objects.filter(id=task_knowledge.id).exists()
+    assert not TaskQuiz.objects.filter(id=task_quiz.id).exists()
     assert not QuizQuestion.objects.filter(quiz_id=quiz.id).exists()
     assert Task.objects.filter(id=shared_task.id).exists()
     assert TaskAssignment.objects.filter(id=shared_assignment.id).exists()

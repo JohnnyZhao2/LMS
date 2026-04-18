@@ -11,7 +11,11 @@ from django.utils import timezone
 
 from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
+from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
+from apps.quizzes.models import QuizQuestion
+from apps.quizzes.services import ensure_quiz_revision
+from apps.questions.models import Question, QuestionOption
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.users.models import Department, Role, User, UserRole
@@ -56,6 +60,7 @@ def mentor(department, mentor_role, student_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=mentor_role)
+    user.current_role = 'MENTOR'
     return user
 
 
@@ -93,6 +98,7 @@ def admin(department, admin_role, student_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=admin_role)
+    user.current_role = 'ADMIN'
     return user
 
 
@@ -105,6 +111,7 @@ def team_manager(department, team_manager_role, student_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=team_manager_role)
+    user.current_role = 'TEAM_MANAGER'
     return user
 
 
@@ -115,13 +122,12 @@ def knowledge(mentor):
         content='测试内容',
         created_by=mentor,
         updated_by=mentor,
-        is_current=True,
     )
 
 
 @pytest.fixture
 def quiz(mentor):
-    return Quiz.objects.create(
+    quiz = Quiz.objects.create(
         title='测试测验',
         quiz_type='PRACTICE',
         duration=30,
@@ -129,6 +135,26 @@ def quiz(mentor):
         created_by=mentor,
         updated_by=mentor,
     )
+    question = Question.objects.create(
+        content='仪表盘测试题目',
+        question_type='SINGLE_CHOICE',
+        score=1,
+        created_by=mentor,
+        updated_by=mentor,
+    )
+    QuestionOption.objects.create(question=question, sort_order=1, content='选项A', is_correct=True)
+    QuestionOption.objects.create(question=question, sort_order=2, content='选项B', is_correct=False)
+    QuizQuestion.objects.create(
+        quiz=quiz,
+        question=question,
+        content=question.content,
+        question_type=question.question_type,
+        reference_answer=question.reference_answer,
+        explanation=question.explanation,
+        score=question.score,
+        order=1,
+    )
+    return quiz
 
 
 @pytest.fixture
@@ -429,7 +455,12 @@ class TestDashboardSelectors:
         from apps.dashboard.selectors import calculate_assignment_progress
 
         # 添加知识点到任务
-        TaskKnowledge.objects.create(task=task, knowledge=knowledge, order=1)
+        TaskKnowledge.objects.create(
+            task=task,
+            knowledge=ensure_knowledge_revision(knowledge, actor=task.created_by),
+            source_knowledge=knowledge,
+            order=1,
+        )
 
         # 刷新 task_assignment 以获取最新的关联数据
         task_assignment.refresh_from_db()
@@ -445,12 +476,19 @@ class TestDashboardSelectors:
         from apps.dashboard.selectors import calculate_assignment_progress
 
         # 添加测验到任务
-        TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
+        quiz_revision = ensure_quiz_revision(quiz, actor=task.created_by)
+        task_quiz = TaskQuiz.objects.create(
+            task=task,
+            quiz=quiz_revision,
+            source_quiz=quiz,
+            order=1,
+        )
 
         # 创建提交记录
         Submission.objects.create(
             task_assignment=task_assignment,
-            quiz=quiz,
+            task_quiz=task_quiz,
+            quiz=quiz_revision,
             user=student,
             status='GRADED',
             obtained_score=80,
@@ -472,10 +510,17 @@ class TestDashboardSelectors:
         """答题中的提交不应计入已完成测验。"""
         from apps.dashboard.selectors import calculate_assignment_progress
 
-        TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
+        quiz_revision = ensure_quiz_revision(quiz, actor=task.created_by)
+        task_quiz = TaskQuiz.objects.create(
+            task=task,
+            quiz=quiz_revision,
+            source_quiz=quiz,
+            order=1,
+        )
         Submission.objects.create(
             task_assignment=task_assignment,
-            quiz=quiz,
+            task_quiz=task_quiz,
+            quiz=quiz_revision,
             user=student,
             status='IN_PROGRESS',
         )
@@ -493,12 +538,19 @@ class TestDashboardSelectors:
         from apps.dashboard.selectors import get_task_participants_progress
 
         # 添加测验到任务
-        TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
+        quiz_revision = ensure_quiz_revision(quiz, actor=task.created_by)
+        task_quiz = TaskQuiz.objects.create(
+            task=task,
+            quiz=quiz_revision,
+            source_quiz=quiz,
+            order=1,
+        )
 
         # 创建提交记录
         Submission.objects.create(
             task_assignment=task_assignment,
-            quiz=quiz,
+            task_quiz=task_quiz,
+            quiz=quiz_revision,
             user=student,
             status='GRADED',
             obtained_score=80,

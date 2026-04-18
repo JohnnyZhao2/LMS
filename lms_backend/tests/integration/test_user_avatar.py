@@ -10,7 +10,7 @@ def department():
 @pytest.fixture
 def admin_role(grant_role_permissions):
     role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    grant_role_permissions(role, ['user.view'])
+    grant_role_permissions(role, ['user.view', 'user.avatar.update'])
     return role
 
 
@@ -29,6 +29,7 @@ def admin_user(department, admin_role):
         department=department,
     )
     UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.current_role = 'ADMIN'
     return user
 
 
@@ -51,6 +52,7 @@ def mentor_user(department, mentor_role):
         department=department,
     )
     UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.current_role = 'MENTOR'
     return user
 
 

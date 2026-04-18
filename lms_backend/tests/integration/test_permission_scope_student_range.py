@@ -17,6 +17,8 @@ def _create_user(*, employee_id: str, username: str, department: Department, rol
     for role_code in role_codes or []:
         role, _ = Role.objects.get_or_create(code=role_code, defaults={'name': role_code})
         UserRole.objects.get_or_create(user=user, role=role)
+    if role_codes:
+        user.current_role = role_codes[0]
     return user
 
 
@@ -55,9 +57,10 @@ def _extract_list_items(response):
     return response.data['data']['results']
 
 @pytest.mark.django_db
-def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
+def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny(grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='范围测试部门', code='SCOPE_RANGE_D1')
+    grant_permissions_to_roles(role_codes=['MENTOR', 'ADMIN'], permission_codes=['task.assign'])
 
     mentor = _create_user(
         employee_id='SCOPE_MENTOR_001',
@@ -286,9 +289,10 @@ def test_user_view_includes_inactive_users_within_scope(grant_permissions_to_rol
 
 
 @pytest.mark.django_db
-def test_task_assign_scope_includes_mentee_with_admin_and_student_roles():
+def test_task_assign_scope_includes_mentee_with_admin_and_student_roles(grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='导师学员身份部门', code='SCOPE_RANGE_D4')
+    grant_permissions_to_roles(role_codes=['MENTOR'], permission_codes=['task.assign'])
 
     mentor = _create_user(
         employee_id='SCOPE_MENTOR_003',
@@ -367,9 +371,13 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides(create_spot_chec
 
 
 @pytest.mark.django_db
-def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(create_spot_check):
+def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(create_spot_check, grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='抽查范围部门', code='SCOPE_RANGE_D2')
+    grant_permissions_to_roles(
+        role_codes=['MENTOR', 'ADMIN'],
+        permission_codes=['spot_check.view', 'spot_check.create'],
+    )
 
     mentor = _create_user(
         employee_id='SCOPE_MENTOR_002',
