@@ -3,12 +3,12 @@ User services for LMS.
 """
 from typing import List, Optional
 
+from apps.activity_logs.decorators import log_user_action
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
-from apps.activity_logs.services import ActivityLogService
 from core.base_service import BaseService
-from core.decorators import log_user_action
+from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .avatar_constants import validate_avatar_key
@@ -217,7 +217,7 @@ class UserManagementService(BaseService):
         if roles_to_remove:
             parts.append(f'移除角色：{removed_names}')
 
-        ActivityLogService.log_user_action(
+        audit_user_action(
             user=user,
             operator=assigned_by,
             action='role_assigned',
@@ -264,7 +264,7 @@ class UserManagementService(BaseService):
             mentor = self._get_user(mentor_id)
             parts.append(f'导师：{mentor.username}')
 
-        ActivityLogService.log_user_action(
+        audit_user_action(
             user=user,
             operator=self.user,
             action='mentor_assigned',

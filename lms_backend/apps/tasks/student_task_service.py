@@ -2,12 +2,12 @@
 
 from typing import List
 
+from apps.activity_logs.decorators import log_operation
 from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.submissions.models import Submission
 from core.base_service import BaseService
-from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import KnowledgeLearningProgress, TaskAssignment

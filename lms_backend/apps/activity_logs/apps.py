@@ -8,8 +8,10 @@ class ActivityLogsConfig(AppConfig):
     verbose_name = '活动日志'
 
     def ready(self):
+        from .audit import register_activity_log_audit_publisher
         from .bootstrap import sync_activity_log_policies
 
+        register_activity_log_audit_publisher()
         post_migrate.connect(
             sync_activity_log_policies,
             sender=self,

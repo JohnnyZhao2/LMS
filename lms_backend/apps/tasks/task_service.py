@@ -7,14 +7,14 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from apps.authorization.engine import authorize, enforce, scope_filter
-from apps.authorization.roles import SUPER_ADMIN_ROLE
+from apps.authorization.roles import SUPER_ADMIN_ROLE, resolve_current_role
+from apps.activity_logs.decorators import log_operation
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
 from apps.quizzes.services import ensure_quiz_revision
 from apps.users.models import User
 from core.base_service import BaseService
-from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
@@ -81,7 +81,7 @@ class TaskService(BaseService):
         assignee_ids = assignee_ids or []
         enforce('task.create', self.request, error_message='无权创建任务')
 
-        current_role = self.get_current_role()
+        current_role = resolve_current_role(self.user)
         created_role = 'ADMIN' if current_role == SUPER_ADMIN_ROLE else (current_role or 'ADMIN')
         task = Task.objects.create(
             title=title,

@@ -5,13 +5,13 @@ from typing import Optional
 
 from django.db import transaction
 
+from apps.activity_logs.decorators import log_content_action
 from apps.authorization.engine import enforce
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
     pop_resource_tag_payload,
 )
 from core.base_service import BaseService
-from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Question, QuestionOption

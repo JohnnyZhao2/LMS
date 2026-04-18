@@ -6,6 +6,7 @@ import os
 import re
 from typing import Optional, Tuple
 
+from apps.activity_logs.decorators import log_content_action
 from django.db import transaction
 from django.utils.html import escape, strip_tags
 
@@ -15,7 +16,6 @@ from apps.tags.resource_sync import (
     pop_resource_tag_payload,
 )
 from core.base_service import BaseService
-from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Knowledge, KnowledgeRevision

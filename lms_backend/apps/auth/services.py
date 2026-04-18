@@ -19,10 +19,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.base_service import BaseService
-from core.decorators import log_user_action
-from core.exceptions import BusinessError, ErrorCodes
-from apps.activity_logs.services import ActivityLogService
+from apps.activity_logs.decorators import log_user_action
 from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import enforce
 from apps.authorization.roles import (
@@ -34,6 +31,9 @@ from apps.authorization.services import AuthorizationService
 from apps.users.models import User
 from apps.users.selectors import get_user_by_employee_id, get_user_by_id
 from apps.users.serializers import UserInfoSerializer
+from core.base_service import BaseService
+from core.audit import audit_user_action
+from core.exceptions import BusinessError, ErrorCodes
 
 
 class AuthenticationService(BaseService):
@@ -55,7 +55,7 @@ class AuthenticationService(BaseService):
         operator: Optional[User] = None,
         status: str = 'success',
     ) -> None:
-        ActivityLogService.log_user_action(
+        audit_user_action(
             user=user,
             operator=operator,
             action=action,

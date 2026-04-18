@@ -7,6 +7,7 @@ import json
 from decimal import Decimal
 from typing import Any, List
 
+from apps.activity_logs.decorators import log_content_action
 from django.db import transaction
 from django.db.models import Count, DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
@@ -16,7 +17,6 @@ from apps.questions.services import QuestionService
 from apps.tags.models import Tag
 from apps.tags.resource_sync import apply_resource_tag_changes
 from core.base_service import BaseService
-from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import (

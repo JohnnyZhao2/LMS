@@ -8,7 +8,6 @@
 """
 from typing import Optional, TypeVar
 
-from apps.authorization.roles import get_current_role as _get_current_role, is_admin_like_role as _is_admin_like_role
 from core.exceptions import BusinessError, ErrorCodes
 
 T = TypeVar('T')
@@ -21,8 +20,6 @@ class BaseService:
     支持构造器注入 request，提供：
     - self.request: HTTP 请求对象
     - self.user: 当前用户
-    - self.get_current_role(): 获取当前角色
-    
     """
     
     def __init__(self, request):
@@ -46,18 +43,7 @@ class BaseService:
     def user(self):
         """获取当前用户"""
         return self._user
-    
-    def get_current_role(self):
-        """
-        获取当前用户的角色
-        
-        Returns:
-            角色代码字符串，如 'ADMIN', 'MENTOR' 等
-        """
-        if not self._user:
-            return None
-        return _get_current_role(self._user)
-    
+
     def validate_not_none(self, value: Optional[T], error_message: str) -> T:
         """
         验证值不为 None

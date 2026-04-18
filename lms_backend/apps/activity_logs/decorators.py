@@ -1,12 +1,12 @@
-"""
-日志记录装饰器
-用于自动记录业务操作日志
-"""
+"""Activity log decorators."""
+
 import inspect
 import time
 from copy import deepcopy
 from functools import wraps
 from typing import Any, Callable, Optional
+
+from core.audit import audit_content_action, audit_operation, audit_user_action
 
 
 ROLE_LABELS = {
@@ -73,7 +73,6 @@ def _build_task_update_summary(template_vars: dict[str, Any]) -> str:
 
 
 def _snapshot_for_logging(value: Any) -> Any:
-    """尽量保留调用入参原貌，避免业务函数内部修改影响日志模板变量。"""
     try:
         return deepcopy(value)
     except Exception:
@@ -227,29 +226,12 @@ def _build_template_vars(
 def log_user_action(
     action: str,
     description_template: Optional[str] = None,
-    action_key: Optional[str] = None
+    action_key: Optional[str] = None,
 ):
-    """
-    记录用户日志的装饰器
-
-    Args:
-        action: 操作类型 (login, logout, password_change, role_assigned, etc.)
-        description_template: 描述模板，可以使用 {变量名} 引用方法参数或返回值
-                            例如: "管理员 {operator.employee_id} 为用户 {user.employee_id} 分配了角色"
-
-    使用示例:
-        @log_user_action('role_assigned', '管理员 {assigned_by.employee_id} 为用户 {result.employee_id} 分配了角色')
-        def assign_roles(self, user_id, role_codes, assigned_by):
-            ...
-            return user
-    """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            # 执行原方法
             result = func(self, *args, **kwargs)
-
-            from apps.activity_logs.services import ActivityLogService
 
             if description_template:
                 template_vars = _build_template_vars(func, self, args, kwargs, result)
@@ -264,13 +246,13 @@ def log_user_action(
             )
             operator = kwargs.get('operator') or kwargs.get('assigned_by') or getattr(self, 'user', None)
 
-            ActivityLogService.log_user_action(
+            audit_user_action(
                 user=user,
                 operator=operator,
                 action=action,
                 description=description,
                 status='success',
-                action_key=action_key
+                action_key=action_key,
             )
 
             return result
@@ -282,32 +264,14 @@ def log_content_action(
     content_type: str,
     action: str,
     description_template: Optional[str] = None,
-    action_key: Optional[str] = None
+    action_key: Optional[str] = None,
 ):
-    """
-    记录内容日志的装饰器
-
-    Args:
-        content_type: 内容类型 (knowledge, quiz, question, assignment)
-        action: 操作类型 (create, update, delete, publish)
-        description_template: 描述模板
-
-    使用示例:
-        @log_content_action('knowledge', 'create', '创建知识文档《{result.title}》')
-        def create(self, data):
-            ...
-            return knowledge
-    """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             template_args = _snapshot_for_logging(args)
             template_kwargs = _snapshot_for_logging(kwargs)
-
-            # 执行原方法
             result = func(self, *args, **kwargs)
-
-            from apps.activity_logs.services import ActivityLogService
 
             if description_template:
                 template_vars = _build_template_vars(func, self, template_args, template_kwargs, result)
@@ -318,7 +282,7 @@ def log_content_action(
             content_id = str(result.id) if hasattr(result, 'id') else 'unknown'
             content_title = getattr(result, 'title', None) or getattr(result, 'content', '')[:50] or '内容'
 
-            ActivityLogService.log_content_action(
+            audit_content_action(
                 content_type=content_type,
                 content_id=content_id,
                 content_title=content_title,
@@ -326,7 +290,7 @@ def log_content_action(
                 action=action,
                 description=description,
                 status='success',
-                action_key=action_key
+                action_key=action_key,
             )
 
             return result
@@ -343,41 +307,14 @@ def log_operation(
     target_type: str = '',
     target_title_template: str = '',
 ):
-    """
-    记录操作日志的装饰器
-
-    Args:
-        operation_type: 操作类型 (task_management, grading, spot_check, data_export)
-        action: 操作
-        description_template: 描述模板
-        measure_duration: 是否测量耗时
-        target_type: 目标类型 (task, quiz, knowledge, student)
-        target_title_template: 目标标题模板，如 '{title}' 或 '{result.title}'
-
-    使用示例:
-        @log_operation('task_management', 'create_and_assign',
-            '截止 {deadline_text}，{assignee_count} 名学员',
-            target_type='task', target_title_template='{title}')
-        def create_task(self, title, description, deadline, assignee_ids=None):
-            ...
-            return task
-    """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
-            # 开始计时
             start_time = time.time() if measure_duration else None
-
-            # 执行原方法
             result = func(self, *args, **kwargs)
-
-            # 计算耗时
             duration = int((time.time() - start_time) * 1000) if measure_duration else 0
 
-            from apps.activity_logs.services import ActivityLogService
-
             template_vars = _build_template_vars(func, self, args, kwargs, result)
-
             if description_template:
                 description = description_template.format(**template_vars)
             else:
@@ -390,7 +327,7 @@ def log_operation(
             if result is not None and hasattr(result, 'id'):
                 resolved_target_id = str(result.id)
 
-            ActivityLogService.log_operation(
+            audit_operation(
                 operator=getattr(self, 'user', None),
                 operation_type=operation_type,
                 action=action,

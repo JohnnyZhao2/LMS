@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
-from apps.authorization.roles import SUPER_ADMIN_ROLE
+from apps.authorization.roles import SUPER_ADMIN_ROLE, resolve_current_role
 from apps.users.models import Role, User
 
 from .constants import (
@@ -185,7 +185,7 @@ class AuthorizationService(BaseService):
         )
 
     def _resolve_role(self, role_code: Optional[str] = None) -> Optional[str]:
-        return role_code or self.get_current_role()
+        return role_code or resolve_current_role(self.user)
 
     def _resolve_target_user(
         self,

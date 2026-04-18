@@ -19,7 +19,7 @@ from apps.authorization.constants import (
     SCOPE_MENTEES,
     SCOPE_SELF,
 )
-from apps.authorization.roles import LEARNING_POOL_EXCLUDED_ROLE_CODES
+from apps.authorization.roles import LEARNING_POOL_EXCLUDED_ROLE_CODES, resolve_current_role
 from apps.users.models import User
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
@@ -95,6 +95,9 @@ class AuthorizationEngine(BaseService):
         if resource_id is not None:
             return (value.__class__.__name__, resource_id)
         return value
+
+    def get_current_role(self) -> Optional[str]:
+        return resolve_current_role(self.user)
 
     def authorize(
         self,

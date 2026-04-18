@@ -2,6 +2,7 @@
 
 from typing import Any, List, Optional, Tuple
 
+from apps.activity_logs.decorators import log_operation
 from django.db import transaction
 from django.db.models import Prefetch, QuerySet
 from django.utils import timezone
@@ -9,7 +10,6 @@ from django.utils import timezone
 from apps.tasks.models import TaskAssignment, TaskQuiz
 from apps.users.models import User
 from core.base_service import BaseService
-from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Answer, AnswerSelection, Submission

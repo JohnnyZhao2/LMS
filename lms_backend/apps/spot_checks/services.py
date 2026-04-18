@@ -9,13 +9,13 @@ Properties: 35, 36
 """
 from typing import List, Optional
 
+from apps.activity_logs.decorators import log_operation
 from django.db import transaction
 from django.db.models import QuerySet
 
 from apps.authorization.engine import enforce, scope_filter
 from apps.users.models import User
 from core.base_service import BaseService
-from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import SpotCheck, SpotCheckItem
