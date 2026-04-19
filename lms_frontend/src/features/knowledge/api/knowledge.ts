@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { PaginatedResponse } from '@/types/common';
 import type { KnowledgeListItem, KnowledgeDetail } from '@/types/knowledge';
@@ -18,15 +19,13 @@ export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) =>
   const { space_tag_id, tag_id, search, pageSize = 20 } = params;
 
   return useInfiniteQuery({
-    queryKey: [
-      'knowledge-list',
-      'infinite',
-      currentRole ?? 'UNKNOWN',
-      space_tag_id,
-      tag_id,
+    queryKey: queryKeys.knowledge.infiniteList({
+      currentRole,
+      spaceTagId: space_tag_id,
+      tagId: tag_id,
       search,
       pageSize,
-    ],
+    }),
     initialPageParam: 1,
     queryFn: ({ pageParam }) => {
       const page = Number(pageParam) || 1;
@@ -58,12 +57,11 @@ export const useKnowledgeDetail = ({ knowledgeId, taskKnowledgeId }: UseKnowledg
   const detailId = taskKnowledgeId ?? knowledgeId ?? 0;
 
   return useQuery({
-    queryKey: [
-      'knowledge-detail',
-      currentRole ?? 'UNKNOWN',
-      taskKnowledgeId ? 'task' : 'knowledge',
-      detailId,
-    ],
+    queryKey: queryKeys.knowledge.detail({
+      currentRole,
+      knowledgeId,
+      taskKnowledgeId,
+    }),
     queryFn: () => (
       taskKnowledgeId
         ? apiClient.get<KnowledgeDetail>(`/knowledge/task/${taskKnowledgeId}/`)

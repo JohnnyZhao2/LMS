@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterKnowledgeViewMutation } from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import type { KnowledgeDetail } from '@/types/knowledge';
 
 /**
@@ -25,7 +27,7 @@ export const useIncrementViewCount = () => {
     },
     onSuccess: (result) => {
       queryClient.setQueriesData<KnowledgeDetail>(
-        { queryKey: ['knowledge-detail'] },
+        { queryKey: queryKeys.knowledge.detailRoot() },
         (old) => {
           if (!old || old.id !== result.id) {
             return old;
@@ -33,7 +35,7 @@ export const useIncrementViewCount = () => {
           return { ...old, view_count: result.view_count };
         },
       );
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
+      return invalidateAfterKnowledgeViewMutation(queryClient);
     },
   });
 };

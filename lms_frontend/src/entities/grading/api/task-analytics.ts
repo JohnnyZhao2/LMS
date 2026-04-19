@@ -1,5 +1,7 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterGradingMutation } from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
 
@@ -10,7 +12,7 @@ export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } 
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['task-analytics', currentRole ?? 'UNKNOWN', taskId],
+    queryKey: queryKeys.grading.taskAnalytics({ currentRole, taskId }),
     queryFn: () => apiClient.get<TaskAnalytics>(`/tasks/${taskId}/analytics/`),
     enabled: Boolean(taskId) && currentRole !== null && enabled,
   });
@@ -23,7 +25,7 @@ export const useStudentExecutions = (taskId: number, options: { enabled?: boolea
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['student-executions', currentRole ?? 'UNKNOWN', taskId],
+    queryKey: queryKeys.grading.studentExecutions({ currentRole, taskId }),
     queryFn: () => apiClient.get<StudentExecution[]>(`/tasks/${taskId}/student-executions/`),
     enabled: Boolean(taskId) && currentRole !== null && enabled,
   });
@@ -40,7 +42,7 @@ export const useGradingQuestions = (
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-questions', currentRole ?? 'UNKNOWN', taskId, quizId],
+    queryKey: queryKeys.grading.questions({ currentRole, taskId, quizId }),
     queryFn: () => apiClient.get<GradingQuestion[]>(`/grading/tasks/${taskId}/questions/?quiz_id=${quizId}`),
     enabled: Boolean(taskId) && Boolean(quizId) && currentRole !== null && enabled,
     placeholderData: keepPreviousData,
@@ -59,7 +61,7 @@ export const useGradingAnswers = (
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-answers', currentRole ?? 'UNKNOWN', taskId, quizId, questionId],
+    queryKey: queryKeys.grading.answers({ currentRole, taskId, quizId, questionId }),
     queryFn: () =>
       apiClient.get<GradingAnswerResponse>(
         `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
@@ -76,12 +78,6 @@ export const useSubmitGrading = (taskId: number) => {
   return useMutation({
     mutationFn: (data: GradingSubmitRequest) =>
       apiClient.post(`/grading/tasks/${taskId}/submit/`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grading-answers'] });
-      queryClient.invalidateQueries({ queryKey: ['grading-questions'] });
-      queryClient.invalidateQueries({ queryKey: ['grading', 'pending'] });
-      queryClient.invalidateQueries({ queryKey: ['task-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['student-executions'] });
-    },
+    onSuccess: () => invalidateAfterGradingMutation(queryClient),
   });
 };

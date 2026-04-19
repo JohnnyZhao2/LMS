@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { StudentLearningTaskDetail, TaskDetail } from '@/types/task';
 
@@ -14,7 +15,7 @@ export const useTaskDetail = (id: number, options: UseTaskDetailOptions = {}) =>
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['task-detail', currentRole ?? 'UNKNOWN', id],
+    queryKey: queryKeys.tasks.detail({ currentRole, id }),
     queryFn: () => apiClient.get<TaskDetail>(`/tasks/${id}/`),
     enabled: Boolean(id) && currentRole !== null && enabled,
   });
@@ -30,7 +31,7 @@ export const useStudentLearningTaskDetail = (
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['student-learning-task-detail', currentRole ?? 'UNKNOWN', taskId],
+    queryKey: queryKeys.tasks.studentLearningDetail({ currentRole, taskId }),
     queryFn: () => apiClient.get<StudentLearningTaskDetail>(`/tasks/${taskId}/detail/`),
     enabled: Boolean(taskId) && currentRole !== null && enabled,
   });

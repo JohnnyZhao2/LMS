@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { StudentDashboard, TaskParticipant } from '@/types/dashboard';
 
@@ -9,7 +10,7 @@ import type { StudentDashboard, TaskParticipant } from '@/types/dashboard';
 export const useStudentDashboard = (taskLimit = 10, knowledgeLimit = 6) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['student-dashboard', currentRole ?? 'UNKNOWN', taskLimit, knowledgeLimit],
+    queryKey: queryKeys.dashboards.student({ currentRole, taskLimit, knowledgeLimit }),
     queryFn: () =>
       apiClient.get<StudentDashboard>(
         `/dashboard/student/?task_limit=${taskLimit}&knowledge_limit=${knowledgeLimit}`,
@@ -24,7 +25,7 @@ export const useStudentDashboard = (taskLimit = 10, knowledgeLimit = 6) => {
 export const useTaskParticipants = (taskId: number | null) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['task-participants', taskId],
+    queryKey: queryKeys.dashboards.taskParticipants(taskId),
     queryFn: () =>
       apiClient.get<TaskParticipant[]>(
         `/dashboard/student/task/${taskId}/participants/`,

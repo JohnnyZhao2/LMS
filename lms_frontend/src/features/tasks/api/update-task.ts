@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation';
 import type { TaskDetail } from '@/types/task';
 import { showApiError } from '@/utils/error-handler';
 
@@ -25,11 +26,7 @@ export const useUpdateTask = () => {
     mutationFn: ({ taskId, data }: { taskId: number; data: TaskUpdateRequest }) => {
       return apiClient.patch<TaskDetail>(`/tasks/${taskId}/`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-    },
+    onSuccess: () => invalidateAfterTaskMutation(queryClient),
     onError: (error: Error) => {
       if (error instanceof ApiError && error.code === 'INVALID_OPERATION') {
         showApiError(error);

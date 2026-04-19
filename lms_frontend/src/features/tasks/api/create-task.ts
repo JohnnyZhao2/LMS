@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation';
 import type { TaskDetail } from '@/types/task';
 
 /**
@@ -24,9 +25,6 @@ export const useCreateTask = () => {
     mutationFn: (data: TaskCreateRequest) => {
       return apiClient.post<TaskDetail>('/tasks/create/', data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-    },
+    onSuccess: () => invalidateAfterTaskMutation(queryClient),
   });
 };

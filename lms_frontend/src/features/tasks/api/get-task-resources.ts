@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { buildQueryString } from '@/lib/api-utils';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '@/lib/query-keys';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
 
@@ -31,7 +32,15 @@ export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => 
   const excludeQuizIds = exclude_quiz_ids.join(',');
 
   return useQuery({
-    queryKey: ['task-resource-options', currentRole ?? 'UNKNOWN', resource_type, search, page, page_size, excludeDocumentIds, excludeQuizIds],
+    queryKey: queryKeys.tasks.resourceOptions({
+      currentRole,
+      resourceType: resource_type,
+      search,
+      page,
+      pageSize: page_size,
+      excludeDocumentIds,
+      excludeQuizIds,
+    }),
     queryFn: () => {
       const queryString = buildQueryString({
         resource_type,

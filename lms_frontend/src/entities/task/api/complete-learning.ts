@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterTaskProgressMutation } from '@/lib/cache-invalidation';
 
 interface CompleteLearningPayload {
   taskId: number;
@@ -17,12 +18,6 @@ export const useCompleteLearning = () => {
       apiClient.post(`/tasks/${taskId}/complete-knowledge/`, {
         task_knowledge_id: taskKnowledgeId,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-detail'] });
-      queryClient.invalidateQueries({
-        queryKey: ['student-learning-task-detail'],
-      });
-    },
+    onSuccess: () => invalidateAfterTaskProgressMutation(queryClient),
   });
 };

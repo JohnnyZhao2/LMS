@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation';
 
 /**
  * 删除任务
@@ -11,9 +12,6 @@ export const useDeleteTask = () => {
     mutationFn: (taskId: number) => {
       return apiClient.delete(`/tasks/${taskId}/`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-    },
+    onSuccess: () => invalidateAfterTaskMutation(queryClient),
   });
 };

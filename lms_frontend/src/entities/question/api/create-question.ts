@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterQuestionMutation } from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import type { PaginatedResponse } from '@/types/common';
 import type { QuestionCreateRequest, Question } from '@/types/question';
 
@@ -25,9 +27,7 @@ export const useCreateQuestion = () => {
 
   return useMutation({
     mutationFn: (data: QuestionCreateRequest) => apiClient.post<Question>('/questions/', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-    },
+    onSuccess: () => invalidateAfterQuestionMutation(queryClient),
   });
 };
 
@@ -42,15 +42,14 @@ export const useUpdateQuestion = () => {
       apiClient.patch<Question>(`/questions/${id}/`, data),
     onSuccess: (updatedQuestion) => {
       queryClient.setQueriesData(
-        { queryKey: ['questions'] },
+        { queryKey: queryKeys.questions.all() },
         (current: PaginatedResponse<Question> | undefined) => patchQuestionListCache(current, updatedQuestion),
       );
       queryClient.setQueriesData(
-        { queryKey: ['question-detail'] },
+        { queryKey: queryKeys.questions.detailRoot() },
         (current: Question | undefined) => (current?.id === updatedQuestion.id ? updatedQuestion : current),
       );
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
+      return invalidateAfterQuestionMutation(queryClient);
     },
   });
 };
@@ -63,9 +62,6 @@ export const useDeleteQuestion = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/questions/${id}/`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-    },
+    onSuccess: () => invalidateAfterQuestionMutation(queryClient),
   });
 };
-

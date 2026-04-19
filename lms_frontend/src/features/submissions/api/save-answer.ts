@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterSubmissionAnswerSaved } from '@/lib/cache-invalidation';
 import type { SaveAnswerRequest } from '@/types/submission';
 
 interface SaveAnswerParams {
@@ -16,8 +17,6 @@ export const useSaveAnswer = () => {
   return useMutation({
     mutationFn: ({ submissionId, data }: SaveAnswerParams) =>
       apiClient.post(`/submissions/${submissionId}/save-answer/`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['submission', variables.submissionId] });
-    },
+    onSuccess: (_, variables) => invalidateAfterSubmissionAnswerSaved(queryClient, variables.submissionId),
   });
 };

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation';
 import type { SpotCheckCreateRequest, SpotCheck } from '@/types/spot-check';
 
 /**
@@ -10,9 +11,7 @@ export const useCreateSpotCheck = () => {
 
   return useMutation({
     mutationFn: (data: SpotCheckCreateRequest) => apiClient.post<SpotCheck>('/spot-checks/', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spot-checks'] });
-    },
+    onSuccess: () => invalidateAfterSpotCheckMutation(queryClient),
   });
 };
 
@@ -25,10 +24,7 @@ export const useUpdateSpotCheck = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<SpotCheckCreateRequest> }) =>
       apiClient.patch<SpotCheck>(`/spot-checks/${id}/`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spot-checks'] });
-      queryClient.invalidateQueries({ queryKey: ['spot-check-detail'] });
-    },
+    onSuccess: () => invalidateAfterSpotCheckMutation(queryClient),
   });
 };
 
@@ -40,10 +36,6 @@ export const useDeleteSpotCheck = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/spot-checks/${id}/`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['spot-checks'] });
-      queryClient.invalidateQueries({ queryKey: ['spot-check-detail'] });
-    },
+    onSuccess: () => invalidateAfterSpotCheckMutation(queryClient),
   });
 };
-

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterQuizMutation } from '@/lib/cache-invalidation';
 import type { QuizCreateRequest, QuizDetail } from '@/types/quiz';
 
 /**
@@ -10,10 +11,7 @@ export const useCreateQuiz = () => {
 
   return useMutation({
     mutationFn: (data: QuizCreateRequest) => apiClient.post<QuizDetail>('/quizzes/', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-    },
+    onSuccess: () => invalidateAfterQuizMutation(queryClient),
   });
 };
 
@@ -26,11 +24,7 @@ export const useUpdateQuiz = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<QuizCreateRequest> }) =>
       apiClient.patch<QuizDetail>(`/quizzes/${id}/`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-      queryClient.invalidateQueries({ queryKey: ['quiz-detail'] });
-    },
+    onSuccess: () => invalidateAfterQuizMutation(queryClient),
   });
 };
 
@@ -42,9 +36,6 @@ export const useDeleteQuiz = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/quizzes/${id}/`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-    },
+    onSuccess: () => invalidateAfterQuizMutation(queryClient),
   });
 };

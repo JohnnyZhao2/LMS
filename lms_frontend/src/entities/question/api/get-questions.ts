@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { QuestionType, PaginatedResponse } from '@/types/common';
 import type { Question } from '@/types/question';
@@ -22,7 +23,15 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
   const { page = 1, pageSize = 20, questionType, search, spaceTagId, tagId } = params;
 
   return useQuery({
-    queryKey: ['questions', currentRole ?? 'UNKNOWN', page, pageSize, questionType, search, spaceTagId, tagId],
+    queryKey: queryKeys.questions.list({
+      currentRole,
+      page,
+      pageSize,
+      questionType,
+      search,
+      spaceTagId,
+      tagId,
+    }),
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -46,7 +55,7 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
 export const useQuestionDetail = (id: number) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['question-detail', currentRole ?? 'UNKNOWN', id],
+    queryKey: queryKeys.questions.detail({ currentRole, id }),
     queryFn: () => apiClient.get<Question>(`/questions/${id}/`),
     enabled: !!id && currentRole !== null,
   });

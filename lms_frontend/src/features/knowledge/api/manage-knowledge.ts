@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterKnowledgeMutation } from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import type { KnowledgeDetail, KnowledgeCreateRequest, KnowledgeUpdateRequest } from '@/types/knowledge';
 
 /**
@@ -11,10 +13,7 @@ export const useCreateKnowledge = () => {
   return useMutation({
     mutationFn: (data: KnowledgeCreateRequest) => 
       apiClient.post<KnowledgeDetail>('/knowledge/', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-    },
+    onSuccess: () => invalidateAfterKnowledgeMutation(queryClient),
   });
 };
 
@@ -29,7 +28,7 @@ export const useUpdateKnowledge = () => {
       apiClient.patch<KnowledgeDetail>(`/knowledge/${id}/`, data),
     onSuccess: (updatedKnowledge) => {
       queryClient.setQueriesData<KnowledgeDetail>(
-        { queryKey: ['knowledge-detail'] },
+        { queryKey: queryKeys.knowledge.detailRoot() },
         (cachedKnowledge) => {
           if (!cachedKnowledge) return cachedKnowledge;
           if (cachedKnowledge.id !== updatedKnowledge.id) return cachedKnowledge;
@@ -39,9 +38,7 @@ export const useUpdateKnowledge = () => {
           };
         },
       );
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+      return invalidateAfterKnowledgeMutation(queryClient);
     },
   });
 };
@@ -54,9 +51,6 @@ export const useDeleteKnowledge = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/knowledge/${id}/`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-    },
+    onSuccess: () => invalidateAfterKnowledgeMutation(queryClient),
   });
 };

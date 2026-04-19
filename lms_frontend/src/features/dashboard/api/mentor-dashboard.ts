@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { MentorDashboard } from '@/types/dashboard';
 
@@ -9,7 +10,7 @@ import type { MentorDashboard } from '@/types/dashboard';
 export const useMentorDashboard = () => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['mentor-dashboard', currentRole ?? 'UNKNOWN'],
+    queryKey: queryKeys.dashboards.mentor(currentRole),
     queryFn: () => apiClient.get<MentorDashboard>('/dashboard/mentor/'),
     enabled: currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER',
     staleTime: 0, // 数据立即过期，确保角色切换时重新获取

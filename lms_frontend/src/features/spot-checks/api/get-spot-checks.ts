@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { PaginatedResponse, RoleCode } from '@/types/common';
 import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
@@ -27,7 +28,12 @@ export const useSpotChecks = (params: GetSpotChecksParams = {}) => {
   const resolvedRole = role ?? currentRole;
   
   return useQuery({
-    queryKey: ['spot-checks', resolvedRole ?? 'UNKNOWN', studentId ?? 'ALL', page, pageSize],
+    queryKey: queryKeys.spotChecks.list({
+      currentRole: resolvedRole,
+      studentId,
+      page,
+      pageSize,
+    }),
     queryFn: () => {
       const queryString = buildQueryString({
         ...buildPaginationParams(page, pageSize),
@@ -48,7 +54,10 @@ export const useSpotCheckStudents = (params: GetSpotCheckStudentsParams = {}) =>
   const resolvedRole = role ?? currentRole;
 
   return useQuery({
-    queryKey: ['spot-check-students', resolvedRole ?? 'UNKNOWN', search ?? ''],
+    queryKey: queryKeys.spotChecks.students({
+      currentRole: resolvedRole,
+      search,
+    }),
     queryFn: () => {
       const queryString = buildQueryString({ search });
       return apiClient.get<SpotCheckStudent[]>(`/spot-checks/students/${queryString}`);
@@ -64,7 +73,7 @@ export const useSpotCheckDetail = (id: number, role?: RoleCode | null) => {
   const currentRole = useCurrentRole();
   const resolvedRole = role ?? currentRole;
   return useQuery({
-    queryKey: ['spot-check-detail', resolvedRole ?? 'UNKNOWN', id],
+    queryKey: queryKeys.spotChecks.detail({ currentRole: resolvedRole, id }),
     queryFn: () => apiClient.get<SpotCheck>(`/spot-checks/${id}/`),
     enabled: !!id && resolvedRole !== null,
   });

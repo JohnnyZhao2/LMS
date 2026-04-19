@@ -1,21 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterUserMutation } from '@/lib/cache-invalidation';
 import type { UserInfo, UserList, RoleCode } from '@/types/common';
-
-const invalidateUserQueries = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  includeMentors = false,
-  includeAssignableUsers = false,
-) => {
-  queryClient.invalidateQueries({ queryKey: ['users'] });
-  queryClient.invalidateQueries({ queryKey: ['user-detail'] });
-  if (includeMentors) {
-    queryClient.invalidateQueries({ queryKey: ['mentors'] });
-  }
-  if (includeAssignableUsers) {
-    queryClient.invalidateQueries({ queryKey: ['assignable-users'] });
-  }
-};
 
 interface CreateUserRequest {
   password: string;
@@ -41,7 +27,7 @@ export const useCreateUser = () => {
 
   return useMutation({
     mutationFn: (data: CreateUserRequest) => apiClient.post<UserList>('/users/', data),
-    onSuccess: () => invalidateUserQueries(queryClient, false, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, { includeAssignableUsers: true }),
   });
 };
 
@@ -51,7 +37,10 @@ export const useUpdateUser = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) =>
       apiClient.patch<UserList>(`/users/${id}/`, data),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -60,7 +49,10 @@ export const useUpdateMyAvatar = () => {
 
   return useMutation({
     mutationFn: (data: UpdateAvatarRequest) => apiClient.patch<UserInfo>('/users/me/avatar/', data),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -70,7 +62,10 @@ export const useUpdateUserAvatar = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateAvatarRequest }) =>
       apiClient.patch<UserList>(`/users/${id}/avatar/`, data),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -79,7 +74,10 @@ export const useActivateUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/activate/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -88,7 +86,10 @@ export const useDeactivateUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/deactivate/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -97,7 +98,10 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete<void>(`/users/${id}/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -109,7 +113,7 @@ export const useResetPassword = () => {
       apiClient.post<{ temporary_password: string }>('/auth/reset-password/', {
         user_id: userId,
       }),
-    onSuccess: () => invalidateUserQueries(queryClient),
+    onSuccess: () => invalidateAfterUserMutation(queryClient),
   });
 };
 
@@ -119,7 +123,10 @@ export const useAssignRoles = () => {
   return useMutation({
     mutationFn: ({ id, roles }: { id: number; roles: RoleCode[] }) =>
       apiClient.post<UserList>(`/users/${id}/assign-roles/`, { role_codes: roles }),
-    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 
@@ -129,6 +136,6 @@ export const useAssignMentor = () => {
   return useMutation({
     mutationFn: ({ id, mentorId }: { id: number; mentorId: number | null }) =>
       apiClient.post<UserList>(`/users/${id}/assign-mentor/`, { mentor_id: mentorId }),
-    onSuccess: () => invalidateUserQueries(queryClient, false, true),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, { includeAssignableUsers: true }),
   });
 };

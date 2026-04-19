@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { UserList, Mentor, Role, Department } from '@/types/common';
 
@@ -50,7 +51,13 @@ export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions =
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, mentorId, isActive, search],
+    queryKey: queryKeys.users.list({
+      currentRole,
+      departmentId,
+      mentorId,
+      isActive,
+      search,
+    }),
     queryFn: () => {
       const queryParams = {
         ...(departmentId && { department_id: String(departmentId) }),
@@ -71,7 +78,7 @@ export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions =
 export const useUserDetail = (id: number) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['user-detail', currentRole ?? 'UNKNOWN', id],
+    queryKey: queryKeys.users.detail({ currentRole, id }),
     queryFn: () => apiClient.get<UserList>(`/users/${id}/`),
     enabled: !!id && currentRole !== null,
   });
@@ -84,7 +91,7 @@ export const useUserDetail = (id: number) => {
 export const useMentors = () => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['mentors', currentRole ?? 'UNKNOWN'],
+    queryKey: queryKeys.users.mentors(currentRole),
     queryFn: () => apiClient.get<Mentor[]>('/users/mentors/'),
     enabled: currentRole !== null,
   });
@@ -98,7 +105,7 @@ export const useMentors = () => {
 export const useRoles = () => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['roles', currentRole ?? 'UNKNOWN'],
+    queryKey: queryKeys.users.roles(currentRole),
     queryFn: () => apiClient.get<Role[]>('/users/roles/'),
     enabled: currentRole !== null,
   });
@@ -111,7 +118,7 @@ export const useRoles = () => {
 export const useDepartments = () => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['departments', currentRole ?? 'UNKNOWN'],
+    queryKey: queryKeys.users.departments(currentRole),
     queryFn: () => apiClient.get<Department[]>('/users/departments/'),
     select: normalizeDepartments,
     enabled: currentRole !== null,

@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import {
+  invalidateAfterActivityLogDeletion,
+  invalidateAfterActivityLogPolicyMutation,
+} from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import type {
   ActivityLogListResponse,
   ActivityLogPolicy,
@@ -9,7 +14,7 @@ import type {
 
 export const useActivityLogs = (params: ActivityLogsQuery, enabled: boolean = true) => {
   return useQuery({
-    queryKey: ['activity-logs', params],
+    queryKey: queryKeys.activityLogs.list(params),
     queryFn: async () => {
       const queryString = buildQueryString({
         type: params.type,
@@ -31,7 +36,7 @@ export const useActivityLogs = (params: ActivityLogsQuery, enabled: boolean = tr
 
 export const useActivityLogPolicies = (enabled: boolean = true) => {
   return useQuery({
-    queryKey: ['activity-log-policies'],
+    queryKey: queryKeys.activityLogs.policies(),
     queryFn: async () => {
       return await apiClient.get<ActivityLogPolicy[]>(`/logs/policies/`);
     },
@@ -46,9 +51,7 @@ export const useUpdateActivityLogPolicy = () => {
     mutationFn: (payload: { key: string; enabled: boolean }) => {
       return apiClient.patch<ActivityLogPolicy>(`/logs/policies/`, payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activity-log-policies'] });
-    },
+    onSuccess: () => invalidateAfterActivityLogPolicyMutation(queryClient),
   });
 };
 
@@ -61,8 +64,6 @@ export const useBulkDeleteActivityLogs = () => {
         item_ids: logItemIds,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
-    },
+    onSuccess: () => invalidateAfterActivityLogDeletion(queryClient),
   });
 };

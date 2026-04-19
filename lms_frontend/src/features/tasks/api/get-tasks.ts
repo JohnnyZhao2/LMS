@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { PaginatedResponse, TaskStatus } from '@/types/common';
 import type { StudentTaskCenterResponse, TaskListItem } from '@/types/task';
@@ -30,7 +31,13 @@ export const useStudentTasks = (
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['student-tasks', currentRole ?? 'UNKNOWN', page, pageSize, status, search],
+    queryKey: queryKeys.tasks.studentList({
+      currentRole,
+      page,
+      pageSize,
+      status,
+      search,
+    }),
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -59,7 +66,14 @@ export const useTaskList = (
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, search, taskStatus, creatorSide],
+    queryKey: queryKeys.tasks.list({
+      currentRole,
+      page,
+      pageSize,
+      search,
+      taskStatus,
+      creatorSide,
+    }),
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),

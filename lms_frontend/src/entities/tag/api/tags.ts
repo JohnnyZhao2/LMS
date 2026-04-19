@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { invalidateAfterTagMutation } from '@/lib/cache-invalidation';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { useAuth } from '@/session/auth/auth-context';
 import type { Tag, TagType } from '@/types/common';
@@ -33,17 +35,6 @@ interface ReorderSpaceTagsPayload {
   ordered_tag_ids: number[];
 }
 
-const invalidateTagRelatedQueries = (
-  queryClient: ReturnType<typeof useQueryClient>,
-) => {
-  queryClient.invalidateQueries({ queryKey: ['tags'] });
-  queryClient.invalidateQueries({ queryKey: ['questions'] });
-  queryClient.invalidateQueries({ queryKey: ['question-detail'] });
-  queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-  queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
-  queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-};
-
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
   const { hasCapability, isLoading: isAuthLoading } = useAuth();
@@ -53,7 +44,14 @@ export const useTags = (params: GetTagsParams = {}) => {
   const canQueryTags = canViewTags || canViewKnowledgeSpaces;
 
   return useQuery({
-    queryKey: ['tags', currentRole ?? 'UNKNOWN', canQueryTags, tag_type, search, limit, applicable_to],
+    queryKey: queryKeys.tags.list({
+      currentRole,
+      canQueryTags,
+      tagType: tag_type,
+      search,
+      limit,
+      applicableTo: applicable_to,
+    }),
     queryFn: () => {
       const queryString = buildQueryString({
         tag_type,
@@ -73,9 +71,7 @@ export const useCreateTag = () => {
 
   return useMutation({
     mutationFn: (data: TagMutationPayload) => apiClient.post<Tag>('/tags/', data),
-    onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient);
-    },
+    onSuccess: () => invalidateAfterTagMutation(queryClient),
   });
 };
 
@@ -85,9 +81,7 @@ export const useUpdateTag = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<TagMutationPayload> }) =>
       apiClient.patch<Tag>(`/tags/${id}/`, data),
-    onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient);
-    },
+    onSuccess: () => invalidateAfterTagMutation(queryClient),
   });
 };
 
@@ -97,9 +91,7 @@ export const useMergeTag = () => {
   return useMutation({
     mutationFn: (data: MergeTagPayload) =>
       apiClient.post<Tag>('/tags/merge/', data),
-    onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient);
-    },
+    onSuccess: () => invalidateAfterTagMutation(queryClient),
   });
 };
 
@@ -108,9 +100,7 @@ export const useDeleteTag = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/tags/${id}/`),
-    onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient);
-    },
+    onSuccess: () => invalidateAfterTagMutation(queryClient),
   });
 };
 
@@ -120,8 +110,6 @@ export const useReorderSpaceTags = () => {
   return useMutation({
     mutationFn: (data: ReorderSpaceTagsPayload) =>
       apiClient.post('/tags/reorder/', data),
-    onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient);
-    },
+    onSuccess: () => invalidateAfterTagMutation(queryClient),
   });
 };

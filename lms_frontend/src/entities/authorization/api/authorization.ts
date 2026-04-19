@@ -1,6 +1,11 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import {
+  invalidateAfterAuthorizationOverrideMutation,
+  invalidateAfterRoleTemplateMutation,
+} from '@/lib/cache-invalidation';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type {
   CreateUserPermissionOverrideRequest,
@@ -43,7 +48,7 @@ export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled
   const currentRole = useCurrentRole();
   const { module, view } = query;
   return useQuery({
-    queryKey: ['authorization', 'permission-catalog', currentRole ?? 'UNKNOWN', module ?? 'ALL', view ?? 'ALL'],
+    queryKey: queryKeys.authorization.permissionCatalog({ currentRole, module, view }),
     queryFn: () => {
       const queryString = buildQueryString({ module, view });
       return apiClient.get<PermissionCatalogItem[]>(`/authorization/permissions/${queryString}`);
@@ -57,7 +62,7 @@ export const useRolePermissionTemplates = (roleCodes: RoleCode[], enabled = true
 
   return useQueries({
     queries: roleCodes.map((roleCode) => ({
-      queryKey: ['authorization', 'role-template', currentRole ?? 'UNKNOWN', roleCode],
+      queryKey: queryKeys.authorization.roleTemplate({ currentRole, roleCode }),
       queryFn: () => apiClient.get<RolePermissionTemplate>(`/authorization/roles/${roleCode}/permissions/`),
       enabled: currentRole !== null && enabled,
     })),
@@ -73,13 +78,7 @@ export const useReplaceRolePermissionTemplate = () => {
         role_code: roleCode,
         permission_codes: permissionCodes,
       }),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['authorization', 'role-template'] }),
-        queryClient.invalidateQueries({ queryKey: ['authorization', 'permission-catalog'] }),
-        queryClient.invalidateQueries({ queryKey: ['authorization', 'user-overrides'] }),
-      ]);
-    },
+    onSuccess: () => invalidateAfterRoleTemplateMutation(queryClient),
   });
 };
 
@@ -90,7 +89,7 @@ export const useUserPermissionOverrides = (
 ) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['authorization', 'user-overrides', currentRole ?? 'UNKNOWN', userId ?? 'NONE', includeInactive],
+    queryKey: queryKeys.authorization.userOverrides({ currentRole, userId, includeInactive }),
     queryFn: () => {
       if (!userId) {
         return Promise.resolve([] as UserPermissionOverride[]);
@@ -109,7 +108,7 @@ export const useUserScopeGroupOverrides = (
 ) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['authorization', 'user-scope-group-overrides', currentRole ?? 'UNKNOWN', userId ?? 'NONE', includeInactive],
+    queryKey: queryKeys.authorization.userScopeGroupOverrides({ currentRole, userId, includeInactive }),
     queryFn: () => {
       if (!userId) {
         return Promise.resolve([] as UserScopeGroupOverride[]);
@@ -122,35 +121,47 @@ export const useUserScopeGroupOverrides = (
 };
 
 export const useCreateUserPermissionOverride = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ userId, data }: CreateUserOverridePayload) =>
       apiClient.post<UserPermissionOverride>(`/authorization/users/${userId}/overrides/`, data),
+    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });
 };
 
 export const useRevokeUserPermissionOverride = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
       apiClient.post<UserPermissionOverride>(
         `/authorization/users/${userId}/overrides/${overrideId}/revoke/`,
         { revoke_reason: revokeReason ?? '' },
       ),
+    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });
 };
 
 export const useCreateUserScopeGroupOverride = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ userId, data }: CreateUserScopeGroupOverridePayload) =>
       apiClient.post<UserScopeGroupOverride>(`/authorization/users/${userId}/scope-group-overrides/`, data),
+    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });
 };
 
 export const useRevokeUserScopeGroupOverride = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
       apiClient.post<UserScopeGroupOverride>(
         `/authorization/users/${userId}/scope-group-overrides/${overrideId}/revoke/`,
         { revoke_reason: revokeReason ?? '' },
       ),
+    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });
 };

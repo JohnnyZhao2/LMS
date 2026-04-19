@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { invalidateAfterSubmissionSubmitted } from '@/lib/cache-invalidation';
 import type { SubmissionDetail } from '@/types/submission';
 
 interface StartQuizPayload {
@@ -29,8 +30,6 @@ export const useSubmitQuiz = () => {
     return useMutation({
         mutationFn: (submissionId: number) =>
             apiClient.post<SubmissionDetail>(`/submissions/${submissionId}/submit/`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-        },
+        onSuccess: () => invalidateAfterSubmissionSubmitted(queryClient),
     });
 };

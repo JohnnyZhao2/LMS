@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { MentorDashboard } from '@/types/dashboard';
 
@@ -10,7 +11,7 @@ export const useAdminDashboard = () => {
   const currentRole = useCurrentRole();
 
   return useQuery({
-    queryKey: ['admin-dashboard', currentRole ?? 'UNKNOWN'],
+    queryKey: queryKeys.dashboards.admin(currentRole),
     queryFn: () => apiClient.get<MentorDashboard>('/dashboard/admin/'),
     enabled: currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN',
     staleTime: 0,
