@@ -7,7 +7,7 @@ import {
   BUSINESS_ROUTE_META,
   getBusinessRouteElement,
   getWorkspaceDashboardElement,
-} from '../app-route-meta';
+} from '../route-registry';
 import {
   getAccessibleWorkspaceHome,
   getWorkspaceConfig,

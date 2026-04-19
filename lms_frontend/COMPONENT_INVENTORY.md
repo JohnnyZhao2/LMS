@@ -1,220 +1,206 @@
 # 组件清单
 
-## UI 基础组件 (39个)
+> 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
-### 表单类 (11个)
-| 组件 | 路径 | 用途 | 依赖 |
-|------|------|------|------|
-| Button | `ui/button.tsx` | 按钮 | Radix Slot, CVA |
-| Input | `ui/input.tsx` | 文本输入 | - |
-| Textarea | `ui/textarea.tsx` | 多行文本 | - |
-| Checkbox | `ui/checkbox.tsx` | 复选框 | Radix Checkbox |
-| Radio Group | `ui/radio-group.tsx` | 单选组 | Radix Radio |
-| Select | `ui/select.tsx` | 下拉选择 | Radix Select |
-| Searchable Select | `ui/searchable-select.tsx` | 可搜索选择 | Radix Popover |
-| Segmented Control | `ui/segmented-control.tsx` | 分段控制 | - |
-| Form | `ui/form.tsx` | 表单容器 | React Hook Form |
-| Date Picker | `ui/date-picker.tsx` | 日期选择 | react-day-picker |
-| Calendar | `ui/calendar.tsx` | 日历 | react-day-picker |
+- 共享组件：50 个
+- Feature 作用域视觉组件：66 个
 
-### 数据展示 (11个)
-| 组件 | 路径 | 用途 | 依赖 |
-|------|------|------|------|
-| Table | `ui/table.tsx` | 基础表格 | - |
-| Data Table | `ui/data-table/data-table.tsx` | 数据表格 | TanStack Table |
-| Data Table Pagination | `ui/data-table/data-table-pagination.tsx` | 表格分页 | TanStack Table |
-| Data Table Column Header | `ui/data-table/data-table-column-header.tsx` | 表格列头 | TanStack Table |
-| Data Table Cells | `ui/data-table/data-table-cells.tsx` | 表格单元格 | TanStack Table |
-| Badge | `ui/badge.tsx` | 徽章 | CVA |
-| Status Badge | `ui/status-badge.tsx` | 状态徽章 | Badge |
-| Progress | `ui/progress.tsx` | 进度条 | - |
-| Skeleton | `ui/skeleton.tsx` | 骨架屏 | - |
-| Card | `ui/card.tsx` | 卡片 | - |
-| Stat Card | `ui/stat-card.tsx` | 统计卡片 | Card |
+## 共享组件
 
-### 反馈类 (9个)
-| 组件 | 路径 | 用途 | 依赖 |
-|------|------|------|------|
-| Alert | `ui/alert.tsx` | 警告提示 | CVA |
-| Dialog | `ui/dialog.tsx` | 对话框 | Radix Dialog |
-| Confirm Dialog | `ui/confirm-dialog.tsx` | 确认对话框 | Dialog |
-| Popover | `ui/popover.tsx` | 弹出层 | Radix Popover |
-| Tooltip | `ui/tooltip.tsx` | 工具提示 | Radix Tooltip |
-| Sonner | `ui/sonner.tsx` | Toast 通知 | sonner |
-| Spinner | `ui/spinner.tsx` | 加载动画 | - |
-| Empty State | `ui/empty-state.tsx` | 空状态 | - |
-| Error Boundary | `ui/error-boundary.tsx` | 错误边界 | React |
+### common (5 个)
 
-### 导航/布局 (8个)
-| 组件 | 路径 | 用途 | 依赖 |
-|------|------|------|------|
-| Tabs | `ui/tabs.tsx` | 标签页 | Radix Tabs |
-| Dropdown Menu | `ui/dropdown-menu.tsx` | 下拉菜单 | Radix Dropdown |
-| Pagination | `ui/pagination.tsx` | 分页 | - |
-| Page Header | `ui/page-header.tsx` | 页面头部 | - |
-| Separator | `ui/separator.tsx` | 分隔线 | Radix Separator |
-| Scroll Area | `ui/scroll-area.tsx` | 滚动区域 | Radix Scroll Area |
-| Action Card | `ui/action-card.tsx` | 操作卡片 | Card |
-| Content Panel | `ui/content-panel.tsx` | 内容面板 | - |
+- `src/components/common/icon-box.tsx`
+- `src/components/common/micro-label.tsx`
+- `src/components/common/selection-indicator.tsx`
+- `src/components/common/space-color-ring-picker.tsx`
+- `src/components/common/user-select-list.tsx`
 
-### 其他 (3个)
-| 组件 | 路径 | 用途 | 依赖 |
-|------|------|------|------|
-| Avatar | `ui/avatar.tsx` | 头像 | Radix Avatar |
-| Label | `ui/label.tsx` | 标签 | Radix Label |
-| Animated Container | `ui/animated-container.tsx` | 动画容器 | - |
+### layouts (1 个)
 
----
+- `src/components/layouts/auth-layout.tsx`
 
-## 通用组件 (11个)
+### ui (44 个)
 
-| 组件 | 路径 | 用途 | 复用度 |
-|------|------|------|--------|
-| User Avatar | `common/user-avatar.tsx` | 用户头像 | 高 |
-| Avatar Circle | `common/avatar-circle.tsx` | 圆形头像 | 中 |
-| Avatar Picker Popover | `users/components/avatar-picker-popover.tsx` | 头像选择器 | 低 |
-| User Info Row | `common/user-info-row.tsx` | 用户信息行 | 高 |
-| User Select List | `common/user-select-list.tsx` | 用户可选列表 | 高 |
-| Status Dot | `common/status-dot.tsx` | 状态点 | 高 |
-| Category Badge | `common/category-badge.tsx` | 分类徽章 | 中 |
-| Metric Badge | `common/metric-badge.tsx` | 指标徽章 | 中 |
-| Icon Box | `common/icon-box.tsx` | 图标盒子 | 中 |
-| Option Item | `common/option-item.tsx` | 选项项 | 中 |
-| Micro Label | `common/micro-label.tsx` | 微标签 | 低 |
-| Action Dropdown | `common/action-dropdown.tsx` | 操作下拉 | 高 |
+- `src/components/ui/action-card.tsx`
+- `src/components/ui/alert.tsx`
+- `src/components/ui/avatar.tsx`
+- `src/components/ui/badge.tsx`
+- `src/components/ui/breadcrumb-nav.tsx`
+- `src/components/ui/button.tsx`
+- `src/components/ui/calendar.tsx`
+- `src/components/ui/card.tsx`
+- `src/components/ui/checkbox.tsx`
+- `src/components/ui/circle-button.tsx`
+- `src/components/ui/compact-number-input.tsx`
+- `src/components/ui/confirm-dialog.tsx`
+- `src/components/ui/data-table/data-table-cells.tsx`
+- `src/components/ui/data-table/data-table.tsx`
+- `src/components/ui/date-picker.tsx`
+- `src/components/ui/dialog.tsx`
+- `src/components/ui/dropdown-menu.tsx`
+- `src/components/ui/empty-state.tsx`
+- `src/components/ui/error-boundary.tsx`
+- `src/components/ui/form.tsx`
+- `src/components/ui/input.tsx`
+- `src/components/ui/label.tsx`
+- `src/components/ui/list-tag.tsx`
+- `src/components/ui/page-header.tsx`
+- `src/components/ui/page-shell.tsx`
+- `src/components/ui/pagination.tsx`
+- `src/components/ui/popover.tsx`
+- `src/components/ui/progress.tsx`
+- `src/components/ui/route-skeleton.tsx`
+- `src/components/ui/scroll-container.tsx`
+- `src/components/ui/search-input.tsx`
+- `src/components/ui/searchable-select.tsx`
+- `src/components/ui/segmented-control.tsx`
+- `src/components/ui/select.tsx`
+- `src/components/ui/separator.tsx`
+- `src/components/ui/skeleton.tsx`
+- `src/components/ui/sonner.tsx`
+- `src/components/ui/spinner.tsx`
+- `src/components/ui/stat-card.tsx`
+- `src/components/ui/table.tsx`
+- `src/components/ui/tabs.tsx`
+- `src/components/ui/textarea.tsx`
+- `src/components/ui/toggle-switch.tsx`
+- `src/components/ui/tooltip.tsx`
 
----
+## Feature 作用域视觉组件
 
-## 布局组件 (3个)
+### activity-logs (5 个)
 
-| 组件 | 路径 | 用途 |
-|------|------|------|
-| App Layout | `layouts/app-layout.tsx` | 应用主布局 |
-| Sidebar | `layouts/sidebar.tsx` | 侧边栏 |
-| Auth Layout | `layouts/auth-layout.tsx` | 认证页布局 |
+#### components
 
----
+- `src/features/activity-logs/components/activity-log-feed.tsx`
+- `src/features/activity-logs/components/activity-log-member-list.tsx`
+- `src/features/activity-logs/components/activity-log-policy-category-section.tsx`
+- `src/features/activity-logs/components/activity-log-policy-panel.tsx`
+- `src/features/activity-logs/components/activity-logs-panel.tsx`
 
-## 业务组件 (按模块)
+### auth (2 个)
 
-### 任务模块 (11个)
-- Task List
-- Task Card
-- Task Form
-- Task Preview Page
-- Task Preview (Index)
-- Progress Monitoring Tab
-- Grading Center Tab
-- Sortable Resource Item
-- Student Task List
-- Task Detail
-- Task Submission
+#### components
 
-### 知识中心 (11个)
-- Knowledge Center Page
-- Knowledge Card
-- Knowledge Add Card
-- Knowledge Focus Shell
-- Tag Input
-- Focus Icon
-- Rich Text Editor
-- Format Toolbar
-- Slash Menu
-- Tag Management Page
-- Tag Form Dialog
+- `src/features/auth/components/login-form.tsx`
+- `src/features/auth/components/role-switch-overlay.tsx`
 
-### 仪表板 (8个)
-- Student Dashboard
-- Student Dashboard Items
-- Mini Calendar
-- Editorial Card
-- Mentor Dashboard
-- Mentor Dashboard Widgets
-- Admin Dashboard
-- Team Manager Dashboard
+### authorization (3 个)
 
-### 用户管理 (8个)
-- User List
-- User Form
-- User Sidebar
-- User Permission Card
-- User Permission Section
-- User Permission Module Sidebar
-- User Permission Scope Popover
-- User Profile
+#### components
 
-### 提交/评分 (5个)
-- Grading Center Page
-- Question Card
-- Answer Review
-- Timer
-- Quiz Player
+- `src/features/authorization/components/role-permission-template-panel.tsx`
+- `src/features/authorization/components/role-template-member-panel.tsx`
 
-### 测验中心 (4个)
-- Quiz Tab
-- Quiz Form Header
-- Quiz Outline Panel
-- Quiz List
+#### pages
 
-### 授权管理 (4个)
-- Authorization Center Page
-- Role Permission Template Panel
-- Role Permission Card
-- Role Permission Dialog
+- `src/features/authorization/pages/authorization-center-page.tsx`
 
-### 认证 (3个)
-- Login Form
-- Role Switch Overlay
-- Protected Route
+### dashboard (8 个)
 
-### 活动日志 (4个)
-- Activity Log Timeline
-- Activity Log Feed
-- Activity Log Policy Panel
-- Activity Logs Panel
-- Activity Log Member List
+#### components
 
-### 抽查 (2个)
-- Spot Check Form
-- Spot Check List
+- `src/features/dashboard/components/admin-dashboard.tsx`
+- `src/features/dashboard/components/mentor-dashboard-widgets.tsx`
+- `src/features/dashboard/components/mentor-dashboard.tsx`
+- `src/features/dashboard/components/student-dashboard.tsx`
+- `src/features/dashboard/components/student-dashboard/editorial-card.tsx`
+- `src/features/dashboard/components/student-dashboard/items.tsx`
+- `src/features/dashboard/components/student-dashboard/mini-calendar.tsx`
+- `src/features/dashboard/components/team-manager-dashboard.tsx`
 
-### 其他 (2个)
-- Route Skeleton
-- Role Route Wrapper
+### grading (1 个)
 
----
+#### components
 
-## 组件依赖关系
+- `src/features/grading/components/grading-center-page.tsx`
 
-### 高频依赖组件
-1. **Button** - 被 90% 组件使用
-2. **Card** - 被 60% 业务组件使用
-3. **Badge** - 被 50% 组件使用
-4. **Dialog** - 被 40% 组件使用
-5. **Popover** - 被 35% 组件使用
+### knowledge (12 个)
 
-### 独立组件
-- Spinner
-- Skeleton
-- Empty State
-- Error Boundary
-- Separator
+#### components
 
----
+- `src/features/knowledge/components/cards/knowledge-add-card.tsx`
+- `src/features/knowledge/components/cards/knowledge-card.tsx`
+- `src/features/knowledge/components/editor/format-toolbar.tsx`
+- `src/features/knowledge/components/editor/rich-text-editor.tsx`
+- `src/features/knowledge/components/editor/slash-menu.tsx`
+- `src/features/knowledge/components/knowledge-center.tsx`
+- `src/features/knowledge/components/modals/knowledge-detail-modal.tsx`
+- `src/features/knowledge/components/modals/knowledge-detail-side-panel.tsx`
+- `src/features/knowledge/components/modals/knowledge-focus-metadata-bar.tsx`
+- `src/features/knowledge/components/modals/knowledge-focus-modal.tsx`
+- `src/features/knowledge/components/modals/knowledge-focus-shell.tsx`
+- `src/features/knowledge/components/shared/focus-icon.tsx`
 
-## 重复模式识别
+### questions (4 个)
 
-### 🔴 高度重复
-1. **表单布局**: 多个 Form 组件有相似的布局结构
-2. **列表容器**: 多个 List 组件有相似的容器逻辑
-3. **卡片变体**: 多个 Card 变体可合并
+#### components
 
-### 🟡 中度重复
-1. **头像显示**: 3-4 个头像相关组件
-2. **徽章显示**: 3-4 个徽章变体
-3. **操作按钮组**: 多处出现相似的操作按钮组
+- `src/features/questions/components/question-batch-editor.tsx`
+- `src/features/questions/components/question-form-page.tsx`
+- `src/features/questions/components/question-management-page.tsx`
+- `src/features/questions/components/question-tab.tsx`
 
-### 🟢 可提取模式
-1. **空状态处理**: 可提取通用 Empty State 模式
-2. **加载状态**: 可提取通用 Loading 模式
-3. **错误处理**: 可提取通用 Error 模式
+### quiz-center (1 个)
+
+#### components
+
+- `src/features/quiz-center/components/quiz-management-page.tsx`
+
+### spot-checks (5 个)
+
+#### components
+
+- `src/features/spot-checks/components/spot-check-form.tsx`
+- `src/features/spot-checks/components/spot-check-item-editor.tsx`
+- `src/features/spot-checks/components/spot-check-list.tsx`
+- `src/features/spot-checks/components/spot-check-record-list.tsx`
+- `src/features/spot-checks/components/spot-check-student-panel.tsx`
+
+### submissions (7 个)
+
+#### components
+
+- `src/features/submissions/components/answer-review.tsx`
+- `src/features/submissions/components/question-card.tsx`
+- `src/features/submissions/components/quiz-player-dialogs.tsx`
+- `src/features/submissions/components/quiz-player-main-panel.tsx`
+- `src/features/submissions/components/quiz-player-panels.tsx`
+- `src/features/submissions/components/quiz-player.tsx`
+- `src/features/submissions/components/timer.tsx`
+
+### tags (3 个)
+
+#### components
+
+- `src/features/tags/components/sortable-space-tag-item.tsx`
+- `src/features/tags/components/tag-form-dialog.tsx`
+- `src/features/tags/components/tag-management-page.tsx`
+
+### tasks (11 个)
+
+#### components
+
+- `src/features/tasks/components/student-task-list.tsx`
+- `src/features/tasks/components/task-card.tsx`
+- `src/features/tasks/components/task-detail.tsx`
+- `src/features/tasks/components/task-form/sortable-resource-item.tsx`
+- `src/features/tasks/components/task-form/task-configuration-panel.tsx`
+- `src/features/tasks/components/task-form/task-form.tsx`
+- `src/features/tasks/components/task-form/task-pipeline-panel.tsx`
+- `src/features/tasks/components/task-form/task-resource-library-panel.tsx`
+- `src/features/tasks/components/task-management.tsx`
+- `src/features/tasks/components/task-preview/progress-monitoring-tab.tsx`
+- `src/features/tasks/components/task-preview/task-preview-page.tsx`
+
+### users (4 个)
+
+#### components
+
+- `src/features/users/components/user-directory-filters.tsx`
+- `src/features/users/components/user-form.tsx`
+- `src/features/users/components/user-list.tsx`
+
+#### pages
+
+- `src/features/users/pages/user-authorization-page.tsx`
