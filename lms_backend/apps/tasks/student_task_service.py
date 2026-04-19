@@ -58,6 +58,8 @@ class StudentTaskService(BaseService):
         '任务：{task_title}',
         target_type='knowledge',
         target_title_template='{result.task_knowledge.knowledge.title}',
+        group='学习进度',
+        label='完成学习',
     )
     def complete_knowledge_learning(
         self,

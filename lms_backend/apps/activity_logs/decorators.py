@@ -8,6 +8,12 @@ from typing import Any, Callable, Optional
 
 from core.audit import audit_content_action, audit_operation, audit_user_action
 
+from .registry import (
+    register_content_log_action,
+    register_operation_log_action,
+    register_user_log_action,
+)
+
 
 ROLE_LABELS = {
     'ADMIN': '管理员',
@@ -16,6 +22,19 @@ ROLE_LABELS = {
     'TEAM_MANAGER': '团队经理',
     'STUDENT': '学员',
     'SUPER_ADMIN': '超管',
+}
+
+EFFECT_LABELS = {
+    'ALLOW': '允许',
+    'DENY': '拒绝',
+}
+
+SCOPE_TYPE_LABELS = {
+    'ALL': '全部对象',
+    'SELF': '本人',
+    'MENTEES': '我的学员',
+    'DEPARTMENT': '本部门',
+    'EXPLICIT_USERS': '指定用户',
 }
 
 SUBMISSION_STATUS_DETAILS = {
@@ -72,6 +91,18 @@ def _build_task_update_summary(template_vars: dict[str, Any]) -> str:
     return '；'.join(parts) if parts else '任务配置已调整'
 
 
+def _resolve_operator(self: Any, kwargs: dict[str, Any]) -> Any:
+    explicit_operator = kwargs.get('operator') or kwargs.get('assigned_by')
+    if explicit_operator is not None:
+        return explicit_operator
+
+    request = getattr(self, 'request', None)
+    request_user = getattr(request, 'user', None)
+    if request_user is not None and getattr(request_user, 'is_authenticated', False):
+        return request_user
+    return getattr(self, 'user', None)
+
+
 def _snapshot_for_logging(value: Any) -> Any:
     try:
         return deepcopy(value)
@@ -114,12 +145,25 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
     role_code = template_vars.get('role_code')
     if role_code:
         template_vars['role_label'] = ROLE_LABELS.get(role_code, role_code)
+    applies_to_role = template_vars.get('applies_to_role')
+    if applies_to_role:
+        template_vars['applies_to_role_label'] = ROLE_LABELS.get(applies_to_role, applies_to_role)
+    effect = template_vars.get('effect')
+    if effect:
+        template_vars['effect_label'] = EFFECT_LABELS.get(effect, effect)
+    scope_type = template_vars.get('scope_type')
+    if scope_type:
+        template_vars['scope_type_label'] = SCOPE_TYPE_LABELS.get(scope_type, scope_type)
 
     for field_name, count_name in (
         ('knowledge_ids', 'knowledge_count'),
         ('quiz_ids', 'quiz_count'),
         ('assignee_ids', 'assignee_count'),
         ('question_ids', 'input_question_count'),
+        ('permission_codes', 'permission_count'),
+        ('scope_user_ids', 'scope_user_count'),
+        ('source_tag_ids', 'source_tag_count'),
+        ('ordered_tag_ids', 'ordered_tag_count'),
     ):
         field_value = template_vars.get(field_name)
         if field_value is not None:
@@ -133,10 +177,14 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
 
     if hasattr(result, 'title'):
         template_vars['resource_title'] = result.title
+    if hasattr(result, 'name'):
+        template_vars['resource_title'] = result.name
     if hasattr(result, 'revision_number'):
         template_vars['revision_number'] = result.revision_number
     if hasattr(result, 'score'):
         template_vars['score_text'] = _format_number(result.score)
+    if hasattr(result, 'max_score'):
+        template_vars['max_score_text'] = _format_number(result.max_score)
     if hasattr(result, 'average_score'):
         template_vars['average_score_text'] = _format_number(result.average_score)
     if hasattr(result, 'total_score'):
@@ -179,10 +227,26 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         template_vars['question_update_summary'] = _build_question_update_summary(template_vars)
     if hasattr(result, 'get_quiz_type_display'):
         template_vars['quiz_type_label'] = result.get_quiz_type_display()
+    if hasattr(result, 'get_tag_type_display'):
+        template_vars['tag_type_label'] = result.get_tag_type_display()
     if hasattr(result, 'quiz') and result.quiz is not None:
         template_vars['quiz_title'] = result.quiz.title
         if hasattr(result.quiz, 'get_quiz_type_display'):
             template_vars['quiz_type_label'] = result.quiz.get_quiz_type_display()
+    if hasattr(result, 'submission') and result.submission is not None:
+        submission = result.submission
+        if getattr(submission, 'quiz', None) is not None:
+            template_vars['quiz_title'] = submission.quiz.title
+            if hasattr(submission.quiz, 'get_quiz_type_display'):
+                template_vars['quiz_type_label'] = submission.quiz.get_quiz_type_display()
+        assignment = getattr(submission, 'task_assignment', None)
+        if assignment is not None:
+            task = getattr(assignment, 'task', None)
+            if task is not None:
+                template_vars['task_title'] = task.title
+            student = getattr(assignment, 'assignee', None)
+            if student is not None:
+                template_vars['student_label'] = _build_user_label(student)
     if hasattr(result, 'task_assignment') and result.task_assignment is not None:
         task = getattr(result.task_assignment, 'task', None)
         if task is not None:
@@ -227,7 +291,19 @@ def log_user_action(
     action: str,
     description_template: Optional[str] = None,
     action_key: Optional[str] = None,
+    *,
+    group: str,
+    label: str,
+    default_enabled: bool = True,
 ):
+    register_user_log_action(
+        action,
+        group=group,
+        label=label,
+        action_key=action_key,
+        default_enabled=default_enabled,
+    )
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -244,7 +320,7 @@ def log_user_action(
                 if hasattr(result, 'employee_id')
                 else (kwargs.get('user') or (args[0] if args else None))
             )
-            operator = kwargs.get('operator') or kwargs.get('assigned_by') or getattr(self, 'user', None)
+            operator = _resolve_operator(self, kwargs)
 
             audit_user_action(
                 user=user,
@@ -265,7 +341,20 @@ def log_content_action(
     action: str,
     description_template: Optional[str] = None,
     action_key: Optional[str] = None,
+    *,
+    group: str,
+    label: str,
+    default_enabled: bool = True,
 ):
+    register_content_log_action(
+        content_type,
+        action,
+        group=group,
+        label=label,
+        action_key=action_key,
+        default_enabled=default_enabled,
+    )
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -280,13 +369,18 @@ def log_content_action(
                 description = f'{action} {content_type}'
 
             content_id = str(result.id) if hasattr(result, 'id') else 'unknown'
-            content_title = getattr(result, 'title', None) or getattr(result, 'content', '')[:50] or '内容'
+            content_title = (
+                getattr(result, 'title', None)
+                or getattr(result, 'name', None)
+                or getattr(result, 'content', '')[:50]
+                or '内容'
+            )
 
             audit_content_action(
                 content_type=content_type,
                 content_id=content_id,
                 content_title=content_title,
-                operator=getattr(self, 'user', None),
+                operator=_resolve_operator(self, kwargs),
                 action=action,
                 description=description,
                 status='success',
@@ -306,7 +400,20 @@ def log_operation(
     action_key: Optional[str] = None,
     target_type: str = '',
     target_title_template: str = '',
+    *,
+    group: str,
+    label: str,
+    default_enabled: bool = True,
 ):
+    register_operation_log_action(
+        operation_type,
+        action,
+        group=group,
+        label=label,
+        action_key=action_key,
+        default_enabled=default_enabled,
+    )
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -328,7 +435,7 @@ def log_operation(
                 resolved_target_id = str(result.id)
 
             audit_operation(
-                operator=getattr(self, 'user', None),
+                operator=_resolve_operator(self, kwargs),
                 operation_type=operation_type,
                 action=action,
                 description=description,

@@ -166,6 +166,8 @@ class QuizService(BaseService):
         'quiz',
         'create',
         '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        group='试卷',
+        label='创建试卷',
     )
     def create(self, data: dict, questions: List[dict] = None) -> Quiz:
         payload = dict(data)
@@ -181,6 +183,8 @@ class QuizService(BaseService):
         'quiz',
         'update',
         '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        group='试卷',
+        label='更新试卷',
     )
     def update(self, pk: int, data: dict, questions: List[dict] = None) -> Quiz:
         quiz = self.get_by_id(pk)
@@ -204,6 +208,8 @@ class QuizService(BaseService):
         'quiz',
         'delete',
         '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        group='试卷',
+        label='删除试卷',
     )
     def delete(self, pk: int) -> Quiz:
         quiz = self.get_by_id(pk)

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Max
 from django.db import IntegrityError, transaction
 
+from apps.activity_logs.decorators import log_content_action, log_operation
 from apps.authorization.engine import authorize
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
@@ -29,6 +30,13 @@ class TagService(BaseService):
         return queryset.order_by('name')[:limit]
 
     @transaction.atomic
+    @log_content_action(
+        'tag',
+        'create',
+        '{tag_type_label}',
+        group='标签管理',
+        label='创建标签',
+    )
     def create(self, data: dict) -> Tag:
         current_module = data.pop('current_module', None)
         extend_scope = data.pop('extend_scope', False)
@@ -74,6 +82,13 @@ class TagService(BaseService):
             self._raise_validation_error(error if isinstance(error, ValidationError) else ValidationError(str(error)))
 
     @transaction.atomic
+    @log_content_action(
+        'tag',
+        'update',
+        '{tag_type_label}',
+        group='标签管理',
+        label='更新标签',
+    )
     def update(self, pk: int, data: dict) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
         self.validate_not_none(tag, f'标签 {pk} 不存在')
@@ -132,6 +147,13 @@ class TagService(BaseService):
         return tag
 
     @transaction.atomic
+    @log_operation(
+        'tag_management',
+        'reorder_spaces',
+        '{ordered_tag_count} 个空间标签',
+        group='标签管理',
+        label='调整空间标签顺序',
+    )
     def reorder_spaces(self, ordered_tag_ids: List[int]) -> None:
         if not ordered_tag_ids:
             raise BusinessError(
@@ -161,6 +183,15 @@ class TagService(BaseService):
         Tag.objects.bulk_update(ordered_tags, ['sort_order'])
 
     @transaction.atomic
+    @log_operation(
+        'tag_management',
+        'merge_tags',
+        '{source_tag_count} 个标签合并为《{result.name}》',
+        target_type='tag',
+        target_title_template='{result.name}',
+        group='标签管理',
+        label='合并标签',
+    )
     def merge(self, source_tag_ids: List[int], merged_name: str) -> Tag:
         normalized_source_ids = [tag_id for tag_id in source_tag_ids if tag_id]
         if len(normalized_source_ids) < 2:
@@ -231,6 +262,13 @@ class TagService(BaseService):
         return target
 
     @transaction.atomic
+    @log_content_action(
+        'tag',
+        'delete',
+        '{tag_type_label}',
+        group='标签管理',
+        label='删除标签',
+    )
     def delete(self, pk: int) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
         self.validate_not_none(tag, f'标签 {pk} 不存在')

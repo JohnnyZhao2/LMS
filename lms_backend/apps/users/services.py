@@ -4,6 +4,7 @@ User services for LMS.
 from typing import List, Optional
 
 from apps.activity_logs.decorators import log_user_action
+from apps.activity_logs.registry import register_user_log_action
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
@@ -17,6 +18,9 @@ from .role_constraints import validate_role_assignment_constraints
 from .selectors import get_user_by_id, get_valid_mentor_by_id
 from .workflows.delete_user import hard_delete_user_business_data
 
+register_user_log_action('role_assigned', group='账号管理', label='分配角色')
+register_user_log_action('mentor_assigned', group='账号管理', label='分配导师')
+
 
 class UserManagementService(BaseService):
     """
@@ -28,7 +32,12 @@ class UserManagementService(BaseService):
     def _get_user(self, user_id: int) -> Optional[User]:
         return get_user_by_id(user_id)
 
-    @log_user_action('deactivate', '被操作账号：{result.username}（{result.employee_id}）')
+    @log_user_action(
+        'deactivate',
+        '被操作账号：{result.username}（{result.employee_id}）',
+        group='账号管理',
+        label='停用账号',
+    )
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -53,7 +62,12 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
-    @log_user_action('activate', '被操作账号：{result.username}（{result.employee_id}）')
+    @log_user_action(
+        'activate',
+        '被操作账号：{result.username}（{result.employee_id}）',
+        group='账号管理',
+        label='启用账号',
+    )
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.

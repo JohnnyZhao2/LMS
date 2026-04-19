@@ -4,8 +4,8 @@
 
 事实型文档统一由脚本生成：
 
-- `COMPONENT_INVENTORY.md`
-- `FEATURE_DEPENDENCY_GRAPH.md`
+- `generated/component-inventory.md`
+- `generated/feature-dependency-graph.md`
 
 更新命令：
 
@@ -46,7 +46,7 @@ src
 
 ## 机器约束
 
-- 分层边界由 [eslint.config.js](./eslint.config.js) 中的 `no-restricted-imports` 负责校验
+- 分层边界由 [eslint.config.js](../eslint.config.js) 中的 `no-restricted-imports` 负责校验
 - 文档漂移由 `npm run docs:check` 负责校验
 
 ## 维护原则

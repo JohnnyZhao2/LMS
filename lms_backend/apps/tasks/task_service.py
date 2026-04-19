@@ -67,6 +67,8 @@ class TaskService(BaseService):
         '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
         target_type='task',
         target_title_template='{title}',
+        group='任务管理',
+        label='创建并分配任务',
     )
     def create_task(
         self,
@@ -182,6 +184,8 @@ class TaskService(BaseService):
         '{task_update_summary}',
         target_type='task',
         target_title_template='{task.title}',
+        group='任务管理',
+        label='更新任务',
     )
     def update_task(
         self,
@@ -313,6 +317,8 @@ class TaskService(BaseService):
         '{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
         target_type='task',
         target_title_template='{result.title}',
+        group='任务管理',
+        label='删除任务',
     )
     def delete_task(self, task: Task) -> SimpleNamespace:
         snapshot = SimpleNamespace(

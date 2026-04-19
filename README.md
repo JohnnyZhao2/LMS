@@ -8,6 +8,7 @@
 - `lms_frontend/`：React 19 + Vite + TypeScript + Tailwind CSS 4
 
 后续如果继续精简文档，以本文件为主，其他 README/说明文档建议逐步归档或删除。
+前后端说明文档现分别归档在 `lms_backend/docs/` 与 `lms_frontend/docs/`。
 
 ## 核心能力
 
@@ -23,11 +24,13 @@
 ```text
 LMS/
 ├── lms_backend/
+│   ├── docs/         # 后端维护/设计文档
 │   ├── apps/         # 业务模块
 │   ├── config/       # Django 配置、路由、settings
 │   ├── core/         # 共享基类、异常、响应、分页
 │   └── tests/        # 集成测试
 ├── lms_frontend/
+│   ├── docs/         # 前端规范/ADR/生成文档
 │   ├── src/app/      # 应用壳、路由
 │   ├── src/features/ # 按业务拆分的前端模块
 │   ├── src/components/ui/
@@ -75,26 +78,15 @@ mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 
 ### 2. 配置环境变量
 
-先复制模板文件：
-
-```bash
-cp lms_backend/.env.example lms_backend/.env
-cp lms_frontend/.env.example lms_frontend/.env
-```
-
-若对接统一认证扫码登录，建议按环境直接切换：
-
-```bash
-cp lms_backend/.env.test lms_backend/.env   # 测试
-cp lms_backend/.env.prod lms_backend/.env   # 生产
-```
-
 说明：
 
-- 后端统一读取 `lms_backend/.env`
-- 前端本地环境变量放在 `lms_frontend/.env`
+- 后端开发读取本地 `lms_backend/.env.development`
+- 前端开发读取本地 `lms_frontend/.env.development`
+- 后端生产读取仓库内 `lms_backend/.env.production`
+- 前端生产构建读取仓库内 `lms_frontend/.env.production`
 - `manage.py` 默认使用 `config.settings.development`
-- `pytest` 也默认走开发配置
+- `python manage.py` 会按 settings 自动选择对应环境文件
+- `pytest` 默认走 `config.settings.test`，不需要额外 env 文件
 - 前端默认请求 `http://127.0.0.1:8000/api`
 
 ### 3. 启动后端

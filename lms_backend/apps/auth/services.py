@@ -20,6 +20,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.activity_logs.decorators import log_user_action
+from apps.activity_logs.registry import register_user_log_action
 from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import enforce
 from apps.authorization.roles import (
@@ -34,6 +35,11 @@ from apps.users.serializers import UserInfoSerializer
 from core.base_service import BaseService
 from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
+
+register_user_log_action('login', group='认证', label='登录成功')
+register_user_log_action('login_failed', group='认证', label='登录失败')
+register_user_log_action('logout', group='认证', label='登出')
+register_user_log_action('password_change', group='账号管理', label='重置/修改密码')
 
 
 class AuthenticationService(BaseService):
@@ -256,7 +262,12 @@ class AuthenticationService(BaseService):
                 message='无效的刷新令牌',
             )
 
-    @log_user_action('switch_role', '当前角色：{role_label}')
+    @log_user_action(
+        'switch_role',
+        '当前角色：{role_label}',
+        group='认证',
+        label='切换角色',
+    )
     def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
         """
         Switch user's current active role.

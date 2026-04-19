@@ -14,7 +14,6 @@ import {
   useUserPermissionOverrides,
   useUserScopeGroupOverrides,
 } from '@/entities/authorization/api/authorization';
-import { UserPermissionModuleSidebar } from '@/entities/authorization/components/user-permission-module-sidebar';
 import { UserPermissionWorkbench } from '@/entities/authorization/components/user-permission-workbench';
 import { ASSIGNABLE_ROLES } from '@/lib/role-config';
 import { showApiError } from '@/utils/error-handler';
@@ -126,14 +125,14 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   );
   const membersByRole = useMemo(
     () => Object.fromEntries(
-      ASSIGNABLE_ROLES.map((roleCode) => [
+      roleCodes.map((roleCode) => [
         roleCode,
         allVisibleUsers
           .filter((user) => user.roles.some((role) => role.code === roleCode))
           .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
       ]),
     ) as Partial<Record<RoleCode, UserList[]>>,
-    [allVisibleUsers],
+    [allVisibleUsers, roleCodes],
   );
   const groupedMembersByRole = useMemo(
     () => ({
@@ -258,8 +257,17 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
       setMutatingUserId((current) => (current === user.id ? null : current));
     }
   };
-  const handleSelectMember = (user: UserList) => {
-    setSelectedUserId((current) => (current === user.id ? null : user.id));
+  const handleSelectRole = (roleCode: RoleCode) => {
+    setActiveRole(roleCode);
+    setSelectedUserId(null);
+    setMemberSearch('');
+  };
+  const handleSelectMember = (roleCode: RoleCode, user: UserList) => {
+    setActiveRole(roleCode);
+    setMemberSearch('');
+    setSelectedUserId((current) => (
+      current === user.id && resolvedActiveRole === roleCode ? null : user.id
+    ));
   };
   const handleUserRoleToggle = async (roleCode: RoleCode) => {
     if (!selectedUserDetail) {
@@ -321,24 +329,25 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
           正在加载角色模板...
         </div>
       ) : resolvedActiveRole ? (
-        <section className="grid h-full min-h-0 grid-cols-1 overflow-hidden rounded-[20px] border border-border/70 bg-white xl:grid-cols-[220px_minmax(0,1fr)_305px]">
-          <aside className="border-b border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.85),rgba(255,255,255,0.96))] px-3 py-4 xl:border-b-0 xl:border-r">
-            <div className="mb-3 px-1">
-              <h3 className="text-sm font-semibold text-foreground">角色模板</h3>
-              <p className="mt-1 text-[11px] leading-5 text-text-muted">选择角色后直接编辑默认权限。</p>
-            </div>
-            <UserPermissionModuleSidebar
-              permissionModules={roleCodes}
-              activePermissionModule={resolvedActiveRole}
-              onSelectModule={(moduleName) => {
-                setActiveRole(moduleName as RoleCode);
-                setSelectedUserId(null);
-              }}
-              getModuleLabel={(moduleName) => ROLE_FULL_LABELS[moduleName as RoleCode] ?? moduleName}
-              showCounts={false}
-            />
-          </aside>
-
+        <section className="grid h-full min-h-0 grid-cols-1 overflow-hidden rounded-[20px] border border-border/70 bg-white xl:grid-cols-[320px_minmax(0,1fr)]">
+          <RoleTemplateMemberPanel
+            roleCodes={roleCodes}
+            activeRole={resolvedActiveRole}
+            search={memberSearch}
+            onSearchChange={setMemberSearch}
+            membersByRole={groupedMembersByRole}
+            candidateUsers={candidateUsers}
+            isLoading={isLoadingMembers}
+            canManageMembers={canManageRoleMembers}
+            isMutating={assignRoles.isPending}
+            mutatingUserId={mutatingUserId}
+            onAddMember={(user) => void handleAssignRole(user)}
+            onRemoveMember={(user) => void handleRemoveRole(user)}
+            selectedMemberId={selectedUserId}
+            canSelectMember={canManageRoleMembers}
+            onSelectRole={handleSelectRole}
+            onSelectMember={handleSelectMember}
+          />
           <div ref={setWorkbenchElement} className="flex min-h-0 flex-col">
             {!isViewingUserOverrides ? (
               <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
@@ -413,39 +422,6 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
               )}
             </div>
           </div>
-
-          {resolvedActiveRole === 'STUDENT' ? (
-            <aside className="flex min-h-0 flex-col border-t border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,0.96))] xl:border-t-0 xl:border-l">
-              <div className="border-b border-border/60 px-3.5 py-4">
-                <h3 className="text-sm font-semibold text-foreground">角色成员</h3>
-                <p className="mt-1 text-[11px] leading-5 text-text-muted">
-                  学员角色固定按模板继承，不支持单独配置成员。
-                </p>
-              </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-8 text-center">
-                <p className="text-[12px] leading-6 text-text-muted">
-                  当前为学员模板，右侧成员管理已关闭。
-                </p>
-              </div>
-            </aside>
-          ) : (
-            <RoleTemplateMemberPanel
-              activeRole={resolvedActiveRole}
-              search={memberSearch}
-              onSearchChange={setMemberSearch}
-              membersByRole={groupedMembersByRole}
-              candidateUsers={candidateUsers}
-              isLoading={isLoadingMembers}
-              canManageMembers={canManageRoleMembers}
-              isMutating={assignRoles.isPending}
-              mutatingUserId={mutatingUserId}
-              onAddMember={(user) => void handleAssignRole(user)}
-              onRemoveMember={(user) => void handleRemoveRole(user)}
-              selectedMemberId={selectedUserId}
-              canSelectMember={canManageRoleMembers}
-              onSelectMember={handleSelectMember}
-            />
-          )}
         </section>
       ) : null}
       <ConfirmDialog

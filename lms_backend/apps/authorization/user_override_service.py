@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.activity_logs.decorators import log_operation
 from apps.authorization.roles import resolve_current_role
 from apps.users.models import User
 from core.exceptions import BusinessError, ErrorCodes
@@ -359,6 +360,15 @@ class UserOverrideServiceMixin:
         ]
 
     @transaction.atomic
+    @log_operation(
+        'authorization',
+        'create_user_permission_override',
+        '权限：{permission_code}；效果：{effect_label}；范围：{scope_type_label}',
+        target_type='user',
+        target_title_template='{result.user.username}',
+        group='用户授权',
+        label='新增用户权限覆盖',
+    )
     def create_user_permission_override(
         self,
         *,
@@ -472,6 +482,15 @@ class UserOverrideServiceMixin:
         return [override for override in overrides if override.scope_group_key in PERMISSION_SCOPE_GROUPS]
 
     @transaction.atomic
+    @log_operation(
+        'authorization',
+        'create_user_scope_group_override',
+        '范围组：{scope_group_key}；效果：{effect_label}；范围：{scope_type_label}',
+        target_type='user',
+        target_title_template='{result.user.username}',
+        group='用户授权',
+        label='新增用户范围组覆盖',
+    )
     def create_user_scope_group_override(
         self,
         *,
@@ -541,6 +560,15 @@ class UserOverrideServiceMixin:
         )
 
     @transaction.atomic
+    @log_operation(
+        'authorization',
+        'revoke_user_scope_group_override',
+        '范围组：{result.scope_group_key}',
+        target_type='user',
+        target_title_template='{result.user.username}',
+        group='用户授权',
+        label='撤销用户范围组覆盖',
+    )
     def revoke_user_scope_group_override(
         self,
         *,
@@ -560,6 +588,15 @@ class UserOverrideServiceMixin:
         return override
 
     @transaction.atomic
+    @log_operation(
+        'authorization',
+        'revoke_user_permission_override',
+        '权限：{result.permission.code}',
+        target_type='user',
+        target_title_template='{result.user.username}',
+        group='用户授权',
+        label='撤销用户权限覆盖',
+    )
     def revoke_user_permission_override(
         self,
         *,

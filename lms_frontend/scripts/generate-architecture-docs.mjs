@@ -3,8 +3,10 @@ import path from 'node:path'
 
 const rootDir = process.cwd()
 const srcDir = path.join(rootDir, 'src')
-const inventoryPath = path.join(rootDir, 'COMPONENT_INVENTORY.md')
-const dependencyGraphPath = path.join(rootDir, 'FEATURE_DEPENDENCY_GRAPH.md')
+const docDir = path.join(rootDir, 'docs')
+const generatedDocDir = path.join(docDir, 'generated')
+const inventoryPath = path.join(generatedDocDir, 'component-inventory.md')
+const dependencyGraphPath = path.join(generatedDocDir, 'feature-dependency-graph.md')
 const checkMode = process.argv.includes('--check')
 
 const sourceExtensions = ['.ts', '.tsx']
@@ -384,6 +386,7 @@ function writeOrCheckFile(targetPath, nextContent) {
     return
   }
 
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true })
   fs.writeFileSync(targetPath, nextContent, 'utf8')
   console.log(`updated ${path.relative(rootDir, targetPath)}`)
 }

@@ -2,6 +2,7 @@ from typing import Iterable, List, Optional, Set
 
 from django.db import transaction
 
+from apps.activity_logs.decorators import log_operation
 from apps.authorization.roles import SUPER_ADMIN_ROLE
 from apps.users.models import Role
 from core.exceptions import BusinessError, ErrorCodes
@@ -169,6 +170,15 @@ class RoleTemplateServiceMixin:
         ]
 
     @transaction.atomic
+    @log_operation(
+        'authorization',
+        'replace_role_permissions',
+        '{permission_count} 项权限',
+        target_type='role',
+        target_title_template='{role_code}',
+        group='角色模板',
+        label='更新角色模板权限',
+    )
     def replace_role_permissions(
         self,
         role_code: str,

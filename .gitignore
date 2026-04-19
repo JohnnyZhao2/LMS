@@ -15,56 +15,6 @@
 *~
 .DS_Store
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-build/
-dist/
-*.egg
-
-# 测试与覆盖率
-.pytest_cache/
-.coverage
-htmlcov/
-nosetests.xml
-coverage.xml
-*.lcov
-.hypothesis/
-.tox/
-
-# Django
-*.log
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
-
-# 环境变量
-**/.env
-**/.env.*
-!**/.env.example
-!**/.env.*.example
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# 前端构建产物
-lms_frontend/dist/
-lms_frontend/.vite/
-lms_frontend/.next/
-lms_frontend/out/
-
-# 后端生成文件
-lms_backend/openapi-schema.yaml
-
 # 仓库根目录杂项
 /.playwright-cli
 /.playwright-mcp/

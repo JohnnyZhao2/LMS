@@ -215,6 +215,8 @@ class SubmissionService(BaseService):
         '第 {attempt_number} 次，{quiz_type_label}，{total_score_text} 分',
         target_type='quiz',
         target_title_template='{quiz_title}',
+        group='答题/考试',
+        label='开始答题',
     )
     def start_quiz(
         self,
@@ -276,6 +278,8 @@ class SubmissionService(BaseService):
         '{status_display}，{obtained_score_text}/{total_score_text}',
         target_type='quiz',
         target_title_template='{quiz_title}',
+        group='答题/考试',
+        label='提交答卷',
     )
     def submit(self, submission: Submission) -> Submission:
         if submission.status != 'IN_PROGRESS':

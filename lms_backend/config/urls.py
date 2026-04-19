@@ -10,7 +10,10 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from config.health import healthz, readyz
 urlpatterns = [
+    path('healthz', healthz, name='healthz'),
+    path('readyz', readyz, name='readyz'),
     path('admin/', admin.site.urls),
     # API endpoints
     path('api/auth/', include('apps.auth.urls')),

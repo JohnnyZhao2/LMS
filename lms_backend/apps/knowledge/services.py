@@ -70,7 +70,13 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'create', '')
+    @log_content_action(
+        'knowledge',
+        'create',
+        '',
+        group='知识文档',
+        label='创建知识文档',
+    )
     def create(self, data: dict) -> Knowledge:
         self._validate_knowledge_data(data)
         payload = dict(data)
@@ -88,7 +94,13 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'update', '')
+    @log_content_action(
+        'knowledge',
+        'update',
+        '',
+        group='知识文档',
+        label='更新知识文档',
+    )
     def update(self, pk: int, data: dict) -> Knowledge:
         knowledge = self.get_by_id(pk)
         self._validate_knowledge_data(data=data, fallback_content=knowledge.content)
@@ -118,7 +130,13 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'delete', '')
+    @log_content_action(
+        'knowledge',
+        'delete',
+        '',
+        group='知识文档',
+        label='删除知识文档',
+    )
     def delete(self, pk: int) -> Knowledge:
         knowledge = self.get_by_id(pk)
         revisions = list(knowledge.revisions.all())

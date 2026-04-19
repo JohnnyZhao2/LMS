@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.log
+*.egg-info/
 build/
 develop-eggs/
 dist/
@@ -21,7 +23,6 @@ wheels/
 *.egg
 
 # Django
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -29,11 +30,11 @@ db.sqlite3-journal
 /staticfiles
 
 # Environment
+# 开发和测试环境只留本地；生产环境文件提交到仓库
 .env
 .env.local
 .env.development
 .env.test
-.env.production
 .venv
 env/
 venv/

@@ -54,6 +54,8 @@ class SpotCheckService(BaseService):
         '{average_score_text} 分，{topic_summary_preview}',
         target_type='spot_check',
         target_title_template='{student_label}',
+        group='抽查记录',
+        label='创建抽查记录',
     )
     @transaction.atomic
     def create(self, data: dict) -> SpotCheck:
@@ -91,6 +93,8 @@ class SpotCheckService(BaseService):
         '{average_score_text} 分，{topic_summary_preview}',
         target_type='spot_check',
         target_title_template='{student_label}',
+        group='抽查记录',
+        label='更新抽查记录',
     )
     @transaction.atomic
     def update(self, pk: int, data: dict) -> SpotCheck:
@@ -110,6 +114,8 @@ class SpotCheckService(BaseService):
         '{average_score_text} 分',
         target_type='spot_check',
         target_title_template='{student_label}',
+        group='抽查记录',
+        label='删除抽查记录',
     )
     def delete(self, pk: int) -> SpotCheck:
         """删除抽查记录。"""

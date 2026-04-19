@@ -44,7 +44,13 @@ class QuestionService(BaseService):
         return queryset
 
     @transaction.atomic
-    @log_content_action('question', 'create', '{question_type_label}，{score_text} 分')
+    @log_content_action(
+        'question',
+        'create',
+        '{question_type_label}，{score_text} 分',
+        group='题目',
+        label='创建题目',
+    )
     def create(self, data: dict) -> Question:
         payload = dict(data)
         self.validate_question_payload(payload)
@@ -68,7 +74,13 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    @log_content_action('question', 'update', '{question_identity}，{question_update_summary}')
+    @log_content_action(
+        'question',
+        'update',
+        '{question_identity}，{question_update_summary}',
+        group='题目',
+        label='更新题目',
+    )
     def update(self, pk: int, data: dict) -> Question:
         question = self.get_by_id(pk)
         enforce('question.update', self.request, error_message='无权编辑此题目')
@@ -119,7 +131,13 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    @log_content_action('question', 'delete', '{question_type_label}，{score_text} 分')
+    @log_content_action(
+        'question',
+        'delete',
+        '{question_type_label}，{score_text} 分',
+        group='题目',
+        label='删除题目',
+    )
     def delete(self, pk: int) -> Question:
         question = self.get_by_id(pk)
         enforce('question.delete', self.request, error_message='无权删除此题目')

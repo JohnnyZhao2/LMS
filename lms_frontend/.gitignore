@@ -1,0 +1,28 @@
+# Environment
+# 开发环境只留本地；生产环境文件提交到仓库
+.env
+.env.local
+.env.development
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.vite/
+.next/
+out/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

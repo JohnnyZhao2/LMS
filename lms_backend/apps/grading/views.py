@@ -1,6 +1,7 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
+from apps.activity_logs.decorators import log_operation
 from apps.grading.selectors import (
     OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
     REVIEWABLE_SUBMISSION_STATUSES,
@@ -291,6 +292,15 @@ class GradingSubmitView(GradingBaseView):
 
         return success_response({'message': '评分成功'})
 
+    @log_operation(
+        'grading',
+        'manual_grade',
+        '{student_label}，{score}/{max_score_text} 分',
+        target_type='quiz',
+        target_title_template='{quiz_title}',
+        group='阅卷中心',
+        label='提交评分',
+    )
     def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments):
         """提交评分"""
         grader = self.request.user
@@ -311,7 +321,7 @@ class GradingSubmitView(GradingBaseView):
                 message=f'分数必须在 0 到 {answer.max_score} 之间'
             )
 
-        grade_subjective_answer(answer, grader=grader, score=score, comment=comments)
+        return grade_subjective_answer(answer, grader=grader, score=score, comment=comments)
 
 
 class PendingQuizzesView(GradingBaseView):

@@ -7,8 +7,8 @@ from django.core.cache import cache
 
 from apps.users.models import User
 
-from .constants import LOG_ACTION_INDEX
 from .models import ActivityLog, ActivityLogPolicy
+from .registry import get_log_action_def, get_log_action_index
 
 _USER_ACTION_SUMMARIES = {
     'login': '{actor} 登录成功',
@@ -27,6 +27,7 @@ _CONTENT_TYPE_NAMES = {
     'quiz': '试卷',
     'question': '题目',
     'assignment': '作业',
+    'tag': '标签',
 }
 
 _CONTENT_ACTION_VERBS = {
@@ -45,6 +46,13 @@ _OPERATION_ACTION_SUMMARIES = {
     'delete_spot_check': '{actor} 删除了 {target} 的抽查记录',
     'manual_grade': '{actor} 批改了答卷',
     'batch_grade': '{actor} 批量评分',
+    'replace_role_permissions': '{actor} 更新了角色模板《{target}》的权限',
+    'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
+    'revoke_user_permission_override': '{actor} 撤销了 {target} 的权限覆盖',
+    'create_user_scope_group_override': '{actor} 新增了 {target} 的范围组覆盖',
+    'revoke_user_scope_group_override': '{actor} 撤销了 {target} 的范围组覆盖',
+    'merge_tags': '{actor} 合并了标签《{target}》',
+    'reorder_spaces': '{actor} 调整了空间标签顺序',
     'start_quiz': '{actor} 开始答题《{target}》',
     'submit': '{actor} 提交了《{target}》',
     'submit_quiz': '{actor} 提交了《{target}》',
@@ -62,7 +70,7 @@ class ActivityLogService:
 
     @classmethod
     def _get_policy_defaults(cls, action_key: str) -> dict:
-        action_def = LOG_ACTION_INDEX[action_key]
+        action_def = get_log_action_def(action_key)
         return {
             'category': action_def['category'],
             'group': action_def['group'],
@@ -95,19 +103,33 @@ class ActivityLogService:
 
     @classmethod
     def sync_policies(cls) -> None:
-        valid_keys = set(LOG_ACTION_INDEX)
+        action_index = get_log_action_index()
+        valid_keys = set(action_index)
         ActivityLogPolicy.objects.exclude(key__in=valid_keys).delete()
 
-        existing_keys = set(
-            ActivityLogPolicy.objects.filter(key__in=valid_keys).values_list('key', flat=True)
-        )
-        missing_policies = [
-            ActivityLogPolicy(key=action_key, **cls._get_policy_defaults(action_key))
-            for action_key in LOG_ACTION_INDEX
-            if action_key not in existing_keys
-        ]
+        existing_policies = {
+            policy.key: policy
+            for policy in ActivityLogPolicy.objects.filter(key__in=valid_keys)
+        }
+        missing_policies = []
+        updated_policies = []
+        for action_key, action_def in action_index.items():
+            existing = existing_policies.get(action_key)
+            if existing is None:
+                missing_policies.append(ActivityLogPolicy(key=action_key, **cls._get_policy_defaults(action_key)))
+                continue
+            changed = False
+            for field_name in ('category', 'group', 'label'):
+                field_value = action_def[field_name]
+                if getattr(existing, field_name) != field_value:
+                    setattr(existing, field_name, field_value)
+                    changed = True
+            if changed:
+                updated_policies.append(existing)
         if missing_policies:
             ActivityLogPolicy.objects.bulk_create(missing_policies)
+        if updated_policies:
+            ActivityLogPolicy.objects.bulk_update(updated_policies, ['category', 'group', 'label'])
 
     @staticmethod
     def _resolve_actor_name(actor: Optional[User]) -> str:

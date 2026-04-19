@@ -30,7 +30,7 @@ const buildAuthState = (overrides: Record<string, unknown> = {}) => ({
 const renderProtectedRoute = (
   path: string,
   authState: Record<string, unknown>,
-  props: React.ComponentProps<typeof ProtectedRoute>,
+  props: Omit<React.ComponentProps<typeof ProtectedRoute>, 'children'>,
 ) => {
   useAuthMock.mockReturnValue(authState);
 

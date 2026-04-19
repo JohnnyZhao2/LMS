@@ -9,28 +9,35 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Load a single environment file: .env
-load_dotenv(BASE_DIR / '.env', override=True)
-
-SETTINGS_MODULE = os.getenv('DJANGO_SETTINGS_MODULE', '')
-DEFAULT_DJANGO_ENV = 'development'
-if SETTINGS_MODULE.endswith('.production') and 'DJANGO_ENV' not in os.environ:
-    DEFAULT_DJANGO_ENV = 'production'
-
-DJANGO_ENV = os.getenv('DJANGO_ENV', DEFAULT_DJANGO_ENV).strip().lower()
-if DJANGO_ENV not in {'development', 'production'}:
+SETTINGS_MODULE = os.getenv('DJANGO_SETTINGS_MODULE', '').strip()
+if SETTINGS_MODULE.endswith('.development'):
+    APP_ENV = 'development'
+    ENV_FILE = BASE_DIR / '.env.development'
+elif SETTINGS_MODULE.endswith('.production'):
+    APP_ENV = 'production'
+    ENV_FILE = BASE_DIR / '.env.production'
+elif SETTINGS_MODULE.endswith('.test'):
+    APP_ENV = 'test'
+    ENV_FILE = None
+else:
     raise ValueError(
-        f'Unsupported DJANGO_ENV "{DJANGO_ENV}". Use "development" or "production".'
+        'Unsupported DJANGO_SETTINGS_MODULE '
+        f'"{SETTINGS_MODULE}". Expected development, production, or test settings.'
     )
+
+if ENV_FILE is not None:
+    if not ENV_FILE.exists():
+        raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
+    load_dotenv(ENV_FILE, override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 secret_key = os.getenv('SECRET_KEY')
-if DJANGO_ENV == 'production':
-    if not secret_key:
-        raise ValueError('SECRET_KEY must be set when DJANGO_ENV=production')
-    SECRET_KEY = secret_key
+if APP_ENV == 'test':
+    SECRET_KEY = 'django-test-secret-key'
 else:
-    SECRET_KEY = secret_key or 'django-insecure-fallback-key-for-development'
+    if not secret_key:
+        raise ValueError(f'SECRET_KEY must be set in {ENV_FILE}')
+    SECRET_KEY = secret_key
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -103,10 +110,10 @@ USE_I18N = True
 # 前端使用 dayjs 解析时会自动转换为本地时间
 USE_TZ = True
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -10,7 +10,9 @@ class ActivityLogsConfig(AppConfig):
     def ready(self):
         from .audit import register_activity_log_audit_publisher
         from .bootstrap import sync_activity_log_policies
+        from .registry import load_declared_log_actions
 
+        load_declared_log_actions()
         register_activity_log_audit_publisher()
         post_migrate.connect(
             sync_activity_log_policies,
