@@ -99,6 +99,29 @@ gunicorn config.wsgi:application --config gunicorn.conf.py
 - [lms_backend/deploy/nginx.conf](/Users/johnnyzhao/Documents/LMS/lms_backend/deploy/nginx.conf:1)
 - [lms_backend/gunicorn.conf.py](/Users/johnnyzhao/Documents/LMS/lms_backend/gunicorn.conf.py:1)
 
+## 后端初始化数据
+
+后端部署分两类：
+
+- 每次部署都跑：`migrate`、`collectstatic`
+- 只在空库首次上线跑一次：`init_data`
+
+首次上线时，在 `migrate` 之后额外执行一次：
+
+```bash
+python manage.py init_data --settings=config.settings.production
+```
+
+`init_data` 会初始化这些基础数据：
+
+- 部门：`一室`、`二室`
+- 角色：`学员`、`导师`、`室经理`、`团队经理`、`管理员`
+- 权限默认目录和角色模板同步
+
+`init_data` 不会创建默认超管账号。
+
+如果你的生产库已经不是空库，一般不要把 `init_data` 放进每次发布流程，只在确实缺这些基础数据时手动跑一次。
+
 ## 探针说明
 
 前端：
@@ -119,6 +142,7 @@ gunicorn config.wsgi:application --config gunicorn.conf.py
 ## 注意
 
 - 后端部署时 `migrate` 不能漏
+- 空库首次上线后，要额外执行一次 `init_data`
 - `init_data` 不要放进每次部署流程
 - 现在生产配置文件是明文提交方案，不走 `example`
 - 如果平台不能设置工作目录，就把命令改成带 `cd` 的形式

@@ -18,17 +18,17 @@ flowchart LR
   types["types"]
   app -->|27| features
   app -->|3| entities
-  app -->|21| session
+  app -->|19| session
   app -->|11| components
   app -->|6| lib
   app -->|2| utils
-  app -->|10| config
+  app -->|9| config
   app -->|8| types
-  features -->|81| entities
+  features -->|80| entities
   features -->|44| session
   features -->|232| components
   features -->|3| hooks
-  features -->|114| lib
+  features -->|113| lib
   features -->|22| utils
   features -->|11| config
   features -->|78| types
@@ -57,17 +57,17 @@ flowchart LR
 |------|----|---------|
 | `app` | `features` | 27 |
 | `app` | `entities` | 3 |
-| `app` | `session` | 21 |
+| `app` | `session` | 19 |
 | `app` | `components` | 11 |
 | `app` | `lib` | 6 |
 | `app` | `utils` | 2 |
-| `app` | `config` | 10 |
+| `app` | `config` | 9 |
 | `app` | `types` | 8 |
-| `features` | `entities` | 81 |
+| `features` | `entities` | 80 |
 | `features` | `session` | 44 |
 | `features` | `components` | 232 |
 | `features` | `hooks` | 3 |
-| `features` | `lib` | 114 |
+| `features` | `lib` | 113 |
 | `features` | `utils` | 22 |
 | `features` | `config` | 11 |
 | `features` | `types` | 78 |

@@ -11,8 +11,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
-from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils.functional import cached_property
 
 from core.mixins import TimestampMixin
@@ -20,6 +19,16 @@ from core.mixins import TimestampMixin
 
 class UserManager(BaseUserManager):
     """自定义 User Manager，支持使用 employee_id 作为用户名字段"""
+    DEFAULT_ROLE_CODE = 'STUDENT'
+    DEFAULT_ROLE_DEFAULTS = {'name': '学员', 'description': '系统默认角色'}
+
+    def _ensure_default_student_role(self, user):
+        student_role, _ = Role.objects.get_or_create(
+            code=self.DEFAULT_ROLE_CODE,
+            defaults=self.DEFAULT_ROLE_DEFAULTS,
+        )
+        UserRole.objects.get_or_create(user=user, role=student_role)
+
     def create_user(self, employee_id, username, password=None, **extra_fields):
         """创建普通用户"""
         if not employee_id:
@@ -29,7 +38,10 @@ class UserManager(BaseUserManager):
         user = self.model(employee_id=employee_id, username=username, **extra_fields)
         if password:
             user.set_password(password)
-        user.save(using=self._db)
+        with transaction.atomic(using=self._db):
+            user.save(using=self._db)
+            if not user.is_superuser:
+                self._ensure_default_student_role(user)
         return user
     def create_superuser(self, employee_id, username, password=None, **extra_fields):
         """创建超级用户"""
