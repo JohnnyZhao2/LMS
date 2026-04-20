@@ -36,7 +36,6 @@ db.sqlite3-journal
 .env.development
 .env.test
 .venv
-env/
 venv/
 ENV/
 env.bak/
