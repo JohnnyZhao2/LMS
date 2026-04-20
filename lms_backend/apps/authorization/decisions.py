@@ -57,3 +57,23 @@ class AuthorizationDecision:
             scope_type=scope_type,
             conditional=conditional,
         )
+
+
+def conditional_allow(permission_code: str, *, constraint: str = '') -> AuthorizationDecision:
+    return AuthorizationDecision.allow(permission_code, constraint=constraint, conditional=True)
+
+
+def conditional_deny(
+    permission_code: str,
+    *,
+    message: str = '',
+    reason: str = '',
+    constraint: str = '',
+) -> AuthorizationDecision:
+    return AuthorizationDecision.deny(
+        permission_code,
+        message=message,
+        reason=reason,
+        constraint=constraint,
+        conditional=True,
+    )

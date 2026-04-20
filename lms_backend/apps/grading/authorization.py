@@ -1,6 +1,4 @@
-"""Grading owned permission specs."""
-
-from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
+from apps.authorization.registry import AuthorizationSpec, perm
 
 
 AUTHORIZATION_SPECS = (
@@ -8,13 +6,13 @@ AUTHORIZATION_SPECS = (
         key='grading.permissions',
         module='grading',
         permissions=(
-            PermissionDefinition(
+            perm(
                 code='grading.view',
                 name='查看阅卷中心',
                 description='查看待阅卷任务、题目分析和作答详情',
                 implies=('task.view',),
             ),
-            PermissionDefinition(
+            perm(
                 code='grading.score',
                 name='提交评分',
                 description='为主观题提交评分',

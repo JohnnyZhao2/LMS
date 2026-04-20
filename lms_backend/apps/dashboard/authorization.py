@@ -1,6 +1,4 @@
-"""Dashboard owned permission specs."""
-
-from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
+from apps.authorization.registry import AuthorizationSpec, perm
 
 
 AUTHORIZATION_SPECS = (
@@ -8,7 +6,7 @@ AUTHORIZATION_SPECS = (
         key='dashboard.system_permissions',
         module='dashboard',
         permissions=(
-            PermissionDefinition(
+            perm(
                 code='dashboard.team_manager.view',
                 name='查看团队经理仪表盘',
                 description='访问团队经理看板',

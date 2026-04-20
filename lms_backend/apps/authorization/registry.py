@@ -6,6 +6,9 @@ from functools import lru_cache
 from importlib import import_module
 from typing import Any, Callable, Iterable, Optional
 
+from django.conf import settings
+from django.utils.module_loading import import_string, module_has_submodule
+
 
 @dataclass(frozen=True)
 class PermissionDefinition:
@@ -53,20 +56,111 @@ class AuthorizationSpec:
     scope_filter_handlers: tuple[ScopeFilterHandler, ...] = ()
 
 
-AUTHORIZATION_SPEC_MODULES = (
-    'apps.authorization.authorization',
-    'apps.activity_logs.authorization',
-    'apps.dashboard.authorization',
-    'apps.grading.authorization',
-    'apps.knowledge.authorization',
-    'apps.questions.authorization',
-    'apps.quizzes.authorization',
-    'apps.spot_checks.authorization',
-    'apps.submissions.authorization',
-    'apps.tags.authorization',
-    'apps.tasks.authorization',
-    'apps.users.authorization',
-)
+CRUD_ACTIONS = ('view', 'create', 'update', 'delete')
+
+
+def perm(code: str, name: str, description: str, **kwargs: Any) -> PermissionDefinition:
+    return PermissionDefinition(code=code, name=name, description=description, **kwargs)
+
+
+def crud_permissions(
+    prefix: str,
+    label: str,
+    *,
+    names: Optional[dict[str, str]] = None,
+    descriptions: Optional[dict[str, str]] = None,
+    kwargs_by_action: Optional[dict[str, dict[str, Any]]] = None,
+) -> tuple[PermissionDefinition, ...]:
+    resolved_names = {
+        'view': f'查看{label}',
+        'create': f'创建{label}',
+        'update': f'更新{label}',
+        'delete': f'删除{label}',
+    } | (names or {})
+    resolved_descriptions = {
+        'view': f'查看{label}列表和详情',
+        'create': f'创建{label}',
+        'update': f'编辑{label}',
+        'delete': f'删除{label}',
+    } | (descriptions or {})
+    return tuple(
+        perm(
+            code=f'{prefix}.{action}',
+            name=resolved_names[action],
+            description=resolved_descriptions[action],
+            **(kwargs_by_action or {}).get(action, {}),
+        )
+        for action in CRUD_ACTIONS
+    )
+
+
+def permission_codes(prefix: str, *actions: str) -> tuple[str, ...]:
+    return tuple(f'{prefix}.{action}' for action in actions)
+
+
+def crud_codes(prefix: str) -> tuple[str, ...]:
+    return permission_codes(prefix, *CRUD_ACTIONS)
+
+
+def scope_rules(permission_code: str, **role_scopes: str) -> tuple[PermissionScopeRuleDefinition, ...]:
+    return tuple(
+        PermissionScopeRuleDefinition(permission_code, role_code, scope_type)
+        for role_code, scope_type in role_scopes.items()
+    )
+
+
+def crud_authorization_spec(
+    key: str,
+    module: str,
+    prefix: str,
+    label: str,
+    *,
+    view_roles: tuple[str, ...] = (),
+    full_roles: tuple[str, ...] = (),
+    extra_role_defaults: Optional[dict[str, tuple[str, ...]]] = None,
+    names: Optional[dict[str, str]] = None,
+    descriptions: Optional[dict[str, str]] = None,
+    kwargs_by_action: Optional[dict[str, dict[str, Any]]] = None,
+    **kwargs: Any,
+) -> AuthorizationSpec:
+    full_role_codes = crud_codes(prefix)
+    return AuthorizationSpec(
+        key=key,
+        module=module,
+        permissions=crud_permissions(
+            prefix,
+            label,
+            names=names,
+            descriptions=descriptions,
+            kwargs_by_action=kwargs_by_action,
+        ),
+        role_defaults={
+            **{role: (f'{prefix}.view',) for role in view_roles},
+            **{role: full_role_codes for role in full_roles},
+            **(extra_role_defaults or {}),
+        },
+        **kwargs,
+    )
+
+
+def _resolve_installed_app_module(app_entry: str) -> str:
+    if '.apps.' not in app_entry:
+        return app_entry
+    return getattr(import_string(app_entry), 'name', app_entry)
+
+
+@lru_cache(maxsize=1)
+def discover_authorization_spec_modules() -> tuple[str, ...]:
+    module_paths: list[str] = []
+    for app_entry in settings.INSTALLED_APPS:
+        app_module_path = _resolve_installed_app_module(app_entry)
+        if not app_module_path.startswith('apps.'):
+            continue
+        app_module = import_module(app_module_path)
+        if not module_has_submodule(app_module, 'authorization'):
+            continue
+        module_paths.append(f'{app_module_path}.authorization')
+    return tuple(module_paths)
 
 
 def _merge_sequence_map(specs: Iterable[AuthorizationSpec], attr_name: str) -> dict[str, list[str]]:
@@ -89,7 +183,7 @@ def _append_unique(target: list[str], value: str) -> None:
 @lru_cache(maxsize=1)
 def load_authorization_specs() -> tuple[AuthorizationSpec, ...]:
     specs: list[AuthorizationSpec] = []
-    for module_path in AUTHORIZATION_SPEC_MODULES:
+    for module_path in discover_authorization_spec_modules():
         module = import_module(module_path)
         specs.extend(getattr(module, 'AUTHORIZATION_SPECS', ()))
     return tuple(specs)
@@ -152,6 +246,8 @@ def build_permission_implication_map(
         for permission_code, implied_codes in implication_map.items()
         if implied_codes
     }
+
+
 def build_system_managed_permission_codes(
     specs: Optional[Iterable[AuthorizationSpec]] = None,
 ) -> list[str]:

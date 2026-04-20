@@ -1,6 +1,4 @@
-"""Activity log owned permission specs."""
-
-from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
+from apps.authorization.registry import AuthorizationSpec, perm
 
 
 AUTHORIZATION_SPECS = (
@@ -8,12 +6,12 @@ AUTHORIZATION_SPECS = (
         key='activity_logs.log_management',
         module='log_management',
         permissions=(
-            PermissionDefinition(
+            perm(
                 code='activity_log.view',
                 name='查看活动日志',
                 description='查看用户日志、内容日志和操作日志',
             ),
-            PermissionDefinition(
+            perm(
                 code='activity_log.policy.update',
                 name='更新日志策略',
                 description='更新活动日志记录策略',

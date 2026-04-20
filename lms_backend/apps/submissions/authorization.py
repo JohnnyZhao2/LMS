@@ -1,6 +1,4 @@
-"""Submission owned permission specs."""
-
-from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
+from apps.authorization.registry import AuthorizationSpec, perm
 
 
 AUTHORIZATION_SPECS = (
@@ -8,12 +6,12 @@ AUTHORIZATION_SPECS = (
         key='submissions.system_permissions',
         module='submission',
         permissions=(
-            PermissionDefinition(
+            perm(
                 code='submission.answer',
                 name='答题提交',
                 description='参与测验或考试并提交答案',
             ),
-            PermissionDefinition(
+            perm(
                 code='submission.review',
                 name='查看答题结果',
                 description='查看作答结果和详情',
