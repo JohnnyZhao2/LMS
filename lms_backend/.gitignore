@@ -29,12 +29,6 @@ db.sqlite3-journal
 /media
 /staticfiles
 
-# Environment
-# 开发和测试环境只留本地；生产环境文件提交到仓库
-.env
-.env.local
-.env.development
-.env.test
 .venv
 venv/
 ENV/
