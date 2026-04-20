@@ -48,33 +48,3 @@ export const buildQuestionSections = <T>(
     })
     .filter((section): section is QuestionSection<T> => section !== null);
 };
-
-export const buildQuestionSectionsInDisplayOrder = <T>(
-  items: T[],
-  getQuestionType: (item: T) => QuestionType,
-): QuestionSection<T>[] => {
-  const sections: QuestionSection<T>[] = [];
-
-  items.forEach((item, originalIndex) => {
-    const type = getQuestionType(item);
-    const lastSection = sections[sections.length - 1];
-    const entry = {
-      item,
-      originalIndex,
-      number: originalIndex + 1,
-    };
-
-    if (lastSection && lastSection.type === type) {
-      lastSection.entries.push(entry);
-      return;
-    }
-
-    sections.push({
-      type,
-      label: QUESTION_TYPE_CONFIG[type].fullLabel,
-      entries: [entry],
-    });
-  });
-
-  return sections;
-};

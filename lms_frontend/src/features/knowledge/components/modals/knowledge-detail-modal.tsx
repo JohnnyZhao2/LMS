@@ -798,13 +798,62 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     );
   }
 
+  if (isFocusMode && knowledge) {
+    return createPortal(
+      <KnowledgeFocusShell
+        content={activeContent}
+        onContentChange={handleContentChange}
+        onExit={handleExitFocusMode}
+        fixed
+        zIndex={500}
+        fadeInDuration="0.18s"
+        editorClassName="kd-immersive-editor"
+        editorMaxWidth={1040}
+        editorPadding="64px 40px 144px"
+        editorMinHeight={380}
+        minimizeIconSize={22}
+        readOnly={!canUpdateKnowledge}
+      >
+        {canUpdateKnowledge ? (
+          <KnowledgeFocusMetadataBar
+            spaces={spaces}
+            spaceTagId={activeSpaceTagId}
+            onSpaceTagChange={handleFocusSpaceTagChange}
+            selectedTags={activeTags}
+            onAddTag={addTag}
+            onRemoveTag={removeTag}
+            title={activeTitle}
+            onTitleChange={(value) => setEditTitle(value)}
+            relatedLinks={activeRelatedLinks}
+            onRelatedLinkChange={handleRelatedLinkChange}
+            onAddRelatedLink={handleAddRelatedLink}
+            onRemoveRelatedLink={handleFocusRemoveRelatedLink}
+            showTagPanel={showFocusTagPanel}
+            onShowTagPanelChange={setShowFocusTagPanel}
+            showRelatedLinksPanel={showFocusRelatedLinksPanel}
+            onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
+            onSave={handleSave}
+            saveDisabled={!canSubmitFocus}
+            isSaving={isSaving}
+            trailingActions={immersiveLearningAction}
+          />
+        ) : immersiveLearningAction ? (
+          <div className="kd-immersive-bottom">
+            {immersiveLearningAction}
+          </div>
+        ) : null}
+      </KnowledgeFocusShell>,
+      document.body,
+    );
+  }
+
   const modalContent = (
     <div
       className="kd-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className={`kd-container${isFocusMode ? ' kd-container-focus' : ''}`}
+        className="kd-container"
         onClick={(e) => e.stopPropagation()}
       >
         {!isFocusMode && (
@@ -854,47 +903,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
           </div>
-        ) : isFocusMode ? (
-          <KnowledgeFocusShell
-            content={activeContent}
-            onContentChange={handleContentChange}
-            onExit={handleExitFocusMode}
-            editorClassName="kd-immersive-editor"
-            editorMaxWidth={1040}
-            editorPadding="64px 40px 144px"
-            editorMinHeight={380}
-            minimizeIconSize={22}
-            readOnly={!canUpdateKnowledge}
-          >
-            {canUpdateKnowledge ? (
-              <KnowledgeFocusMetadataBar
-                spaces={spaces}
-                spaceTagId={activeSpaceTagId}
-                onSpaceTagChange={handleFocusSpaceTagChange}
-                selectedTags={activeTags}
-                onAddTag={addTag}
-                onRemoveTag={removeTag}
-                title={activeTitle}
-                onTitleChange={(value) => setEditTitle(value)}
-                relatedLinks={activeRelatedLinks}
-                onRelatedLinkChange={handleRelatedLinkChange}
-                onAddRelatedLink={handleAddRelatedLink}
-                onRemoveRelatedLink={handleFocusRemoveRelatedLink}
-                showTagPanel={showFocusTagPanel}
-                onShowTagPanelChange={setShowFocusTagPanel}
-                showRelatedLinksPanel={showFocusRelatedLinksPanel}
-                onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
-                onSave={handleSave}
-                saveDisabled={!canSubmitFocus}
-                isSaving={isSaving}
-                trailingActions={immersiveLearningAction}
-              />
-            ) : immersiveLearningAction ? (
-              <div className="kd-immersive-bottom">
-                {immersiveLearningAction}
-              </div>
-            ) : null}
-          </KnowledgeFocusShell>
         ) : (
           <>
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}

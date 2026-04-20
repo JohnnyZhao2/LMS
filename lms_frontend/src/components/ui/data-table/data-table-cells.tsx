@@ -241,27 +241,6 @@ export const CellStatus: React.FC<CellStatusProps> = ({
     </div>
 );
 
-/**
- * Cell 带图标的文字
- * 用于：部门、日期等需要小图标+文字的列
- */
-interface CellIconTextProps {
-    icon: React.ReactNode;
-    text: string;
-    className?: string;
-}
-
-export const CellIconText: React.FC<CellIconTextProps> = ({
-    icon,
-    text,
-    className,
-}) => (
-    <div className={cn('inline-flex items-center gap-2', className)}>
-        <span className="text-text-muted">{icon}</span>
-        <span className="text-[13px] font-medium text-text-muted">{text}</span>
-    </div>
-);
-
 interface CellMutedTimestampProps {
     icon?: React.ReactNode;
     value?: string | Date | null;
