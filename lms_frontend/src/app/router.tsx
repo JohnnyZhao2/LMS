@@ -9,7 +9,6 @@ import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/app/guards/route-guard';
 import { useAuth } from '@/session/auth/auth-context';
 import { LoginPage } from '@/app/routes/auth/login';
-import { OidcCallbackPage } from '@/app/routes/auth/oidc-callback';
 import { roleRoutes } from './routes/role-routes';
 import { AppContent } from './app-content';
 import { AppProvider } from './provider';
@@ -54,7 +53,6 @@ export const appRouter = createBrowserRouter(
     <Route element={<AppRoot />}>
       {/* 认证路由（不需要角色前缀） */}
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-      <Route path={ROUTES.LOGIN_OIDC_CALLBACK} element={<OidcCallbackPage />} />
 
       {/* 角色前缀路由 */}
       <Route path="/:role" element={<RoleRouteWrapper />}>

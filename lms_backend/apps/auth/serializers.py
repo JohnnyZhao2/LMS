@@ -91,10 +91,9 @@ class ResetPasswordResponseSerializer(serializers.Serializer):
     temporary_password = serializers.CharField(help_text='临时密码')
 
 
-class OidcAuthorizeUrlResponseSerializer(serializers.Serializer):
+class OneAccountAuthorizeUrlResponseSerializer(serializers.Serializer):
     authorize_url = serializers.CharField(help_text='统一认证授权跳转地址')
-    state = serializers.CharField(help_text='防重放随机值')
 
 
-class OidcCodeLoginRequestSerializer(serializers.Serializer):
+class OneAccountCodeLoginRequestSerializer(serializers.Serializer):
     code = serializers.CharField(required=True, help_text='统一认证回调授权码')

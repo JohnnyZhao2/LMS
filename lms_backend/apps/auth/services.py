@@ -6,7 +6,6 @@ Implements:
 - Role switching
 - Inactive user login rejection
 """
-import secrets
 import string
 from typing import Any, Dict, NoReturn, Optional
 
@@ -183,17 +182,15 @@ class AuthenticationService(BaseService):
             description=f'账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
         )
 
-    def get_oidc_authorize_url(self) -> Dict[str, str]:
-        state = secrets.token_urlsafe(24)
-        authorize_url = self.one_account_client.build_authorize_url(state=state)
+    def get_one_account_authorize_url(self) -> Dict[str, str]:
+        authorize_url = self.one_account_client.build_authorize_url()
         return {
             'authorize_url': authorize_url,
-            'state': state,
         }
 
-    def login_by_oidc_code(self, code: str) -> Dict[str, Any]:
-        oidc_result = self.one_account_client.exchange_code(code=code)
-        employee_id = oidc_result['employee_id']
+    def login_by_one_account_code(self, code: str) -> Dict[str, Any]:
+        one_account_result = self.one_account_client.exchange_code(code=code)
+        employee_id = one_account_result['employee_id']
         user_obj = get_user_by_employee_id(employee_id)
         authenticated_user = self._validate_active_user(user_obj)
         return self._finalize_login(

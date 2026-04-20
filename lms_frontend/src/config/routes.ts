@@ -3,7 +3,6 @@
  */
 export const ROUTES = {
   LOGIN: '/login',
-  LOGIN_OIDC_CALLBACK: '/login/oidc/callback',
   DASHBOARD: '/dashboard',
   AUTHORIZATION: '/authorization',
   AUDIT_LOGS: '/audit-logs',

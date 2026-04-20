@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,7 +20,7 @@ import { useAuth } from '@/session/auth/auth-context';
 import { getWorkspaceHome } from '@/session/workspace/role-paths';
 import { showApiError } from '@/utils/error-handler';
 import { ApiError } from '@/lib/api-client';
-import { beginOidcLogin } from '../utils/oidc-session';
+import { beginOneAccountLogin } from '../utils/one-account';
 
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
@@ -28,13 +28,15 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-type PendingAction = 'password' | 'oidc' | null;
+type PendingAction = 'password' | 'one-account' | null;
 
 export const LoginForm: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { login, loginByOneAccountCode } = useAuth();
   const navigate = useNavigate();
   const isPending = pendingAction !== null;
+  const callbackCode = searchParams.get('code');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -44,12 +46,41 @@ export const LoginForm: React.FC = () => {
     },
   });
 
-  const handleOidcLogin = async () => {
-    setPendingAction('oidc');
+  useEffect(() => {
+    if (!callbackCode) {
+      return;
+    }
+
+    setPendingAction('one-account');
+    void (async () => {
+      try {
+        const currentRole = await loginByOneAccountCode(callbackCode);
+        toast.success('登录成功');
+        const rolePath = getWorkspaceHome(currentRole) ?? ROUTES.LOGIN;
+        navigate(rolePath, { replace: true });
+      } catch (error) {
+        if (error instanceof ApiError) {
+          showApiError(error, '扫码登录失败');
+        } else {
+          toast.error('网络错误，请稍后重试');
+        }
+        navigate(ROUTES.LOGIN, { replace: true });
+      } finally {
+        setPendingAction(null);
+      }
+    })();
+  }, [callbackCode, loginByOneAccountCode, navigate]);
+
+  const handleOneAccountLogin = async () => {
+    setPendingAction('one-account');
     try {
-      await beginOidcLogin();
-    } catch {
-      toast.error('获取扫码登录地址失败');
+      await beginOneAccountLogin();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showApiError(error, '获取扫码登录地址失败');
+      } else {
+        toast.error('网络错误，请稍后重试');
+      }
       setPendingAction(null);
     }
   };
@@ -175,10 +206,10 @@ export const LoginForm: React.FC = () => {
               type="button"
               variant="ghost"
               disabled={isPending}
-              onClick={handleOidcLogin}
+              onClick={handleOneAccountLogin}
               className="w-full h-12 !rounded-full border-none bg-[#F7E8EA] text-[#C41230] shadow-none hover:bg-[#F2DADD] hover:text-[#A30F28] focus-visible:ring-[#C41230]/16 focus-visible:ring-offset-0"
             >
-              {pendingAction === 'oidc' ? '跳转扫码中...' : '扫码登录'}
+              {pendingAction === 'one-account' ? '正在处理扫码登录...' : '扫码登录'}
             </Button>
           </div>
         </form>

@@ -18,8 +18,8 @@ from apps.auth.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
-    OidcAuthorizeUrlResponseSerializer,
-    OidcCodeLoginRequestSerializer,
+    OneAccountAuthorizeUrlResponseSerializer,
+    OneAccountCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
     ResetPasswordRequestSerializer,
@@ -199,25 +199,25 @@ class ResetPasswordView(BaseAPIView):
         )
 
 
-class OidcAuthorizeUrlView(BaseAPIView):
+class OneAccountAuthorizeUrlView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
 
     @extend_schema(
         summary='获取统一认证扫码登录地址',
-        description='返回统一认证扫码登录跳转地址和state',
+        description='返回统一认证扫码登录跳转地址',
         responses={
-            200: OidcAuthorizeUrlResponseSerializer,
+            200: OneAccountAuthorizeUrlResponseSerializer,
         },
         tags=['认证']
     )
     def get(self, request):
-        result = self.service.get_oidc_authorize_url()
+        result = self.service.get_one_account_authorize_url()
         return success_response(result)
 
 
-class OidcCodeLoginView(BaseAPIView):
+class OneAccountCodeLoginView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
@@ -225,7 +225,7 @@ class OidcCodeLoginView(BaseAPIView):
     @extend_schema(
         summary='统一认证授权码登录',
         description='使用统一认证回调code登录并换发本系统JWT',
-        request=OidcCodeLoginRequestSerializer,
+        request=OneAccountCodeLoginRequestSerializer,
         responses={
             200: LoginResponseSerializer,
             400: OpenApiResponse(description='授权码无效或统一认证失败'),
@@ -233,8 +233,8 @@ class OidcCodeLoginView(BaseAPIView):
         tags=['认证']
     )
     def post(self, request):
-        serializer = OidcCodeLoginRequestSerializer(data=request.data)
+        serializer = OneAccountCodeLoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        result = self.service.login_by_oidc_code(code=serializer.validated_data['code'])
+        result = self.service.login_by_one_account_code(code=serializer.validated_data['code'])
         return success_response(result)

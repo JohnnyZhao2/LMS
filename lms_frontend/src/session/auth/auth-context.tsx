@@ -23,7 +23,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (data: LoginRequest) => Promise<RoleCode>;
-  loginByOidcCode: (code: string) => Promise<RoleCode>;
+  loginByOneAccountCode: (code: string) => Promise<RoleCode>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -115,9 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return completeLogin(response);
   }, [completeLogin]);
 
-  const loginByOidcCode = useCallback(async (code: string) => {
+  const loginByOneAccountCode = useCallback(async (code: string) => {
     const response = await apiClient.post<LoginResponse>(
-      '/auth/oidc/code-login/',
+      '/auth/one-account/code-login/',
       { code },
       { skipAuth: true },
     );
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextValue = {
     ...state,
     login,
-    loginByOidcCode,
+    loginByOneAccountCode,
     logout,
     switchRole,
     refreshUser,

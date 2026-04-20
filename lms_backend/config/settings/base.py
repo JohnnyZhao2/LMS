@@ -254,11 +254,11 @@ ONE_ACCOUNT_OIDC = {
     'ENABLED': os.getenv('ONE_ACCOUNT_OIDC_ENABLED', 'false').lower() == 'true',
     'DOMAIN': os.getenv('ONE_ACCOUNT_OIDC_DOMAIN', 'http://test.cn'),
     'CLIENT_ID': os.getenv('ONE_ACCOUNT_OIDC_CLIENT_ID', 'fake_client_id_32_length_value_demo'),
-    'REDIRECT_URI': os.getenv('ONE_ACCOUNT_OIDC_REDIRECT_URI', 'http://localhost:5173/login/oidc/callback'),
-    'SCOPE': os.getenv('ONE_ACCOUNT_OIDC_SCOPE', 'openid'),
+    'REDIRECT_URI': os.getenv('ONE_ACCOUNT_OIDC_REDIRECT_URI', 'http://localhost:5173/login'),
     'AUTH_PATH': os.getenv('ONE_ACCOUNT_OIDC_AUTH_PATH', '/auth-server/auth'),
     'TOKEN_PATH': os.getenv('ONE_ACCOUNT_OIDC_TOKEN_PATH', '/auth-server/token'),
     'CLIENT_PRIVATE_KEY': os.getenv('ONE_ACCOUNT_OIDC_CLIENT_PRIVATE_KEY', ''),
+    'CENTER_PUBLIC_KEY': os.getenv('ONE_ACCOUNT_OIDC_CENTER_PUBLIC_KEY', ''),
 }
 
 # Cache settings (using Django's default in-memory cache for rate limiting)

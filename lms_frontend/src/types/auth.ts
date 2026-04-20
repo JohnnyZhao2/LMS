@@ -41,11 +41,6 @@ export interface LoginResponse extends AuthSessionPayload, TokenPair {}
  */
 export type SwitchRoleResponse = LoginResponse;
 
-export interface OidcAuthorizeUrlResponse {
+export interface OneAccountAuthorizeUrlResponse {
   authorize_url: string;
-  state: string;
-}
-
-export interface OidcCodeLoginRequest {
-  code: string;
 }
