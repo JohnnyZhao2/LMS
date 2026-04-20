@@ -139,7 +139,11 @@ class OneAccountClient:
         }
 
     def _sm2_sign_base64(self, text: str) -> str:
-        signer = sm2.CryptSM2(private_key=self.config.client_private_key, public_key='')
+        client_public_key = self._derive_public_key(self.config.client_private_key)
+        signer = sm2.CryptSM2(
+            private_key=self.config.client_private_key,
+            public_key=client_public_key,
+        )
         random_hex = secrets.token_hex(32)
         signature_hex = signer.sign_with_sm3(text.encode('utf-8'), random_hex)
         return base64.b64encode(bytes.fromhex(signature_hex)).decode('utf-8')
@@ -205,6 +209,10 @@ class OneAccountClient:
 
     def _normalize_private_key(self, value: str) -> str:
         return ''.join(value.split())
+
+    def _derive_public_key(self, private_key: str) -> str:
+        signer = sm2.CryptSM2(private_key=private_key, public_key='')
+        return signer._kg(int(private_key, 16), sm2.default_ecc_table['g'])  # noqa: SLF001
 
     def _normalize_public_key(self, value: str) -> str:
         normalized = ''.join(value.split())

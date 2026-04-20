@@ -2,6 +2,7 @@ import type { ReactNode, RefObject } from 'react';
 import { Calendar, Check, Eye, Edit, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { TagAssignmentSection } from '@/entities/tag/components/tag-assignment-section';
+import { RelatedLinksEditor } from '../shared/related-links-editor';
 import { getRelatedLinkDisplayText } from '../../utils/related-links';
 import type { KnowledgeDetail as KnowledgeDetailType, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
@@ -49,7 +50,7 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
 
               onOpenRelatedLinksEditor(activeRelatedLinks.length === 0);
             }}
-            className="kd-links-add-btn"
+            className="kg-ghost-icon-btn krl-add-btn"
             aria-label="添加相关链接"
           >
             <Plus style={{ width: 12, height: 12 }} />
@@ -58,61 +59,18 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
       </div>
 
       {canUpdateKnowledge && editingLinks ? (
-        activeRelatedLinks.length > 0 ? (
-          <div className="kd-links-edit-list">
-            <div className="kd-link-edit-head">
-              <span className="kd-link-edit-head-label">名称</span>
-              <span className="kd-link-edit-head-label">链接</span>
-              <span />
-            </div>
-            {activeRelatedLinks.map((link, index) => (
-              <div key={`detail-link-${index}`} className="kd-link-edit-row">
-                <input
-                  value={link.title ?? ''}
-                  onChange={(e) => onRelatedLinkChange(index, 'title', e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      onRelatedLinksBlur();
-                    }
-                  }}
-                  placeholder="链接名称"
-                  aria-label="链接标题"
-                  className="kd-link-input kd-link-input-title"
-                />
-                <input
-                  value={link.url}
-                  onChange={(e) => onRelatedLinkChange(index, 'url', e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      onRelatedLinksBlur();
-                    }
-                  }}
-                  placeholder="https://example.com"
-                  aria-label="链接地址"
-                  className="kd-link-input kd-link-input-url"
-                />
-                <button
-                  type="button"
-                  onClick={() => onRemoveRelatedLink(index)}
-                  className="kd-link-remove-btn"
-                  aria-label="删除相关链接"
-                >
-                  <X style={{ width: 12, height: 12 }} />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="kd-links-empty"
-            onClick={onAddRelatedLink}
-          >
-            添加相关链接
-          </button>
-        )
+        <RelatedLinksEditor
+          variant="detail"
+          links={activeRelatedLinks}
+          onChange={onRelatedLinkChange}
+          onAdd={onAddRelatedLink}
+          onRemove={onRemoveRelatedLink}
+          onSubmit={onRelatedLinksBlur}
+          emptyLabel="添加相关链接"
+          showColumnLabels
+          titlePlaceholder="链接名称"
+          urlPlaceholder="https://example.com"
+        />
       ) : (
         <div className="kd-links-list">
           {activeRelatedLinks.map((link, index) => (

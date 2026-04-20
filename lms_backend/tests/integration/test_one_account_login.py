@@ -52,6 +52,29 @@ def _build_signed_id_token(*, client_id: str, employee_id: str) -> tuple[str, st
     return f'{header_segment}.{payload_segment}.{signature_segment}', public_key
 
 
+def test_one_account_client_signatures_can_be_verified_by_client_public_key(settings):
+    client_id = 'client_12345678901234567890123456'
+    _configure_one_account(settings, client_id=client_id)
+
+    client = OneAccountClient()
+    client_public_key = client._derive_public_key(client.config.client_private_key)  # noqa: SLF001
+    verifier = sm2.CryptSM2(private_key='', public_key=client_public_key)
+
+    message = (
+        'POST\n'
+        'Accept:*/*\n'
+        'Content-Type:\n'
+        f'X-ClientId:{client_id}\n'
+        'X-Nonce:test-nonce\n'
+        'X-TimeStamp:1713542400000\n'
+        '\n'
+        f'client_id={client_id}&code=test-code&grant_type=authorization_code'
+    )
+    signature_hex = base64.b64decode(client._sm2_sign_base64(message)).hex()  # noqa: SLF001
+
+    assert verifier.verify_with_sm3(signature_hex, message.encode('utf-8'))
+
+
 def test_one_account_authorize_url_only_contains_required_query_params(settings, api_client, unwrap_response_data):
     _configure_one_account(settings)
 

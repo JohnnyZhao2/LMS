@@ -1,4 +1,5 @@
 import 'quill/dist/quill.bubble.css';
+import '../shared/knowledge-editor-shared.css';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Quill from 'quill';
@@ -33,107 +34,6 @@ type QuillLineLike = QuillLine & { length: () => number };
 
 const EMPTY_HTML = '<p><br></p>';
 const BlockEmbed = Quill.import('blots/block/embed') as BlockEmbedCtor;
-
-const EDITOR_STYLES = `
-  .sqe-shell {
-    position: relative;
-  }
-
-  .sqe-shell .ql-container.ql-bubble {
-    border: none;
-    font-family: inherit;
-  }
-
-  .sqe-shell .ql-editor {
-    min-height: var(--sqe-min-height);
-    padding: 0;
-    font-family: inherit;
-    color: inherit;
-    overflow-y: visible;
-  }
-
-  .sqe-shell .ql-editor.ql-blank::before {
-    display: none;
-  }
-
-  .sqe-shell .ql-editor h1 {
-    font-size: 32px;
-    font-weight: 600;
-    line-height: 1.2;
-    margin: 0 0 18px;
-  }
-
-  .sqe-shell .ql-editor h2 {
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.3;
-    margin: 0 0 14px;
-  }
-
-  .sqe-shell .ql-editor h3 {
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.4;
-    margin: 0 0 12px;
-  }
-
-  .sqe-shell .ql-editor p {
-    margin: 0 0 14px;
-  }
-
-  .sqe-shell .ql-editor blockquote {
-    border-left: 3px solid rgba(148, 163, 184, 0.45);
-    margin: 0 0 16px;
-    padding-left: 16px;
-    color: #667085;
-    font-style: italic;
-  }
-
-  .sqe-shell .ql-editor .ql-code-block-container {
-    background: rgba(15, 23, 42, 0.06);
-    border-radius: 12px;
-    color: #1f2937;
-    margin: 0 0 16px;
-    padding: 14px 16px;
-    font-family: 'SF Mono', 'Menlo', monospace;
-    font-size: 13px;
-    line-height: 1.7;
-  }
-
-  .sqe-shell .ql-editor hr {
-    border: none;
-    border-top: 1px solid rgba(148, 163, 184, 0.45);
-    margin: 12px 0 18px;
-  }
-
-  .sqe-shell .ql-editor a {
-    color: #2563eb;
-    text-decoration: underline;
-    text-decoration-color: rgba(37, 99, 235, 0.35);
-  }
-
-  .sqe-inline-placeholder {
-    position: absolute;
-    z-index: 1;
-    pointer-events: none;
-    color: color-mix(in srgb, var(--theme-text-muted) 72%, white);
-    font-style: italic;
-    display: block;
-    max-width: calc(100% - 24px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    transform: translateY(-50%);
-  }
-
-  .sqe-inline-placeholder--wrap {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-    line-height: 1.5;
-    transform: none;
-  }
-`;
 
 class DividerBlot extends BlockEmbed {
   static blotName = 'divider';
@@ -736,7 +636,7 @@ export function SlashQuillEditor({
   return (
     <div
       ref={shellRef}
-      className={cn('sqe-shell', className)}
+      className={cn('sqe-shell', 'ke-content-base', className)}
       style={{ ['--sqe-min-height' as string]: `${minHeight}px` }}
     >
       <div ref={editorRef} />
@@ -770,7 +670,6 @@ export function SlashQuillEditor({
           onApplyHeader={handleApplyHeader}
         />
       )}
-      <style>{EDITOR_STYLES}</style>
     </div>
   );
 }

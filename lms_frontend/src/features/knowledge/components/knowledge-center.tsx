@@ -27,7 +27,6 @@ import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
-import { KnowledgeFocusModal } from './modals/knowledge-focus-modal';
 import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
 
 type KnowledgeModalState =
@@ -511,25 +510,25 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             )}
 
             {modalState?.kind === 'create' && (
-                    <KnowledgeFocusModal
-                        initialContent={modalState.initialContent}
-                        initialSpaceTagId={modalState.initialSpaceTagId}
-                        onClose={() => {
-                            setModalState(null);
-                            if (isCreateRoute) {
-                                roleNavigate('knowledge');
-                            }
-                        }}
-                        onCreated={(id) => {
-                            refetch();
-                            if (isCreateRoute) {
-                                roleNavigate(`knowledge#${id}`);
-                                return;
-                            }
-                            openDetailModal(id);
-                            syncDetailHash(id);
-                        }}
-                    />
+                <KnowledgeDetailModal
+                    initialContent={modalState.initialContent}
+                    initialSpaceTagId={modalState.initialSpaceTagId}
+                    onClose={() => {
+                        setModalState(null);
+                        if (isCreateRoute) {
+                            roleNavigate('knowledge');
+                        }
+                    }}
+                    onCreated={(id) => {
+                        refetch();
+                        if (isCreateRoute) {
+                            roleNavigate(`knowledge#${id}`);
+                            return;
+                        }
+                        openDetailModal(id);
+                        syncDetailHash(id);
+                    }}
+                />
             )}
 
             <SpaceTagQuickCreateDialog

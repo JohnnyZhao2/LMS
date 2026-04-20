@@ -3,6 +3,7 @@ import * as React from 'react';
 import { hasMeaningfulKnowledgeHtml } from '../../utils/slash-shortcuts';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { KnowledgeActionButton } from '../shared/knowledge-action-button';
 
 interface AddKnowledgeCardProps {
   onSave: (content: string) => Promise<void> | void;
@@ -150,7 +151,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             placeholder="在这里输入，键入 / 调出快捷指令"
             placeholderMode="empty-only"
             placeholderWrap
-            className="akc-editor"
+            className="akc-editor ke-content-card"
             minHeight={46}
           />
         </div>
@@ -165,63 +166,20 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
               zIndex: 2,
             }}
           >
-            <button
+            <KnowledgeActionButton
+              variant="solid"
               onMouseDown={(event) => {
                 event.preventDefault();
                 void saveDraft();
               }}
               disabled={!hasContent || isSaving}
-              style={{
-                width: '100%',
-                border: 'none',
-                borderRadius: 0,
-                background: '#e8793a',
-                padding: '10px 0',
-                color: '#fff',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: !hasContent || isSaving ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit',
-                opacity: !hasContent || isSaving ? 0.7 : 1,
-              }}
+              className="akc-save-btn"
             >
               {isSaving ? '保存中…' : '保存'}
-            </button>
+            </KnowledgeActionButton>
           </div>
         )}
       </div>
-
-      <style>{`
-        .akc-editor .ql-editor {
-          font-size: 14.5px;
-          line-height: 1.68;
-          color: #1a1a1a;
-          letter-spacing: -0.008em;
-        }
-
-        .akc-editor .ql-editor.ql-blank::before {
-          color: #b8bec8;
-          font-style: normal;
-        }
-
-        .akc-editor .sqe-inline-placeholder--wrap {
-          max-width: calc(100% - 8px);
-        }
-
-        .akc-editor .ql-editor h1 {
-          font-size: 28px;
-          margin-bottom: 14px;
-        }
-
-        .akc-editor .ql-editor p {
-          margin-bottom: 10px;
-        }
-
-        .akc-editor .sqe-menu {
-          left: 0 !important;
-          min-width: 210px;
-        }
-      `}</style>
     </div>
   );
 };

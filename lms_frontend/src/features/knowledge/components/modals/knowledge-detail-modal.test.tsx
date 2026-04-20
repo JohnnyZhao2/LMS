@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KnowledgeDetailModal } from './knowledge-detail-modal';
 
 const useAuthMock = vi.fn();
+const createKnowledgeMutateAsyncMock = vi.fn();
 const updateKnowledgeMutateAsyncMock = vi.fn();
+const parseDocumentMutateAsyncMock = vi.fn();
 const completeLearningMutateAsyncMock = vi.fn();
 const useKnowledgeDetailMock = vi.fn();
 const useStudentLearningTaskDetailMock = vi.fn();
@@ -21,8 +23,19 @@ vi.mock('../../api/knowledge', () => ({
 }));
 
 vi.mock('../../api/manage-knowledge', () => ({
+  useCreateKnowledge: () => ({
+    mutateAsync: createKnowledgeMutateAsyncMock,
+    isPending: false,
+  }),
   useUpdateKnowledge: () => ({
     mutateAsync: updateKnowledgeMutateAsyncMock,
+    isPending: false,
+  }),
+}));
+
+vi.mock('../../api/parse-document', () => ({
+  useParseDocument: () => ({
+    mutateAsync: parseDocumentMutateAsyncMock,
     isPending: false,
   }),
 }));
@@ -127,7 +140,9 @@ const knowledgeDetail = {
 describe('KnowledgeDetailModal', () => {
   beforeEach(() => {
     useAuthMock.mockReset();
+    createKnowledgeMutateAsyncMock.mockReset();
     updateKnowledgeMutateAsyncMock.mockReset();
+    parseDocumentMutateAsyncMock.mockReset();
     completeLearningMutateAsyncMock.mockReset();
     useKnowledgeDetailMock.mockReset();
     useStudentLearningTaskDetailMock.mockReset();
@@ -143,6 +158,12 @@ describe('KnowledgeDetailModal', () => {
       ...knowledgeDetail,
       title: '新标题',
       content: '<p>新标题</p><p>新内容</p>',
+    });
+    createKnowledgeMutateAsyncMock.mockResolvedValue({ id: 1 });
+    parseDocumentMutateAsyncMock.mockResolvedValue({
+      suggested_title: '',
+      content: '<p>导入内容</p>',
+      file_type: 'pdf',
     });
     completeLearningMutateAsyncMock.mockResolvedValue(undefined);
   });
