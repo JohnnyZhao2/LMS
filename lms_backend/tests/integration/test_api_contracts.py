@@ -295,6 +295,44 @@ def create_activity_log(
     )
 
 
+def auth(api_client, user):
+    api_client.force_authenticate(user=user)
+    return api_client
+
+
+def as_role(user: User, role_code: str) -> User:
+    user = User.objects.get(pk=user.pk)
+    user.current_role = role_code
+    return user
+
+
+def assert_status(response, status_code: int) -> None:
+    assert response.status_code == status_code, response.data
+
+
+def assert_success(response, *, status_code: int = 200, message: str = 'success') -> None:
+    assert_status(response, status_code)
+    assert response.data['code'] == 'SUCCESS'
+    assert response.data['message'] == message
+
+
+def assert_error_code(response, *, status_code: int, code: str) -> None:
+    assert_status(response, status_code)
+    assert response.data['code'] == code
+
+
+def assert_validation_error(response, field: str, *, message: Optional[str] = None) -> None:
+    assert_error_code(response, status_code=400, code='VALIDATION_ERROR')
+    if message is None:
+        assert field in str(response.data['message'])
+        return
+    assert response.data['message'] == message
+
+
+def assert_permission_denied(response) -> None:
+    assert_error_code(response, status_code=403, code='PERMISSION_DENIED')
+
+
 @pytest.fixture
 def exam_task_quiz(student_assignment, sample_exam_quiz):
     return _ensure_task_quiz(
@@ -350,12 +388,9 @@ def sample_spot_check(student_user, mentor_user, create_spot_check):
 @pytest.mark.django_db
 class TestQuestionApiContracts:
     def test_question_list_response_is_wrapped(self, api_client, mentor_user, sample_question):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -380,10 +415,9 @@ class TestQuestionApiContracts:
         )
         ensure_quiz_revision(quiz, actor=mentor_user)
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert result_ids == [sample_question.id]
 
@@ -395,40 +429,33 @@ class TestQuestionApiContracts:
             score=sample_question.score,
         )
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result = next(item for item in response.data['data']['results'] if item['id'] == sample_question.id)
         assert result['usage_count'] == 1
         assert result['is_referenced'] is True
 
     def test_question_detail_returns_current_question(self, api_client, mentor_user, sample_question):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/questions/{sample_question.id}/')
+        response = auth(api_client, mentor_user).get(f'/api/questions/{sample_question.id}/')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['id'] == sample_question.id
 
-    def test_question_list_rejects_invalid_created_by(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?created_by=not-an-int')
+    @pytest.mark.parametrize(
+        ('path', 'field'),
+        [
+            ('/api/questions/?created_by=not-an-int', 'created_by'),
+            ('/api/questions/?space_tag_id=0', 'space_tag_id'),
+        ],
+    )
+    def test_question_list_rejects_invalid_filters(self, api_client, mentor_user, path, field):
+        response = auth(api_client, mentor_user).get(path)
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'created_by' in response.data['message']
-
-    def test_question_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?space_tag_id=0')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'space_tag_id' in response.data['message']
+        assert_validation_error(response, field)
 
     def test_question_create_allows_missing_space_tag(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.post(
+        response = auth(api_client, mentor_user).post(
             '/api/questions/',
             {
                 'content': '无space题目',
@@ -443,13 +470,12 @@ class TestQuestionApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
+        assert_status(response, 201)
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['space_tag'] is None
 
     def test_question_create_accepts_question_tags(self, api_client, mentor_user, question_tag):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.post(
+        response = auth(api_client, mentor_user).post(
             '/api/questions/',
             {
                 'content': '带标签题目',
@@ -465,7 +491,7 @@ class TestQuestionApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
+        assert_status(response, 201)
         assert {item['id'] for item in response.data['data']['tags']} == {question_tag.id}
 
     def test_question_create_rejects_non_question_scope_tags(
@@ -474,8 +500,7 @@ class TestQuestionApiContracts:
         mentor_user,
         knowledge_tag,
     ):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.post(
+        response = auth(api_client, mentor_user).post(
             '/api/questions/',
             {
                 'content': '错误标签题目',
@@ -491,19 +516,18 @@ class TestQuestionApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == 'tag_ids 包含无效的题目标签ID'
 
     def test_question_patch_allows_clearing_space_tag(self, api_client, mentor_user, sample_question):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.patch(
+        response = auth(api_client, mentor_user).patch(
             f'/api/questions/{sample_question.id}/',
             {'space_tag_id': None},
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['space_tag'] is None
         assert response.data['data']['id'] == sample_question.id
@@ -518,14 +542,13 @@ class TestQuestionApiContracts:
         sample_question,
         question_tag,
     ):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.patch(
+        response = auth(api_client, mentor_user).patch(
             f'/api/questions/{sample_question.id}/',
             {'tag_ids': [question_tag.id]},
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         log = ActivityLog.objects.filter(
             category='content',
             target_type='question',
@@ -549,9 +572,7 @@ class TestAuthApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'access_token' in response.data['data']
         assert 'refresh_token' in response.data['data']
@@ -563,9 +584,7 @@ class TestAuthApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'employee_id' in str(response.data['message'])
+        assert_validation_error(response, 'employee_id')
 
     def test_refresh_response_is_wrapped(self, api_client, student_user):
         login_response = api_client.post(
@@ -584,31 +603,23 @@ class TestAuthApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'access_token' in response.data['data']
         assert 'refresh_token' in response.data['data']
 
     def test_me_response_is_wrapped(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/auth/me/')
+        response = auth(api_client, student_user).get('/api/auth/me/')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['user']['id'] == student_user.id
 
 
 @pytest.mark.django_db
 class TestQuizApiContracts:
     def test_quiz_list_response_is_wrapped(self, api_client, mentor_user, sample_quiz):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/quizzes/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/quizzes/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -617,70 +628,70 @@ class TestQuizApiContracts:
     def test_quiz_list_hides_history_versions(self, api_client, mentor_user, sample_quiz):
         ensure_quiz_revision(sample_quiz, actor=mentor_user)
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/quizzes/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/quizzes/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert result_ids == [sample_quiz.id]
 
     def test_quiz_list_rejects_invalid_created_by(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/quizzes/?created_by=invalid')
+        response = auth(api_client, mentor_user).get('/api/quizzes/?created_by=invalid')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'created_by' in response.data['message']
+        assert_validation_error(response, 'created_by')
 
 
 @pytest.mark.django_db
 class TestTagApiContracts:
     def test_tag_list_response_is_wrapped(self, api_client, mentor_user, space_tag):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tags/?tag_type=SPACE')
+        response = auth(api_client, mentor_user).get('/api/tags/?tag_type=SPACE')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert isinstance(response.data['data'], list)
         result_ids = [item['id'] for item in response.data['data']]
         assert space_tag.id in result_ids
 
     def test_student_can_list_space_tags_for_knowledge_filters(self, api_client, student_user, space_tag):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tags/?tag_type=SPACE')
+        response = auth(api_client, student_user).get('/api/tags/?tag_type=SPACE')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']]
         assert space_tag.id in result_ids
 
-    def test_student_cannot_list_all_space_tags_without_tag_view(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tags/?tag_type=TAG')
+    @pytest.mark.parametrize(
+        ('user_fixture', 'path', 'status_code', 'code', 'field'),
+        [
+            ('student_user', '/api/tags/?tag_type=TAG', 403, 'PERMISSION_DENIED', None),
+            ('mentor_user', '/api/tags/?limit=bad', 400, 'VALIDATION_ERROR', 'limit'),
+        ],
+    )
+    def test_tag_list_rejects_invalid_requests(
+        self,
+        request,
+        api_client,
+        user_fixture,
+        path,
+        status_code,
+        code,
+        field,
+    ):
+        response = auth(api_client, request.getfixturevalue(user_fixture)).get(path)
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
-
-    def test_tag_list_rejects_invalid_limit(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tags/?limit=bad')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'limit' in response.data['message']
+        if code == 'PERMISSION_DENIED':
+            assert_permission_denied(response)
+            return
+        assert_error_code(response, status_code=status_code, code=code)
+        assert field in response.data['message']
 
     def test_tag_list_supports_scope_filter(self, api_client, mentor_user, knowledge_tag, question_tag):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tags/?tag_type=TAG&applicable_to=question')
+        response = auth(api_client, mentor_user).get('/api/tags/?tag_type=TAG&applicable_to=question')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = {item['id'] for item in response.data['data']}
         assert question_tag.id in result_ids
         assert knowledge_tag.id not in result_ids
 
     def test_tag_create_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/',
             {
                 'name': space_tag.name,
@@ -691,7 +702,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '标签名称不能与其他类型重复'
 
@@ -701,8 +712,7 @@ class TestTagApiContracts:
         admin_user,
         knowledge_tag,
     ):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/',
             {
                 'name': knowledge_tag.name,
@@ -713,7 +723,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
+        assert_status(response, 201)
         assert response.data['data']['id'] == knowledge_tag.id
         assert response.data['data']['allow_knowledge'] is True
         assert response.data['data']['allow_question'] is True
@@ -728,8 +738,7 @@ class TestTagApiContracts:
         admin_user,
         knowledge_tag,
     ):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/',
             {
                 'name': knowledge_tag.name,
@@ -740,7 +749,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '已存在同名标签，可扩展适用范围后复用'
         assert response.data['details']['existing_tag_id'] == knowledge_tag.id
@@ -750,14 +759,13 @@ class TestTagApiContracts:
         assert knowledge_tag.allow_question is False
 
     def test_tag_patch_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag, knowledge_tag):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/tags/{knowledge_tag.id}/',
             {'name': space_tag.name},
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '标签名称不能与其他类型重复'
 
@@ -776,8 +784,7 @@ class TestTagApiContracts:
         sample_knowledge.tags.set([knowledge_tag.id])
         sample_question.tags.set([knowledge_tag.id])
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/tags/{knowledge_tag.id}/',
             {
                 'tag_type': 'SPACE',
@@ -787,7 +794,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         assert response.data['data']['tag_type'] == 'SPACE'
 
         sample_knowledge.refresh_from_db()
@@ -807,8 +814,7 @@ class TestTagApiContracts:
             sort_order=2,
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/',
             {
                 'name': '第三个空间',
@@ -818,7 +824,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
+        assert_status(response, 201)
         assert response.data['data']['sort_order'] == 3
 
     def test_space_tag_reorder_updates_sort_order(self, api_client, admin_user, space_tag):
@@ -837,8 +843,7 @@ class TestTagApiContracts:
             sort_order=3,
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/reorder/',
             {
                 'ordered_tag_ids': [third_space_tag.id, space_tag.id, second_space_tag.id],
@@ -846,7 +851,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
 
         space_tag.refresh_from_db()
         second_space_tag.refresh_from_db()
@@ -863,8 +868,7 @@ class TestTagApiContracts:
         sample_knowledge,
         sample_question,
     ):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/tags/{space_tag.id}/',
             {
                 'tag_type': 'TAG',
@@ -874,7 +878,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         assert response.data['data']['tag_type'] == 'TAG'
 
         sample_knowledge.refresh_from_db()
@@ -905,8 +909,7 @@ class TestTagApiContracts:
         sample_knowledge.tags.set([knowledge_tag.id])
         sample_question.tags.set([sibling_tag.id])
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/merge/',
             {
                 'source_tag_ids': [knowledge_tag.id, sibling_tag.id],
@@ -915,7 +918,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         assert response.data['data']['name'] == '统一标签'
 
         sample_knowledge.refresh_from_db()
@@ -930,8 +933,7 @@ class TestTagApiContracts:
         assert merged_tag.allow_question is True
 
     def test_tag_merge_rejects_cross_type_tags(self, api_client, admin_user, knowledge_tag, space_tag):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/tags/merge/',
             {
                 'source_tag_ids': [knowledge_tag.id, space_tag.id],
@@ -940,7 +942,7 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '仅支持同类型标签合并，请先改类型'
 
@@ -952,11 +954,10 @@ class TestTagApiContracts:
         sample_knowledge,
         sample_question,
     ):
-        api_client.force_authenticate(user=admin_user)
+        
+        response = auth(api_client, admin_user).delete(f'/api/tags/{space_tag.id}/')
 
-        response = api_client.delete(f'/api/tags/{space_tag.id}/')
-
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert not Tag.objects.filter(id=space_tag.id).exists()
 
@@ -969,12 +970,9 @@ class TestTagApiContracts:
 @pytest.mark.django_db
 class TestKnowledgeApiContracts:
     def test_knowledge_list_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/knowledge/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -983,57 +981,44 @@ class TestKnowledgeApiContracts:
     def test_knowledge_list_hides_history_versions(self, api_client, mentor_user, sample_knowledge):
         ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/knowledge/?page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert result_ids == [sample_knowledge.id]
 
     def test_knowledge_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/?space_tag_id=bad')
+        response = auth(api_client, mentor_user).get('/api/knowledge/?space_tag_id=bad')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'space_tag_id' in response.data['message']
+        assert_validation_error(response, 'space_tag_id')
 
     def test_knowledge_detail_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/knowledge/{sample_knowledge.id}/')
+        response = auth(api_client, mentor_user).get(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['id'] == sample_knowledge.id
 
     def test_knowledge_detail_returns_current_document(self, api_client, mentor_user, sample_knowledge):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/knowledge/{sample_knowledge.id}/')
+        response = auth(api_client, mentor_user).get(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['id'] == sample_knowledge.id
 
     def test_knowledge_increment_view_count_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.post(f'/api/knowledge/{sample_knowledge.id}/view/')
+        response = auth(api_client, mentor_user).post(f'/api/knowledge/{sample_knowledge.id}/view/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['view_count'] >= 1
 
     def test_knowledge_delete_hard_deletes_record(self, api_client, admin_user, sample_knowledge):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.delete(f'/api/knowledge/{sample_knowledge.id}/')
+        response = auth(api_client, admin_user).delete(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert not Knowledge.objects.filter(id=sample_knowledge.id).exists()
 
     def test_knowledge_create_allows_missing_title(self, api_client, admin_user, space_tag):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
                 'space_tag_id': space_tag.id,
@@ -1042,14 +1027,11 @@ class TestKnowledgeApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == '创建成功'
+        assert_success(response, status_code=201, message='创建成功')
         assert response.data['data']['title'] == ''
 
     def test_knowledge_create_allows_missing_space_tag(self, api_client, admin_user):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
                 'content': '<p>无space正文内容</p>',
@@ -1057,14 +1039,11 @@ class TestKnowledgeApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == '创建成功'
+        assert_success(response, status_code=201, message='创建成功')
         assert response.data['data']['space_tag'] is None
 
     def test_knowledge_create_rejects_empty_content(self, api_client, admin_user):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
                 'title': '仅标题',
@@ -1073,7 +1052,7 @@ class TestKnowledgeApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '知识文档必须填写正文内容'
 
@@ -1083,8 +1062,7 @@ class TestKnowledgeApiContracts:
         admin_user,
         question_tag,
     ):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
                 'title': '错误标签知识',
@@ -1094,21 +1072,18 @@ class TestKnowledgeApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400, response.data
+        assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == 'tag_ids 包含无效的知识标签ID'
 
     def test_knowledge_patch_allows_blank_title(self, api_client, admin_user, sample_knowledge):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/knowledge/{sample_knowledge.id}/',
             {'title': ''},
             format='json',
         )
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['title'] == ''
 
     def test_knowledge_patch_only_tags_inherits_unprovided_space_tag(
@@ -1133,14 +1108,13 @@ class TestKnowledgeApiContracts:
         )
         sample_knowledge.tags.set([source_tag.id])
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/knowledge/{sample_knowledge.id}/',
             {'tag_ids': [target_tag.id]},
             format='json'
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         data = response.data['data']
         assert data['space_tag']['id'] == sample_knowledge.space_tag_id
         assert {item['id'] for item in data['tags']} == {target_tag.id}
@@ -1173,14 +1147,13 @@ class TestKnowledgeApiContracts:
         )
         sample_knowledge.tags.set([source_tag.id])
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/knowledge/{sample_knowledge.id}/',
             {'space_tag_id': target_space_tag.id},
             format='json'
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         data = response.data['data']
         assert data['space_tag']['id'] == target_space_tag.id
         assert {item['id'] for item in data['tags']} == {source_tag.id}
@@ -1196,8 +1169,7 @@ class TestKnowledgeApiContracts:
         admin_user,
         sample_knowledge,
     ):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.patch(
+        response = auth(api_client, admin_user).patch(
             f'/api/knowledge/{sample_knowledge.id}/',
             {
                 'related_links': [
@@ -1210,7 +1182,7 @@ class TestKnowledgeApiContracts:
             format='json'
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         data = response.data['data']
         assert data['content'] == sample_knowledge.content
         assert data['related_links'] == [
@@ -1224,12 +1196,9 @@ class TestKnowledgeApiContracts:
 @pytest.mark.django_db
 class TestStudentTaskApiContracts:
     def test_student_assignment_list_response_is_wrapped(self, api_client, student_user, student_assignment):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/my-assignments/?page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/tasks/my-assignments/?page=1&page_size=10')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         assert 'count' in response.data['data']
@@ -1237,18 +1206,16 @@ class TestStudentTaskApiContracts:
         assert student_assignment.task_id in task_ids
 
     def test_student_assignment_list_rejects_invalid_page(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/my-assignments/?page=abc')
+        response = auth(api_client, student_user).get('/api/tasks/my-assignments/?page=abc')
 
-        assert response.status_code == 404
+        assert_status(response, 404)
         assert response.data['code'] == 'RESOURCE_NOT_FOUND'
         assert response.data['message'] == '无效页面。'
 
     def test_student_assignment_list_caps_oversized_page_size(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/my-assignments/?page_size=999')
+        response = auth(api_client, student_user).get('/api/tasks/my-assignments/?page_size=999')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['page_size'] == 100
 
@@ -1256,24 +1223,18 @@ class TestStudentTaskApiContracts:
 @pytest.mark.django_db
 class TestTaskListApiContracts:
     def test_task_list_response_is_wrapped(self, api_client, student_user, student_assignment):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/?status=open&page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/tasks/?status=open&page=1&page_size=10')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         task_ids = [item['id'] for item in response.data['data']['results']]
         assert student_assignment.task_id in task_ids
 
     def test_task_list_rejects_invalid_status(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/?status=unknown')
+        response = auth(api_client, student_user).get('/api/tasks/?status=unknown')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'status' in response.data['message']
+        assert_validation_error(response, 'status')
 
     def test_task_list_status_closed_filters_by_deadline(self, api_client, student_user, mentor_user, student_assignment):
         expired_task = Task.objects.create(
@@ -1289,10 +1250,9 @@ class TestTaskListApiContracts:
             status='IN_PROGRESS',
         )
 
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/?status=closed&page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/tasks/?status=closed&page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert expired_task.id in result_ids
         assert student_assignment.task_id not in result_ids
@@ -1324,10 +1284,9 @@ class TestTaskListApiContracts:
             status='IN_PROGRESS',
         )
 
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/?search=命中&page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/tasks/?search=命中&page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert matched_task.id in result_ids
         assert len(result_ids) == 1
@@ -1364,10 +1323,9 @@ class TestTaskListApiContracts:
         submission.submitted_at = timezone.now()
         submission.save(update_fields=['started_at', 'submitted_at'])
 
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tasks/?search=风险计数&page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/tasks/?search=风险计数&page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         result = response.data['data']['results'][0]
         assert result['pending_grading_count'] == 1
         assert result['abnormal_count'] == 1
@@ -1376,66 +1334,50 @@ class TestTaskListApiContracts:
 @pytest.mark.django_db
 class TestUserManagementApiContracts:
     def test_user_list_response_is_wrapped(self, api_client, admin_user, student_user):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/users/?is_active=true')
+        response = auth(api_client, admin_user).get('/api/users/?is_active=true')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert isinstance(response.data['data'], list)
         assert response.data['data'][0]['avatar_key'] == student_user.avatar_key
         user_ids = [item['id'] for item in response.data['data']]
         assert admin_user.id in user_ids
         assert student_user.id in user_ids
 
-    def test_user_list_rejects_invalid_is_active(self, api_client, admin_user):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/users/?is_active=maybe')
+    @pytest.mark.parametrize(
+        ('path', 'field'),
+        [
+            ('/api/users/?is_active=maybe', 'is_active'),
+            ('/api/users/?department_id=oops', 'department_id'),
+        ],
+    )
+    def test_user_list_rejects_invalid_filters(self, api_client, admin_user, path, field):
+        response = auth(api_client, admin_user).get(path)
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'is_active' in response.data['message']
-
-    def test_user_list_rejects_invalid_department_id(self, api_client, admin_user):
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/users/?department_id=oops')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'department_id' in response.data['message']
+        assert_validation_error(response, field)
 
 
 @pytest.mark.django_db
 class TestAssignableUserApiContracts:
     def test_assignable_user_list_response_is_wrapped(self, api_client, mentor_user, student_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tasks/assignable-users/')
+        response = auth(api_client, mentor_user).get('/api/tasks/assignable-users/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert isinstance(response.data['data'], list)
         result_ids = [item['id'] for item in response.data['data']]
         assert student_user.id in result_ids
 
     def test_assignable_user_list_rejects_invalid_department_id(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tasks/assignable-users/?department_id=bad')
+        response = auth(api_client, mentor_user).get('/api/tasks/assignable-users/?department_id=bad')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'department_id' in response.data['message']
+        assert_validation_error(response, 'department_id')
 
 
 @pytest.mark.django_db
 class TestTaskResourceOptionApiContracts:
     def test_task_resource_options_response_is_wrapped(self, api_client, mentor_user, sample_knowledge, sample_quiz):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'results' in response.data['data']
         result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
         assert ('DOCUMENT', sample_knowledge.id) in result_ids
@@ -1445,23 +1387,21 @@ class TestTaskResourceOptionApiContracts:
         ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
         ensure_quiz_revision(sample_quiz, actor=mentor_user)
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
         assert ('DOCUMENT', sample_knowledge.id) in result_ids
         assert ('QUIZ', sample_quiz.id) in result_ids
         assert len(result_ids) == 2
 
     def test_task_resource_options_support_excluding_selected_resources(self, api_client, mentor_user, sample_knowledge, sample_quiz):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(
+        response = auth(api_client, mentor_user).get(
             f'/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10'
             f'&exclude_document_ids={sample_knowledge.id}&exclude_quiz_ids={sample_quiz.id}'
         )
 
-        assert response.status_code == 200, response.data
+        assert_status(response, 200)
         result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
         assert ('DOCUMENT', sample_knowledge.id) not in result_ids
         assert ('QUIZ', sample_quiz.id) not in result_ids
@@ -1470,8 +1410,7 @@ class TestTaskResourceOptionApiContracts:
 @pytest.mark.django_db
 class TestSpotCheckApiContracts:
     def test_spot_check_create_response_is_wrapped(self, api_client, mentor_user, student_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.post(
+        response = auth(api_client, mentor_user).post(
             '/api/spot-checks/',
             {
                 'student': student_user.id,
@@ -1487,20 +1426,15 @@ class TestSpotCheckApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == '创建成功'
+        assert_success(response, status_code=201, message='创建成功')
         assert 'data' in response.data
         assert response.data['data']['student'] == student_user.id
         assert response.data['data']['topic_count'] == 1
 
     def test_spot_check_list_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/spot-checks/?page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/spot-checks/?page=1&page_size=10')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'data' in response.data
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -1511,28 +1445,21 @@ class TestSpotCheckApiContracts:
         assert result['topic_summary'] == sample_spot_check.topic_summary
 
     def test_spot_check_list_rejects_invalid_student_id(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/spot-checks/?student_id=bad')
+        response = auth(api_client, mentor_user).get('/api/spot-checks/?student_id=bad')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'student_id' in response.data['message']
+        assert_validation_error(response, 'student_id')
 
     def test_spot_check_detail_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get(f'/api/spot-checks/{sample_spot_check.id}/')
+        response = auth(api_client, mentor_user).get(f'/api/spot-checks/{sample_spot_check.id}/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['id'] == sample_spot_check.id
         assert response.data['data']['student_avatar_key'] == sample_spot_check.student.avatar_key
         assert response.data['data']['checker_avatar_key'] == sample_spot_check.checker.avatar_key
         assert response.data['data']['items'][0]['topic'] == '契约测试抽查'
 
     def test_spot_check_patch_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.patch(
+        response = auth(api_client, mentor_user).patch(
             f'/api/spot-checks/{sample_spot_check.id}/',
             {
                 'items': [
@@ -1547,9 +1474,7 @@ class TestSpotCheckApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['items'][0]['comment'] == '已更新评语'
 
     def test_spot_check_student_list_includes_students_without_records(
@@ -1569,12 +1494,9 @@ class TestSpotCheckApiContracts:
         )
         create_spot_check(student_user, mentor_user)
 
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/spot-checks/students/')
+        response = auth(api_client, mentor_user).get('/api/spot-checks/students/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert isinstance(response.data['data'], list)
         result_ids = [item['id'] for item in response.data['data']]
         assert student_user.id in result_ids
@@ -1590,8 +1512,7 @@ class TestSubmissionApiContracts:
         student_assignment,
         practice_task_quiz,
     ):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.post(
+        response = auth(api_client, student_user).post(
             '/api/submissions/start/',
             {
                 'assignment_id': student_assignment.id,
@@ -1600,31 +1521,26 @@ class TestSubmissionApiContracts:
             format='json',
         )
 
-        assert response.status_code == 201
+        assert_status(response, 201)
         assert response.data['code'] == 'SUCCESS'
         assert 'data' in response.data
         assert response.data['data']['task_title'] == student_assignment.task.title
 
     def test_submit_response_is_wrapped(self, api_client, student_user, in_progress_submission):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.post(f'/api/submissions/{in_progress_submission.id}/submit/')
+        response = auth(api_client, student_user).post(f'/api/submissions/{in_progress_submission.id}/submit/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['id'] == in_progress_submission.id
 
     def test_save_answer_rejects_invalid_question_id(self, api_client, student_user, in_progress_submission):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.post(
+        response = auth(api_client, student_user).post(
             f'/api/submissions/{in_progress_submission.id}/save-answer/',
             {'question_id': 999999, 'user_answer': 'A'},
             format='json',
         )
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'question_id' in str(response.data['message'])
+        assert_error_code(response, status_code=404, code='RESOURCE_NOT_FOUND')
+        assert response.data['message'] == '题目不在此答卷中'
 
     def test_save_answer_supports_marking_question(
         self,
@@ -1632,11 +1548,10 @@ class TestSubmissionApiContracts:
         student_user,
         in_progress_submission,
     ):
-        api_client.force_authenticate(user=student_user)
         target_answer = in_progress_submission.answers.order_by('id').first()
         assert target_answer is not None
 
-        response = api_client.post(
+        response = auth(api_client, student_user).post(
             f'/api/submissions/{in_progress_submission.id}/save-answer/',
             {'question_id': target_answer.question_id, 'is_marked': True},
             format='json',
@@ -1644,35 +1559,28 @@ class TestSubmissionApiContracts:
 
         target_answer.refresh_from_db()
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['question_id'] == target_answer.question_id
         assert response.data['data']['is_marked'] is True
         assert target_answer.is_marked is True
 
     def test_practice_result_response_is_wrapped(self, api_client, student_user, submitted_practice_submission):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get(f'/api/submissions/{submitted_practice_submission.id}/result/')
+        response = auth(api_client, student_user).get(f'/api/submissions/{submitted_practice_submission.id}/result/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['id'] == submitted_practice_submission.id
 
     def test_exam_result_response_is_wrapped(self, api_client, student_user, submitted_exam_submission):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get(f'/api/submissions/{submitted_exam_submission.id}/result/')
+        response = auth(api_client, student_user).get(f'/api/submissions/{submitted_exam_submission.id}/result/')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['id'] == submitted_exam_submission.id
 
     def test_practice_result_rejects_in_progress_submission(self, api_client, student_user, in_progress_submission):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get(f'/api/submissions/{in_progress_submission.id}/result/')
+        response = auth(api_client, student_user).get(f'/api/submissions/{in_progress_submission.id}/result/')
 
-        assert response.status_code == 400
+        assert_status(response, 400)
         assert response.data['code'] == 'INVALID_OPERATION'
         assert '尚未提交' in response.data['message']
 
@@ -1697,32 +1605,24 @@ class TestTaskAnalyticsApiContracts:
 
     def test_task_analytics_response_is_wrapped(self, api_client, mentor_user, student_user):
         task = self._create_mentor_task(mentor_user, student_user)
-        mentor = User.objects.get(pk=mentor_user.pk)
-        mentor.current_role = 'MENTOR'
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get(
+        mentor = as_role(mentor_user, 'MENTOR')
+        response = auth(api_client, mentor).get(
             f'/api/tasks/{task.id}/analytics/',
         )
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert 'completion' in response.data['data']
         assert 'accuracy' in response.data['data']
         assert 'time_distribution' in response.data['data']
 
     def test_student_executions_response_is_wrapped(self, api_client, mentor_user, student_user):
         task = self._create_mentor_task(mentor_user, student_user)
-        mentor = User.objects.get(pk=mentor_user.pk)
-        mentor.current_role = 'MENTOR'
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get(
+        mentor = as_role(mentor_user, 'MENTOR')
+        response = auth(api_client, mentor).get(
             f'/api/tasks/{task.id}/student-executions/',
         )
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert isinstance(response.data['data'], list)
 
 
@@ -1744,31 +1644,27 @@ class TestGradingApiContracts:
         )
         return task
 
-    def test_grading_questions_rejects_missing_quiz_id(self, api_client, mentor_user, student_user):
+    @pytest.mark.parametrize(
+        ('path_template', 'field'),
+        [
+            ('/api/grading/tasks/{task_id}/questions/', 'quiz_id'),
+            ('/api/grading/tasks/{task_id}/answers/?quiz_id=1&question_id=bad', 'question_id'),
+        ],
+    )
+    def test_grading_rejects_invalid_queries(
+        self,
+        api_client,
+        mentor_user,
+        student_user,
+        path_template,
+        field,
+    ):
         task = self._create_mentor_task(mentor_user, student_user)
-        mentor = User.objects.get(pk=mentor_user.pk)
-        mentor.current_role = 'MENTOR'
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get(
-            f'/api/grading/tasks/{task.id}/questions/',
+        response = auth(api_client, as_role(mentor_user, 'MENTOR')).get(
+            path_template.format(task_id=task.id),
         )
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'quiz_id' in response.data['message']
-
-    def test_grading_answers_rejects_invalid_question_id(self, api_client, mentor_user, student_user):
-        task = self._create_mentor_task(mentor_user, student_user)
-        mentor = User.objects.get(pk=mentor_user.pk)
-        mentor.current_role = 'MENTOR'
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get(
-            f'/api/grading/tasks/{task.id}/answers/?quiz_id=1&question_id=bad',
-        )
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'question_id' in response.data['message']
+        assert_validation_error(response, field)
 
 
 @pytest.mark.django_db
@@ -1807,12 +1703,9 @@ class TestActivityLogApiContracts:
             target_title=mentor_user.username,
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
+        response = auth(api_client, admin_user).get('/api/logs/?type=user&page=1&page_size=10')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         result_ids = {item['user']['id'] for item in response.data['data']['members']}
         assert admin_user.id in result_ids
         assert mentor_user.id in result_ids
@@ -1830,12 +1723,9 @@ class TestActivityLogApiContracts:
             target_id=str(student_user.id),
             target_title=student_user.username,
         )
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
+        response = auth(api_client, admin_user).get('/api/logs/?type=user&page=1&page_size=10')
 
-        assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
+        assert_success(response)
         assert response.data['data']['count'] == 1
         assert response.data['data']['page'] == 1
         assert response.data['data']['page_size'] == 10
@@ -1874,10 +1764,9 @@ class TestActivityLogApiContracts:
             target_title='导师试卷',
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
+        response = auth(api_client, admin_user).get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['count'] == 1
         assert {member['user']['id'] for member in response.data['data']['members']} == {
             admin_user.id,
@@ -1916,10 +1805,9 @@ class TestActivityLogApiContracts:
             target_title='导师试卷',
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
+        response = auth(api_client, admin_user).get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['count'] == 1
         assert response.data['data']['results'][0]['id'] == f'content-{mentor_log.id}'
         assert {member['user']['id'] for member in response.data['data']['members']} == {
@@ -1956,13 +1844,12 @@ class TestActivityLogApiContracts:
             created_at=timezone.make_aware(datetime(2026, 3, 25, 15, 30, 0))
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get(
+        response = auth(api_client, admin_user).get(
             '/api/logs/?type=operation&search=答卷&status=success'
             '&date_from=2026-03-20&date_to=2026-03-26&page=1&page_size=10'
         )
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['count'] == 1
         assert response.data['data']['results'][0]['id'] == f'operation-{matched_log.id}'
         assert 'summary' in response.data['data']['results'][0]
@@ -2001,10 +1888,9 @@ class TestActivityLogApiContracts:
             duration=50,
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/?type=operation&page=1&page_size=1')
+        response = auth(api_client, admin_user).get('/api/logs/?type=operation&page=1&page_size=1')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['count'] == 3
         assert len(response.data['data']['results']) == 1
         assert len(response.data['data']['members']) == 2
@@ -2014,11 +1900,9 @@ class TestActivityLogApiContracts:
         assert response.data['data']['members'][1]['activity_count'] == 1
 
     def test_activity_log_requires_permission(self, api_client, student_user):
-        api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
+        response = auth(api_client, student_user).get('/api/logs/?type=user&page=1&page_size=10')
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
+        assert_permission_denied(response)
 
     def test_activity_log_delete_endpoint_removes_selected_log(self, api_client, admin_user):
         log = create_activity_log(
@@ -2034,10 +1918,9 @@ class TestActivityLogApiContracts:
             target_title='删除测试',
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.delete(f'/api/logs/items/operation-{log.id}/')
+        response = auth(api_client, admin_user).delete(f'/api/logs/items/operation-{log.id}/')
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['code'] == 'SUCCESS'
         assert not ActivityLog.objects.filter(pk=log.id).exists()
 
@@ -2059,11 +1942,9 @@ class TestActivityLogApiContracts:
             target_title=student_user.username,
         )
 
-        api_client.force_authenticate(user=student_user)
-        response = api_client.delete(f'/api/logs/items/user-{log.id}/')
+        response = auth(api_client, student_user).delete(f'/api/logs/items/user-{log.id}/')
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
+        assert_permission_denied(response)
 
     def test_activity_log_bulk_delete_endpoint_removes_selected_logs(self, api_client, admin_user):
         first_log = create_activity_log(
@@ -2088,8 +1969,7 @@ class TestActivityLogApiContracts:
             duration=18,
         )
 
-        api_client.force_authenticate(user=admin_user)
-        response = api_client.post(
+        response = auth(api_client, admin_user).post(
             '/api/logs/items/bulk-delete/',
             {
                 'item_ids': [
@@ -2100,7 +1980,7 @@ class TestActivityLogApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200
+        assert_status(response, 200)
         assert response.data['data']['deleted_count'] == 2
         assert not ActivityLog.objects.filter(pk=first_log.id).exists()
         assert not ActivityLog.objects.filter(pk=second_log.id).exists()
@@ -2123,12 +2003,10 @@ class TestActivityLogApiContracts:
             target_title=student_user.username,
         )
 
-        api_client.force_authenticate(user=student_user)
-        response = api_client.post(
+        response = auth(api_client, student_user).post(
             '/api/logs/items/bulk-delete/',
             {'item_ids': [f'user-{log.id}']},
             format='json',
         )
 
-        assert response.status_code == 403
-        assert response.data['code'] == 'PERMISSION_DENIED'
+        assert_permission_denied(response)
