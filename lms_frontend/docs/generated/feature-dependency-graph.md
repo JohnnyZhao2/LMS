@@ -26,19 +26,19 @@ flowchart LR
   app -->|8| types
   features -->|75| entities
   features -->|43| session
-  features -->|229| components
+  features -->|230| components
   features -->|3| hooks
   features -->|116| lib
   features -->|20| utils
   features -->|11| config
-  features -->|77| types
+  features -->|79| types
   entities -->|1| features
   entities -->|11| session
   entities -->|51| components
   entities -->|2| hooks
-  entities -->|70| lib
+  entities -->|69| lib
   entities -->|5| utils
-  entities -->|63| types
+  entities -->|66| types
   session -->|2| lib
   session -->|1| config
   session -->|4| types
@@ -65,19 +65,19 @@ flowchart LR
 | `app` | `types` | 8 |
 | `features` | `entities` | 75 |
 | `features` | `session` | 43 |
-| `features` | `components` | 229 |
+| `features` | `components` | 230 |
 | `features` | `hooks` | 3 |
 | `features` | `lib` | 116 |
 | `features` | `utils` | 20 |
 | `features` | `config` | 11 |
-| `features` | `types` | 77 |
+| `features` | `types` | 79 |
 | `entities` | `features` | 1 |
 | `entities` | `session` | 11 |
 | `entities` | `components` | 51 |
 | `entities` | `hooks` | 2 |
-| `entities` | `lib` | 70 |
+| `entities` | `lib` | 69 |
 | `entities` | `utils` | 5 |
-| `entities` | `types` | 63 |
+| `entities` | `types` | 66 |
 | `session` | `lib` | 2 |
 | `session` | `config` | 1 |
 | `session` | `types` | 4 |
