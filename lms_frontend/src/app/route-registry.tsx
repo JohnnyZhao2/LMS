@@ -1,4 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
+/**
+ * 业务路由注册表。
+ *
+ * 路径、权限、菜单元数据集中声明在这里；角色前缀和实际可访问性由
+ * `role-routes` 与 route guard 根据这些 meta 生成，避免菜单和路由各维护一份。
+ */
 import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';

@@ -1,17 +1,42 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
-const rootDir = process.cwd()
+const projectRootDir = findProjectRoot(process.cwd())
+const rootDir = path.join(projectRootDir, 'lms_frontend')
 const srcDir = path.join(rootDir, 'src')
 const docDir = path.join(rootDir, 'docs')
 const generatedDocDir = path.join(docDir, 'generated')
 const inventoryPath = path.join(generatedDocDir, 'component-inventory.md')
 const dependencyGraphPath = path.join(generatedDocDir, 'feature-dependency-graph.md')
+const updateLogPath = path.join(generatedDocDir, 'project-update-log.md')
+const backendDir = path.join(projectRootDir, 'lms_backend')
+const backendGeneratedDocDir = path.join(backendDir, 'docs', 'generated')
+const backendModuleMapPath = path.join(backendGeneratedDocDir, 'backend-module-map.md')
 const checkMode = process.argv.includes('--check')
 
 const sourceExtensions = ['.ts', '.tsx']
 const sharedLayers = new Set(['components', 'hooks', 'lib', 'utils', 'config', 'types'])
 const layerOrder = ['app', 'features', 'entities', 'session', 'components', 'hooks', 'lib', 'utils', 'config', 'types']
+
+function findProjectRoot(startDir) {
+  let currentDir = startDir
+  while (true) {
+    if (
+      fs.existsSync(path.join(currentDir, 'README.md'))
+      && fs.existsSync(path.join(currentDir, 'lms_backend'))
+      && fs.existsSync(path.join(currentDir, 'lms_frontend'))
+    ) {
+      return currentDir
+    }
+
+    const parentDir = path.dirname(currentDir)
+    if (parentDir === currentDir) {
+      throw new Error(`无法定位项目根目录: ${startDir}`)
+    }
+    currentDir = parentDir
+  }
+}
 
 function toPosix(filePath) {
   return filePath.split(path.sep).join('/')
@@ -22,6 +47,12 @@ function isCodeFile(filePath) {
     && !filePath.endsWith('.d.ts')
     && !filePath.includes('.test.')
     && !filePath.includes('.spec.')
+}
+
+function isPythonSourceFile(filePath) {
+  return filePath.endsWith('.py')
+    && !filePath.includes(`${path.sep}__pycache__${path.sep}`)
+    && !filePath.endsWith(`${path.sep}__init__.py`)
 }
 
 function walkFiles(dirPath) {
@@ -41,6 +72,14 @@ function walkFiles(dirPath) {
 
 function formatCount(count, unit = '个') {
   return `${count} ${unit}`
+}
+
+function formatList(values) {
+  return values.length ? values.map((value) => `\`${value}\``).join('<br>') : '-'
+}
+
+function formatPathList(values) {
+  return values.length ? values.map((value) => `\`${toPosix(value)}\``).join('<br>') : '-'
 }
 
 function escapeMermaidLabel(label) {
@@ -178,6 +217,123 @@ function getLayerMeta(filePath) {
 
 function incrementCounter(counter, key) {
   counter.set(key, (counter.get(key) ?? 0) + 1)
+}
+
+function extractPythonClassNames(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8')
+  return [...content.matchAll(/^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/gm)]
+    .map((match) => match[1])
+}
+
+function collectBackendModules() {
+  const appsDir = path.join(backendDir, 'apps')
+  const appNames = fs.readdirSync(appsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith('__'))
+    .map((entry) => entry.name)
+    .sort()
+
+  return appNames.map((appName) => {
+    const appDir = path.join(appsDir, appName)
+    const files = walkFiles(appDir).filter(isPythonSourceFile).sort()
+    const sourceFiles = files.filter((filePath) => !filePath.includes(`${path.sep}migrations${path.sep}`))
+    const migrationFiles = files.filter((filePath) => filePath.includes(`${path.sep}migrations${path.sep}`))
+    const modelFiles = sourceFiles.filter((filePath) => path.basename(filePath) === 'models.py')
+    const serviceFiles = sourceFiles.filter((filePath) => {
+      const basename = path.basename(filePath)
+      return basename === 'services.py' || basename.endsWith('_service.py') || basename === 'workflows.py'
+    })
+    const selectorFiles = sourceFiles.filter((filePath) => path.basename(filePath) === 'selectors.py' || path.basename(filePath).endsWith('_queries.py'))
+    const serializerFiles = sourceFiles.filter((filePath) => path.basename(filePath) === 'serializers.py')
+    const authorizationFiles = sourceFiles.filter((filePath) => path.basename(filePath) === 'authorization.py')
+    const viewFiles = sourceFiles.filter((filePath) => {
+      const relativePath = toPosix(path.relative(appDir, filePath))
+      return relativePath === 'views.py' || relativePath.startsWith('views/')
+    })
+
+    return {
+      appName,
+      modelClasses: modelFiles.flatMap(extractPythonClassNames).sort(),
+      serviceFiles: serviceFiles.map((filePath) => path.relative(backendDir, filePath)).sort(),
+      selectorFiles: selectorFiles.map((filePath) => path.relative(backendDir, filePath)).sort(),
+      serializerFiles: serializerFiles.map((filePath) => path.relative(backendDir, filePath)).sort(),
+      authorizationFiles: authorizationFiles.map((filePath) => path.relative(backendDir, filePath)).sort(),
+      viewFiles: viewFiles.map((filePath) => path.relative(backendDir, filePath)).sort(),
+      migrationCount: migrationFiles.length,
+    }
+  })
+}
+
+function renderBackendModuleMap() {
+  const modules = collectBackendModules()
+  const modelCount = modules.reduce((sum, item) => sum + item.modelClasses.length, 0)
+  const serviceFileCount = modules.reduce((sum, item) => sum + item.serviceFiles.length, 0)
+  const viewFileCount = modules.reduce((sum, item) => sum + item.viewFiles.length, 0)
+
+  const lines = [
+    '# 后端模块地图',
+    '',
+    '> 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。',
+    '',
+    `- 业务模块：${formatCount(modules.length)}`,
+    `- 模型相关类：${formatCount(modelCount)}`,
+    `- Service/Workflow 文件：${formatCount(serviceFileCount)}`,
+    `- View 文件：${formatCount(viewFileCount)}`,
+    '',
+    '## 模块清单',
+    '',
+    '| 模块 | 模型相关类 | Service / Workflow | Selector / Query | Serializer | View | 权限声明 | 迁移 |',
+    '|------|--------|--------------------|------------------|------------|------|----------|------|',
+  ]
+
+  for (const moduleInfo of modules) {
+    lines.push(
+      `| \`${moduleInfo.appName}\` | ${formatList(moduleInfo.modelClasses)} | ${formatPathList(moduleInfo.serviceFiles)} | ${formatPathList(moduleInfo.selectorFiles)} | ${formatPathList(moduleInfo.serializerFiles)} | ${formatPathList(moduleInfo.viewFiles)} | ${formatPathList(moduleInfo.authorizationFiles)} | ${moduleInfo.migrationCount} |`,
+    )
+  }
+
+  return `${lines.join('\n').trim()}\n`
+}
+
+function sanitizeMarkdownCell(value) {
+  return value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim()
+}
+
+function truncateText(value, maxLength = 140) {
+  if (value.length <= maxLength) {
+    return value
+  }
+  return `${value.slice(0, maxLength - 3)}...`
+}
+
+function renderProjectUpdateLog() {
+  const rawLog = execFileSync(
+    'git',
+    ['-C', projectRootDir, 'log', '-n', '30', '--date=short', '--pretty=format:%h%x1f%cs%x1f%s'],
+    { encoding: 'utf8' },
+  ).trim()
+
+  const lines = [
+    '# 项目更新记录',
+    '',
+    '> 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。',
+    '',
+    '来源：最近 30 条 git commit。未提交改动不会进入本文件。',
+    '',
+  ]
+
+  if (!rawLog) {
+    lines.push('当前没有提交记录。')
+    return `${lines.join('\n').trim()}\n`
+  }
+
+  lines.push('| Commit | 日期 | 内容 |')
+  lines.push('|--------|------|------|')
+  for (const row of rawLog.split('\n')) {
+    const [hash, date, subject] = row.split('\x1f')
+    lines.push(`| \`${hash}\` | ${date} | ${truncateText(sanitizeMarkdownCell(subject))} |`)
+  }
+
+  return `${lines.join('\n').trim()}\n`
 }
 
 function collectDependencyData() {
@@ -380,7 +536,7 @@ function writeOrCheckFile(targetPath, nextContent) {
 
   if (checkMode) {
     if (currentContent !== nextContent) {
-      console.error(`文档已漂移: ${path.relative(rootDir, targetPath)}`)
+      console.error(`文档已漂移: ${path.relative(projectRootDir, targetPath)}`)
       process.exitCode = 1
     }
     return
@@ -388,11 +544,13 @@ function writeOrCheckFile(targetPath, nextContent) {
 
   fs.mkdirSync(path.dirname(targetPath), { recursive: true })
   fs.writeFileSync(targetPath, nextContent, 'utf8')
-  console.log(`updated ${path.relative(rootDir, targetPath)}`)
+  console.log(`updated ${path.relative(projectRootDir, targetPath)}`)
 }
 
 writeOrCheckFile(inventoryPath, renderInventory())
 writeOrCheckFile(dependencyGraphPath, renderDependencyGraph())
+writeOrCheckFile(backendModuleMapPath, renderBackendModuleMap())
+writeOrCheckFile(updateLogPath, renderProjectUpdateLog())
 
 if (checkMode && process.exitCode) {
   process.exit(process.exitCode)

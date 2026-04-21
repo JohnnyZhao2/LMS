@@ -12,6 +12,7 @@ Accepted
 
 - 手写文档只保留原则、约束、ADR
 - 组件清单、依赖图、类似 inventory 的事实文档统一自动生成
+- 后端模块地图和项目更新记录也纳入同一个生成入口
 - 生成入口统一为 `npm run docs:generate`
 - 漂移检查统一为 `npm run docs:check`
 - `npm run lint` 必须包含文档漂移检查

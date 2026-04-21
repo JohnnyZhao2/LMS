@@ -1,4 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
+/**
+ * 登录态和角色态上下文。
+ *
+ * 后端会按当前角色返回 capabilities；前端只消费这份能力表，不在页面里重复实现
+ * 角色权限规则。
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
 import type { AuthSessionPayload, LoginRequest, LoginResponse, SwitchRoleResponse } from '@/types/auth';
@@ -45,6 +51,7 @@ const buildLoggedOutState = (): AuthState => ({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // 同一角色的连续切换请求复用同一个 promise，避免快速点击时产生并发状态覆盖。
   const activeRoleSwitchRequestRef = useRef<{
     roleCode: RoleCode;
     startedAt: number;

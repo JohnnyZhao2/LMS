@@ -1,3 +1,10 @@
+"""列表范围过滤。
+
+资源级 `authorize` 负责单对象判定；本模块负责列表页和选择器的 queryset 收窄。
+默认范围来自各模块 `authorization.py` 的 `scope_rules`，用户例外来自数据库里的
+用户范围组覆盖。
+"""
+
 from typing import Any, Optional, Type
 
 from django.db.models import Q, QuerySet
@@ -19,6 +26,8 @@ from .constants import (
 
 
 class ScopedQuerysetEngineMixin:
+    """把权限范围解析为 queryset 过滤条件。"""
+
     def get_current_role(self) -> Optional[str]:
         return resolve_current_role(self.user)
 
@@ -37,6 +46,8 @@ class ScopedQuerysetEngineMixin:
                 raise ValueError('resource_model 和 base_queryset 不能同时为空')
             queryset = model.objects.all()
 
+        # scope-aware 权限的“能力开关”和“可见范围”分开计算：
+        # 先确认用户拥有能力，再按默认范围和用户覆盖收窄列表。
         if permission_code in SCOPE_AWARE_PERMISSION_CODES:
             has_capability = self._authorization_service.is_capability_granted(permission_code)
         else:
@@ -96,6 +107,7 @@ class ScopedQuerysetEngineMixin:
         )
         deny_ids: set[int] = set()
 
+        # 新模型优先用 scope_group 覆盖；没有范围组的旧权限点才读取单权限覆盖。
         scope_group_key = self._authorization_service._get_scope_group_key(permission_code)
         if scope_group_key:
             overrides = self._authorization_service._list_active_scope_group_overrides_cached(
@@ -121,6 +133,7 @@ class ScopedQuerysetEngineMixin:
             elif override.effect == EFFECT_ALLOW:
                 allow_ids.update(scope_ids)
 
+        # 最终可见范围 = 默认允许 + 用户显式允许 - 用户显式拒绝。
         final_ids = allow_ids - deny_ids
         if cache_key:
             self._get_request_cache()['scoped_user_ids'][(permission_code, cache_key)] = final_ids

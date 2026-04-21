@@ -1,4 +1,8 @@
-"""Task models for LMS."""
+"""任务模型。
+
+任务发布时不会直接绑定当前知识/试卷，而是通过 `TaskKnowledge/TaskQuiz` 绑定
+执行期快照；`source_*` 字段只保留来源追踪，方便任务编辑和后台排查。
+"""
 
 from django.db import models
 from django.utils import timezone
@@ -6,7 +10,7 @@ from django.utils import timezone
 from core.mixins import CreatorMixin, TimestampMixin
 
 class Task(TimestampMixin, CreatorMixin, models.Model):
-    """任务主模型。"""
+    """任务主表，只保存任务元信息和截止时间。"""
 
     title = models.CharField(max_length=200, verbose_name='任务标题')
     description = models.TextField(blank=True, default='', verbose_name='任务描述')
@@ -88,6 +92,10 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
 
     @property
     def has_student_progress(self):
+        """判断任务是否已有执行痕迹。
+
+        一旦学员完成知识或产生答卷，任务资源和已分配学员就不能再被破坏性移除。
+        """
         if KnowledgeLearningProgress.objects.filter(
             assignment__task_id=self.id,
             is_completed=True,
@@ -168,7 +176,11 @@ class TaskAssignment(TimestampMixin, models.Model):
         return timezone.now() > self.task.deadline
 
 class TaskKnowledge(TimestampMixin, models.Model):
-    """任务与知识快照的关联。"""
+    """任务与知识快照的关联。
+
+    `knowledge` 是执行期读取的冻结快照；`source_knowledge` 是资源中心当前对象，
+    只用于编辑任务时还原选择列表。
+    """
 
     task = models.ForeignKey(
         Task,
@@ -209,7 +221,10 @@ class TaskKnowledge(TimestampMixin, models.Model):
 
 
 class TaskQuiz(TimestampMixin, models.Model):
-    """任务与试卷快照的关联。"""
+    """任务与试卷快照的关联。
+
+    答题、评分、统计都读 `quiz` 指向的快照，避免资源中心后续编辑影响已发布任务。
+    """
 
     task = models.ForeignKey(
         Task,

@@ -50,10 +50,14 @@ interface ApiRequestOptions extends RequestInit {
 }
 
 /**
- * API 客户端
+ * API 客户端。
+ *
+ * 后端统一返回 `{ code, message, data }`，调用方只拿 `data`。401 时集中刷新
+ * token，页面层不需要各自处理刷新逻辑。
  */
 class ApiClient {
   private baseURL: string;
+  // 多个请求同时遇到 401 时，共享同一次 refresh，避免刷新令牌被并发消费。
   private refreshPromise: Promise<void> | null = null;
 
   constructor(baseURL: string) {
@@ -124,7 +128,7 @@ class ApiClient {
     const isFormData =
       typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
 
-    // 准备请求头
+    // FormData 不能手动设置 Content-Type，浏览器需要自动写入 boundary。
     const headers: Record<string, string> = {};
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
@@ -154,7 +158,7 @@ class ApiClient {
       headers,
     });
 
-    // 处理 401 错误，尝试刷新 token
+    // access token 过期时刷新后重放原请求；刷新失败则清理会话并回登录页。
     if (response.status === 401 && !skipAuth) {
       try {
         await this.refreshToken();

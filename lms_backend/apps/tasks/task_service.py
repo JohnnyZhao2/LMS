@@ -23,6 +23,12 @@ from .selectors import task_detail_queryset, task_list_queryset
 
 
 class TaskService(BaseService):
+    """任务发布、编辑、删除的业务编排。
+
+    这里负责把“当前资源”转换为“任务执行快照”，并维护任务分配约束。
+    列表读取尽量走 selectors，权限范围统一走 authorization engine。
+    """
+
     MANAGEMENT_SIDE_ROLES = ['ADMIN', SUPER_ADMIN_ROLE]
 
     def get_task_queryset_for_user(self) -> QuerySet:
@@ -135,6 +141,7 @@ class TaskService(BaseService):
                     code=ErrorCodes.RESOURCE_NOT_FOUND,
                     message=f'知识文档 {knowledge_id} 不存在',
                 )
+            # 发布任务时冻结当前知识内容；任务执行链路只读 revision。
             revision = ensure_knowledge_revision(knowledge, actor=self.user)
             associations.append(
                 TaskKnowledge(
@@ -169,6 +176,7 @@ class TaskService(BaseService):
                     code=ErrorCodes.RESOURCE_NOT_FOUND,
                     message=f'试卷 {quiz_id} 不存在',
                 )
+            # 试卷快照包含题目和选项，保证学员答题期间不会被资源中心编辑影响。
             revision = ensure_quiz_revision(quiz, actor=self.user)
             associations.append(
                 TaskQuiz(
@@ -202,6 +210,7 @@ class TaskService(BaseService):
         self._validate_update_payload(knowledge_ids, quiz_ids, assignee_ids)
         has_progress = task.has_student_progress
         if has_progress:
+            # 已有执行痕迹后不允许破坏执行边界：不能换资源，也不能移除既有学员。
             if knowledge_ids is not None:
                 raise BusinessError(
                     code=ErrorCodes.INVALID_OPERATION,
@@ -245,6 +254,7 @@ class TaskService(BaseService):
         existing_ids = get_existing_ids(task.id)
         normalized_ids = self._dedupe_resource_ids(resource_ids)
         if existing_ids != normalized_ids:
+            # 资源顺序也是业务状态。只要集合或顺序变化，就重建关联并重新冻结快照。
             delete_by_task(task.id)
             if normalized_ids:
                 create_method(task, normalized_ids)

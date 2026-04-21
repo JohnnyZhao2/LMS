@@ -1,4 +1,8 @@
-"""Authorization registry built from per-app specs."""
+"""从各业务模块收集权限声明。
+
+权限系统的真相源在每个 app 自己的 `authorization.py`。本文件只负责发现、
+合并、去重和构建运行时常量，不直接写死业务权限。
+"""
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -12,6 +16,8 @@ from django.utils.module_loading import import_string, module_has_submodule
 
 @dataclass(frozen=True)
 class PermissionDefinition:
+    """单个权限点的声明。"""
+
     code: str
     name: str
     description: str
@@ -22,6 +28,8 @@ class PermissionDefinition:
 
 @dataclass(frozen=True)
 class DefaultScopeRuleDefinition:
+    """某个角色默认拥有的对象范围。"""
+
     permission_code: str
     role_code: str
     scope_type: str
@@ -29,6 +37,8 @@ class DefaultScopeRuleDefinition:
 
 @dataclass(frozen=True)
 class ResourceAuthorizationHandler:
+    """单对象资源约束处理器。"""
+
     key: str
     permission_codes: tuple[str, ...]
     authorize: Callable[..., Any]
@@ -37,6 +47,8 @@ class ResourceAuthorizationHandler:
 
 @dataclass(frozen=True)
 class ScopeFilterHandler:
+    """列表 queryset 范围过滤处理器。"""
+
     key: str
     permission_code: str
     resource_model: type
@@ -46,6 +58,8 @@ class ScopeFilterHandler:
 
 @dataclass(frozen=True)
 class AuthorizationSpec:
+    """一个业务模块导出的完整权限规格。"""
+
     key: str
     module: Optional[str] = None
     permissions: tuple[PermissionDefinition, ...] = ()
@@ -152,6 +166,7 @@ def _resolve_installed_app_module(app_entry: str) -> str:
 
 @lru_cache(maxsize=1)
 def discover_authorization_spec_modules() -> tuple[str, ...]:
+    """按 INSTALLED_APPS 自动发现 `apps.*.authorization` 模块。"""
     module_paths: list[str] = []
     for app_entry in settings.INSTALLED_APPS:
         app_module_path = _resolve_installed_app_module(app_entry)
@@ -191,6 +206,7 @@ def load_authorization_specs() -> tuple[AuthorizationSpec, ...]:
 
 
 def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None) -> list[dict[str, Any]]:
+    """生成同步到数据库和前端展示的权限目录。"""
     resolved_specs = tuple(specs or load_authorization_specs())
     catalog: list[dict[str, str]] = []
     seen_codes: set[str] = set()
@@ -221,6 +237,10 @@ def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None
 def build_permission_implication_map(
     specs: Optional[Iterable[AuthorizationSpec]] = None,
 ) -> dict[str, list[str]]:
+    """生成隐含权限关系。
+
+    例如 create/update/delete 自动隐含 view，避免页面拥有写权限却无法读取详情。
+    """
     resolved_specs = tuple(specs or load_authorization_specs())
     registered_codes = {
         permission.code

@@ -15,11 +15,15 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Answer, AnswerSelection, Submission
 from .scoring import calculate_submission_obtained_score, refresh_assignment_score
 
+# 区分“调用方未传字段”和“调用方传了空值”的哨兵对象。
 UNSET = object()
 
 
 class SubmissionService(BaseService):
+    """答题、保存答案、提交试卷的业务编排。"""
+
     def _base_queryset(self, user: Optional[User] = None) -> QuerySet:
+        """答卷详情常用预加载，避免序列化答案时产生 N+1 查询。"""
         qs = Submission.objects.select_related(
             'task_assignment__task',
             'task_quiz',
@@ -100,6 +104,10 @@ class SubmissionService(BaseService):
         return submission
 
     def _normalize_user_answer_input(self, answer: Answer, user_answer: Any) -> dict[str, Any]:
+        """把前端答案值转换为模型可写入的字段。
+
+        客观题前端传选项 key，后端在试卷快照选项里解析成 option id。
+        """
         question = answer.question
         if question.is_subjective:
             if user_answer in (None, ''):
@@ -131,6 +139,7 @@ class SubmissionService(BaseService):
         return {'option_ids': [option_key_map[user_answer]['id']]}
 
     def _sync_answer_option_ids(self, answer: Answer, option_ids: list[int]) -> None:
+        """同步客观题选项关联，保留未变化的关联行。"""
         desired_ids = set(option_ids)
         existing_links = list(answer.answer_selections.all())
         existing_ids = {link.question_option_id for link in existing_links}
@@ -161,6 +170,7 @@ class SubmissionService(BaseService):
         quiz_id: int,
         user: User,
     ) -> Tuple[TaskAssignment, TaskQuiz, Any]:
+        """确认当前学员确实被分配了这张任务试卷。"""
         assignment = TaskAssignment.objects.select_related('task').filter(
             id=assignment_id,
             assignee=user,
@@ -192,6 +202,10 @@ class SubmissionService(BaseService):
         quiz_id: int,
         user: User,
     ) -> tuple[Submission, bool]:
+        """开始或恢复答题。
+
+        考试只能有一次有效提交；练习允许多次作答，但同一份进行中答卷会复用。
+        """
         assignment, task_quiz, quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
         is_exam = quiz.quiz_type == 'EXAM'
         if is_exam:
@@ -230,6 +244,7 @@ class SubmissionService(BaseService):
         attempt_number = 1 if is_exam else self._count_attempts(assignment.id, task_quiz.id) + 1
         remaining_seconds = quiz.duration * 60 if is_exam and quiz.duration else None
         questions = quiz.quiz_questions.order_by('order').values_list('id', flat=True)
+        # 每道快照题先生成空 Answer，后续保存答案只更新这批固定记录。
         answers_data = [{'question_id': question_id} for question_id in questions]
         submission = self._create_with_answers(
             answers_data,
@@ -282,6 +297,7 @@ class SubmissionService(BaseService):
         label='提交答卷',
     )
     def submit(self, submission: Submission) -> Submission:
+        """提交答卷并刷新成绩、任务完成状态。"""
         if submission.status != 'IN_PROGRESS':
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='该答卷已提交')
 

@@ -1,3 +1,8 @@
+"""阅卷流程。
+
+`SubmissionService` 负责学员作答；这里负责人工评分后的状态收口和分数刷新。
+"""
+
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -8,6 +13,10 @@ from .scoring import refresh_assignment_score, refresh_submission_obtained_score
 
 
 def finalize_submission_grading(submission: Submission) -> Submission:
+    """完成一份待评分答卷。
+
+    所有主观题必须先有评分，答卷才能从 GRADING 进入 GRADED。
+    """
     if submission.status != 'GRADING':
         raise ValidationError('只能完成待评分状态的记录')
     if not submission.all_subjective_graded:
@@ -27,6 +36,7 @@ def refresh_submission_scores(submission: Submission) -> None:
 
 
 def grade_subjective_answer(answer, grader, score, comment=''):
+    """给单道主观题评分，并在必要时自动完成整份答卷。"""
     if answer.is_objective:
         raise ValidationError('客观题不需要人工评分')
 

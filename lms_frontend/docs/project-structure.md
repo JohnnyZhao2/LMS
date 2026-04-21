@@ -6,6 +6,8 @@
 
 - `generated/component-inventory.md`
 - `generated/feature-dependency-graph.md`
+- `../../lms_backend/docs/generated/backend-module-map.md`
+- `generated/project-update-log.md`
 
 更新命令：
 
@@ -53,4 +55,5 @@ src
 
 - 原则、ADR、命名约定可以手写
 - 组件清单、依赖图、文件清单这类事实必须生成
+- 项目更新记录从 git commit 生成，不手写
 - 如果事实型文档无法稳定生成，就不要保留它

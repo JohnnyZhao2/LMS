@@ -125,6 +125,8 @@ npm run dev
 ```bash
 npm run build
 npm run lint
+npm run docs:generate
+npm run docs:check
 npm run preview
 ```
 
@@ -156,6 +158,37 @@ python -m pytest tests/integration/test_dashboard.py -q -x
 - API 响应统一为 `{ code, message, data }`
 - 前端按 `features` 组织业务代码
 - 后端复杂读查询优先抽到 `selectors.py`
+- 复杂业务链路优先补模块级、流程级注释，不写“逐行翻译式”注释
+- 事实型文档统一自动生成，不手改 `docs/generated/` 下的文件
+
+## 文档维护
+
+手写文档负责解释原则和业务语义，生成文档负责反映代码事实。更新代码后执行：
+
+```bash
+cd lms_frontend
+npm run docs:generate
+```
+
+当前生成内容：
+
+- `lms_frontend/docs/generated/component-inventory.md`：前端组件清单
+- `lms_frontend/docs/generated/feature-dependency-graph.md`：前端分层依赖图
+- `lms_backend/docs/generated/backend-module-map.md`：后端模块地图
+- `lms_frontend/docs/generated/project-update-log.md`：最近 30 条 git commit 更新记录
+
+校验文档是否漂移：
+
+```bash
+cd lms_frontend
+npm run docs:check
+```
+
+说明：
+
+- `npm run lint` 已包含 `docs:check`
+- 项目更新记录来自 git commit；未提交改动不会进入自动记录
+- 如果新增迁移，先执行后端 `migrate` 验证，再更新生成文档
 
 ## 当前模块
 

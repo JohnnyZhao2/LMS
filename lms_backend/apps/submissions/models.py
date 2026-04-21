@@ -1,4 +1,8 @@
-"""Submission models for LMS."""
+"""答题与评分模型。
+
+提交记录只引用任务里的 `QuizRevision` 和 `QuizRevisionQuestion`，不回读资源中心的
+当前试卷/题目。这样阅卷和统计始终基于学员实际作答时看到的内容。
+"""
 
 from decimal import Decimal
 
@@ -9,7 +13,7 @@ from core.mixins import TimestampMixin
 
 
 class Submission(TimestampMixin, models.Model):
-    """答题记录。"""
+    """一次试卷作答记录。"""
 
     STATUS_CHOICES = [
         ('IN_PROGRESS', '答题中'),
@@ -82,6 +86,7 @@ class Submission(TimestampMixin, models.Model):
         return f'{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)'
 
     def save(self, *args, **kwargs):
+        """创建时补齐答题用户、试卷总分和任务试卷关联。"""
         if not self.pk:
             if not self.user_id:
                 self.user = self.task_assignment.assignee
@@ -125,6 +130,10 @@ class Submission(TimestampMixin, models.Model):
         return self.obtained_score >= self.quiz.pass_score
 
     def get_reference_remaining_seconds(self):
+        """返回考试计时的参考剩余秒数。
+
+        保存答案时会记录 `remaining_seconds`，重新进入考试时再扣除离线期间耗时。
+        """
         if self.quiz.quiz_type != 'EXAM':
             return None
         base_seconds = self.remaining_seconds
@@ -136,7 +145,10 @@ class Submission(TimestampMixin, models.Model):
         return max(base_seconds - elapsed_seconds, 0)
 
 class Answer(TimestampMixin, models.Model):
-    """单题作答记录。"""
+    """单题作答记录。
+
+    主观题答案存在 `text_answer`；客观题答案存在 `AnswerSelection` 关联表。
+    """
 
     submission = models.ForeignKey(
         Submission,
@@ -186,6 +198,7 @@ class Answer(TimestampMixin, models.Model):
         return f'{self.submission} - {self.question}'
 
     def _ordered_answer_selections(self):
+        """按快照选项顺序返回用户选择，保证多选题答案展示稳定。"""
         cached = getattr(self, '_prefetched_objects_cache', {})
         if 'answer_selections' in cached:
             return sorted(
@@ -239,6 +252,7 @@ class Answer(TimestampMixin, models.Model):
         return self.question.score
 
     def auto_grade(self):
+        """客观题自动判分；主观题留给人工评分流程。"""
         if self.is_subjective:
             return
         is_correct, score = self.question.check_answer(
@@ -250,6 +264,7 @@ class Answer(TimestampMixin, models.Model):
         self.save(update_fields=['is_correct', 'obtained_score'])
 
     def apply_manual_grade(self, grader, score: Decimal, comment=''):
+        """写入人工评分结果并同步是否满分。"""
         self.graded_by = grader
         self.graded_at = timezone.now()
         self.obtained_score = score
