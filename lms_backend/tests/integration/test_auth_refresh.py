@@ -2,7 +2,7 @@ import pytest
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, UserPermissionOverride
+from apps.authorization.models import Permission, RolePermission, UserPermissionOverride
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -78,6 +78,143 @@ def test_refresh_token_should_rotate_and_invalidate_old_token():
     )
     assert second_refresh_response.status_code == 401
     assert second_refresh_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
+
+
+@pytest.mark.django_db
+def test_logout_blacklists_refresh_token():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Logout', code='DEPT_LOGOUT')
+    User.objects.create_user(
+        employee_id='EMP_LOGOUT',
+        username='Logout User',
+        password='password123',
+        department=department,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP_LOGOUT', 'password': 'password123'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    payload = login_response.data['data']
+
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {payload['access_token']}")
+    logout_response = client.post(
+        '/api/auth/logout/',
+        {'refresh_token': payload['refresh_token']},
+        format='json',
+    )
+    assert logout_response.status_code == 200
+
+    client.credentials()
+    refresh_response = client.post(
+        '/api/auth/refresh/',
+        {'refresh_token': payload['refresh_token']},
+        format='json',
+    )
+    assert refresh_response.status_code == 401
+    assert refresh_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
+
+
+@pytest.mark.django_db
+def test_logout_rejects_invalid_refresh_token():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Bad Logout', code='DEPT_BAD_LOGOUT')
+    User.objects.create_user(
+        employee_id='EMP_BAD_LOGOUT',
+        username='Bad Logout User',
+        password='password123',
+        department=department,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP_BAD_LOGOUT', 'password': 'password123'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    access_token = login_response.data['data']['access_token']
+
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    logout_response = client.post(
+        '/api/auth/logout/',
+        {'refresh_token': 'invalid-refresh-token'},
+        format='json',
+    )
+
+    assert logout_response.status_code == 401
+    assert logout_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
+
+
+@pytest.mark.django_db
+def test_change_password_updates_password_and_invalidates_tokens():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Change Password', code='DEPT_CHANGE_PASSWORD')
+    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    permission = Permission.objects.get(code='user.activate')
+    RolePermission.objects.get_or_create(role=admin_role, permission=permission)
+    admin_user = User.objects.create_user(
+        employee_id='EMP_CHANGE_PASSWORD_ADMIN',
+        username='Change Password Admin',
+        password='admin-password',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=admin_user, role=admin_role)
+    target_user = User.objects.create_user(
+        employee_id='EMP_CHANGE_PASSWORD_TARGET',
+        username='Change Password Target',
+        password='old-password',
+        department=department,
+    )
+
+    target_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': target_user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert target_login_response.status_code == 200
+    old_refresh_token = target_login_response.data['data']['refresh_token']
+
+    admin_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': admin_user.employee_id, 'password': 'admin-password'},
+        format='json',
+    )
+    assert admin_login_response.status_code == 200
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {admin_login_response.data['data']['access_token']}")
+    switch_response = client.post('/api/auth/switch-role/', {'role_code': 'ADMIN'}, format='json')
+    assert switch_response.status_code == 200
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {switch_response.data['data']['access_token']}")
+
+    change_response = client.post(
+        '/api/auth/change-password/',
+        {'user_id': target_user.id, 'password': 'new-password'},
+        format='json',
+    )
+    assert change_response.status_code == 200
+
+    client.credentials()
+    old_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': target_user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert old_login_response.status_code == 401
+
+    new_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': target_user.employee_id, 'password': 'new-password'},
+        format='json',
+    )
+    assert new_login_response.status_code == 200
+
+    refresh_response = client.post('/api/auth/refresh/', {'refresh_token': old_refresh_token}, format='json')
+    assert refresh_response.status_code == 401
+    assert refresh_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
 
 
 @pytest.mark.django_db

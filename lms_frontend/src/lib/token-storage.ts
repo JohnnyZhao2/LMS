@@ -1,6 +1,8 @@
 /**
  * Token 存储工具
  */
+import type { TokenPair } from '@/types/auth';
+
 const ACCESS_TOKEN_KEY = 'lms_access_token';
 const REFRESH_TOKEN_KEY = 'lms_refresh_token';
 
@@ -27,6 +29,10 @@ export const tokenStorage = {
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   },
 
+  setTokenPair({ access_token, refresh_token }: TokenPair): void {
+    this.setTokens(access_token, refresh_token);
+  },
+
   /**
    * 检查是否已登录
    */
@@ -37,7 +43,7 @@ export const tokenStorage = {
   /**
    * 清除所有存储
    */
-  clearAll(): void {
+  clearTokens(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   },

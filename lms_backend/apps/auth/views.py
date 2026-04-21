@@ -4,7 +4,7 @@ Implements:
 - Login / Logout
 - Token refresh
 - Role switching
-- Password reset
+- Password change
 - Current user info
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -15,6 +15,7 @@ from core.responses import success_response
 from core.throttles import AuthThrottle
 from apps.auth.serializers import (
     AuthSessionSerializer,
+    ChangePasswordRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -22,8 +23,6 @@ from apps.auth.serializers import (
     OneAccountCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
-    ResetPasswordRequestSerializer,
-    ResetPasswordResponseSerializer,
     SwitchRoleRequestSerializer,
 )
 from apps.auth.services import AuthenticationService
@@ -79,7 +78,7 @@ class LogoutView(BaseAPIView):
         serializer = LogoutRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        refresh_token = serializer.validated_data.get('refresh_token')
+        refresh_token = serializer.validated_data['refresh_token']
         self.service.logout(request.user, refresh_token)
         return success_response(message='登出成功')
 
@@ -166,37 +165,35 @@ class MeView(BaseAPIView):
         return success_response(result)
 
 
-class ResetPasswordView(BaseAPIView):
+class ChangePasswordView(BaseAPIView):
     """
-    Admin password reset endpoint.
+    Admin password change endpoint.
     """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
     @extend_schema(
-        summary='重置用户密码',
-        description='管理员重置指定用户的密码，生成临时密码',
-        request=ResetPasswordRequestSerializer,
+        summary='修改用户密码',
+        description='管理员为指定用户设置新密码',
+        request=ChangePasswordRequestSerializer,
         responses={
-            200: ResetPasswordResponseSerializer,
+            200: OpenApiResponse(description='密码修改成功'),
             403: OpenApiResponse(description='无权限执行此操作'),
             404: OpenApiResponse(description='用户不存在'),
         },
         tags=['认证']
     )
     def post(self, request):
-        serializer = ResetPasswordRequestSerializer(data=request.data)
+        serializer = ChangePasswordRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        result = self.service.reset_password(
+        self.service.change_password(
             operator=request.user,
             target_user_id=serializer.validated_data['user_id'],
+            password=serializer.validated_data['password'],
         )
 
-        return success_response(
-            data=result,
-            message='密码已重置，请通知用户使用临时密码登录并修改密码'
-        )
+        return success_response(message='密码已修改')
 
 
 class OneAccountAuthorizeUrlView(BaseAPIView):

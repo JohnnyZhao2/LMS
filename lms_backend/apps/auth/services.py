@@ -6,7 +6,6 @@ Implements:
 - Role switching
 - Inactive user login rejection
 """
-import string
 from typing import Any, Dict, NoReturn, Optional
 
 from django.contrib.auth import authenticate
@@ -38,15 +37,13 @@ from core.exceptions import BusinessError, ErrorCodes
 register_user_log_action('login', group='认证', label='登录成功')
 register_user_log_action('login_failed', group='认证', label='登录失败')
 register_user_log_action('logout', group='认证', label='登出')
-register_user_log_action('password_change', group='账号管理', label='重置/修改密码')
+register_user_log_action('password_change', group='账号管理', label='修改密码')
 
 
 class AuthenticationService(BaseService):
     """
     Authentication service handling login, logout, and role switching.
     """
-    TEMP_PASSWORD_LENGTH = 12
-
     def __init__(self, request):
         super().__init__(request)
         self.one_account_client = OneAccountClient()
@@ -198,19 +195,21 @@ class AuthenticationService(BaseService):
             description=f'统一认证扫码登录：账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
         )
 
-    def logout(self, user: User, refresh_token: Optional[str] = None) -> None:
+    def logout(self, user: User, refresh_token: str) -> None:
         """
         Logout user by blacklisting their refresh token.
         Args:
             user: The user to logout
-            refresh_token: Optional refresh token to blacklist
+            refresh_token: Refresh token to blacklist
         """
-        if refresh_token:
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except (TokenError, InvalidToken, ValueError):
-                pass
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except (TokenError, InvalidToken, ValueError, TypeError) as exc:
+            raise BusinessError(
+                code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
+                message='无效的刷新令牌',
+            ) from exc
 
         self._log_user_action(
             user=user,
@@ -293,19 +292,18 @@ class AuthenticationService(BaseService):
         active_user = self._validate_active_user(get_user_by_id(user.id))
         return self._build_user_payload(active_user, requested_role=requested_role)
 
-    def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
+    def change_password(self, operator: User, target_user_id: int, password: str) -> None:
         enforce(
             'user.activate',
             self.request,
-            error_message='只有管理员可以重置用户密码',
+            error_message='只有管理员可以修改用户密码',
         )
 
         target_user = self.validate_not_none(
             get_user_by_id(target_user_id),
             '用户不存在',
         )
-        temporary_password = self.generate_temporary_password()
-        target_user.set_password(temporary_password)
+        target_user.set_password(password)
         target_user.save(update_fields=['password'])
         self.blacklist_all_tokens(target_user)
 
@@ -316,11 +314,6 @@ class AuthenticationService(BaseService):
             description=f'被操作账号：{target_user.username}（{target_user.employee_id}）',
             status='success',
         )
-        return {'temporary_password': temporary_password}
-
-    def generate_temporary_password(self, length: int = TEMP_PASSWORD_LENGTH) -> str:
-        alphabet = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
 
     def _generate_tokens(self, user: User, current_role: Optional[str] = None) -> Dict[str, str]:
         """

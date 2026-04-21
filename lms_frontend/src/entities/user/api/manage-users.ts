@@ -22,6 +22,11 @@ interface UpdateAvatarRequest {
   avatar_key: string;
 }
 
+interface ChangePasswordRequest {
+  userId: number;
+  password: string;
+}
+
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
 
@@ -105,13 +110,14 @@ export const useDeleteUser = () => {
   });
 };
 
-export const useResetPassword = () => {
+export const useChangePassword = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: number) =>
-      apiClient.post<{ temporary_password: string }>('/auth/reset-password/', {
+    mutationFn: ({ userId, password }: ChangePasswordRequest) =>
+      apiClient.post<void>('/auth/change-password/', {
         user_id: userId,
+        password,
       }),
     onSuccess: () => invalidateAfterUserMutation(queryClient),
   });

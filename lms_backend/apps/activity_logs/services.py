@@ -15,7 +15,7 @@ _USER_ACTION_SUMMARIES = {
     'logout': '{actor} 退出登录',
     'login_failed': '{actor} 登录失败',
     'switch_role': '{actor} 切换了角色',
-    'password_change': '{actor} 重置了用户密码',
+    'password_change': '{actor} 修改了用户密码',
     'role_assigned': '{actor} 更新了用户角色',
     'mentor_assigned': '{actor} 分配了导师',
     'activate': '{actor} 启用了用户账号',

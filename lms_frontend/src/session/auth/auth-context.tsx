@@ -4,12 +4,7 @@ import { apiClient } from '@/lib/api-client';
 import type { AuthSessionPayload, LoginRequest, LoginResponse, SwitchRoleResponse } from '@/types/auth';
 import type { CapabilityMap } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
-import {
-  clearStoredAuthSession,
-  commitAuthSession,
-  getStoredRefreshToken,
-  hasStoredAuthSession,
-} from '@/lib/auth-session';
+import { tokenStorage } from '@/lib/token-storage';
 
 interface AuthState {
   user: UserInfo | null;
@@ -56,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     promise: Promise<SwitchRoleResponse>;
   } | null>(null);
   const [state, setState] = useState<AuthState>(() => {
-    const hasTokens = hasStoredAuthSession();
+    const hasTokens = tokenStorage.hasTokens();
 
     return {
       user: null,
@@ -70,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const resetAuthState = useCallback(() => {
-    clearStoredAuthSession();
+    tokenStorage.clearTokens();
     setState(buildLoggedOutState());
   }, []);
 
@@ -91,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const refreshUser = useCallback(async () => {
-    if (!hasStoredAuthSession()) {
+    if (!tokenStorage.hasTokens()) {
       setState(buildLoggedOutState());
       return;
     }
@@ -105,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyAuthSession, resetAuthState]);
 
   const completeLogin = useCallback((response: LoginResponse) => {
-    commitAuthSession(response);
+    tokenStorage.setTokenPair(response);
     applyAuthSession(response, { isSwitching: false });
     return response.current_role;
   }, [applyAuthSession]);
@@ -125,14 +120,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [completeLogin]);
 
   const logout = useCallback(async () => {
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
-      try {
-        await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
-      } catch {
-        void 0;
-      }
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
     }
+    await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
     resetAuthState();
   }, [resetAuthState]);
 
@@ -158,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
         await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
       }
-      commitAuthSession(response);
+      tokenStorage.setTokenPair(response);
       applyAuthSession(response, { isSwitching: false });
     } catch (error) {
       const elapsed = Date.now() - sharedRequest.startedAt;

@@ -1,6 +1,5 @@
 import { config } from '@/config/app-config';
 import { tokenStorage } from './token-storage';
-import { clearStoredAuthSession, commitAuthSession, getStoredRefreshToken } from './auth-session';
 import { ROUTES } from '@/config/routes';
 
 /**
@@ -69,7 +68,7 @@ class ApiClient {
       return this.refreshPromise;
     }
 
-    const refreshToken = getStoredRefreshToken();
+    const refreshToken = tokenStorage.getRefreshToken();
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -91,13 +90,13 @@ class ApiClient {
         access_token: string;
         refresh_token: string;
       }>;
-      commitAuthSession(responseData.data);
+      tokenStorage.setTokenPair(responseData.data);
     })();
 
     try {
       await this.refreshPromise;
     } catch (error) {
-      clearStoredAuthSession();
+      tokenStorage.clearTokens();
       throw error;
     } finally {
       this.refreshPromise = null;
@@ -170,7 +169,7 @@ class ApiClient {
         });
       } catch (error) {
         // 刷新失败，跳转到登录页
-        clearStoredAuthSession();
+        tokenStorage.clearTokens();
         window.location.href = ROUTES.LOGIN;
         throw error;
       }

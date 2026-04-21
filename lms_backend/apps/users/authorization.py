@@ -27,7 +27,7 @@ AUTHORIZATION_SPECS = (
             perm(
                 code='user.activate',
                 name='启停账号',
-                description='启用/停用账号并重置密码',
+                description='启用/停用账号并修改密码',
             ),
             perm(
                 code='user.authorize',

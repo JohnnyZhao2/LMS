@@ -9,12 +9,11 @@ import {
   Lock,
   Ban,
   CheckCircle,
-  ShieldCheck,
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from '@/entities/user/api/get-users'
-import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
+import { useActivateUser, useChangePassword, useDeactivateUser, useDeleteUser, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
 import { UserForm } from "./user-form"
 import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"
@@ -30,9 +29,10 @@ import {
 import { CellWithAvatar, CellTags, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
@@ -49,7 +49,7 @@ export const UserList: React.FC = () => {
   const canUpdateUser = hasCapability('user.update')
   const canManageUserAccount = hasCapability('user.activate')
   const canDeleteUser = hasCapability('user.delete')
-  const canResetPassword = canManageUserAccount
+  const canChangePassword = canManageUserAccount
   const canOpenUserEditor = canUpdateUser || hasCapability('user.authorize')
   const canAdminEditAvatar = hasCapability('user.avatar.update')
   const userIdParam = searchParams.get('user_id')
@@ -69,14 +69,13 @@ export const UserList: React.FC = () => {
   // 用户操作状态
   const [formModalOpen, setFormModalOpen] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<number | undefined>()
-  const [resetPasswordDialog, setResetPasswordDialog] = React.useState<{
+  const [changePasswordDialog, setChangePasswordDialog] = React.useState<{
     open: boolean
     userId?: number
+    username?: string
   }>({ open: false })
-  const [tempPasswordDialog, setTempPasswordDialog] = React.useState<{
-    open: boolean
-    password?: string
-  }>({ open: false })
+  const [newPassword, setNewPassword] = React.useState('')
+  const [passwordError, setPasswordError] = React.useState<string>()
   const [deleteUserDialog, setDeleteUserDialog] = React.useState<{
     open: boolean
     user?: UserListType
@@ -115,7 +114,7 @@ export const UserList: React.FC = () => {
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
   const deleteUser = useDeleteUser()
-  const resetPassword = useResetPassword()
+  const changePassword = useChangePassword()
   const updateUserAvatar = useUpdateUserAvatar()
 
   // 筛选变化时重置页码
@@ -145,12 +144,30 @@ export const UserList: React.FC = () => {
     }
   }
 
-  const handleResetPassword = async () => {
-    if (!resetPasswordDialog.userId) return
+  const closeChangePasswordDialog = () => {
+    setChangePasswordDialog({ open: false })
+    setNewPassword('')
+    setPasswordError(undefined)
+  }
+
+  const openChangePasswordDialog = (user: UserListType) => {
+    setChangePasswordDialog({ open: true, userId: user.id, username: user.username })
+    setNewPassword('')
+    setPasswordError(undefined)
+  }
+
+  const handleChangePassword = async () => {
+    if (!changePasswordDialog.userId) return
+    const password = newPassword.trim()
+    if (!password) {
+      setPasswordError('请输入新密码')
+      return
+    }
+
     try {
-      const result = await resetPassword.mutateAsync(resetPasswordDialog.userId)
-      setResetPasswordDialog({ open: false })
-      setTempPasswordDialog({ open: true, password: result.temporary_password })
+      await changePassword.mutateAsync({ userId: changePasswordDialog.userId, password })
+      toast.success("密码已修改")
+      closeChangePasswordDialog()
     } catch (error) {
       showApiError(error)
     }
@@ -280,13 +297,13 @@ export const UserList: React.FC = () => {
               <Pencil className="h-4 w-4" />
             </Button>
           </Tooltip>
-          {canResetPassword && (
-            <Tooltip title="重置密码">
+          {canChangePassword && (
+            <Tooltip title="修改密码">
               <Button
                 variant="ghost"
                 size="icon"
                 className={LIST_ACTION_ICON_WARNING_CLASS}
-                onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
+                onClick={() => openChangePasswordDialog(row.original)}
               >
                 <Lock className="h-4 w-4" />
               </Button>
@@ -332,7 +349,7 @@ export const UserList: React.FC = () => {
     },
   ]
 
-    return (
+  return (
     <>
       <PageFillShell>
         <PageHeader
@@ -416,26 +433,61 @@ export const UserList: React.FC = () => {
         }}
       />
 
-      {/* Reset Password Confirm Dialog */}
-      <ConfirmDialog
-        open={resetPasswordDialog.open}
-        onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
-        title="重置密码？"
-        description={
-          <>
-            系统将生成一个<span className="text-primary-600 font-semibold">临时密码</span>。<br />
-            用户下次登录时必须修改。
-          </>
-        }
-        icon={<Lock className="h-10 w-10" />}
-        iconBgColor="bg-primary-100"
-        iconColor="text-primary-600"
-        confirmText="确认重置"
-        cancelText="取消"
-        confirmVariant="destructive"
-        onConfirm={handleResetPassword}
-        isConfirming={resetPassword.isPending}
-      />
+      <Dialog
+        open={changePasswordDialog.open}
+        onOpenChange={(open) => {
+          if (!open) closeChangePasswordDialog()
+        }}
+      >
+        <DialogContent className="max-w-md rounded-xl border border-border p-7 [&>button]:hidden">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-warning-100 text-warning">
+              <Lock className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center text-xl font-bold text-foreground">修改密码</DialogTitle>
+            <DialogDescription className="text-center text-sm text-text-muted">
+              {changePasswordDialog.username ? `为「${changePasswordDialog.username}」设置新密码` : '设置新密码'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-5 space-y-2">
+            <Input
+              type="password"
+              value={newPassword}
+              autoFocus
+              placeholder="输入新密码"
+              onChange={(event) => {
+                setNewPassword(event.target.value)
+                setPasswordError(undefined)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  void handleChangePassword()
+                }
+              }}
+            />
+            {passwordError && <p className="text-xs font-bold text-destructive">{passwordError}</p>}
+          </div>
+
+          <div className="mt-6 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeChangePasswordDialog}
+              disabled={changePassword.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleChangePassword()}
+              disabled={changePassword.isPending}
+            >
+              {changePassword.isPending ? '保存中' : '保存'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={deleteUserDialog.open}
@@ -457,45 +509,6 @@ export const UserList: React.FC = () => {
         isConfirming={deleteUser.isPending}
       />
 
-      {/* Temp Password Dialog */}
-      <Dialog
-        open={tempPasswordDialog.open}
-        onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
-      >
-        <DialogContent className="rounded-xl max-w-md p-8 border border-border">
-          <DialogHeader>
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-secondary-100 text-secondary">
-              <ShieldCheck className="h-8 w-8" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-foreground text-center">重置成功</DialogTitle>
-            <DialogDescription className="text-text-muted text-center text-sm">
-              请务必将此密码<span className="text-foreground font-semibold">安全地</span>转交给用户
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-6 cursor-pointer" onClick={() => {
-            navigator.clipboard.writeText(tempPasswordDialog.password || '');
-            toast.success('密码已复制');
-          }}>
-            <div className="bg-muted rounded-xl p-6 text-center hover:bg-muted transition-colors">
-              <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 block">临时密码</span>
-              <code className="text-2xl font-bold text-primary-600 tracking-widest font-mono">
-                {tempPasswordDialog.password}
-              </code>
-              <div className="mt-3 text-xs font-medium text-text-muted">点击复制</div>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-6">
-            <Button
-              onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-primary text-white rounded-lg h-11 font-semibold hover:bg-primary-600 "
-            >
-              完成并关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
