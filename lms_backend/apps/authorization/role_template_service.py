@@ -17,9 +17,7 @@ from .constants import (
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
-    SCOPE_DESCRIPTIONS,
     SYSTEM_MANAGED_PERMISSION_CODES,
-    VISIBLE_SCOPE_CHOICES,
 )
 from .models import Permission, RolePermission
 from .selectors import get_permissions_by_codes
@@ -156,18 +154,6 @@ class RoleTemplateServiceMixin:
                 'default_scope_types': default_scope_types,
             })
         return scope_groups
-
-    def get_role_scope_options(self, role_code: str) -> List[dict]:
-        default_scope_types = set(self.get_role_default_scope_types(role_code))
-        return [
-            {
-                'code': scope_code,
-                'label': scope_label,
-                'description': SCOPE_DESCRIPTIONS.get(scope_code, ''),
-                'inherited_by_default': scope_code in default_scope_types,
-            }
-            for scope_code, scope_label in VISIBLE_SCOPE_CHOICES
-        ]
 
     @transaction.atomic
     @log_operation(

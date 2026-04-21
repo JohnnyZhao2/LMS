@@ -1,5 +1,7 @@
 """Authorization serializers."""
 
+from collections.abc import Mapping
+
 from rest_framework import serializers
 
 from apps.users.models import Role
@@ -12,12 +14,23 @@ from .constants import (
     SCOPE_AWARE_PERMISSION_CODES,
     SCOPE_CHOICES,
     SCOPE_EXPLICIT_USERS,
-    VISIBLE_SCOPE_CHOICES,
 )
 from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
 
 
 NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'STUDENT']
+
+
+class StrictSerializer(serializers.Serializer):
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping):
+            unknown_fields = sorted(set(data) - set(self.fields))
+            if unknown_fields:
+                raise serializers.ValidationError({
+                    field: '不支持的字段'
+                    for field in unknown_fields
+                })
+        return super().to_internal_value(data)
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -63,13 +76,6 @@ class PermissionSerializer(serializers.ModelSerializer):
         ]
 
 
-class ScopeOptionSerializer(serializers.Serializer):
-    code = serializers.ChoiceField(choices=VISIBLE_SCOPE_CHOICES)
-    label = serializers.CharField()
-    description = serializers.CharField()
-    inherited_by_default = serializers.BooleanField()
-
-
 class RoleScopeGroupSerializer(serializers.Serializer):
     key = serializers.CharField()
     permission_codes = serializers.ListField(
@@ -77,7 +83,7 @@ class RoleScopeGroupSerializer(serializers.Serializer):
         allow_empty=False,
     )
     default_scope_types = serializers.ListField(
-        child=serializers.ChoiceField(choices=VISIBLE_SCOPE_CHOICES),
+        child=serializers.ChoiceField(choices=SCOPE_CHOICES),
         allow_empty=True,
     )
 
@@ -93,15 +99,14 @@ class RolePermissionSerializer(serializers.Serializer):
 
 class RolePermissionTemplateSerializer(RolePermissionSerializer):
     default_scope_types = serializers.ListField(
-        child=serializers.ChoiceField(choices=VISIBLE_SCOPE_CHOICES),
+        child=serializers.ChoiceField(choices=SCOPE_CHOICES),
         allow_empty=True,
         help_text='该角色默认继承的数据范围',
     )
-    scope_options = ScopeOptionSerializer(many=True, help_text='当前角色可选的数据范围')
     scope_groups = RoleScopeGroupSerializer(many=True, help_text='按能力组聚合的默认范围')
 
 
-class UserPermissionOverrideCreateSerializer(serializers.Serializer):
+class UserPermissionOverrideCreateSerializer(StrictSerializer):
     permission_code = serializers.CharField(help_text='权限编码')
     effect = serializers.ChoiceField(choices=EFFECT_CHOICES, help_text='覆盖效果')
     applies_to_role = serializers.ChoiceField(
@@ -110,29 +115,8 @@ class UserPermissionOverrideCreateSerializer(serializers.Serializer):
         allow_null=True,
         help_text='仅对某个激活角色生效（可选）',
     )
-    scope_type = serializers.ChoiceField(choices=SCOPE_CHOICES, help_text='覆盖范围')
-    scope_user_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1),
-        required=False,
-        allow_empty=True,
-        help_text='指定用户ID列表（scope_type=EXPLICIT_USERS 时使用）',
-    )
     reason = serializers.CharField(required=False, allow_blank=True, default='')
     expires_at = serializers.DateTimeField(required=False, allow_null=True)
-
-    def validate(self, attrs):
-        scope_type = attrs.get('scope_type')
-        scope_user_ids = attrs.get('scope_user_ids') or []
-        normalized_scope_user_ids = sorted({int(user_id) for user_id in scope_user_ids})
-
-        if scope_type == SCOPE_EXPLICIT_USERS and not normalized_scope_user_ids:
-            raise serializers.ValidationError({'scope_user_ids': '指定用户范围必须至少选择一个用户'})
-
-        if scope_type != SCOPE_EXPLICIT_USERS and normalized_scope_user_ids:
-            raise serializers.ValidationError({'scope_user_ids': '仅当范围为指定用户时才允许传 scope_user_ids'})
-
-        attrs['scope_user_ids'] = normalized_scope_user_ids
-        return attrs
 
 
 class UserPermissionOverrideSerializer(serializers.ModelSerializer):
@@ -149,8 +133,6 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
             'permission_name',
             'effect',
             'applies_to_role',
-            'scope_type',
-            'scope_user_ids',
             'reason',
             'expires_at',
             'is_active',
@@ -163,7 +145,7 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
         ]
 
 
-class UserScopeGroupOverrideCreateSerializer(serializers.Serializer):
+class UserScopeGroupOverrideCreateSerializer(StrictSerializer):
     scope_group_key = serializers.CharField(help_text='范围组键')
     effect = serializers.ChoiceField(choices=EFFECT_CHOICES, help_text='覆盖效果')
     applies_to_role = serializers.ChoiceField(

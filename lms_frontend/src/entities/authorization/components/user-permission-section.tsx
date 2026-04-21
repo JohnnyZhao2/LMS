@@ -18,8 +18,6 @@ import type { RoleCode } from '@/types/common';
 import type { Department, UserList as UserDetail } from '@/types/common';
 import { KeyRound } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PermissionModuleSections } from '@/entities/authorization/components/permission-module-sections';
-import { PermissionToggleCard } from '@/entities/authorization/components/permission-toggle-card';
 import {
   buildPermissionModuleSections,
   buildScopeAwarePermissionCodeSet,
@@ -27,12 +25,8 @@ import {
 } from '@/entities/authorization/utils/permission-sections';
 
 import { useUsers } from '@/entities/user/api/get-users';
-import { UserPermissionScopePopover } from './user-permission-scope-popover';
-import {
-  DEFAULT_ROLE_SCOPE_TYPES,
-  normalizeScopeTypes,
-  sameScopeTypes,
-} from './user-form.utils';
+import { DEFAULT_ROLE_SCOPE_TYPES, normalizeScopeTypes } from './user-form.utils';
+import { UserPermissionModuleList } from './user-permission-module-list';
 import {
   mapPermissionOverrideEntry,
   mapScopeGroupOverrideEntry,
@@ -86,7 +80,6 @@ export function UserPermissionSection({
     refetch: refetchUserOverrides,
   } = useUserPermissionOverrides(
     userId ?? null,
-    false,
     shouldLoadUserOverrides,
   );
   const {
@@ -94,7 +87,6 @@ export function UserPermissionSection({
     refetch: refetchScopeGroupOverrides,
   } = useUserScopeGroupOverrides(
     userId ?? null,
-    false,
     shouldLoadUserOverrides,
   );
   const createUserOverride = useCreateUserPermissionOverride();
@@ -393,75 +385,38 @@ export function UserPermissionSection({
         )}
 
         <div className="relative">
-          <PermissionModuleSections
-            sections={moduleSectionsBase.map((section) => ({
-              module: section.module,
-              permissions: section.permissions,
-              sectionAction: section.scopeGroupKey ? (
-                <div className="w-full lg:w-[220px]">
-                  <UserPermissionScopePopover
-                    open={showScopeAdjustPanel && openScopeGroupKey === section.scopeGroupKey}
-                    onOpenChange={(open) => {
-                      setOpenScopeGroupKey(open ? section.scopeGroupKey : null);
-                      setShowScopeAdjustPanel(open);
-                    }}
-                    summary={
-                      openScopeGroupKey === section.scopeGroupKey
-                        ? formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)
-                        : (section.scopeSummary ?? '设置范围')
-                    }
-                    scopeFilterOptions={scopeFilterOptions}
-                    availableScopeTypes={availableScopeTypes}
-                    selectedPermissionScopes={selectedPermissionScopes}
-                    onSelectPresetScope={selectPresetScope}
-                    scopeUserFilter={scopeUserFilter}
-                    onScopeFilterChange={handleScopeFilterChange}
-                    showReset={openScopeGroupKey === section.scopeGroupKey
-                      && !sameScopeTypes(
-                        selectedPermissionScopes,
-                        activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
-                      )}
-                    onReset={() => {
-                      applyDefaultScopePreset();
-                      setScopeUserFilter('all');
-                    }}
-                    scopeUserSearch={scopeUserSearch}
-                    onScopeUserSearchChange={setScopeUserSearch}
-                    isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
-                    hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
-                    onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
-                    selectedFilteredScopeCount={selectedFilteredScopeCount}
-                    filteredScopeUsers={filteredScopeUsers}
-                    selectedScopeUserIds={selectedScopeUserIds}
-                    onToggleScopeUser={toggleScopeUser}
-                    isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
-                    onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
-                    isScopeUsersLoading={isScopeUsersLoading}
-                    dialogContentElement={dialogContentElement}
-                  />
-                </div>
-              ) : null,
-            }))}
-            renderPermissionCard={(permission) => {
-              const permissionState = getPermissionState(permission.code);
-              const disabled = Boolean(
-                isPermissionSaving(permission.code)
-                || (permissionState.checked
-                  ? permissionState.disableBlockedReason
-                  : permissionState.enableBlockedReason),
-              );
-
-              return (
-                <PermissionToggleCard
-                  key={permission.code}
-                  permission={permission}
-                  checked={permissionState.checked}
-                  disabled={disabled}
-                  isSaving={isPermissionSaving(permission.code)}
-                  onToggle={(nextChecked) => void handlePermissionToggle(permission.code, nextChecked)}
-                />
-              );
-            }}
+          <UserPermissionModuleList
+            activeScopeSection={activeScopeSection}
+            availableScopeTypes={availableScopeTypes}
+            dialogContentElement={dialogContentElement}
+            filteredScopeUsers={filteredScopeUsers}
+            formatScopeSummaryForDisplay={formatScopeSummaryForDisplay}
+            getPermissionState={getPermissionState}
+            handlePermissionToggle={handlePermissionToggle}
+            handleScopeFilterChange={handleScopeFilterChange}
+            hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
+            isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
+            isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
+            isPermissionSaving={isPermissionSaving}
+            isScopeUsersLoading={isScopeUsersLoading}
+            moduleSections={moduleSectionsBase}
+            onApplyDefaultScopePreset={applyDefaultScopePreset}
+            onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
+            onOpenScopeGroupChange={setOpenScopeGroupKey}
+            onScopeUserSearchChange={setScopeUserSearch}
+            onSelectPresetScope={selectPresetScope}
+            onSetScopeUserFilter={setScopeUserFilter}
+            onSetShowScopeAdjustPanel={setShowScopeAdjustPanel}
+            onToggleScopeUser={toggleScopeUser}
+            onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
+            openScopeGroupKey={openScopeGroupKey}
+            scopeFilterOptions={scopeFilterOptions}
+            scopeUserFilter={scopeUserFilter}
+            scopeUserSearch={scopeUserSearch}
+            selectedFilteredScopeCount={selectedFilteredScopeCount}
+            selectedPermissionScopes={selectedPermissionScopes}
+            selectedScopeUserIds={selectedScopeUserIds}
+            showScopeAdjustPanel={showScopeAdjustPanel}
           />
         </div>
       </div>

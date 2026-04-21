@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from django.db import transaction
 from django.db.models import Q
@@ -10,7 +10,6 @@ from apps.users.models import User
 from core.exceptions import BusinessError, ErrorCodes
 
 from .constants import (
-    CONDITIONAL_PERMISSION_CODES,
     CONFIG_MODULE_PERMISSION_CODES,
     EFFECT_ALLOW,
     EFFECT_DENY,
@@ -20,11 +19,8 @@ from .constants import (
     REGISTERED_PERMISSION_CODES,
     SCOPE_ALL,
     SCOPE_AWARE_PERMISSION_CODES,
-    SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
     SCOPE_GROUP_RULES,
-    SCOPE_MENTEES,
-    SCOPE_SELF,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
 from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
@@ -32,54 +28,11 @@ from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
 
 class UserOverrideServiceMixin:
     @staticmethod
-    def _supports_scope_override(permission_code: str) -> bool:
-        return permission_code in SCOPE_AWARE_PERMISSION_CODES
-
-    @staticmethod
     def _get_scope_group_key(permission_code: str) -> Optional[str]:
         return PERMISSION_SCOPE_GROUP_KEY_MAP.get(permission_code)
 
     def _resolve_role(self, role_code: Optional[str] = None) -> Optional[str]:
         return role_code or resolve_current_role(self.user)
-
-    def _resolve_target_user(
-        self,
-        *,
-        target_user: Optional[User] = None,
-        target_user_id: Optional[int] = None,
-    ) -> Optional[User]:
-        if target_user is not None:
-            return target_user
-        if target_user_id is None:
-            return None
-        return User.objects.select_related('department', 'mentor').filter(pk=target_user_id).first()
-
-    def _match_scope(
-        self,
-        override: UserPermissionOverride,
-        *,
-        actor: Optional[User],
-        target_user: Optional[User],
-    ) -> bool:
-        scope_type = override.scope_type
-
-        if scope_type == SCOPE_ALL:
-            return True
-        if not actor or target_user is None:
-            return False
-
-        target_user_id = target_user.id
-        if scope_type == SCOPE_SELF:
-            return target_user_id == actor.id
-        if scope_type == SCOPE_MENTEES:
-            return target_user.mentor_id == actor.id
-        if scope_type == SCOPE_DEPARTMENT:
-            if not actor.department_id:
-                return False
-            return target_user.department_id == actor.department_id
-        if scope_type == SCOPE_EXPLICIT_USERS:
-            return target_user_id in set(override.scope_user_ids or [])
-        return False
 
     def _resolve_override_effect(
         self,
@@ -87,7 +40,6 @@ class UserOverrideServiceMixin:
         acting_user: Optional[User],
         permission_code: str,
         current_role: Optional[str],
-        target_user: Optional[User],
     ) -> Optional[str]:
         if permission_code in SYSTEM_MANAGED_PERMISSION_CODES:
             return None
@@ -104,8 +56,6 @@ class UserOverrideServiceMixin:
 
         allow_matched = False
         for override in overrides:
-            if not self._match_scope(override, actor=acting_user, target_user=target_user):
-                continue
             if override.effect == EFFECT_DENY:
                 return EFFECT_DENY
             if override.effect == EFFECT_ALLOW:
@@ -236,17 +186,13 @@ class UserOverrideServiceMixin:
         permission_code: str,
         *,
         current_role: Optional[str] = None,
-        target_user: Optional[User] = None,
-        target_user_id: Optional[int] = None,
     ) -> bool:
         resolved_role = self._resolve_role(current_role)
-        resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
         return (
             self._resolve_override_effect(
                 acting_user=self.user,
                 permission_code=permission_code,
                 current_role=resolved_role,
-                target_user=resolved_target,
             )
             == EFFECT_ALLOW
         )
@@ -257,8 +203,6 @@ class UserOverrideServiceMixin:
         *,
         acting_user: Optional[User] = None,
         current_role: Optional[str] = None,
-        target_user: Optional[User] = None,
-        target_user_id: Optional[int] = None,
     ) -> bool:
         base_user = acting_user or self.user
         if not base_user or not base_user.is_authenticated:
@@ -267,12 +211,10 @@ class UserOverrideServiceMixin:
             return True
 
         resolved_role = self._resolve_role(current_role)
-        resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
         override_effect = self._resolve_override_effect(
             acting_user=base_user,
             permission_code=permission_code,
             current_role=resolved_role,
-            target_user=resolved_target,
         )
 
         if override_effect == EFFECT_DENY:
@@ -322,14 +264,8 @@ class UserOverrideServiceMixin:
                 acting_user=user,
                 current_role=resolved_role,
             ) if resolved_role else False
-            scope_types = self.get_permission_scope_types(
-                permission_code=permission_code,
-                current_role=resolved_role,
-            ) if resolved_role else []
             capability_map[permission_code] = {
                 'allowed': allowed,
-                'conditional': permission_code in CONDITIONAL_PERMISSION_CODES,
-                'scope_types': scope_types,
             }
         return capability_map
 
@@ -337,14 +273,12 @@ class UserOverrideServiceMixin:
         self,
         *,
         user_id: int,
-        include_inactive: bool = False,
     ) -> List[UserPermissionOverride]:
         queryset = UserPermissionOverride.objects.select_related('permission', 'granted_by', 'revoked_by').filter(user_id=user_id)
-        if not include_inactive:
-            queryset = queryset.filter(
-                is_active=True,
-                revoked_at__isnull=True,
-            ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+        queryset = queryset.filter(
+            is_active=True,
+            revoked_at__isnull=True,
+        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override
@@ -352,10 +286,6 @@ class UserOverrideServiceMixin:
             if (
                 override.permission.code in REGISTERED_PERMISSION_CODES
                 and override.permission.code not in CONFIG_MODULE_PERMISSION_CODES
-                and not (
-                    override.permission.code in SCOPE_AWARE_PERMISSION_CODES
-                    and override.scope_type != SCOPE_ALL
-                )
             )
         ]
 
@@ -363,7 +293,7 @@ class UserOverrideServiceMixin:
     @log_operation(
         'authorization',
         'create_user_permission_override',
-        '权限：{permission_code}；效果：{effect_label}；范围：{scope_type_label}',
+        '权限：{permission_code}；效果：{effect_label}',
         target_type='user',
         target_title_template='{result.user.username}',
         group='用户授权',
@@ -376,8 +306,6 @@ class UserOverrideServiceMixin:
         permission_code: str,
         effect: str,
         applies_to_role: Optional[str],
-        scope_type: str,
-        scope_user_ids: Optional[List[int]] = None,
         reason: str = '',
         expires_at=None,
     ) -> UserPermissionOverride:
@@ -417,50 +345,11 @@ class UserOverrideServiceMixin:
                 message='学员角色为固定工作台角色，不支持配置用户权限覆盖',
             )
 
-        normalized_scope_type = scope_type
-        normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
-        if permission.code in SCOPE_AWARE_PERMISSION_CODES and (
-            normalized_scope_type != SCOPE_ALL or normalized_scope_user_ids
-        ):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='范围感知权限不再支持通过旧权限覆盖接口配置对象范围，请改用范围组覆盖接口',
-            )
-        if not self._supports_scope_override(permission.code):
-            normalized_scope_type = SCOPE_ALL
-            normalized_scope_user_ids = []
-
-        if normalized_scope_type == SCOPE_EXPLICIT_USERS:
-            if not normalized_scope_user_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='指定用户范围必须至少选择一个用户',
-                )
-            valid_scope_user_ids = set(
-                User.objects.filter(
-                    id__in=normalized_scope_user_ids,
-                    is_active=True,
-                ).values_list('id', flat=True)
-            )
-            invalid_scope_user_ids = sorted(set(normalized_scope_user_ids) - valid_scope_user_ids)
-            if invalid_scope_user_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'指定用户不存在或已停用: {invalid_scope_user_ids}',
-                )
-        elif normalized_scope_user_ids:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='仅当范围为指定用户时才允许传 scope_user_ids',
-            )
-
         return UserPermissionOverride.objects.create(
             user=target_user,
             permission=permission,
             effect=effect,
             applies_to_role=normalized_applies_to_role,
-            scope_type=normalized_scope_type,
-            scope_user_ids=normalized_scope_user_ids,
             reason=reason,
             expires_at=expires_at,
             granted_by=self.user,
@@ -470,14 +359,12 @@ class UserOverrideServiceMixin:
         self,
         *,
         user_id: int,
-        include_inactive: bool = False,
     ) -> List[UserScopeGroupOverride]:
         queryset = UserScopeGroupOverride.objects.select_related('granted_by', 'revoked_by').filter(user_id=user_id)
-        if not include_inactive:
-            queryset = queryset.filter(
-                is_active=True,
-                revoked_at__isnull=True,
-            ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+        queryset = queryset.filter(
+            is_active=True,
+            revoked_at__isnull=True,
+        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override

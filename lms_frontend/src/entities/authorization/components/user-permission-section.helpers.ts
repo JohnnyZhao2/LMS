@@ -1,6 +1,5 @@
 import type {
   PermissionOverrideEffect,
-  PermissionOverrideScope,
   UserPermissionOverride,
   UserScopeGroupOverride,
 } from '@/types/authorization';
@@ -12,8 +11,6 @@ interface OverrideSignatureParts {
   permissionCode: string;
   effect: PermissionOverrideEffect;
   appliesToRole: RoleCode | null;
-  scopeType: PermissionOverrideScope;
-  scopeUserIds: number[];
 }
 
 export const normalizeScopeUserIds = (scopeUserIds: number[]): number[] => (
@@ -24,25 +21,19 @@ const buildOverrideSignature = ({
   permissionCode,
   effect,
   appliesToRole,
-  scopeType,
-  scopeUserIds,
 }: OverrideSignatureParts): string => [
   permissionCode,
   effect,
   appliesToRole ?? 'ALL_ROLES',
-  scopeType,
-  normalizeScopeUserIds(scopeUserIds).join(','),
 ].join('|');
 
 export const getOverrideSignature = (override: Pick<
   PermissionOverrideEntry,
-  'permissionCode' | 'effect' | 'appliesToRole' | 'scopeType' | 'scopeUserIds'
+  'permissionCode' | 'effect' | 'appliesToRole'
 >): string => buildOverrideSignature({
   permissionCode: override.permissionCode,
   effect: override.effect,
   appliesToRole: override.appliesToRole,
-  scopeType: override.scopeType,
-  scopeUserIds: override.scopeUserIds,
 });
 
 export const mapPermissionOverrideEntry = (
@@ -52,8 +43,6 @@ export const mapPermissionOverrideEntry = (
   permissionCode: override.permission_code,
   effect: override.effect,
   appliesToRole: override.applies_to_role,
-  scopeType: override.scope_type,
-  scopeUserIds: normalizeScopeUserIds(override.scope_user_ids),
 });
 
 export const mapScopeGroupOverrideEntry = (

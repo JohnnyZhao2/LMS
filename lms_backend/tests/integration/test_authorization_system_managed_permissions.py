@@ -1,8 +1,6 @@
-import importlib
 from typing import Optional
 
 import pytest
-from django.apps import apps
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
@@ -308,7 +306,6 @@ def test_system_managed_permissions_cannot_be_overridden_per_user():
         {
             'permission_code': 'submission.answer',
             'effect': 'ALLOW',
-            'scope_type': 'ALL',
             'reason': 'should fail',
         },
         format='json',
@@ -320,11 +317,10 @@ def test_system_managed_permissions_cannot_be_overridden_per_user():
 
 
 @pytest.mark.django_db
-def test_non_scope_permission_override_is_normalized_to_all_and_takes_effect():
+def test_permission_override_takes_effect_without_scope_payload():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_NORMALIZE_ADMIN', username='Scope Normalize Super')
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_NORMALIZE_MENTOR', username='Scope Normalize Mentor', role_code='MENTOR')
-    student_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_NORMALIZE_STU', username='Scope Normalize Student', role_code='STUDENT')
     _authenticate(client, employee_id=admin_user.employee_id)
 
     override_response = client.post(
@@ -333,16 +329,13 @@ def test_non_scope_permission_override_is_normalized_to_all_and_takes_effect():
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
-            'scope_type': 'EXPLICIT_USERS',
-            'scope_user_ids': [student_user.id],
-            'reason': 'normalize to global',
+            'reason': 'grant permission',
         },
         format='json',
     )
 
     assert override_response.status_code == 201
-    assert override_response.data['data']['scope_type'] == 'ALL'
-    assert override_response.data['data']['scope_user_ids'] == []
+    assert override_response.data['data']['permission_code'] == 'knowledge.update'
 
     payload = _authenticate(client, employee_id=mentor_user.employee_id, role_code='MENTOR')
     assert payload['capabilities']['knowledge.update']['allowed'] is True
@@ -375,7 +368,6 @@ def test_student_role_cannot_be_used_for_user_override_applies_to_role():
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
             'applies_to_role': 'STUDENT',
-            'scope_type': 'ALL',
             'reason': 'should reject student role',
         },
         format='json',
@@ -401,7 +393,6 @@ def test_super_admin_cannot_be_target_of_user_permission_override():
         {
             'permission_code': 'knowledge.update',
             'effect': 'DENY',
-            'scope_type': 'ALL',
             'reason': 'should reject super admin target',
         },
         format='json',
@@ -429,7 +420,6 @@ def test_student_current_role_ignores_user_permission_overrides():
         {
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
-            'scope_type': 'ALL',
             'reason': 'global override for non-student roles',
         },
         format='json',
@@ -629,9 +619,6 @@ def test_role_permission_template_response_includes_default_scope_types():
     assert set(scope_group_map['task_student_scope']['permission_codes']) == {'task.assign', 'task.analytics.view'}
     assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
-    assert any(option['code'] == 'SELF' and option['inherited_by_default'] for option in payload['scope_options'])
-    assert any(option['code'] == 'MENTEES' and option['inherited_by_default'] for option in payload['scope_options'])
-    assert any(option['code'] == 'EXPLICIT_USERS' and not option['inherited_by_default'] for option in payload['scope_options'])
 
 
 @pytest.mark.django_db
@@ -653,27 +640,28 @@ def test_sync_authorization_restores_role_default_scope_groups():
 
 
 @pytest.mark.django_db
-def test_self_scoped_override_does_not_grant_global_page_access_without_target_user():
+def test_user_permission_override_rejects_legacy_scope_payload():
     client = APIClient()
-    admin_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_ADMIN', username='Scope Fix Admin', role_code='ADMIN')
+    admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_FIX_ADMIN', username='Scope Fix Admin')
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_MENTOR', username='Scope Fix Mentor', role_code='MENTOR')
-    permission = Permission.objects.get(code='user.authorize')
+    _authenticate(client, employee_id=admin_user.employee_id)
 
-    UserPermissionOverride.objects.create(
-        user=mentor_user,
-        permission=permission,
-        effect='ALLOW',
-        applies_to_role='MENTOR',
-        scope_type='SELF',
-        scope_user_ids=[],
-        granted_by=admin_user,
+    response = client.post(
+        f'/api/authorization/users/{mentor_user.id}/overrides/',
+        {
+            'permission_code': 'user.authorize',
+            'effect': 'ALLOW',
+            'applies_to_role': 'MENTOR',
+            'scope_type': 'SELF',
+            'scope_user_ids': [],
+        },
+        format='json',
     )
 
-    _authenticate(client, employee_id=mentor_user.employee_id)
-    response = client.get('/api/authorization/permissions/')
-
-    assert response.status_code == 403
-    assert response.data['code'] == 'PERMISSION_DENIED'
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '不支持的字段' in str(response.data)
+    assert not UserPermissionOverride.objects.filter(user=mentor_user, permission__code='user.authorize').exists()
 
 
 @pytest.mark.django_db
@@ -693,7 +681,6 @@ def test_non_admin_role_can_create_log_management_permission_override():
             'permission_code': 'activity_log.view',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
-            'scope_type': 'ALL',
             'reason': 'grant log management access',
         },
         format='json',
@@ -824,45 +811,13 @@ def test_scope_aware_permission_override_api_rejects_scoped_payload():
 
     assert response.status_code == 400
     assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '请改用范围组覆盖接口' in response.data['message']
+    assert '不支持的字段' in str(response.data)
     assert not UserPermissionOverride.objects.filter(
         user=mentor_user,
         permission__code='task.assign',
         applies_to_role='MENTOR',
         is_active=True,
     ).exists()
-
-
-@pytest.mark.django_db
-def test_scope_group_migration_preserves_legacy_all_scope_override():
-    migration_module = importlib.import_module('apps.authorization.migrations.0023_scope_group_overrides')
-
-    mentor_user = _create_user_with_role(
-        employee_id='EMP_AUTH_SCOPE_MIGRATION_MENTOR',
-        username='Scope Migration Mentor',
-        role_code='MENTOR',
-    )
-    permission = Permission.objects.get(code='user.view')
-    UserPermissionOverride.objects.create(
-        user=mentor_user,
-        permission=permission,
-        effect='ALLOW',
-        applies_to_role='MENTOR',
-        scope_type='ALL',
-        scope_user_ids=[],
-        granted_by=mentor_user,
-    )
-
-    migration_module.migrate_scope_aware_user_overrides(apps, None)
-
-    migrated_override = UserScopeGroupOverride.objects.get(
-        user=mentor_user,
-        scope_group_key='user_scope',
-        effect='ALLOW',
-        applies_to_role='MENTOR',
-        scope_type='ALL',
-    )
-    assert migrated_override.scope_user_ids == []
 
 
 @pytest.mark.django_db

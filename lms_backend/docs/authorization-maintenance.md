@@ -11,9 +11,9 @@
   - 代码默认权限同步到 `Permission`
   - 角色模板差异在 `RolePermission`
   - 用户能力例外在 `UserPermissionOverride`
-  - 范围组默认规则来自代码注册表与角色默认规则
+  - 范围组默认规则来自代码注册表
   - 用户范围覆盖在 `UserScopeGroupOverride`
-- 前端说明：`lms_frontend/src/features/authorization/constants/permission-presentation.ts`
+- 前端说明：`lms_frontend/src/entities/authorization/constants/permission-presentation.ts`
 
 现在已经没有 `policies.py` 这个运行时中心。附加约束走两条主链：
 
@@ -23,7 +23,7 @@
 现在的范围模型已经不是“按模块共享”，而是：
 
 - 权限自己声明 `scope_group_key`
-- 默认范围按 `scope_group_key + role` 落库
+- 默认范围按 `scope_group_key + role` 从代码注册表解析
 - 用户页面改的是 `scope_group`，不是单个 permission 的范围
 - `scope-aware permission` 的开关和范围分离：
   - 能力开关看 `RolePermission / UserPermissionOverride`
@@ -45,7 +45,7 @@
 
 ### 前端同步
 
-- 权限说明：`lms_frontend/src/features/authorization/constants/permission-presentation.ts`
+- 权限说明：`lms_frontend/src/entities/authorization/constants/permission-presentation.ts`
 - 路由守卫、菜单显隐、页面入口
 
 ## 同步与校验

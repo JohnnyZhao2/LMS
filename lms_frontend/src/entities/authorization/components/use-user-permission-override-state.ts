@@ -10,7 +10,7 @@ import type { RoleCode } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 
 import { applyPermissionSelectionChange } from '@/entities/authorization/utils/permission-dependencies';
-import { getOverrideSignature, normalizeScopeUserIds } from './user-permission-section.helpers';
+import { getOverrideSignature } from './user-permission-section.helpers';
 import type { PermissionOverrideEntry, PermissionState } from './user-permission-section.types';
 import {
   buildPermissionTogglePlan,
@@ -150,8 +150,6 @@ export const useUserPermissionOverrideState = ({
           payload.permission_code,
           payload.effect,
           payload.applies_to_role ?? '',
-          payload.scope_type,
-          normalizeScopeUserIds(payload.scope_user_ids ?? []).join(','),
         ].join('|'),
         payload,
       ]),
@@ -172,12 +170,7 @@ export const useUserPermissionOverrideState = ({
           uniquePayloadsToCreate.map((payload) =>
             createOverride({
               userId,
-              data: {
-                ...payload,
-                scope_user_ids: payload.scope_type === 'EXPLICIT_USERS'
-                  ? normalizeScopeUserIds(payload.scope_user_ids ?? [])
-                  : [],
-              },
+              data: payload,
             }),
           ),
         );

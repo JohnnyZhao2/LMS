@@ -80,13 +80,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
         db_index=True,
         verbose_name='生效角色',
     )
-    scope_type = models.CharField(
-        max_length=20,
-        choices=SCOPE_CHOICES,
-        default=SCOPE_ALL,
-        verbose_name='作用域类型',
-    )
-    scope_user_ids = models.JSONField(default=list, blank=True, verbose_name='指定用户ID列表')
     reason = models.CharField(max_length=255, default='', blank=True, verbose_name='原因')
     expires_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='过期时间')
     is_active = models.BooleanField(default=True, db_index=True, verbose_name='是否启用')
@@ -123,44 +116,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
     def __str__(self):
         role = self.applies_to_role or 'ALL_ROLES'
         return f'{self.user_id}:{role}:{self.effect}:{self.permission.code}'
-
-
-class PermissionScopeRule(TimestampMixin, models.Model):
-    """Default scope rules keyed by permission + role."""
-
-    permission = models.ForeignKey(
-        Permission,
-        on_delete=models.CASCADE,
-        related_name='scope_rules',
-        verbose_name='权限',
-    )
-    role_code = models.CharField(
-        max_length=20,
-        choices=Role.ROLE_CHOICES,
-        db_index=True,
-        verbose_name='角色代码',
-    )
-    scope_type = models.CharField(
-        max_length=20,
-        choices=SCOPE_CHOICES,
-        db_index=True,
-        verbose_name='范围类型',
-    )
-    is_active = models.BooleanField(default=True, db_index=True, verbose_name='是否启用')
-
-    class Meta:
-        db_table = 'lms_permission_scope_rule'
-        verbose_name = '权限范围规则'
-        verbose_name_plural = '权限范围规则'
-        ordering = ['permission__code', 'role_code', 'scope_type']
-        unique_together = ['permission', 'role_code', 'scope_type']
-        indexes = [
-            models.Index(fields=['permission', 'role_code'], name='perm_scope_rule_p_r_idx'),
-            models.Index(fields=['role_code', 'scope_type'], name='perm_scope_rule_r_s_idx'),
-        ]
-
-    def __str__(self):
-        return f'{self.permission.code}:{self.role_code}:{self.scope_type}'
 
 
 class UserScopeGroupOverride(TimestampMixin, models.Model):

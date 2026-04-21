@@ -37,7 +37,6 @@ def test_scope_allow_override_marks_user_view_capability_as_allowed():
         user=mentor,
         effect='ALLOW',
         applies_to_role='MENTOR',
-        scope_type='ALL',
         granted_by=mentor,
     )
     UserScopeGroupOverride.objects.create(
@@ -60,7 +59,6 @@ def test_scope_allow_override_marks_user_view_capability_as_allowed():
     payload = _switch_role(client, 'MENTOR')
     assert payload['current_role'] == 'MENTOR'
     assert payload['capabilities']['user.view']['allowed'] is True
-    assert payload['capabilities']['user.view']['scope_types'] == ['MENTEES']
 
 
 @pytest.mark.django_db
@@ -96,7 +94,6 @@ def test_scope_allow_override_allows_user_list_access_with_scoped_results():
         user=mentor,
         effect='ALLOW',
         applies_to_role='MENTOR',
-        scope_type='ALL',
         granted_by=mentor,
     )
     UserScopeGroupOverride.objects.create(

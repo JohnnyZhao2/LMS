@@ -128,8 +128,6 @@ def test_authorization_user_permission_override_writes_activity_logs():
         permission_code='knowledge.view',
         effect='ALLOW',
         applies_to_role=None,
-        scope_type=SCOPE_ALL,
-        scope_user_ids=[],
         reason='临时放开',
     )
     service.revoke_user_permission_override(

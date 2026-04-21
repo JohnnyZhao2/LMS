@@ -6,8 +6,6 @@ export interface PermissionOverrideEntry {
   permissionCode: string;
   effect: PermissionOverrideEffect;
   appliesToRole: RoleCode | null;
-  scopeType: PermissionOverrideScope;
-  scopeUserIds: number[];
 }
 
 export interface ScopeGroupOverrideEntry {

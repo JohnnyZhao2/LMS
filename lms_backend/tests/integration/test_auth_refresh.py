@@ -270,7 +270,6 @@ def test_knowledge_view_permission_can_be_denied_by_override():
         permission=permission,
         effect='DENY',
         applies_to_role='ADMIN',
-        scope_type='ALL',
         reason='测试显式拒绝优先级',
         granted_by=admin_user,
     )

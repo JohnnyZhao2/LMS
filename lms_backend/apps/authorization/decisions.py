@@ -1,7 +1,6 @@
 """Authorization decision primitives."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -13,8 +12,6 @@ class AuthorizationDecision:
     message: str = ''
     reason: str = ''
     constraint: str = ''
-    scope_type: Optional[str] = None
-    conditional: bool = False
 
     @classmethod
     def allow(
@@ -24,8 +21,6 @@ class AuthorizationDecision:
         message: str = '',
         reason: str = '',
         constraint: str = '',
-        scope_type: Optional[str] = None,
-        conditional: bool = False,
     ) -> 'AuthorizationDecision':
         return cls(
             allowed=True,
@@ -33,8 +28,6 @@ class AuthorizationDecision:
             message=message,
             reason=reason,
             constraint=constraint,
-            scope_type=scope_type,
-            conditional=conditional,
         )
 
     @classmethod
@@ -45,8 +38,6 @@ class AuthorizationDecision:
         message: str = '',
         reason: str = '',
         constraint: str = '',
-        scope_type: Optional[str] = None,
-        conditional: bool = False,
     ) -> 'AuthorizationDecision':
         return cls(
             allowed=False,
@@ -54,13 +45,11 @@ class AuthorizationDecision:
             message=message,
             reason=reason,
             constraint=constraint,
-            scope_type=scope_type,
-            conditional=conditional,
         )
 
 
 def conditional_allow(permission_code: str, *, constraint: str = '') -> AuthorizationDecision:
-    return AuthorizationDecision.allow(permission_code, constraint=constraint, conditional=True)
+    return AuthorizationDecision.allow(permission_code, constraint=constraint)
 
 
 def conditional_deny(
@@ -75,5 +64,4 @@ def conditional_deny(
         message=message,
         reason=reason,
         constraint=constraint,
-        conditional=True,
     )

@@ -27,6 +27,8 @@ PERMISSION_CATALOG_ACCESS_CODES = (
     'authorization.role_template.update',
     'user.authorize',
 )
+
+
 class PermissionCatalogView(BaseAPIView):
     """Permission catalog management."""
 
@@ -84,7 +86,6 @@ class RolePermissionView(BaseAPIView):
                 'permission_codes': permission_codes,
                 'default_scope_types': self.service.get_role_default_scope_types(role_code),
                 'scope_groups': self.service.get_role_scope_groups(role_code),
-                'scope_options': self.service.get_role_scope_options(role_code),
             }
         )
 
@@ -118,7 +119,6 @@ class RolePermissionView(BaseAPIView):
                 'permission_codes': permission_codes,
                 'default_scope_types': self.service.get_role_default_scope_types(role_code),
                 'scope_groups': self.service.get_role_scope_groups(role_code),
-                'scope_options': self.service.get_role_scope_options(role_code),
             }
         )
 
@@ -131,9 +131,6 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
 
     @extend_schema(
         summary='获取用户权限覆盖规则',
-        parameters=[
-            OpenApiParameter(name='include_inactive', type=bool, description='是否包含失效/撤销规则'),
-        ],
         responses={
             200: UserPermissionOverrideSerializer(many=True),
             403: OpenApiResponse(description='无权限'),
@@ -143,10 +140,8 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
     def get(self, request, user_id: int):
         enforce('user.authorize', request, error_message='只有管理员可以查看用户权限覆盖')
 
-        include_inactive = request.query_params.get('include_inactive') == 'true'
         overrides = self.service.list_user_permission_overrides(
             user_id=user_id,
-            include_inactive=include_inactive,
         )
         serializer = UserPermissionOverrideSerializer(overrides, many=True)
         return list_response(serializer.data)
@@ -172,8 +167,6 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
             permission_code=serializer.validated_data['permission_code'],
             effect=serializer.validated_data['effect'],
             applies_to_role=serializer.validated_data.get('applies_to_role'),
-            scope_type=serializer.validated_data['scope_type'],
-            scope_user_ids=serializer.validated_data.get('scope_user_ids') or [],
             reason=serializer.validated_data.get('reason', ''),
             expires_at=serializer.validated_data.get('expires_at'),
         )
@@ -218,9 +211,6 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
 
     @extend_schema(
         summary='获取用户范围组覆盖规则',
-        parameters=[
-            OpenApiParameter(name='include_inactive', type=bool, description='是否包含失效/撤销规则'),
-        ],
         responses={
             200: UserScopeGroupOverrideSerializer(many=True),
             403: OpenApiResponse(description='无权限'),
@@ -229,10 +219,8 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
     )
     def get(self, request, user_id: int):
         enforce('user.authorize', request, error_message='只有管理员可以查看用户范围组覆盖')
-        include_inactive = request.query_params.get('include_inactive') == 'true'
         overrides = self.service.list_user_scope_group_overrides(
             user_id=user_id,
-            include_inactive=include_inactive,
         )
         serializer = UserScopeGroupOverrideSerializer(overrides, many=True)
         return list_response(serializer.data)

@@ -97,7 +97,7 @@ def validate_authorization_consistency():
     scope_rule_permission_codes = {rule.permission_code for rule in PERMISSION_SCOPE_RULES}
     unknown_scope_rule_permissions = sorted(scope_rule_permission_codes - declared_codes)
     if unknown_scope_rule_permissions:
-        errors.append(f'PermissionScopeRule 声明了未登记权限: {unknown_scope_rule_permissions}')
+        errors.append(f'范围规则声明了未登记权限: {unknown_scope_rule_permissions}')
 
     used_codes = _extract_used_backend_permission_codes() | _extract_used_frontend_permission_codes()
     unknown_used_codes = sorted(code for code in used_codes if code not in declared_codes)

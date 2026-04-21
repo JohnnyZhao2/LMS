@@ -145,8 +145,6 @@ export const buildPermissionTogglePlan = ({
         permission_code: permissionCode,
         effect: 'ALLOW',
         applies_to_role: roleCode,
-        scope_type: 'ALL',
-        scope_user_ids: [],
       });
     }
   } else {
@@ -156,8 +154,6 @@ export const buildPermissionTogglePlan = ({
         permission_code: permissionCode,
         effect: 'DENY',
         applies_to_role: roleCode,
-        scope_type: 'ALL',
-        scope_user_ids: [],
       });
     }
   }

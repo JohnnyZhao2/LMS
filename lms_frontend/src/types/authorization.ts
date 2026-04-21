@@ -26,18 +26,10 @@ export interface RolePermissionTemplate {
   permission_codes: string[];
   default_scope_types: PermissionOverrideScope[];
   scope_groups: RoleScopeGroup[];
-  scope_options: PermissionScopeOption[];
 }
 
 export type PermissionOverrideEffect = 'ALLOW' | 'DENY';
 export type PermissionOverrideScope = 'ALL' | 'SELF' | 'MENTEES' | 'DEPARTMENT' | 'EXPLICIT_USERS';
-
-export interface PermissionScopeOption {
-  code: PermissionOverrideScope;
-  label: string;
-  description: string;
-  inherited_by_default: boolean;
-}
 
 export interface UserPermissionOverride {
   id: number;
@@ -45,8 +37,6 @@ export interface UserPermissionOverride {
   permission_name: string;
   effect: PermissionOverrideEffect;
   applies_to_role: RoleCode | null;
-  scope_type: PermissionOverrideScope;
-  scope_user_ids: number[];
   reason: string;
   expires_at: string | null;
   is_active: boolean;
@@ -62,8 +52,6 @@ export interface CreateUserPermissionOverrideRequest {
   permission_code: string;
   effect: PermissionOverrideEffect;
   applies_to_role?: RoleCode | null;
-  scope_type: PermissionOverrideScope;
-  scope_user_ids?: number[];
   reason?: string;
   expires_at?: string | null;
 }
@@ -98,8 +86,6 @@ export interface CreateUserScopeGroupOverrideRequest {
 
 interface PermissionCapability {
   allowed: boolean;
-  conditional: boolean;
-  scope_types: PermissionOverrideScope[];
 }
 
 export type CapabilityMap = Record<string, PermissionCapability>;

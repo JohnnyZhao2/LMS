@@ -21,7 +21,7 @@ class PermissionDefinition:
 
 
 @dataclass(frozen=True)
-class PermissionScopeRuleDefinition:
+class DefaultScopeRuleDefinition:
     permission_code: str
     role_code: str
     scope_type: str
@@ -52,7 +52,7 @@ class AuthorizationSpec:
     system_managed_codes: tuple[str, ...] = ()
     role_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
     role_system_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    scope_rules: tuple[PermissionScopeRuleDefinition, ...] = ()
+    scope_rules: tuple[DefaultScopeRuleDefinition, ...] = ()
     resource_authorization_handlers: tuple[ResourceAuthorizationHandler, ...] = ()
     scope_filter_handlers: tuple[ScopeFilterHandler, ...] = ()
 
@@ -103,9 +103,9 @@ def crud_codes(prefix: str) -> tuple[str, ...]:
     return permission_codes(prefix, *CRUD_ACTIONS)
 
 
-def scope_rules(permission_code: str, **role_scopes: str) -> tuple[PermissionScopeRuleDefinition, ...]:
+def scope_rules(permission_code: str, **role_scopes: str) -> tuple[DefaultScopeRuleDefinition, ...]:
     return tuple(
-        PermissionScopeRuleDefinition(permission_code, role_code, scope_type)
+        DefaultScopeRuleDefinition(permission_code, role_code, scope_type)
         for role_code, scope_type in role_scopes.items()
     )
 
@@ -274,9 +274,9 @@ def build_role_system_permission_defaults(
 
 def build_permission_scope_rules(
     specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> list[PermissionScopeRuleDefinition]:
+) -> list[DefaultScopeRuleDefinition]:
     resolved_specs = tuple(specs or load_authorization_specs())
-    rules: list[PermissionScopeRuleDefinition] = []
+    rules: list[DefaultScopeRuleDefinition] = []
     seen_keys: set[tuple[str, str, str]] = set()
     for spec in resolved_specs:
         for rule in spec.scope_rules:
@@ -352,18 +352,6 @@ def build_scope_filter_handlers(
     return tuple(handlers)
 
 
-def build_conditional_permission_codes(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> set[str]:
-    conditional_codes = set(build_scope_aware_permission_codes(specs))
-    for handler in build_resource_authorization_handlers(specs):
-        conditional_codes.update(handler.constraint_summaries.keys())
-    for handler in build_scope_filter_handlers(specs):
-        if handler.constraint_summary:
-            conditional_codes.add(handler.permission_code)
-    return conditional_codes
-
-
 def build_permission_constraint_summaries(
     specs: Optional[Iterable[AuthorizationSpec]] = None,
 ) -> dict[str, str]:
@@ -374,7 +362,7 @@ def build_permission_constraint_summaries(
         if handler.constraint_summary and handler.permission_code not in summaries:
             summaries[handler.permission_code] = handler.constraint_summary
 
-    scope_rules_by_permission: dict[str, list[PermissionScopeRuleDefinition]] = defaultdict(list)
+    scope_rules_by_permission: dict[str, list[DefaultScopeRuleDefinition]] = defaultdict(list)
     for rule in build_permission_scope_rules(specs):
         scope_rules_by_permission[rule.permission_code].append(rule)
     for permission_code, rules in scope_rules_by_permission.items():

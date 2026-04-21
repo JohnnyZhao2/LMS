@@ -84,18 +84,16 @@ export const useReplaceRolePermissionTemplate = () => {
 
 export const useUserPermissionOverrides = (
   userId: number | null,
-  includeInactive = false,
   enabled = true,
 ) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.authorization.userOverrides({ currentRole, userId, includeInactive }),
+    queryKey: queryKeys.authorization.userOverrides({ currentRole, userId }),
     queryFn: () => {
       if (!userId) {
         return Promise.resolve([] as UserPermissionOverride[]);
       }
-      const queryString = buildQueryString({ include_inactive: includeInactive });
-      return apiClient.get<UserPermissionOverride[]>(`/authorization/users/${userId}/overrides/${queryString}`);
+      return apiClient.get<UserPermissionOverride[]>(`/authorization/users/${userId}/overrides/`);
     },
     enabled: currentRole !== null && !!userId && enabled,
   });
@@ -103,18 +101,16 @@ export const useUserPermissionOverrides = (
 
 export const useUserScopeGroupOverrides = (
   userId: number | null,
-  includeInactive = false,
   enabled = true,
 ) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.authorization.userScopeGroupOverrides({ currentRole, userId, includeInactive }),
+    queryKey: queryKeys.authorization.userScopeGroupOverrides({ currentRole, userId }),
     queryFn: () => {
       if (!userId) {
         return Promise.resolve([] as UserScopeGroupOverride[]);
       }
-      const queryString = buildQueryString({ include_inactive: includeInactive });
-      return apiClient.get<UserScopeGroupOverride[]>(`/authorization/users/${userId}/scope-group-overrides/${queryString}`);
+      return apiClient.get<UserScopeGroupOverride[]>(`/authorization/users/${userId}/scope-group-overrides/`);
     },
     enabled: currentRole !== null && !!userId && enabled,
   });
