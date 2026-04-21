@@ -6,7 +6,7 @@ from typing import Optional
 from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
-from apps.authorization.engine import enforce
+from apps.authorization.engine import enforce, scope_filter
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
     pop_resource_tag_payload,
@@ -18,7 +18,6 @@ from .models import Question, QuestionOption
 from .question_like import DEFAULT_QUESTION_SCORE
 from .selectors import (
     apply_question_filters,
-    get_question_by_id,
     question_base_queryset,
 )
 
@@ -27,7 +26,7 @@ class QuestionService(BaseService):
     """题目应用服务。"""
 
     def get_by_id(self, pk: int) -> Question:
-        question = get_question_by_id(pk)
+        question = self.get_queryset().filter(pk=pk).first()
         self.validate_not_none(question, f'题目 {pk} 不存在')
         return question
 
@@ -37,7 +36,7 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
     ):
-        queryset = question_base_queryset()
+        queryset = scope_filter('question.view', self.request, base_queryset=question_base_queryset())
         queryset = apply_question_filters(queryset, filters or {}, search)
         if ordering:
             queryset = queryset.order_by(ordering)
@@ -83,7 +82,7 @@ class QuestionService(BaseService):
     )
     def update(self, pk: int, data: dict) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.update', self.request, error_message='无权编辑此题目')
+        enforce('question.update', self.request, resource=question, error_message='无权编辑此题目')
 
         payload = dict(data)
         self.validate_question_payload(payload, source=question)
@@ -140,7 +139,7 @@ class QuestionService(BaseService):
     )
     def delete(self, pk: int) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.delete', self.request, error_message='无权删除此题目')
+        enforce('question.delete', self.request, resource=question, error_message='无权删除此题目')
         question.delete()
         return question
 

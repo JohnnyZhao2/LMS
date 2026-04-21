@@ -1,16 +1,28 @@
 import pytest
-from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
 
 from apps.authorization.constants import ROLE_PERMISSION_DEFAULTS, ROLE_SYSTEM_PERMISSION_DEFAULTS
 from apps.authorization.models import RolePermission
 from apps.authorization.services import AuthorizationService
-from apps.users.models import Role
+from apps.users.models import Department, Role, User
 
 
 def _build_service() -> AuthorizationService:
+    department, _ = Department.objects.get_or_create(
+        code='AUTH_SYNC_TEST',
+        defaults={'name': '授权同步测试部门'},
+    )
+    actor, _ = User.objects.get_or_create(
+        employee_id='AUTH_SYNC_ACTOR',
+        defaults={
+            'username': '授权同步操作者',
+            'department': department,
+            'is_staff': True,
+            'is_superuser': True,
+        },
+    )
     request = RequestFactory().get('/')
-    request.user = AnonymousUser()
+    request.user = actor
     return AuthorizationService(request)
 
 

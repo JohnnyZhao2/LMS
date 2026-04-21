@@ -5,6 +5,7 @@ import pytest
 from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog
+from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.questions.models import Question, QuestionOption
@@ -81,6 +82,19 @@ def mentor_user(department, mentor_role):
     user = User.objects.create_user(
         employee_id='CONTRACT_MENTOR_001',
         username='契约测试导师',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.current_role = 'MENTOR'
+    return user
+
+
+@pytest.fixture
+def other_mentor_user(department, mentor_role):
+    user = User.objects.create_user(
+        employee_id='CONTRACT_MENTOR_002',
+        username='契约测试导师B',
         password='password123',
         department=department,
     )
@@ -396,6 +410,92 @@ class TestQuestionApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_question.id in result_ids
 
+    def test_question_list_only_returns_own_questions(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+        sample_question,
+    ):
+        other_question = create_single_choice_question(
+            created_by=other_mentor_user,
+            content='其他导师题目',
+        )
+
+        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert sample_question.id in result_ids
+        assert other_question.id not in result_ids
+
+    def test_question_detail_hides_other_mentor_question(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+    ):
+        other_question = create_single_choice_question(
+            created_by=other_mentor_user,
+            content='不可见题目',
+        )
+
+        response = auth(api_client, mentor_user).get(f'/api/questions/{other_question.id}/')
+
+        assert_error_code(response, status_code=404, code='RESOURCE_NOT_FOUND')
+
+    def test_admin_can_view_all_questions(
+        self,
+        api_client,
+        admin_user,
+        admin_role,
+        grant_role_permissions,
+        mentor_user,
+        other_mentor_user,
+    ):
+        grant_role_permissions(admin_role, ['question.view'])
+        mentor_question = create_single_choice_question(
+            created_by=mentor_user,
+            content='导师题目',
+        )
+        other_question = create_single_choice_question(
+            created_by=other_mentor_user,
+            content='其他导师题目',
+        )
+
+        response = auth(api_client, admin_user).get('/api/questions/?page=1&page_size=10')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert mentor_question.id in result_ids
+        assert other_question.id in result_ids
+
+    def test_question_resource_scope_ignores_explicit_creator_override(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+    ):
+        other_question = create_single_choice_question(
+            created_by=other_mentor_user,
+            content='范围覆盖可见题目',
+        )
+        UserScopeGroupOverride.objects.create(
+            user=mentor_user,
+            scope_group_key='question_resource_scope',
+            effect='ALLOW',
+            applies_to_role='MENTOR',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[other_mentor_user.id],
+            granted_by=mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert other_question.id not in result_ids
+
     def test_question_list_hides_history_versions(self, api_client, mentor_user, sample_question):
         quiz = Quiz.objects.create(
             title='题目快照容器',
@@ -624,6 +724,130 @@ class TestQuizApiContracts:
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_quiz.id in result_ids
+
+    def test_quiz_list_only_returns_own_quizzes(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+        sample_quiz,
+    ):
+        other_quiz = Quiz.objects.create(
+            title='其他导师试卷',
+            quiz_type='PRACTICE',
+            created_by=other_mentor_user,
+            updated_by=other_mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get('/api/quizzes/?page=1&page_size=10')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert sample_quiz.id in result_ids
+        assert other_quiz.id not in result_ids
+
+    def test_quiz_detail_hides_other_mentor_quiz(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+    ):
+        other_quiz = Quiz.objects.create(
+            title='不可见试卷',
+            quiz_type='PRACTICE',
+            created_by=other_mentor_user,
+            updated_by=other_mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get(f'/api/quizzes/{other_quiz.id}/')
+
+        assert_error_code(response, status_code=404, code='RESOURCE_NOT_FOUND')
+
+    def test_admin_can_view_all_quizzes(
+        self,
+        api_client,
+        admin_user,
+        admin_role,
+        grant_role_permissions,
+        mentor_user,
+        other_mentor_user,
+    ):
+        grant_role_permissions(admin_role, ['quiz.view'])
+        mentor_quiz = Quiz.objects.create(
+            title='导师试卷',
+            quiz_type='PRACTICE',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        other_quiz = Quiz.objects.create(
+            title='其他导师试卷',
+            quiz_type='PRACTICE',
+            created_by=other_mentor_user,
+            updated_by=other_mentor_user,
+        )
+
+        response = auth(api_client, admin_user).get('/api/quizzes/?page=1&page_size=10')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert mentor_quiz.id in result_ids
+        assert other_quiz.id in result_ids
+
+    def test_quiz_create_rejects_other_mentor_source_question(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+    ):
+        other_question = create_single_choice_question(
+            created_by=other_mentor_user,
+            content='不可引用题目',
+        )
+
+        response = auth(api_client, mentor_user).post(
+            '/api/quizzes/',
+            {
+                'title': '跨导师引用试卷',
+                'quiz_type': 'PRACTICE',
+                'questions': [
+                    {
+                        'source_question_id': other_question.id,
+                        'content': '跨导师引用题目',
+                        'question_type': 'SINGLE_CHOICE',
+                        'options': [
+                            {'key': 'A', 'value': '选项A'},
+                            {'key': 'B', 'value': '选项B'},
+                        ],
+                        'answer': 'A',
+                        'score': '1',
+                    }
+                ],
+            },
+            format='json',
+        )
+
+        assert_error_code(response, status_code=404, code='RESOURCE_NOT_FOUND')
+
+    def test_task_resource_options_hide_other_mentor_quizzes(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+        sample_quiz,
+    ):
+        other_quiz = Quiz.objects.create(
+            title='任务资源库不可见试卷',
+            quiz_type='PRACTICE',
+            created_by=other_mentor_user,
+            updated_by=other_mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get('/api/tasks/resource-options/?resource_type=QUIZ')
+
+        assert_status(response, 200)
+        result_ids = {item['id'] for item in response.data['data']['results']}
+        assert sample_quiz.id in result_ids
+        assert other_quiz.id not in result_ids
 
     def test_quiz_list_hides_history_versions(self, api_client, mentor_user, sample_quiz):
         ensure_quiz_revision(sample_quiz, actor=mentor_user)
@@ -1405,6 +1629,34 @@ class TestTaskResourceOptionApiContracts:
         result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
         assert ('DOCUMENT', sample_knowledge.id) not in result_ids
         assert ('QUIZ', sample_quiz.id) not in result_ids
+
+    def test_task_create_rejects_other_mentor_quiz(
+        self,
+        api_client,
+        mentor_user,
+        other_mentor_user,
+        student_user,
+    ):
+        other_quiz = Quiz.objects.create(
+            title='任务不可引用试卷',
+            quiz_type='PRACTICE',
+            created_by=other_mentor_user,
+            updated_by=other_mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).post(
+            '/api/tasks/create/',
+            {
+                'title': '跨导师试卷任务',
+                'description': '',
+                'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+                'quiz_ids': [other_quiz.id],
+                'assignee_ids': [student_user.id],
+            },
+            format='json',
+        )
+
+        assert_error_code(response, status_code=404, code='RESOURCE_NOT_FOUND')
 
 
 @pytest.mark.django_db

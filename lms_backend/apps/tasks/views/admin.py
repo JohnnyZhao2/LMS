@@ -152,6 +152,7 @@ class TaskResourceOptionListView(APIView):
         exclude_document_ids = _parse_positive_int_list_query_param(request, 'exclude_document_ids')
         exclude_quiz_ids = _parse_positive_int_list_query_param(request, 'exclude_quiz_ids')
         items = task_resource_options(
+            request=request,
             search=search,
             resource_type=resource_type,
             exclude_document_ids=set(exclude_document_ids),

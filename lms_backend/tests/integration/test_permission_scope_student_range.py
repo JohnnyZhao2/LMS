@@ -1,9 +1,11 @@
 import pytest
 from typing import Optional
 
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.authorization.models import UserScopeGroupOverride
+from apps.knowledge.models import Knowledge
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -127,6 +129,97 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny(grant_p
     student_ids = {item['id'] for item in response.data['data']}
     assert mentee.id not in student_ids
     assert extra_student.id in student_ids
+
+
+@pytest.mark.django_db
+def test_task_create_enforces_assignable_student_scope(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='任务创建范围部门', code='TASK_CREATE_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['MENTOR'], permission_codes=['task.create', 'task.assign'])
+
+    mentor = _create_user(
+        employee_id='TASK_CREATE_SCOPE_MENTOR',
+        username='任务创建导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    admin = _create_user(
+        employee_id='TASK_CREATE_SCOPE_ADMIN',
+        username='任务创建管理员',
+        department=department,
+        role_codes=['ADMIN'],
+    )
+    mentee = _create_user(
+        employee_id='TASK_CREATE_SCOPE_MENTEE',
+        username='任务创建名下学员',
+        department=department,
+    )
+    extra_student = _create_user(
+        employee_id='TASK_CREATE_SCOPE_EXTRA',
+        username='任务创建额外学员',
+        department=department,
+    )
+    mentee.mentor = mentor
+    mentee.save(update_fields=['mentor'])
+    knowledge = Knowledge.objects.create(
+        title='任务创建范围知识',
+        content='任务创建范围内容',
+        created_by=mentor,
+        updated_by=mentor,
+    )
+
+    client.force_authenticate(user=mentor)
+
+    allowed_response = client.post(
+        '/api/tasks/create/',
+        {
+            'title': '默认范围可创建任务',
+            'description': '',
+            'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+            'knowledge_ids': [knowledge.id],
+            'assignee_ids': [mentee.id],
+        },
+        format='json',
+    )
+    assert allowed_response.status_code == 201
+
+    denied_response = client.post(
+        '/api/tasks/create/',
+        {
+            'title': '默认范围禁止创建任务',
+            'description': '',
+            'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+            'knowledge_ids': [knowledge.id],
+            'assignee_ids': [extra_student.id],
+        },
+        format='json',
+    )
+    assert denied_response.status_code == 403
+    assert denied_response.data['code'] == 'PERMISSION_DENIED'
+    assert '以下学员不在当前可分配范围' in denied_response.data['message']
+
+    UserScopeGroupOverride.objects.create(
+        user=mentor,
+        scope_group_key='task_student_scope',
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='EXPLICIT_USERS',
+        scope_user_ids=[extra_student.id],
+        granted_by=admin,
+    )
+
+    override_response = client.post(
+        '/api/tasks/create/',
+        {
+            'title': '显式范围可创建任务',
+            'description': '',
+            'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+            'knowledge_ids': [knowledge.id],
+            'assignee_ids': [extra_student.id],
+        },
+        format='json',
+    )
+    assert override_response.status_code == 201
 
 
 @pytest.mark.django_db

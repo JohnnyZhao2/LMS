@@ -15,6 +15,36 @@ export interface RoleScopeSelection {
   scopeUserIds: number[];
 }
 
+export const AVAILABLE_SCOPE_TYPES: PermissionOverrideScope[] = [
+  'SELF',
+  'MENTEES',
+  'DEPARTMENT',
+  'ALL',
+  'EXPLICIT_USERS',
+];
+
+export const normalizeAvailableScopeTypes = (
+  scopeTypes: PermissionOverrideScope[],
+): PermissionOverrideScope[] => {
+  const scopeTypeSet = new Set(scopeTypes);
+  return AVAILABLE_SCOPE_TYPES.filter((scopeType) => scopeTypeSet.has(scopeType));
+};
+
+const filterScopeTypesByAvailability = (
+  scopeTypes: PermissionOverrideScope[],
+  availableScopeTypes?: PermissionOverrideScope[],
+): PermissionOverrideScope[] => {
+  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
+  if (!availableScopeTypes || availableScopeTypes.length === 0) {
+    return normalizedScopeTypes;
+  }
+
+  const availableScopeTypeSet = new Set(normalizeAvailableScopeTypes(availableScopeTypes));
+  return normalizeScopeTypes(
+    normalizedScopeTypes.filter((scopeType) => availableScopeTypeSet.has(scopeType)),
+  );
+};
+
 export const STUDENT_ONLY_SCOPE_PERMISSION_CODES = new Set<string>([
   'task.assign',
   'task.analytics.view',
@@ -87,12 +117,14 @@ export const syncRoleScopeSelection = ({
   getPresetMatchedScopeUserIdsForSelection,
   selectableScopeUserIdSet,
   selection,
+  availableScopeTypes,
 }: {
   getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
   selectableScopeUserIdSet: Set<number>;
   selection: RoleScopeSelection;
+  availableScopeTypes?: PermissionOverrideScope[];
 }): RoleScopeSelection => {
-  const scopeTypes = normalizeScopeTypes(selection.scopeTypes);
+  const scopeTypes = filterScopeTypesByAvailability(selection.scopeTypes, availableScopeTypes);
   if (scopeTypes.includes('EXPLICIT_USERS')) {
     return {
       scopeTypes,
@@ -113,19 +145,25 @@ export const getRoleScopeSelectionFromOverrides = ({
   scopeGroupKey,
   roleCode,
   scopeGroupOverrides,
+  availableScopeTypes,
 }: {
   getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
   scopeGroupKey?: string | null;
   roleCode: RoleCode;
   scopeGroupOverrides: ScopeGroupOverrideEntry[];
+  availableScopeTypes?: PermissionOverrideScope[];
 }): RoleScopeSelection | null => {
   if (!scopeGroupKey) {
     return null;
   }
+  const availableScopeTypeSet = availableScopeTypes && availableScopeTypes.length > 0
+    ? new Set(normalizeAvailableScopeTypes(availableScopeTypes))
+    : null;
 
   const scopedOverrides = scopeGroupOverrides.filter((override) => (
     override.appliesToRole === roleCode
     && override.scopeGroupKey === scopeGroupKey
+    && (!availableScopeTypeSet || availableScopeTypeSet.has(override.scopeType))
   ));
   if (scopedOverrides.length === 0) {
     return null;
@@ -136,8 +174,8 @@ export const getRoleScopeSelectionFromOverrides = ({
   const standardScopeTypes = normalizeScopeTypes(
     sourceOverrides
       .map((override) => override.scopeType)
-      .filter((scopeType): scopeType is Exclude<PermissionOverrideScope, 'EXPLICIT_USERS' | 'SELF'> => (
-        scopeType !== 'EXPLICIT_USERS' && scopeType !== 'SELF'
+      .filter((scopeType): scopeType is Exclude<PermissionOverrideScope, 'EXPLICIT_USERS'> => (
+        scopeType !== 'EXPLICIT_USERS'
       )),
   );
   const explicitOverride = sourceOverrides.find((override) => (
@@ -169,6 +207,7 @@ export const resolveRoleScopeSelection = ({
   selectableScopeUserIdSet,
   selectedRoleDefaultScopeTypes,
   scopeGroupOverrides,
+  availableScopeTypes,
 }: {
   cachedSelection?: RoleScopeSelection;
   getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
@@ -177,12 +216,14 @@ export const resolveRoleScopeSelection = ({
   selectableScopeUserIdSet: Set<number>;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
   scopeGroupOverrides: ScopeGroupOverrideEntry[];
+  availableScopeTypes?: PermissionOverrideScope[];
 }): RoleScopeSelection => {
   if (cachedSelection) {
     return syncRoleScopeSelection({
       getPresetMatchedScopeUserIdsForSelection,
       selectableScopeUserIdSet,
       selection: cachedSelection,
+      availableScopeTypes,
     });
   }
 
@@ -191,16 +232,19 @@ export const resolveRoleScopeSelection = ({
     scopeGroupKey,
     roleCode,
     scopeGroupOverrides,
+    availableScopeTypes,
   });
+  const fallbackScopeTypes = filterScopeTypesByAvailability(selectedRoleDefaultScopeTypes, availableScopeTypes);
   const fallbackSelection: RoleScopeSelection = overrideSelection ?? {
-    scopeTypes: selectedRoleDefaultScopeTypes,
-    scopeUserIds: getPresetMatchedScopeUserIdsForSelection(selectedRoleDefaultScopeTypes),
+    scopeTypes: fallbackScopeTypes,
+    scopeUserIds: getPresetMatchedScopeUserIdsForSelection(fallbackScopeTypes),
   };
 
   return syncRoleScopeSelection({
     getPresetMatchedScopeUserIdsForSelection,
     selectableScopeUserIdSet,
     selection: fallbackSelection,
+    availableScopeTypes,
   });
 };
 

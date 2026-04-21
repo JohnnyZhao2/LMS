@@ -42,9 +42,11 @@ import { useUserPermissionOverrideState } from './use-user-permission-override-s
 import { useUserPermissionScopeState } from './use-user-permission-scope-state';
 import { useUserScopeGroupOverrideState } from './use-user-scope-group-override-state';
 import {
+  AVAILABLE_SCOPE_TYPES,
   formatScopeSummaryForDisplay as formatPersistedScopeSummary,
   getPresetMatchedScopeUserIds,
   getSelectableScopeUsers,
+  normalizeAvailableScopeTypes,
   resolveRoleScopeSelection,
   STUDENT_ONLY_SCOPE_PERMISSION_CODES,
 } from './user-permission-scope.utils';
@@ -202,10 +204,8 @@ export function UserPermissionSection({
   const moduleSectionsBase = useMemo(() => {
     return permissionSections
       .map(({ module, permissions }) => {
-        const scopeGroupKey = permissions
-          .map((permission) => permission.scope_group_key)
-          .find((groupKey): groupKey is string => Boolean(groupKey))
-          ?? null;
+        const scopeGroupPermission = permissions.find((permission) => Boolean(permission.scope_group_key));
+        const scopeGroupKey = scopeGroupPermission?.scope_group_key ?? null;
         const scopeAwarePermissionCodes = permissions
           .filter((permission) => permission.scope_aware)
           .map((permission) => permission.code);
@@ -224,6 +224,14 @@ export function UserPermissionSection({
           )
             ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
             ?? [],
+        );
+        const availableScopeTypes = normalizeAvailableScopeTypes(
+          (
+            scopeGroupKey
+              ? scopeGroupPermission?.allowed_scope_types
+              : AVAILABLE_SCOPE_TYPES
+          )
+            ?? AVAILABLE_SCOPE_TYPES,
         );
         const shouldRestrictToStudents = Boolean(
           scopePoolPermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePoolPermissionCode),
@@ -244,6 +252,7 @@ export function UserPermissionSection({
           selectableScopeUserIdSet,
           selectedRoleDefaultScopeTypes,
           scopeGroupOverrides: userScopeGroupOverrides,
+          availableScopeTypes,
         });
 
         return {
@@ -252,6 +261,7 @@ export function UserPermissionSection({
           scopeGroupKey,
           scopePoolPermissionCode,
           selectedRoleDefaultScopeTypes,
+          availableScopeTypes,
           scopeSelection,
           scopeSummary: scopeGroupKey ? formatPersistedScopeSummary({
             departments,
@@ -303,6 +313,7 @@ export function UserPermissionSection({
     selectedFilteredScopeCount,
     isAllFilteredScopeUsersSelected,
     hasPartialFilteredScopeSelection,
+    availableScopeTypes,
     setShowScopeAdjustPanel,
     setScopeUserSearch,
     setScopeUserFilter,
@@ -310,6 +321,7 @@ export function UserPermissionSection({
     handleScopeFilterChange,
     toggleSelectAllFilteredScopeUsers,
     applyDefaultScopePreset,
+    selectPresetScope,
     toggleScopeUser,
     ensureExplicitUsersScopeSelected,
   } = useUserPermissionScopeState({
@@ -321,6 +333,7 @@ export function UserPermissionSection({
     hasConfigurablePermissionRoles,
     normalizedSelectedPermissionRole,
     selectedRoleDefaultScopeTypes: activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
+    availableScopeTypes: activeScopeSection?.availableScopeTypes ?? AVAILABLE_SCOPE_TYPES,
     scopeGroupKey: activeScopeSection?.scopeGroupKey ?? undefined,
     scopePermissionCode: activeScopeSection?.scopePoolPermissionCode ?? null,
     scopeUsers,
@@ -398,6 +411,9 @@ export function UserPermissionSection({
                         : (section.scopeSummary ?? '设置范围')
                     }
                     scopeFilterOptions={scopeFilterOptions}
+                    availableScopeTypes={availableScopeTypes}
+                    selectedPermissionScopes={selectedPermissionScopes}
+                    onSelectPresetScope={selectPresetScope}
                     scopeUserFilter={scopeUserFilter}
                     onScopeFilterChange={handleScopeFilterChange}
                     showReset={openScopeGroupKey === section.scopeGroupKey

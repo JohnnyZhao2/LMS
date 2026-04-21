@@ -219,6 +219,15 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert permission_map['task.analytics.view']['scope_group_key'] == 'task_student_scope'
     assert permission_map['spot_check.view']['scope_group_key'] == 'spot_check_student_scope'
     assert permission_map['user.view']['scope_group_key'] == 'user_scope'
+    assert permission_map['question.view']['scope_group_key'] == 'question_resource_scope'
+    assert permission_map['question.update']['scope_group_key'] == 'question_resource_scope'
+    assert permission_map['question.delete']['scope_group_key'] == 'question_resource_scope'
+    assert permission_map['question.view']['allowed_scope_types'] == ['SELF', 'ALL']
+    assert permission_map['quiz.view']['scope_group_key'] == 'quiz_resource_scope'
+    assert permission_map['quiz.update']['scope_group_key'] == 'quiz_resource_scope'
+    assert permission_map['quiz.delete']['scope_group_key'] == 'quiz_resource_scope'
+    assert permission_map['quiz.view']['allowed_scope_types'] == ['SELF', 'ALL']
+    assert 'EXPLICIT_USERS' in permission_map['task.assign']['allowed_scope_types']
     assert permission_map['task.view']['scope_group_key'] is None
     assert 'role_template_visible' not in permission_map['task.view']
     assert 'user_authorization_visible' not in permission_map['task.view']
@@ -602,15 +611,27 @@ def test_role_permission_template_response_includes_default_scope_types():
     assert response.status_code == 200
     payload = response.data['data']
     assert payload['role_code'] == 'MENTOR'
-    assert payload['default_scope_types'] == ['MENTEES']
+    assert payload['default_scope_types'] == ['SELF', 'MENTEES']
     scope_group_map = {item['key']: item for item in payload['scope_groups']}
+    assert scope_group_map['question_resource_scope']['default_scope_types'] == ['SELF']
+    assert set(scope_group_map['question_resource_scope']['permission_codes']) == {
+        'question.view',
+        'question.update',
+        'question.delete',
+    }
+    assert scope_group_map['quiz_resource_scope']['default_scope_types'] == ['SELF']
+    assert set(scope_group_map['quiz_resource_scope']['permission_codes']) == {
+        'quiz.view',
+        'quiz.update',
+        'quiz.delete',
+    }
     assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
     assert set(scope_group_map['task_student_scope']['permission_codes']) == {'task.assign', 'task.analytics.view'}
     assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
+    assert any(option['code'] == 'SELF' and option['inherited_by_default'] for option in payload['scope_options'])
     assert any(option['code'] == 'MENTEES' and option['inherited_by_default'] for option in payload['scope_options'])
     assert any(option['code'] == 'EXPLICIT_USERS' and not option['inherited_by_default'] for option in payload['scope_options'])
-    assert all(option['code'] != 'SELF' for option in payload['scope_options'])
 
 
 @pytest.mark.django_db
@@ -624,6 +645,8 @@ def test_sync_authorization_restores_role_default_scope_groups():
 
     assert response.status_code == 200
     scope_group_map = {item['key']: item for item in response.data['data']['scope_groups']}
+    assert scope_group_map['question_resource_scope']['default_scope_types'] == ['SELF']
+    assert scope_group_map['quiz_resource_scope']['default_scope_types'] == ['SELF']
     assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
@@ -730,6 +753,45 @@ def test_user_scope_group_override_api_creates_and_lists_records():
     payload = list_response.data['data']
     assert len(payload) == 1
     assert payload[0]['scope_group_key'] == 'task_student_scope'
+
+
+@pytest.mark.django_db
+def test_resource_scope_group_override_rejects_explicit_users():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_RES_SCOPE_ADMIN', username='Resource Scope Super')
+    mentor_user = _create_user_with_role(
+        employee_id='EMP_AUTH_RES_SCOPE_MENTOR',
+        username='Resource Scope Mentor',
+        role_code='MENTOR',
+    )
+    extra_user = _create_user_with_role(
+        employee_id='EMP_AUTH_RES_SCOPE_EXTRA',
+        username='Resource Scope Extra',
+        role_code='MENTOR',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.post(
+        f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/',
+        {
+            'scope_group_key': 'question_resource_scope',
+            'effect': 'ALLOW',
+            'applies_to_role': 'MENTOR',
+            'scope_type': 'EXPLICIT_USERS',
+            'scope_user_ids': [extra_user.id],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '不支持 EXPLICIT_USERS 范围' in response.data['message']
+    assert not UserScopeGroupOverride.objects.filter(
+        user=mentor_user,
+        scope_group_key='question_resource_scope',
+        scope_type='EXPLICIT_USERS',
+        is_active=True,
+    ).exists()
 
 
 @pytest.mark.django_db

@@ -8,6 +8,7 @@ export interface PermissionCatalogItem {
   constraint_summary: string;
   scope_aware: boolean;
   scope_group_key: string | null;
+  allowed_scope_types: PermissionOverrideScope[];
   implies: string[];
   is_active: boolean;
 }

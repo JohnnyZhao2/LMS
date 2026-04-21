@@ -13,10 +13,15 @@ from apps.tasks.serializers import CompleteKnowledgeLearningSerializer, TaskDeta
 from apps.tasks.student_task_service import StudentTaskService
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import TaskAssignmentFactory, TaskFactory, TaskKnowledgeFactory, UserFactory
+from apps.users.models import Role, UserRole
 from core.exceptions import BusinessError, ErrorCodes
 
 
 def build_request(user):
+    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    UserRole.objects.get_or_create(user=user, role=role)
+    user.__dict__.pop('role_codes', None)
+    user.current_role = 'ADMIN'
     return SimpleNamespace(user=user, META={})
 
 
@@ -61,13 +66,21 @@ def create_resources(admin_user):
     return knowledge, quiz
 
 
+def bypass_task_authorization(monkeypatch):
+    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        'apps.tasks.task_service.enforce_assignable_students_scope',
+        lambda *args, **kwargs: None,
+    )
+
+
 @pytest.mark.django_db
 def test_create_task_binds_current_resources_to_snapshots_and_reuses_them(monkeypatch):
     admin_user = UserFactory()
     student_a = UserFactory()
     student_b = UserFactory()
     knowledge, quiz = create_resources(admin_user)
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     service = TaskService(build_request(admin_user))
     task_a = service.create_task(
@@ -110,7 +123,7 @@ def test_update_task_blocks_resource_replacement_after_knowledge_progress(monkey
     other_knowledge = KnowledgeService(build_request(admin_user)).create(
         {'title': '知识 B', 'content': '<p>内容 B</p>', 'tag_ids': []}
     )
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task_service = TaskService(build_request(admin_user))
     task = task_service.create_task(
@@ -141,7 +154,7 @@ def test_update_task_blocks_quiz_replacement_after_submission_started(monkeypatc
         {'title': '试卷 B', 'quiz_type': 'PRACTICE'},
         questions=[build_choice_payload(content='题目 B1')],
     )
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task_service = TaskService(build_request(admin_user))
     task = task_service.create_task(
@@ -171,7 +184,7 @@ def test_update_task_allows_basic_fields_and_assignee_addition_after_progress(mo
     student_a = UserFactory()
     student_b = UserFactory()
     knowledge, quiz = create_resources(admin_user)
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task_service = TaskService(build_request(admin_user))
     task = task_service.create_task(
@@ -206,7 +219,7 @@ def test_update_task_blocks_assignee_removal_after_progress(monkeypatch):
     student_a = UserFactory()
     student_b = UserFactory()
     knowledge, quiz = create_resources(admin_user)
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task_service = TaskService(build_request(admin_user))
     task = task_service.create_task(
@@ -235,7 +248,7 @@ def test_submission_reads_task_quiz_snapshot_even_after_current_quiz_changes(mon
     admin_user = UserFactory()
     student = UserFactory()
     knowledge, quiz = create_resources(admin_user)
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task_service = TaskService(build_request(admin_user))
     task = task_service.create_task(
@@ -283,7 +296,7 @@ def test_task_detail_serializer_prefers_revision_title_when_source_deleted(monke
     admin_user = UserFactory()
     student = UserFactory()
     knowledge, quiz = create_resources(admin_user)
-    monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
+    bypass_task_authorization(monkeypatch)
 
     task = TaskService(build_request(admin_user)).create_task(
         title='任务 A',

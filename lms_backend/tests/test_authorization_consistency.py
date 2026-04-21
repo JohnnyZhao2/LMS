@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_APPS_ROOT = REPO_ROOT / 'apps'
 FRONTEND_SRC_ROOT = REPO_ROOT.parent / 'lms_frontend' / 'src'
 FRONTEND_PRESENTATION_FILE = (
-    FRONTEND_SRC_ROOT / 'features' / 'authorization' / 'constants' / 'permission-presentation.ts'
+    FRONTEND_SRC_ROOT / 'entities' / 'authorization' / 'constants' / 'permission-presentation.ts'
 )
 
 BACKEND_PERMISSION_PATTERNS = [

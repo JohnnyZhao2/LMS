@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .constants import (
     CONFIG_PERMISSION_MODULE,
+    PERMISSION_SCOPE_GROUPS,
     REGISTERED_PERMISSION_CODES,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
@@ -85,6 +86,9 @@ def list_active_scope_group_overrides(
 
     if scope_group_key:
         queryset = queryset.filter(scope_group_key=scope_group_key)
+        scope_group = PERMISSION_SCOPE_GROUPS.get(scope_group_key)
+        if scope_group:
+            queryset = queryset.filter(scope_type__in=scope_group['available_scope_types'])
 
     return list(queryset.order_by('-created_at', '-id'))
 

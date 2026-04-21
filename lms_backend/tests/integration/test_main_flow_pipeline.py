@@ -14,9 +14,13 @@ from apps.submissions.workflows import grade_subjective_answer
 from apps.tasks.assignment_workflow import get_assignment_progress_data
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import UserFactory
+from apps.users.models import Role, UserRole
 
 
 def build_request(user, current_role: str = 'ADMIN'):
+    role, _ = Role.objects.get_or_create(code=current_role, defaults={'name': current_role})
+    UserRole.objects.get_or_create(user=user, role=role)
+    user.__dict__.pop('role_codes', None)
     user.current_role = current_role
     return SimpleNamespace(user=user, META={})
 

@@ -8,9 +8,14 @@ from apps.questions.models import Question
 from apps.quizzes.models import QuizQuestion, QuizRevision
 from apps.quizzes.services import QuizService, ensure_quiz_revision
 from apps.tasks.tests.factories import TaskFactory, TaskKnowledgeFactory, UserFactory
+from apps.users.models import Role, UserRole
 
 
 def build_request(user):
+    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    UserRole.objects.get_or_create(user=user, role=role)
+    user.__dict__.pop('role_codes', None)
+    user.current_role = 'ADMIN'
     return SimpleNamespace(user=user, META={})
 
 

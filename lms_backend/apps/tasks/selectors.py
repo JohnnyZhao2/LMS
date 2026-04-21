@@ -5,6 +5,7 @@ from typing import Any, Optional
 from django.db.models import Count, Prefetch, Q, QuerySet, Sum
 from django.utils import timezone
 
+from apps.authorization.engine import scope_filter
 from apps.knowledge.selectors import get_knowledge_queryset
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
@@ -125,6 +126,8 @@ def task_quiz_queryset(task_id: int) -> QuerySet:
 
 
 def task_resource_options(
+    *,
+    request,
     search: Optional[str] = None,
     resource_type: str = 'ALL',
     exclude_document_ids: Optional[set[int]] = None,
@@ -156,7 +159,11 @@ def task_resource_options(
         )
 
     if resource_type in {'ALL', 'QUIZ'}:
-        quiz_rows = Quiz.objects.annotate(
+        quiz_rows = scope_filter(
+            'quiz.view',
+            request,
+            base_queryset=Quiz.objects.all(),
+        ).annotate(
             question_count_value=Count('quiz_questions'),
         )
         if exclude_quiz_ids:

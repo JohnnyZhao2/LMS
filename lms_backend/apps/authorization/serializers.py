@@ -8,6 +8,7 @@ from .constants import (
     EFFECT_CHOICES,
     PERMISSION_CATALOG_BY_CODE,
     PERMISSION_CONSTRAINT_SUMMARIES,
+    PERMISSION_ALLOWED_SCOPE_TYPES_MAP,
     SCOPE_AWARE_PERMISSION_CODES,
     SCOPE_CHOICES,
     SCOPE_EXPLICIT_USERS,
@@ -23,6 +24,7 @@ class PermissionSerializer(serializers.ModelSerializer):
     constraint_summary = serializers.SerializerMethodField()
     scope_aware = serializers.SerializerMethodField()
     scope_group_key = serializers.SerializerMethodField()
+    allowed_scope_types = serializers.SerializerMethodField()
     implies = serializers.SerializerMethodField()
 
     def get_constraint_summary(self, obj: Permission) -> str:
@@ -34,6 +36,12 @@ class PermissionSerializer(serializers.ModelSerializer):
     def get_scope_group_key(self, obj: Permission):
         catalog_item = PERMISSION_CATALOG_BY_CODE.get(obj.code)
         return catalog_item.get('scope_group_key') if catalog_item else None
+
+    def get_allowed_scope_types(self, obj: Permission) -> list[str]:
+        catalog_item = PERMISSION_CATALOG_BY_CODE.get(obj.code)
+        if not catalog_item or not catalog_item.get('scope_group_key'):
+            return []
+        return list(PERMISSION_ALLOWED_SCOPE_TYPES_MAP.get(obj.code, ()))
 
     def get_implies(self, obj: Permission) -> list[str]:
         catalog_item = PERMISSION_CATALOG_BY_CODE.get(obj.code)
@@ -49,6 +57,7 @@ class PermissionSerializer(serializers.ModelSerializer):
             'constraint_summary',
             'scope_aware',
             'scope_group_key',
+            'allowed_scope_types',
             'implies',
             'is_active',
         ]

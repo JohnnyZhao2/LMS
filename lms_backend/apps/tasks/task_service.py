@@ -151,7 +151,11 @@ class TaskService(BaseService):
         valid_ids = self._dedupe_resource_ids(quiz_ids)
         quiz_map = {
             quiz.id: quiz
-            for quiz in Quiz.objects.filter(id__in=valid_ids).prefetch_related(
+            for quiz in scope_filter(
+                'quiz.view',
+                self.request,
+                base_queryset=Quiz.objects.filter(id__in=valid_ids),
+            ).prefetch_related(
                 'quiz_questions__question_options',
                 'quiz_questions__question__tags',
                 'quiz_questions__question__space_tag',
@@ -333,7 +337,10 @@ class TaskService(BaseService):
 
     def _ensure_valid_resource_ids(self, resource_ids: List[int], resource_model: Any, resource_label: str) -> List[int]:
         normalized_ids = self._dedupe_resource_ids(resource_ids)
-        is_valid, invalid_ids = self._validate_current_resources(normalized_ids, resource_model)
+        queryset = resource_model.objects.all()
+        if resource_model is Quiz:
+            queryset = scope_filter('quiz.view', self.request, base_queryset=queryset)
+        is_valid, invalid_ids = self._validate_current_resources(normalized_ids, queryset)
         if not is_valid:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
@@ -396,20 +403,20 @@ class TaskService(BaseService):
             self._ensure_valid_assignee_ids(assignee_ids)
 
     @staticmethod
-    def _validate_current_resources(resource_ids: List[int], resource_model: Any) -> Tuple[bool, List[int]]:
+    def _validate_current_resources(resource_ids: List[int], resource_queryset: QuerySet) -> Tuple[bool, List[int]]:
         if not resource_ids:
             return True, []
-        existing_ids = set(resource_model.objects.filter(id__in=resource_ids).values_list('id', flat=True))
+        existing_ids = set(resource_queryset.filter(id__in=resource_ids).values_list('id', flat=True))
         invalid_ids = sorted(set(resource_ids) - existing_ids)
         return len(invalid_ids) == 0, invalid_ids
 
     @staticmethod
     def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int]]:
-        return TaskService._validate_current_resources(knowledge_ids, Knowledge)
+        return TaskService._validate_current_resources(knowledge_ids, Knowledge.objects.all())
 
     @staticmethod
     def validate_quiz_ids(quiz_ids: List[int]) -> Tuple[bool, List[int]]:
-        return TaskService._validate_current_resources(quiz_ids, Quiz)
+        return TaskService._validate_current_resources(quiz_ids, Quiz.objects.all())
 
     @staticmethod
     def validate_assignee_ids(assignee_ids: List[int]) -> Tuple[bool, List[int]]:

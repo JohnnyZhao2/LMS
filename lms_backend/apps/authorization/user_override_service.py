@@ -479,7 +479,14 @@ class UserOverrideServiceMixin:
                 revoked_at__isnull=True,
             ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
-        return [override for override in overrides if override.scope_group_key in PERMISSION_SCOPE_GROUPS]
+        return [
+            override
+            for override in overrides
+            if (
+                override.scope_group_key in PERMISSION_SCOPE_GROUPS
+                and override.scope_type in PERMISSION_SCOPE_GROUPS[override.scope_group_key]['available_scope_types']
+            )
+        ]
 
     @transaction.atomic
     @log_operation(
@@ -516,6 +523,12 @@ class UserOverrideServiceMixin:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message=f'范围组 {scope_group_key} 不存在',
+            )
+        available_scope_types = set(PERMISSION_SCOPE_GROUPS[scope_group_key]['available_scope_types'])
+        if scope_type not in available_scope_types:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'范围组 {scope_group_key} 不支持 {scope_type} 范围',
             )
 
         normalized_applies_to_role = applies_to_role or None

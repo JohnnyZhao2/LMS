@@ -14,6 +14,7 @@ import {
   formatScopeSummaryForDisplay as formatScopeSummaryForDisplayValue,
   getPresetMatchedScopeUserIds,
   getSelectableScopeUsers,
+  normalizeAvailableScopeTypes,
   resolveRoleScopeSelection,
   STUDENT_ONLY_SCOPE_PERMISSION_CODES,
   syncRoleScopeSelection,
@@ -30,6 +31,7 @@ interface UseUserPermissionScopeStateParams {
   hasConfigurablePermissionRoles: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
+  availableScopeTypes: PermissionOverrideScope[];
   scopeGroupKey?: string;
   scopePermissionCode?: string | null;
   scopeUsers: UserList[];
@@ -48,6 +50,7 @@ interface UseUserPermissionScopeStateResult {
   selectedFilteredScopeCount: number;
   isAllFilteredScopeUsersSelected: boolean;
   hasPartialFilteredScopeSelection: boolean;
+  availableScopeTypes: PermissionOverrideScope[];
   setShowScopeAdjustPanel: (open: boolean) => void;
   setScopeUserSearch: (value: string) => void;
   setScopeUserFilter: (value: string) => void;
@@ -58,6 +61,7 @@ interface UseUserPermissionScopeStateResult {
   handleScopeFilterChange: (filterValue: string) => void;
   toggleSelectAllFilteredScopeUsers: () => void;
   applyDefaultScopePreset: () => void;
+  selectPresetScope: (scopeType: PermissionOverrideScope) => void;
   toggleScopeUser: (scopeUserId: number) => void;
   ensureExplicitUsersScopeSelected: () => void;
 }
@@ -71,6 +75,7 @@ export const useUserPermissionScopeState = ({
   hasConfigurablePermissionRoles,
   normalizedSelectedPermissionRole,
   selectedRoleDefaultScopeTypes,
+  availableScopeTypes,
   scopeGroupKey,
   scopePermissionCode,
   scopeUsers,
@@ -81,6 +86,11 @@ export const useUserPermissionScopeState = ({
   const [scopeUserSearch, setScopeUserSearch] = useState('');
   const [showScopeAdjustPanel, setShowScopeAdjustPanel] = useState(false);
   const [scopeUserFilter, setScopeUserFilter] = useState<string>('all');
+  const normalizedAvailableScopeTypes = useMemo(
+    () => normalizeAvailableScopeTypes(availableScopeTypes),
+    [availableScopeTypes],
+  );
+  const canSelectExplicitScopeUsers = normalizedAvailableScopeTypes.includes('EXPLICIT_USERS');
   const shouldRestrictToStudents = useMemo(
     () => Boolean(scopePermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePermissionCode)),
     [scopePermissionCode],
@@ -125,6 +135,7 @@ export const useUserPermissionScopeState = ({
       selectableScopeUserIdSet,
       selectedRoleDefaultScopeTypes,
       scopeGroupOverrides,
+      availableScopeTypes: normalizedAvailableScopeTypes,
     });
   }, [
     getPresetMatchedScopeUserIdsForSelection,
@@ -135,6 +146,7 @@ export const useUserPermissionScopeState = ({
     scopeGroupKey,
     selectableScopeUserIdSet,
     selectedRoleDefaultScopeTypes,
+    normalizedAvailableScopeTypes,
     scopeGroupOverrides,
   ]);
 
@@ -155,11 +167,13 @@ export const useUserPermissionScopeState = ({
         selectableScopeUserIdSet,
         selectedRoleDefaultScopeTypes,
         scopeGroupOverrides,
+        availableScopeTypes: normalizedAvailableScopeTypes,
       });
       const nextSelection = syncRoleScopeSelection({
         getPresetMatchedScopeUserIdsForSelection,
         selectableScopeUserIdSet,
         selection: updater(currentSelection),
+        availableScopeTypes: normalizedAvailableScopeTypes,
       });
 
       if (
@@ -189,6 +203,7 @@ export const useUserPermissionScopeState = ({
     scopeGroupKey,
     selectableScopeUserIdSet,
     selectedRoleDefaultScopeTypes,
+    normalizedAvailableScopeTypes,
     scopeGroupOverrides,
   ]);
 
@@ -264,6 +279,9 @@ export const useUserPermissionScopeState = ({
   };
 
   const toggleSelectAllFilteredScopeUsers = () => {
+    if (!canSelectExplicitScopeUsers) {
+      return;
+    }
     if (filteredScopeUserIds.length === 0) {
       return;
     }
@@ -295,7 +313,18 @@ export const useUserPermissionScopeState = ({
     setScopeUserSearch('');
   };
 
+  const selectPresetScope = (scopeType: PermissionOverrideScope) => {
+    updateCurrentRoleSelection(() => ({
+      scopeTypes: normalizeScopeTypes([scopeType]),
+      scopeUserIds: getPresetMatchedScopeUserIdsForSelection([scopeType]),
+    }));
+    setScopeUserSearch('');
+  };
+
   const toggleScopeUser = (scopeUserId: number) => {
+    if (!canSelectExplicitScopeUsers) {
+      return;
+    }
     updateCurrentRoleSelection((currentSelection) => ({
       ...currentSelection,
       scopeUserIds: currentSelection.scopeUserIds.includes(scopeUserId)
@@ -305,6 +334,9 @@ export const useUserPermissionScopeState = ({
   };
 
   const ensureExplicitUsersScopeSelected = () => {
+    if (!canSelectExplicitScopeUsers) {
+      return;
+    }
     if (selectedPermissionScopes.includes('EXPLICIT_USERS')) {
       return;
     }
@@ -326,6 +358,7 @@ export const useUserPermissionScopeState = ({
     selectedFilteredScopeCount,
     isAllFilteredScopeUsersSelected,
     hasPartialFilteredScopeSelection,
+    availableScopeTypes: normalizedAvailableScopeTypes,
     setShowScopeAdjustPanel,
     setScopeUserSearch,
     setScopeUserFilter,
@@ -333,6 +366,7 @@ export const useUserPermissionScopeState = ({
     handleScopeFilterChange,
     toggleSelectAllFilteredScopeUsers,
     applyDefaultScopePreset,
+    selectPresetScope,
     toggleScopeUser,
     ensureExplicitUsersScopeSelected,
   };
