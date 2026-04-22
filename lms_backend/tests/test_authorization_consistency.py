@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+from typing import Optional
 
 from apps.authorization.constants import (
     PERMISSION_CATALOG,
@@ -8,6 +9,7 @@ from apps.authorization.constants import (
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
+from apps.authorization.views import PERMISSION_CATALOG_ACCESS_CODES
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +17,9 @@ BACKEND_APPS_ROOT = REPO_ROOT / 'apps'
 FRONTEND_SRC_ROOT = REPO_ROOT.parent / 'lms_frontend' / 'src'
 FRONTEND_PRESENTATION_FILE = (
     FRONTEND_SRC_ROOT / 'entities' / 'authorization' / 'constants' / 'permission-presentation.ts'
+)
+FRONTEND_AUTHORIZATION_ACCESS_FILE = (
+    FRONTEND_SRC_ROOT / 'entities' / 'authorization' / 'constants' / 'access.ts'
 )
 
 BACKEND_PERMISSION_PATTERNS = [
@@ -43,6 +48,36 @@ def _extract_module_presentation_codes():
     source_text = FRONTEND_PRESENTATION_FILE.read_text(encoding='utf-8')
     module_block = _extract_object_body(source_text, 'MODULE_PRESENTATION')
     return set(re.findall(r'^\s*([a-z_]+):\s*\{', module_block, re.MULTILINE))
+
+
+def _extract_frontend_authorization_workbench_access_codes() -> list[str]:
+    source_text = FRONTEND_AUTHORIZATION_ACCESS_FILE.read_text(encoding='utf-8')
+    const_values = dict(re.findall(
+        r"export const ([A-Z_]+)\s*=\s*['\"]([a-z_]+(?:\.[a-z_]+)+)['\"];",
+        source_text,
+    ))
+    array_values = {
+        name: re.findall(r'\b[A-Z_]+\b', body)
+        for name, body in re.findall(
+            r'export const ([A-Z_]+)\s*=\s*\[(.*?)\];',
+            source_text,
+            re.S,
+        )
+    }
+
+    def resolve_const_names(name: str, seen: Optional[set[str]] = None) -> list[str]:
+        resolved_seen = seen or set()
+        if name in resolved_seen:
+            return []
+        if name in const_values:
+            return [const_values[name]]
+        resolved_seen.add(name)
+        codes: list[str] = []
+        for child_name in array_values.get(name, []):
+            codes.extend(resolve_const_names(child_name, resolved_seen))
+        return codes
+
+    return resolve_const_names('AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS')
 
 
 def _iter_backend_source_files():
@@ -108,6 +143,13 @@ def validate_authorization_consistency():
     missing_module_codes = sorted(declared_modules - module_presentation_codes)
     if missing_module_codes:
         errors.append(f'前端模块说明缺失: {missing_module_codes}')
+
+    frontend_authorization_access_codes = _extract_frontend_authorization_workbench_access_codes()
+    if tuple(frontend_authorization_access_codes) != tuple(PERMISSION_CATALOG_ACCESS_CODES):
+        errors.append(
+            '用户授权工作台入口权限前后端不一致: '
+            f'frontend={frontend_authorization_access_codes}, backend={list(PERMISSION_CATALOG_ACCESS_CODES)}'
+        )
 
     return errors
 

@@ -25,7 +25,7 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.authorize', request, error_message='只有管理员可以分配角色')
+        enforce('user.role.assign', request, error_message='无权分配用户角色')
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(

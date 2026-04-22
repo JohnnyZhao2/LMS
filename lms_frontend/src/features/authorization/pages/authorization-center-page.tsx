@@ -10,6 +10,11 @@ import {
   useRolePermissionTemplates,
   usePermissionCatalog,
 } from '@/entities/authorization/api/authorization';
+import {
+  AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
+  ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
+  ROLE_PERMISSION_TEMPLATE_UPDATE_PERMISSION,
+} from '@/entities/authorization/constants/access';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
 const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');
@@ -17,8 +22,9 @@ const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_
 export const AuthorizationCenterPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { hasCapability, refreshUser } = useAuth();
-  const canViewRoleTemplate = hasCapability('authorization.role_template.view') || hasCapability('authorization.role_template.update');
-  const canUpdateRoleTemplate = hasCapability('authorization.role_template.update');
+  const canAccessWorkbench = AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS.some(hasCapability);
+  const canViewRoleTemplate = ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS.some(hasCapability);
+  const canUpdateRoleTemplate = hasCapability(ROLE_PERMISSION_TEMPLATE_UPDATE_PERMISSION);
   const initialRoleCode = searchParams.get('role_code');
   const initialUserIdParam = searchParams.get('user_id');
   const initialSelectedRole = ROLE_TEMPLATE_ORDER.includes(initialRoleCode as (typeof ROLE_TEMPLATE_ORDER)[number])
@@ -27,7 +33,7 @@ export const AuthorizationCenterPage: React.FC = () => {
   const initialSelectedUserId = initialUserIdParam ? Number(initialUserIdParam) : null;
 
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
-  const shouldLoadData = canViewRoleTemplate;
+  const shouldLoadData = canAccessWorkbench;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({ view: 'role_template' }, shouldLoadData);
   const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
@@ -74,12 +80,12 @@ export const AuthorizationCenterPage: React.FC = () => {
     }
   };
 
-  if (!canViewRoleTemplate) {
+  if (!canAccessWorkbench) {
     return (
       <PageFillShell>
         <PageWorkbench className="gap-0">
           <div className="flex h-full items-center justify-center rounded-2xl border border-border bg-muted px-6 py-8 text-sm text-text-muted">
-            当前账号没有角色模板配置权限，请联系管理员开通。
+            当前账号没有用户授权工作台权限，请联系管理员开通。
           </div>
         </PageWorkbench>
       </PageFillShell>
@@ -90,6 +96,7 @@ export const AuthorizationCenterPage: React.FC = () => {
     <PageFillShell>
       <PageWorkbench className="gap-0">
         <RolePermissionTemplatePanel
+          canViewRoleTemplate={canViewRoleTemplate}
           canUpdateRoleTemplate={canUpdateRoleTemplate}
           roleCodes={ROLE_TEMPLATE_ORDER}
           permissionCatalog={permissionCatalog}

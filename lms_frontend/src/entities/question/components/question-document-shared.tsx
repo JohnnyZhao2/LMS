@@ -74,7 +74,7 @@ export const QuestionChoiceIndicator: React.FC<{
     {shape === 'square' ? (
       <Check
         className={cn(
-          'h-[10px] w-[10px] text-white transition-all',
+          'h-[10px] w-[10px] text-white',
           selected ? 'opacity-100' : 'opacity-0',
           iconClassName,
         )}
@@ -82,8 +82,8 @@ export const QuestionChoiceIndicator: React.FC<{
     ) : (
       <span
         className={cn(
-          'block rounded-full bg-white transition-all',
-          selected ? 'h-[6px] w-[6px]' : 'h-0 w-0',
+          'block h-[6px] w-[6px] rounded-full bg-white',
+          selected ? 'opacity-100' : 'opacity-0',
           dotClassName,
         )}
       />

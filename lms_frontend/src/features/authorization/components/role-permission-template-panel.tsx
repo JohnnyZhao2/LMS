@@ -12,6 +12,7 @@ import { RoleTemplateMemberPanel } from './role-template-member-panel';
 import { useRolePermissionTemplateState } from './use-role-permission-template-state';
 
 interface RolePermissionTemplatePanelProps {
+  canViewRoleTemplate: boolean;
   canUpdateRoleTemplate: boolean;
   roleCodes: RoleCode[];
   permissionCatalog: PermissionCatalogItem[];
@@ -24,6 +25,7 @@ interface RolePermissionTemplatePanelProps {
 }
 
 export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelProps> = ({
+  canViewRoleTemplate,
   canUpdateRoleTemplate,
   roleCodes,
   permissionCatalog,
@@ -36,6 +38,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
 }) => {
   const {
     canManageRoleMembers,
+    canViewUserAuthorization,
     candidateUsers,
     canResetCurrentRoleOverrides,
     departments,
@@ -99,7 +102,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
             onAddMember={(user) => void handleAssignRole(user)}
             onRemoveMember={(user) => void handleRemoveRole(user)}
             selectedMemberId={selectedUserId}
-            canSelectMember={canManageRoleMembers}
+            canSelectMember={canViewUserAuthorization}
             onSelectRole={handleSelectRole}
             onSelectMember={handleSelectMember}
           />
@@ -147,7 +150,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                     </Button>
                   )}
                 />
-              ) : (
+              ) : canViewRoleTemplate ? (
                 <PermissionModuleSections
                   sections={permissionSections}
                   renderPermissionCard={(permission) => {
@@ -174,6 +177,10 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                     );
                   }}
                 />
+              ) : (
+                <div className="flex h-full min-h-[260px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/30 px-6 text-sm text-text-muted">
+                  请选择左侧成员查看用户授权。
+                </div>
               )}
             </div>
           </div>

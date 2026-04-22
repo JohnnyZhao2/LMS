@@ -41,6 +41,7 @@ import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -50,7 +51,7 @@ export const UserList: React.FC = () => {
   const canManageUserAccount = hasCapability('user.activate')
   const canDeleteUser = hasCapability('user.delete')
   const canChangePassword = canManageUserAccount
-  const canOpenUserEditor = canUpdateUser || hasCapability('user.authorize')
+  const canOpenUserEditor = canUpdateUser || hasCapability(USER_ROLE_ASSIGN_PERMISSION)
   const canAdminEditAvatar = hasCapability('user.avatar.update')
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined

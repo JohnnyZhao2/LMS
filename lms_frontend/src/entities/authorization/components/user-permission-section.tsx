@@ -44,6 +44,11 @@ import {
   resolveRoleScopeSelection,
   STUDENT_ONLY_SCOPE_PERMISSION_CODES,
 } from './user-permission-scope.utils';
+import {
+  ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
+  USER_PERMISSION_ACCESS_PERMISSIONS,
+  USER_PERMISSION_UPDATE_PERMISSION,
+} from '@/entities/authorization/constants/access';
 
 interface UserPermissionSectionProps {
   userId?: number;
@@ -65,15 +70,14 @@ export function UserPermissionSection({
   dialogContentElement,
 }: UserPermissionSectionProps) {
   const { hasCapability, refreshUser } = useAuth();
-  const canManageUserAuthorization = hasCapability('user.authorize');
-  const canViewRoleTemplate =
-    hasCapability('authorization.role_template.view')
-    || hasCapability('authorization.role_template.update');
+  const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
+  const canManageUserAuthorization = hasCapability(USER_PERMISSION_UPDATE_PERMISSION);
+  const canViewRoleTemplate = ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS.some(hasCapability);
 
-  const shouldLoadUserOverrides = Boolean(userId) && canManageUserAuthorization;
+  const shouldLoadUserOverrides = Boolean(userId) && canViewUserAuthorization;
   const { data: permissionCatalog = [] } = usePermissionCatalog(
     { view: 'user_authorization' },
-    canManageUserAuthorization,
+    canViewUserAuthorization,
   );
   const {
     data: userOverrides = [],
@@ -97,7 +101,7 @@ export function UserPermissionSection({
 
   const { data: scopeUsers = [], isLoading: isScopeUsersLoading } = useUsers(
     {},
-    { enabled: canManageUserAuthorization },
+    { enabled: canViewUserAuthorization },
   );
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => {
@@ -112,7 +116,7 @@ export function UserPermissionSection({
 
   const roleTemplateQueries = useRolePermissionTemplates(
     previewRoleCodes,
-    canManageUserAuthorization && canViewRoleTemplate,
+    canViewUserAuthorization && canViewRoleTemplate,
   );
 
   const roleTemplatePermissionCodeMap = useMemo(() => {
@@ -356,7 +360,7 @@ export function UserPermissionSection({
     refreshUser,
     refetchUserOverrides,
   });
-  if (!canManageUserAuthorization) {
+  if (!canViewUserAuthorization) {
     return null;
   }
 

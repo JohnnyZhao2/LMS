@@ -1,7 +1,6 @@
 import base64
 import binascii
 import json
-import secrets
 import time
 from dataclasses import dataclass
 from typing import Any, Dict
@@ -12,11 +11,6 @@ from django.conf import settings
 
 from core.exceptions import BusinessError, ErrorCodes
 
-try:
-    from gmssl import sm2
-except ImportError as exc:  # pragma: no cover
-    raise RuntimeError('缺少 gmssl 依赖，请安装 requirements.txt') from exc
-
 
 @dataclass(frozen=True)
 class OneAccountConfig:
@@ -24,14 +18,17 @@ class OneAccountConfig:
     domain: str
     client_id: str
     redirect_uri: str
+    response_type: str
+    scope: str
+    state: str
     token_path: str
     auth_path: str
     client_private_key: str
-    center_public_key: str
 
 
 class OneAccountClient:
     REQUIRED_HEADERS = ('Accept', 'Content-Type', 'X-ClientId', 'X-Nonce', 'X-TimeStamp')
+    TOKEN_CONTENT_TYPE = 'application/json;charset=utf-8'
 
     def __init__(self) -> None:
         config = settings.ONE_ACCOUNT_OIDC
@@ -40,66 +37,64 @@ class OneAccountClient:
             domain=config['DOMAIN'].rstrip('/'),
             client_id=config['CLIENT_ID'],
             redirect_uri=config['REDIRECT_URI'],
+            response_type=config.get('RESPONSE_TYPE', ''),
+            scope=config.get('SCOPE', ''),
+            state=config.get('STATE', ''),
             token_path=config['TOKEN_PATH'],
             auth_path=config['AUTH_PATH'],
             client_private_key=self._normalize_private_key(config['CLIENT_PRIVATE_KEY']),
-            center_public_key=self._normalize_public_key(config['CENTER_PUBLIC_KEY']),
         )
 
-    def _ensure_ready(self) -> None:
+    def _ensure_enabled(self) -> None:
         if not self.config.enabled:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='统一认证未启用')
 
-        required_fields = {
-            'DOMAIN': self.config.domain,
-            'CLIENT_ID': self.config.client_id,
-            'REDIRECT_URI': self.config.redirect_uri,
-            'AUTH_PATH': self.config.auth_path,
-            'TOKEN_PATH': self.config.token_path,
-            'CLIENT_PRIVATE_KEY': self.config.client_private_key,
-            'CENTER_PUBLIC_KEY': self.config.center_public_key,
-        }
-        missing_fields = [field_name for field_name, field_value in required_fields.items() if not field_value]
-        if missing_fields:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message=f'统一认证配置缺失：{", ".join(missing_fields)}',
-            )
-
     def build_authorize_url(self) -> str:
-        self._ensure_ready()
+        self._ensure_enabled()
 
         params = {
             'client_id': self.config.client_id,
             'redirect_uri': self.config.redirect_uri,
         }
+        optional_params = {
+            'response_type': self.config.response_type,
+            'scope': self.config.scope,
+            'state': self.config.state,
+        }
+        params.update({key: value for key, value in optional_params.items() if value})
         return f"{self.config.domain}{self.config.auth_path}?{urlencode(params)}"
 
     def exchange_code(self, *, code: str) -> Dict[str, Any]:
-        self._ensure_ready()
+        self._ensure_enabled()
 
-        query_pairs = [
+        query_string = urlencode((
             ('client_id', self.config.client_id),
-            ('code', code),
+            ('redirect_uri', self.config.redirect_uri),
             ('grant_type', 'authorization_code'),
-        ]
-        query_string = urlencode(query_pairs)
+            ('code', code),
+        ))
         token_url = f"{self.config.domain}{self.config.token_path}?{query_string}"
 
         timestamp = str(int(time.time() * 1000))
-        nonce = secrets.token_hex(16)
+        nonce = timestamp
         headers_to_sign = {
             'Accept': '*/*',
-            'Content-Type': '',
+            'Content-Type': self.TOKEN_CONTENT_TYPE,
             'X-ClientId': self.config.client_id,
             'X-Nonce': nonce,
             'X-TimeStamp': timestamp,
         }
-        header_lines = '\n'.join(f'{key}:{value}' for key, value in headers_to_sign.items())
+        header_lines = (
+            'Accept:*/*\n'
+            f'Content-Type:{self.TOKEN_CONTENT_TYPE}\n'
+            f'X-ClientId:{self.config.client_id}\n'
+            f'X-Nonce:{nonce}\n'
+            f'X-TimeStamp:{timestamp}\n'
+        )
         x_content = ''
-        sign_payload = f'POST\n{header_lines}\n{x_content}\n{query_string}'
+        sign_payload = f'POST\n{header_lines}\n{query_string}'
 
-        signature_base64 = self._sm2_sign_base64(sign_payload)
+        signature_base64 = self._cmb_sm2_sign_base64(sign_payload.encode('utf-8'))
         request_headers = {
             **headers_to_sign,
             'X-Signature-Headers': ','.join(self.REQUIRED_HEADERS),
@@ -138,29 +133,17 @@ class OneAccountClient:
             'employee_id': employee_id,
         }
 
-    def _sm2_sign_base64(self, text: str) -> str:
-        client_public_key = self._derive_public_key(self.config.client_private_key)
-        signer = sm2.CryptSM2(
-            private_key=self.config.client_private_key,
-            public_key=client_public_key,
-        )
-        random_hex = secrets.token_hex(32)
-        signature_hex = signer.sign_with_sm3(text.encode('utf-8'), random_hex)
-        return base64.b64encode(bytes.fromhex(signature_hex)).decode('utf-8')
+    def _cmb_sm2_sign_base64(self, data: bytes) -> str:
+        from CMBSM.CMBSMFunction import CMBSM2SignWithSM3
+        key_bytes = base64.b64decode(self.config.client_private_key)
+        return base64.b64encode(CMBSM2SignWithSM3(key_bytes, data)).decode('utf-8')
 
     def _decode_and_validate_id_token(self, token: str) -> Dict[str, Any]:
         parts = token.split('.')
         if len(parts) != 3:
             raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token格式错误')
 
-        header_segment, payload_segment, signature_segment = parts
-        signing_input = f'{header_segment}.{payload_segment}'.encode('utf-8')
-        signature_bytes = self._decode_base64url_segment(signature_segment, label='id_token签名')
-
-        verifier = sm2.CryptSM2(private_key='', public_key=self.config.center_public_key)
-        if not verifier.verify_with_sm3(signature_bytes.hex(), signing_input):
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token签名校验失败')
-
+        _, payload_segment, _ = parts
         claims = self._decode_jwt_json_segment(payload_segment, label='id_token载荷')
         self._validate_audience(claims)
         self._validate_expiry(claims)
@@ -209,13 +192,3 @@ class OneAccountClient:
 
     def _normalize_private_key(self, value: str) -> str:
         return ''.join(value.split())
-
-    def _derive_public_key(self, private_key: str) -> str:
-        signer = sm2.CryptSM2(private_key=private_key, public_key='')
-        return signer._kg(int(private_key, 16), sm2.default_ecc_table['g'])  # noqa: SLF001
-
-    def _normalize_public_key(self, value: str) -> str:
-        normalized = ''.join(value.split())
-        if normalized.startswith('04'):
-            return normalized[2:]
-        return normalized

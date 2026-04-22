@@ -116,8 +116,9 @@ def test_admin_capabilities_follow_default_menu_and_system_rules():
     assert 'grading.view' not in permissions
     assert 'grading.score' not in permissions
     assert 'user.view' not in permissions
-    assert 'authorization.role_template.view' not in permissions
-    assert 'user.authorize' not in permissions
+    assert 'role_permission_template.view' not in permissions
+    assert 'user.role.assign' not in permissions
+    assert 'user.permission.view' not in permissions
     assert 'activity_log.view' not in permissions
     assert 'activity_log.policy.update' not in permissions
 
@@ -202,8 +203,12 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'task.view' in permission_codes
     assert 'tag.view' in permission_codes
     assert 'tag.create' in permission_codes
-    assert 'authorization.role_template.view' not in permission_codes
-    assert 'authorization.role_template.update' not in permission_codes
+    assert 'user.role.assign' in permission_codes
+    assert 'user.permission.view' in permission_codes
+    assert 'user.permission.update' in permission_codes
+    assert 'user.authorize' not in permission_codes
+    assert 'role_permission_template.view' not in permission_codes
+    assert 'role_permission_template.update' not in permission_codes
     assert 'activity_log.policy.update' not in permission_codes
     assert 'dashboard.student.view' not in permission_codes
     assert 'dashboard.mentor.view' not in permission_codes
@@ -274,7 +279,7 @@ def test_admin_cannot_access_role_permission_template():
 
     assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'
-    assert '仅超级管理员可以查看角色权限模板' in response.data['message']
+    assert '无权查看角色权限模板' in response.data['message']
 
 
 @pytest.mark.django_db
@@ -339,6 +344,7 @@ def test_permission_override_takes_effect_without_scope_payload():
 
     payload = _authenticate(client, employee_id=mentor_user.employee_id, role_code='MENTOR')
     assert payload['capabilities']['knowledge.update']['allowed'] is True
+    assert payload['capabilities']['knowledge.view']['allowed'] is True
 
     knowledge = Knowledge.objects.create(
         title='Scope Normalize Knowledge',
@@ -382,7 +388,7 @@ def test_student_role_cannot_be_used_for_user_override_applies_to_role():
 
 
 @pytest.mark.django_db
-def test_super_admin_cannot_be_target_of_user_permission_override():
+def test_super_admin_cannot_be_target_of_user_override():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_SUPER_OVERRIDE_ADMIN', username='Super Override Admin')
     target_super_user = _create_superuser(employee_id='EMP_AUTH_SUPER_OVERRIDE_TARGET', username='Super Override Target')
@@ -409,7 +415,7 @@ def test_super_admin_cannot_be_target_of_user_permission_override():
 
 
 @pytest.mark.django_db
-def test_student_current_role_ignores_user_permission_overrides():
+def test_student_current_role_ignores_user_overrides():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_STUDENT_ROLE_ADMIN', username='Student Role Super')
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_STUDENT_ROLE_TARGET', username='Student Role Target', role_code='MENTOR')
@@ -640,7 +646,7 @@ def test_sync_authorization_restores_role_default_scope_groups():
 
 
 @pytest.mark.django_db
-def test_user_permission_override_rejects_legacy_scope_payload():
+def test_user_override_rejects_legacy_scope_payload():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_FIX_ADMIN', username='Scope Fix Admin')
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_MENTOR', username='Scope Fix Mentor', role_code='MENTOR')
@@ -649,7 +655,7 @@ def test_user_permission_override_rejects_legacy_scope_payload():
     response = client.post(
         f'/api/authorization/users/{mentor_user.id}/overrides/',
         {
-            'permission_code': 'user.authorize',
+            'permission_code': 'user.role.assign',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
             'scope_type': 'SELF',
@@ -661,7 +667,7 @@ def test_user_permission_override_rejects_legacy_scope_payload():
     assert response.status_code == 400
     assert response.data['code'] == 'VALIDATION_ERROR'
     assert '不支持的字段' in str(response.data)
-    assert not UserPermissionOverride.objects.filter(user=mentor_user, permission__code='user.authorize').exists()
+    assert not UserPermissionOverride.objects.filter(user=mentor_user, permission__code='user.role.assign').exists()
 
 
 @pytest.mark.django_db

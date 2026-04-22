@@ -12,7 +12,6 @@ from .constants import (
     CONFIG_PERMISSION_MANAGEABLE_ROLE,
     EFFECT_ALLOW,
     EFFECT_DENY,
-    PERMISSION_IMPLIES_MAP,
     PERMISSION_SCOPE_GROUPS,
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
@@ -20,22 +19,11 @@ from .constants import (
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
 from .models import Permission, RolePermission
+from .permission_implications import expand_permission_codes
 from .selectors import get_permissions_by_codes
 
 
 class RoleTemplateServiceMixin:
-    @staticmethod
-    def _expand_permission_codes(permission_codes: Iterable[str]) -> List[str]:
-        expanded_codes: list[str] = []
-        pending_codes = [code for code in permission_codes if code]
-        while pending_codes:
-            permission_code = pending_codes.pop(0)
-            if permission_code in expanded_codes:
-                continue
-            expanded_codes.append(permission_code)
-            pending_codes.extend(PERMISSION_IMPLIES_MAP.get(permission_code, []))
-        return expanded_codes
-
     @staticmethod
     def _can_manage_config_permissions(role_code: Optional[str]) -> bool:
         return role_code == CONFIG_PERMISSION_MANAGEABLE_ROLE
@@ -175,7 +163,7 @@ class RoleTemplateServiceMixin:
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='超管为系统专有角色，不支持配置模板权限',
             )
-        requested_codes = self._expand_permission_codes(permission_codes)
+        requested_codes = expand_permission_codes(permission_codes)
         if not self._can_manage_config_permissions(role_code):
             forbidden_codes = sorted(set(requested_codes) & set(CONFIG_MODULE_PERMISSION_CODES))
             if forbidden_codes:

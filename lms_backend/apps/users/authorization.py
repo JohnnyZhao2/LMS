@@ -30,9 +30,22 @@ AUTHORIZATION_SPECS = (
                 description='启用/停用账号并修改密码',
             ),
             perm(
-                code='user.authorize',
-                name='分配权限',
-                description='分配角色并配置用户权限自定义',
+                code='user.role.assign',
+                name='分配用户角色',
+                description='给用户分配或移除业务角色',
+                implies=('user.view',),
+            ),
+            perm(
+                code='user.permission.view',
+                name='查看用户权限',
+                description='查看用户继承的角色权限和用户权限自定义',
+                implies=('user.view',),
+            ),
+            perm(
+                code='user.permission.update',
+                name='更新用户权限',
+                description='配置用户权限自定义和范围自定义',
+                implies=('user.permission.view',),
             ),
             perm(
                 code='user.avatar.update',

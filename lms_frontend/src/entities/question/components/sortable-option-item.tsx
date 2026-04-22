@@ -55,19 +55,22 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         onClick={onToggleAnswer}
         disabled={disabled}
         aria-label={`${selected ? '取消' : '设为'}${isSingleChoice ? '正确答案' : '正确选项'} ${optionKey}`}
-        className={cn(disabled ? 'cursor-default' : 'cursor-pointer')}
+        className={cn(
+          'flex w-[18px] shrink-0 items-center justify-center self-stretch p-0 leading-none',
+          disabled ? 'cursor-default' : 'cursor-pointer',
+        )}
       >
         <QuestionChoiceIndicator
           selected={selected}
           shape={isSingleChoice ? 'circle' : 'square'}
           className={cn(
-            'h-[14px] w-[14px] border transition-all duration-150',
+            'h-[14px] w-[14px] border transition-colors duration-150',
             selected && 'shadow-[0_0_0_2px_var(--theme-interaction-outline)]',
           )}
           selectedClassName="border-primary-500 bg-primary-500"
           unselectedClassName="border-gray-300 bg-transparent"
           iconClassName="h-[8px] w-[8px]"
-          dotClassName={selected ? 'h-[5px] w-[5px] bg-white' : 'h-0 w-0'}
+          dotClassName="h-[5px] w-[5px] bg-white"
         />
       </button>
 

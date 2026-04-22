@@ -5,22 +5,23 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from gmssl import sm2
 
 from apps.auth.one_account import OneAccountClient
 from apps.users.models import Department, User
 
 
-def _configure_one_account(settings, *, client_id='client_12345678901234567890123456', center_public_key='1') -> None:
+def _configure_one_account(settings, *, client_id='client_12345678901234567890123456') -> None:
     settings.ONE_ACCOUNT_OIDC = {
         'ENABLED': True,
         'DOMAIN': 'http://test.cn',
         'CLIENT_ID': client_id,
         'REDIRECT_URI': 'http://localhost:5173/login',
+        'RESPONSE_TYPE': '',
+        'SCOPE': '',
+        'STATE': '',
         'AUTH_PATH': '/auth-server/auth',
         'TOKEN_PATH': '/auth-server/token',
-        'CLIENT_PRIVATE_KEY': '1'.zfill(64),
-        'CENTER_PUBLIC_KEY': center_public_key,
+        'CLIENT_PRIVATE_KEY': base64.b64encode(b'1' * 32).decode('utf-8'),
     }
 
 
@@ -28,11 +29,7 @@ def _base64url_encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode('utf-8').rstrip('=')
 
 
-def _build_signed_id_token(*, client_id: str, employee_id: str) -> tuple[str, str]:
-    private_key = '1'.zfill(64)
-    signer = sm2.CryptSM2(private_key=private_key, public_key='')
-    public_key = signer._kg(int(private_key, 16), sm2.default_ecc_table['g'])  # noqa: SLF001
-
+def _build_id_token(*, client_id: str, employee_id: str) -> str:
     header_segment = _base64url_encode(json.dumps({'alg': 'SM2', 'typ': 'JWT'}, separators=(',', ':')).encode('utf-8'))
     payload_segment = _base64url_encode(
         json.dumps(
@@ -44,35 +41,57 @@ def _build_signed_id_token(*, client_id: str, employee_id: str) -> tuple[str, st
             separators=(',', ':'),
         ).encode('utf-8')
     )
-    signing_input = f'{header_segment}.{payload_segment}'.encode('utf-8')
-
-    signing_client = sm2.CryptSM2(private_key=private_key, public_key=public_key)
-    signature_hex = signing_client.sign_with_sm3(signing_input, '2'.zfill(64))
-    signature_segment = _base64url_encode(bytes.fromhex(signature_hex))
-    return f'{header_segment}.{payload_segment}.{signature_segment}', public_key
+    return f'{header_segment}.{payload_segment}.signature'
 
 
-def test_one_account_client_signatures_can_be_verified_by_client_public_key(settings):
+def test_one_account_token_request_uses_cmb_signature_payload(settings):
     client_id = 'client_12345678901234567890123456'
     _configure_one_account(settings, client_id=client_id)
 
     client = OneAccountClient()
-    client_public_key = client._derive_public_key(client.config.client_private_key)  # noqa: SLF001
-    verifier = sm2.CryptSM2(private_key='', public_key=client_public_key)
-
-    message = (
+    token = _build_id_token(client_id=client_id, employee_id='EMP_SIGNED_TOKEN')
+    expected_payload = (
         'POST\n'
         'Accept:*/*\n'
-        'Content-Type:\n'
+        'Content-Type:application/json;charset=utf-8\n'
         f'X-ClientId:{client_id}\n'
-        'X-Nonce:test-nonce\n'
+        'X-Nonce:1713542400000\n'
         'X-TimeStamp:1713542400000\n'
         '\n'
-        f'client_id={client_id}&code=test-code&grant_type=authorization_code'
+        f'client_id={client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Flogin'
+        '&grant_type=authorization_code&code=test-code'
     )
-    signature_hex = base64.b64decode(client._sm2_sign_base64(message)).hex()  # noqa: SLF001
 
-    assert verifier.verify_with_sm3(signature_hex, message.encode('utf-8'))
+    class MockResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self):
+            return json.dumps({'id_token': token}).encode('utf-8')
+
+    with (
+        patch('time.time', return_value=1713542400),
+        patch.object(client, '_cmb_sm2_sign_base64', return_value='mock-signature') as sign_mock,
+        patch('apps.auth.one_account.urlopen', return_value=MockResponse()) as urlopen_mock,
+    ):
+        result = client.exchange_code(code='test-code')
+
+    assert result == {'employee_id': 'EMP_SIGNED_TOKEN'}
+    sign_mock.assert_called_once_with(expected_payload.encode('utf-8'))
+    request = urlopen_mock.call_args.args[0]
+    assert request.full_url == (
+        'http://test.cn/auth-server/token?'
+        f'client_id={client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Flogin'
+        '&grant_type=authorization_code&code=test-code'
+    )
+    assert request.headers['Content-type'] == 'application/json;charset=utf-8'
+    assert request.headers['X-clientid'] == client_id
+    assert request.headers['X-nonce'] == '1713542400000'
+    assert request.headers['X-timestamp'] == '1713542400000'
+    assert request.headers['X-signature'] == 'mock-signature'
 
 
 def test_one_account_authorize_url_only_contains_required_query_params(settings, api_client, unwrap_response_data):
@@ -118,10 +137,10 @@ def test_one_account_code_login_returns_session(api_client):
     assert 'refresh_token' in payload
 
 
-def test_one_account_client_validates_signed_id_token(settings):
+def test_one_account_client_decodes_id_token(settings):
     client_id = 'client_12345678901234567890123456'
-    token, public_key = _build_signed_id_token(client_id=client_id, employee_id='EMP_SIGNED_TOKEN')
-    _configure_one_account(settings, client_id=client_id, center_public_key=f'04{public_key}')
+    token = _build_id_token(client_id=client_id, employee_id='EMP_SIGNED_TOKEN')
+    _configure_one_account(settings, client_id=client_id)
 
     client = OneAccountClient()
     claims = client._decode_and_validate_id_token(token)  # noqa: SLF001

@@ -24,6 +24,7 @@ from .constants import (
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
 from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
+from .permission_implications import get_permission_covering_codes, permission_code_set_covers
 
 
 class UserOverrideServiceMixin:
@@ -224,8 +225,17 @@ class UserOverrideServiceMixin:
         if not resolved_role:
             return False
 
+        implied_allow_codes = get_permission_covering_codes(permission_code)
+        for implied_allow_code in implied_allow_codes:
+            if self._resolve_override_effect(
+                acting_user=base_user,
+                permission_code=implied_allow_code,
+                current_role=resolved_role,
+            ) == EFFECT_ALLOW:
+                return True
+
         role_codes = self._get_role_permission_code_set(resolved_role)
-        return permission_code in role_codes
+        return permission_code_set_covers(role_codes, permission_code)
 
     def get_permission_scope_types(
         self,

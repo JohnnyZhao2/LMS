@@ -17,6 +17,10 @@ import {
   getManagedRoleCodes,
   getSelectedBusinessRoleCode,
 } from '@/entities/authorization/utils/user-role-assignment';
+import {
+  USER_PERMISSION_ACCESS_PERMISSIONS,
+  USER_ROLE_ASSIGN_PERMISSION,
+} from '@/entities/authorization/constants/access';
 
 interface UseRolePermissionTemplateStateParams {
   roleCodes: RoleCode[];
@@ -36,7 +40,8 @@ export function useRolePermissionTemplateState({
   initialSelectedUserId = null,
 }: UseRolePermissionTemplateStateParams) {
   const { hasCapability, refreshUser } = useAuth();
-  const canManageRoleMembers = hasCapability('user.authorize');
+  const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
+  const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
   const [activeRole, setActiveRole] = useState<RoleCode | null>(initialRoleCode);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
@@ -70,7 +75,7 @@ export function useRolePermissionTemplateState({
   const isSavingCurrentRole = resolvedActiveRole ? savingRoleCodes.includes(resolvedActiveRole) : false;
   const { data: allVisibleUsers = [], isLoading: isLoadingMembers } = useUsers(
     {},
-    { enabled: Boolean(resolvedActiveRole) },
+    { enabled: Boolean(resolvedActiveRole) && (canManageRoleMembers || canViewUserAuthorization) },
   );
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
@@ -312,6 +317,7 @@ export function useRolePermissionTemplateState({
 
   return {
     canManageRoleMembers,
+    canViewUserAuthorization,
     candidateUsers,
     canResetCurrentRoleOverrides,
     departments,

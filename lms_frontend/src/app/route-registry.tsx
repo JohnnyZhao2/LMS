@@ -14,6 +14,7 @@ import { PageFillShell, PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
 import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
+import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
 import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
 
 export type PermissionMode = 'all' | 'any';
@@ -386,7 +387,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'authorization-center',
     kind: 'business',
     path: 'authorization',
-    requiredPermissions: ['authorization.role_template.view', 'authorization.role_template.update'],
+    requiredPermissions: AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
     permissionMode: 'any',
     showInMenu: true,
     menu: {

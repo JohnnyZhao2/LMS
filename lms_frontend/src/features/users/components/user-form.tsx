@@ -27,6 +27,7 @@ import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
 import { useAuth } from '@/session/auth/auth-context';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';
@@ -154,8 +155,8 @@ const UserFormContent: React.FC<{
     const { hasCapability } = useAuth();
     const canCreateUser = hasCapability('user.create');
     const canUpdateUser = hasCapability('user.update');
-    const canUpdateUserAuthorization = hasCapability('user.authorize');
-    const canSubmitForm = isEdit ? (canUpdateUser || canUpdateUserAuthorization) : canCreateUser;
+    const canAssignUserRole = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
+    const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
@@ -233,8 +234,8 @@ const UserFormContent: React.FC<{
             toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
             return;
           }
-          if (rolesChanged && !canUpdateUserAuthorization) {
-            toast.error('当前账号没有用户授权管理权限，无法调整角色');
+          if (rolesChanged && !canAssignUserRole) {
+            toast.error('当前账号没有用户角色分配权限，无法调整角色');
             return;
           }
 
@@ -256,12 +257,12 @@ const UserFormContent: React.FC<{
           }
           toast.success("账号信息已更新");
         } else {
-          if (!canUpdateUser) {
+          if (!canCreateUser) {
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
-          if (formData.role_codes.length > 0 && !canUpdateUserAuthorization) {
-            toast.error('当前账号没有用户授权管理权限，无法分配角色');
+          if (formData.role_codes.length > 0 && !canAssignUserRole) {
+            toast.error('当前账号没有用户角色分配权限，无法分配角色');
             return;
           }
           const newUser = await createUser.mutateAsync({
@@ -500,7 +501,7 @@ const UserFormContent: React.FC<{
                 {roles.filter(r => r.code !== 'STUDENT').map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
-                  const disabled = !canUpdateUserAuthorization || isRoleToggleDisabled();
+                  const disabled = !canAssignUserRole || isRoleToggleDisabled();
                   const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
                   return (

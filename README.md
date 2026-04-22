@@ -190,6 +190,21 @@ npm run docs:check
 - 项目更新记录来自 git commit；未提交改动不会进入自动记录
 - 如果新增迁移，先执行后端 `migrate` 验证，再更新生成文档
 
+## 改动同步
+查看本次提交改了哪些文件：
+
+```bash
+git show --name-only --stat
+```
+
+公司电脑手动替换对应文件后执行：
+
+```bash
+cd lms_backend
+conda activate lms
+python manage.py migrate
+```
+
 ## 当前模块
 
 后端已启用模块：

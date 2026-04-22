@@ -22,10 +22,18 @@ from .services import AuthorizationService
 
 
 PERMISSION_CATALOG_VIEW_CHOICES = {'role_template', 'user_authorization'}
+ROLE_PERMISSION_TEMPLATE_ACCESS_CODES = (
+    'role_permission_template.view',
+    'role_permission_template.update',
+)
+USER_PERMISSION_ACCESS_CODES = (
+    'user.permission.view',
+    'user.permission.update',
+)
 PERMISSION_CATALOG_ACCESS_CODES = (
-    'authorization.role_template.view',
-    'authorization.role_template.update',
-    'user.authorize',
+    *ROLE_PERMISSION_TEMPLATE_ACCESS_CODES,
+    *USER_PERMISSION_ACCESS_CODES,
+    'user.role.assign',
 )
 
 
@@ -77,7 +85,11 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, role_code: str):
-        enforce('authorization.role_template.view', request, error_message='仅超级管理员可以查看角色权限模板')
+        enforce_any(
+            ROLE_PERMISSION_TEMPLATE_ACCESS_CODES,
+            request,
+            error_message='无权查看角色权限模板',
+        )
 
         permission_codes = self.service.get_role_permission_codes(role_code)
         return success_response(
@@ -100,7 +112,7 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def put(self, request, role_code: str):
-        enforce('authorization.role_template.update', request, error_message='无权配置角色权限模板')
+        enforce('role_permission_template.update', request, error_message='无权配置角色权限模板')
 
         serializer = RolePermissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -138,7 +150,11 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, user_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以查看用户权限覆盖')
+        enforce_any(
+            USER_PERMISSION_ACCESS_CODES,
+            request,
+            error_message='无权查看用户权限覆盖',
+        )
 
         overrides = self.service.list_user_permission_overrides(
             user_id=user_id,
@@ -157,7 +173,7 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以创建用户权限覆盖')
+        enforce('user.permission.update', request, error_message='无权创建用户权限覆盖')
 
         serializer = UserPermissionOverrideCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -191,7 +207,7 @@ class UserPermissionOverrideRevokeView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int, override_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以撤销用户权限覆盖')
+        enforce('user.permission.update', request, error_message='无权撤销用户权限覆盖')
 
         serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -218,7 +234,11 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, user_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以查看用户范围组覆盖')
+        enforce_any(
+            USER_PERMISSION_ACCESS_CODES,
+            request,
+            error_message='无权查看用户范围组覆盖',
+        )
         overrides = self.service.list_user_scope_group_overrides(
             user_id=user_id,
         )
@@ -236,7 +256,7 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以创建用户范围组覆盖')
+        enforce('user.permission.update', request, error_message='无权创建用户范围组覆盖')
         serializer = UserScopeGroupOverrideCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         override = self.service.create_user_scope_group_override(
@@ -268,7 +288,7 @@ class UserScopeGroupOverrideRevokeView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int, override_id: int):
-        enforce('user.authorize', request, error_message='只有管理员可以撤销用户范围组覆盖')
+        enforce('user.permission.update', request, error_message='无权撤销用户范围组覆盖')
         serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         override = self.service.revoke_user_scope_group_override(
