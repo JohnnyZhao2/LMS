@@ -1,5 +1,4 @@
 import base64
-import binascii
 import json
 import time
 from dataclasses import dataclass
@@ -42,7 +41,7 @@ class OneAccountClient:
             state=config.get('STATE', ''),
             token_path=config['TOKEN_PATH'],
             auth_path=config['AUTH_PATH'],
-            client_private_key=self._normalize_private_key(config['CLIENT_PRIVATE_KEY']),
+            client_private_key=''.join(config['CLIENT_PRIVATE_KEY'].split()),
         )
 
     def _ensure_enabled(self) -> None:
@@ -69,9 +68,8 @@ class OneAccountClient:
 
         query_string = urlencode((
             ('client_id', self.config.client_id),
-            ('redirect_uri', self.config.redirect_uri),
-            ('grant_type', 'authorization_code'),
             ('code', code),
+            ('grant_type', 'authorization_code'),
         ))
         token_url = f"{self.config.domain}{self.config.token_path}?{query_string}"
 
@@ -124,7 +122,7 @@ class OneAccountClient:
         if not id_token:
             raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='统一认证未返回id_token')
 
-        claims = self._decode_and_validate_id_token(id_token)
+        claims = self._decode_id_token(id_token)
         employee_id = claims.get('employeeId')
         if not employee_id:
             raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token缺少employeeId')
@@ -138,57 +136,14 @@ class OneAccountClient:
         key_bytes = base64.b64decode(self.config.client_private_key)
         return base64.b64encode(CMBSM2SignWithSM3(key_bytes, data)).decode('utf-8')
 
-    def _decode_and_validate_id_token(self, token: str) -> Dict[str, Any]:
+    def _decode_id_token(self, token: str) -> Dict[str, Any]:
         parts = token.split('.')
         if len(parts) != 3:
             raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token格式错误')
 
-        _, payload_segment, _ = parts
-        claims = self._decode_jwt_json_segment(payload_segment, label='id_token载荷')
-        self._validate_audience(claims)
-        self._validate_expiry(claims)
+        payload = parts[1]
+        payload += '=' * ((4 - len(payload) % 4) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload).decode('utf-8'))
+        if not isinstance(claims, dict):
+            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token载荷格式错误')
         return claims
-
-    def _decode_base64url_segment(self, segment: str, *, label: str) -> bytes:
-        padding = '=' * ((4 - len(segment) % 4) % 4)
-        try:
-            return base64.urlsafe_b64decode(segment + padding)
-        except (ValueError, binascii.Error) as exc:
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message=f'{label}解析失败') from exc
-
-    def _decode_jwt_json_segment(self, segment: str, *, label: str) -> Dict[str, Any]:
-        decoded = self._decode_base64url_segment(segment, label=label)
-        try:
-            data = json.loads(decoded.decode('utf-8'))
-        except json.JSONDecodeError as exc:
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message=f'{label}解析失败') from exc
-        if not isinstance(data, dict):
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message=f'{label}格式错误')
-        return data
-
-    def _validate_audience(self, claims: Dict[str, Any]) -> None:
-        audience = claims.get('aud')
-        if not isinstance(audience, list) or not audience:
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token缺少aud')
-
-        client_info_raw = audience[0]
-        if not isinstance(client_info_raw, str):
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token aud格式错误')
-
-        try:
-            client_info = json.loads(client_info_raw)
-        except json.JSONDecodeError as exc:
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token aud格式错误') from exc
-
-        if client_info.get('id') != self.config.client_id:
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token受众不匹配')
-
-    def _validate_expiry(self, claims: Dict[str, Any]) -> None:
-        exp = claims.get('exp')
-        if not isinstance(exp, (int, float)):
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token缺少exp')
-        if exp <= int(time.time()):
-            raise BusinessError(code=ErrorCodes.AUTH_INVALID_CREDENTIALS, message='id_token已过期')
-
-    def _normalize_private_key(self, value: str) -> str:
-        return ''.join(value.split())

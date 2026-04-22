@@ -225,7 +225,7 @@ class OneAccountCodeLoginView(BaseAPIView):
         request=OneAccountCodeLoginRequestSerializer,
         responses={
             200: LoginResponseSerializer,
-            400: OpenApiResponse(description='授权码无效或统一认证失败'),
+            401: OpenApiResponse(description='授权码无效或统一认证失败'),
         },
         tags=['认证']
     )

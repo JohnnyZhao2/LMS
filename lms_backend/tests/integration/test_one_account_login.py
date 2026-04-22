@@ -58,8 +58,7 @@ def test_one_account_token_request_uses_cmb_signature_payload(settings):
         'X-Nonce:1713542400000\n'
         'X-TimeStamp:1713542400000\n'
         '\n'
-        f'client_id={client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Flogin'
-        '&grant_type=authorization_code&code=test-code'
+        f'client_id={client_id}&code=test-code&grant_type=authorization_code'
     )
 
     class MockResponse:
@@ -84,8 +83,7 @@ def test_one_account_token_request_uses_cmb_signature_payload(settings):
     request = urlopen_mock.call_args.args[0]
     assert request.full_url == (
         'http://test.cn/auth-server/token?'
-        f'client_id={client_id}&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Flogin'
-        '&grant_type=authorization_code&code=test-code'
+        f'client_id={client_id}&code=test-code&grant_type=authorization_code'
     )
     assert request.headers['Content-type'] == 'application/json;charset=utf-8'
     assert request.headers['X-clientid'] == client_id
@@ -143,7 +141,7 @@ def test_one_account_client_decodes_id_token(settings):
     _configure_one_account(settings, client_id=client_id)
 
     client = OneAccountClient()
-    claims = client._decode_and_validate_id_token(token)  # noqa: SLF001
+    claims = client._decode_id_token(token)  # noqa: SLF001
 
     assert claims['employeeId'] == 'EMP_SIGNED_TOKEN'
     assert claims['aud'] == [json.dumps({'id': client_id}, separators=(',', ':'))]
