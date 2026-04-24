@@ -31,6 +31,15 @@
     background-color: var(--theme-muted-hover);
 }
 
+.scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+}
+
 /* ============================================
    Tailwind CSS v4 Theme Configuration
    使用 @theme 注册 CSS 变量供 Tailwind 使用

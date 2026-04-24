@@ -61,7 +61,7 @@
 .ke-content-detail .ql-editor :is(th,td){border-bottom:1px solid #eee;padding:10px 14px;text-align:left}
 .ke-content-detail .ql-editor th{background:#fafafa;color:#333;font-weight:600}
 
-.ke-content-focus .ql-editor{color:#2a2a2e;font-family:"Georgia","Times New Roman","PingFang SC",serif;font-size:16px;line-height:2}
+.ke-content-focus .ql-editor{color:#2a2a2e;font-family:inherit;font-size:16px;line-height:2}
 .ke-content-focus .ql-editor.ql-blank::before{display:block;color:#c0c4cc}
 .ke-content-focus .ql-editor h1{margin-bottom:18px;color:#1f2937;font-size:40px}
 .ke-content-focus .ql-editor p{margin-bottom:14px}

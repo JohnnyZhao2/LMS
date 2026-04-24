@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import { richTextToPreviewText } from '@/lib/rich-text';
+import { richTextToPlainText } from '@/lib/rich-text';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 
@@ -12,6 +12,8 @@ interface KnowledgeItemProps {
 }
 
 export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigate }) => {
+  const previewText = richTextToPlainText(knowledge.content);
+
   return (
     <div
       onClick={() => navigate(`knowledge/${knowledge.id}?from=dashboard`)}
@@ -21,17 +23,18 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
         "hover:border-slate-300/80 hover:shadow-[0_18px_40px_-28px_rgba(15,23,42,0.22),0_8px_18px_-14px_rgba(15,23,42,0.1)] active:scale-[0.985]"
       )}
     >
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="min-w-0 flex-1">
-          <h5 className="mb-2 line-clamp-2 text-[14px] font-bold leading-tight tracking-tight text-slate-800 transition-colors duration-300 group-hover:text-slate-950">
-            {knowledge.title}
-          </h5>
-          <p className="line-clamp-3 break-all text-[11px] font-medium leading-[1.1rem] tracking-tight text-slate-400/85">
-            {richTextToPreviewText(knowledge.content_preview || '') || '点击进入深度学习...'}
-          </p>
+      <div className="relative z-10 flex h-full min-h-0 flex-col">
+        <h5 className="mb-2 line-clamp-2 text-[14px] font-bold leading-tight tracking-tight text-slate-800 transition-colors duration-300 group-hover:text-slate-950">
+          {knowledge.title}
+        </h5>
+
+        <div
+          className="min-h-0 flex-1 overflow-hidden whitespace-pre-line break-words text-[12.5px] font-medium leading-[1.72] tracking-[0.01em] text-slate-500/90"
+        >
+          {previewText}
         </div>
 
-        <div className="mt-auto flex items-end justify-between border-t border-slate-200/60 pt-2.5">
+        <div className="mt-3 flex shrink-0 items-end justify-between border-t border-slate-200/60 pt-2.5">
           <div className="min-w-0">
             <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/50">
               最近更新

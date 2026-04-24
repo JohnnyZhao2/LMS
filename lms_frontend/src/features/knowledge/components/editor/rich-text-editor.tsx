@@ -71,41 +71,6 @@ function deleteDividerBeforeCaret(quill: Quill): boolean {
   return true;
 }
 
-function resetBlockFormatBeforeCaret(quill: Quill): boolean {
-  const selection = quill.getSelection();
-  if (!selection || selection.length > 0) {
-    return false;
-  }
-
-  const [currentLine, offset] = quill.getLine(selection.index);
-  if (!currentLine || offset !== 0) {
-    return false;
-  }
-
-  const lineIndex = quill.getIndex(currentLine);
-  const formats = quill.getFormat(lineIndex, 1);
-
-  if (formats.blockquote) {
-    quill.formatLine(lineIndex, 1, 'blockquote', false, Quill.sources.USER);
-    quill.setSelection(lineIndex, 0, Quill.sources.SILENT);
-    return true;
-  }
-
-  if (typeof formats.header === 'number') {
-    quill.formatLine(lineIndex, 1, 'header', false, Quill.sources.USER);
-    quill.setSelection(lineIndex, 0, Quill.sources.SILENT);
-    return true;
-  }
-
-  if (formats['code-block']) {
-    quill.formatLine(lineIndex, 1, 'code-block', false, Quill.sources.USER);
-    quill.setSelection(lineIndex, 0, Quill.sources.SILENT);
-    return true;
-  }
-
-  return false;
-}
-
 function getTextThroughIndex(quill: Quill, index: number): string {
   const contents = quill.getContents(0, index);
   return contents.ops
@@ -293,6 +258,11 @@ export function SlashQuillEditor({
       readOnly,
       modules: {
         toolbar: false,
+        keyboard: {
+          bindings: {
+            'list autofill': false,
+          },
+        },
       },
     });
 
@@ -434,14 +404,6 @@ export function SlashQuillEditor({
       if (event.key === 'Backspace') {
         const removedDivider = deleteDividerBeforeCaret(quill);
         if (removedDivider) {
-          event.preventDefault();
-          setSlashTrigger(null);
-          scheduleUiUpdate();
-          return;
-        }
-
-        const resetBlockFormat = resetBlockFormatBeforeCaret(quill);
-        if (resetBlockFormat) {
           event.preventDefault();
           setSlashTrigger(null);
           scheduleUiUpdate();

@@ -87,8 +87,8 @@ export const StudentDashboard: React.FC = () => {
                   </button>
                 }
               />
-              <div className="overflow-visible xl:min-h-0 xl:flex-1">
-                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:min-h-full xl:grid-cols-4 xl:grid-rows-1 xl:pr-1">
+              <div className="overflow-hidden xl:min-h-0 xl:flex-1">
+                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:h-full xl:min-h-0 xl:grid-cols-4 xl:grid-rows-1 xl:pr-1">
                   {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-full min-h-[156px] rounded-xl" />) :
                     latestKnowledge.map((k) => (
                       <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
@@ -106,8 +106,8 @@ export const StudentDashboard: React.FC = () => {
                 icon={CalendarIcon}
                 accentColor="text-sky-500"
               />
-              <div className="overflow-visible xl:min-h-0 xl:flex-1">
-                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:min-h-full xl:grid-cols-4 xl:grid-rows-1 xl:pr-1">
+              <div className="overflow-hidden xl:min-h-0 xl:flex-1">
+                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:h-full xl:min-h-0 xl:grid-cols-4 xl:grid-rows-1 xl:pr-1">
                   {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-full min-h-[168px] rounded-xl" />) :
                     tasks.map(t => (
                       <TaskItem
@@ -133,7 +133,7 @@ export const StudentDashboard: React.FC = () => {
                 />
                 <MiniCalendar
                   selectedTask={selectedTask}
-                  className="xl:min-h-0 xl:flex-1"
+                  className="xl:h-full xl:min-h-0 xl:flex-1"
                 />
               </div>
             </div>
@@ -146,7 +146,10 @@ export const StudentDashboard: React.FC = () => {
                   icon={TrendingUp}
                   accentColor="text-violet-500"
                 />
-                <EditorialCard className="min-h-0 xl:flex-1">
+                <EditorialCard
+                  className="min-h-0 xl:h-full xl:flex-1"
+                  contentClassName="pr-0 xl:pr-0"
+                >
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     {!selectedTask ? (
                       <div className="px-1 py-2">
@@ -170,54 +173,59 @@ export const StudentDashboard: React.FC = () => {
                         ))}
                       </div>
                     ) : participantItems.length > 0 ? (
-                      <ScrollContainer className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain py-2 pl-1 pr-5">
-                        {participantItems.map((p) => (
-                          <div
-                            key={p.id}
-                            className={cn(
-                              "group/peer flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-500",
-                              p.is_me
-                                ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
-                                : "hover:bg-slate-50"
-                            )}
-                          >
-                            <div className={cn(
-                              "flex h-5 w-5 shrink-0 items-center justify-center text-[11px] font-black italic tracking-tighter transition-transform duration-500 group-hover/peer:scale-110",
-                              p.rank === 1 ? "text-amber-500" :
-                                p.rank === 2 ? "text-slate-400" :
-                                  "text-slate-300"
-                            )}>
-                              {String(p.rank).padStart(2, '0')}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="mb-1.5 flex items-center justify-between">
-                                <span className={cn(
-                                  "truncate text-[12px] font-bold tracking-tight transition-colors",
-                                  p.is_me ? "text-primary" : "text-slate-600"
-                                )}>
-                                  {p.is_me ? '我' : p.name}
-                                </span>
-                                <span className={cn(
-                                  "text-[10px] font-black transition-colors",
-                                  p.is_me ? "text-primary/70" : "text-slate-300"
-                                )}>
-                                  {Math.round(p.progress)}%
-                                </span>
+                      <ScrollContainer
+                        scrollbar="hidden"
+                        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-2"
+                      >
+                        <div className="flex flex-col gap-2 pl-1 pr-6">
+                          {participantItems.map((p) => (
+                            <div
+                              key={p.id}
+                              className={cn(
+                                "group/peer flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-500",
+                                p.is_me
+                                  ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
+                                  : "hover:bg-slate-50"
+                              )}
+                            >
+                              <div className={cn(
+                                "flex h-5 w-5 shrink-0 items-center justify-center text-[11px] font-black italic tracking-tighter transition-transform duration-500 group-hover/peer:scale-110",
+                                p.rank === 1 ? "text-amber-500" :
+                                  p.rank === 2 ? "text-slate-400" :
+                                    "text-slate-300"
+                              )}>
+                                {String(p.rank).padStart(2, '0')}
                               </div>
 
-                              <div className="h-[2px] w-full overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                  className={cn(
-                                    "h-full transition-all duration-1000 ease-out",
-                                    p.is_me ? "bg-primary" : "bg-slate-300/40"
-                                  )}
-                                  style={{ width: `${p.progress}%` }}
-                                />
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-1.5 flex items-center justify-between">
+                                  <span className={cn(
+                                    "truncate text-[12px] font-bold tracking-tight transition-colors",
+                                    p.is_me ? "text-primary" : "text-slate-600"
+                                  )}>
+                                    {p.is_me ? '我' : p.name}
+                                  </span>
+                                  <span className={cn(
+                                    "text-[10px] font-black transition-colors",
+                                    p.is_me ? "text-primary/70" : "text-slate-300"
+                                  )}>
+                                    {Math.round(p.progress)}%
+                                  </span>
+                                </div>
+
+                                <div className="h-[2px] w-full overflow-hidden rounded-full bg-slate-100">
+                                  <div
+                                    className={cn(
+                                      "h-full transition-all duration-1000 ease-out",
+                                      p.is_me ? "bg-primary" : "bg-slate-300/40"
+                                    )}
+                                    style={{ width: `${p.progress}%` }}
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </ScrollContainer>
                     ) : (
                       <div className="px-1 py-2">

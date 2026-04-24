@@ -45,7 +45,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
   readOnly = false,
 }) => {
   const classes = ['kfs-shell', fixed ? 'kfs-shell-fixed' : '', shellClassName].filter(Boolean).join(' ');
-  const editorClasses = ['kfs-editor', 'ke-content-focus', editorClassName].filter(Boolean).join(' ');
+  const editorClasses = ['kfs-editor', 'ke-content-detail', 'ke-content-focus', editorClassName].filter(Boolean).join(' ');
   const shellStyle: FocusShellStyle = {
     '--kfs-editor-max-width': `${editorMaxWidth}px`,
     '--kfs-editor-padding': editorPadding,

@@ -6,7 +6,7 @@ type ScrollContainerElement = 'div' | 'nav' | 'section' | 'aside' | 'main';
 
 interface ScrollContainerProps extends React.HTMLAttributes<HTMLElement> {
   as?: ScrollContainerElement;
-  scrollbar?: 'subtle' | 'inherit';
+  scrollbar?: 'subtle' | 'hidden' | 'inherit';
 }
 
 export function ScrollContainer({
@@ -19,7 +19,14 @@ export function ScrollContainer({
   const Component = as as React.ElementType;
 
   return (
-    <Component className={cn(scrollbar === 'subtle' && 'scrollbar-subtle', className)} {...props}>
+    <Component
+      className={cn(
+        scrollbar === 'subtle' && 'scrollbar-subtle',
+        scrollbar === 'hidden' && 'scrollbar-hidden',
+        className
+      )}
+      {...props}
+    >
       {children}
     </Component>
   );

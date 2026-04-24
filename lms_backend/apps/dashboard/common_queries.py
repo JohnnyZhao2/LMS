@@ -12,7 +12,7 @@ from apps.submissions.models import Submission
 
 
 def get_latest_knowledge(limit: int = 6) -> QuerySet:
-    return Knowledge.objects.select_related('created_by', 'updated_by').order_by('-updated_at')[:limit]
+    return Knowledge.objects.select_related('created_by', 'updated_by', 'space_tag').order_by('-updated_at')[:limit]
 
 
 def calculate_task_stats(assignments: QuerySet) -> Dict[str, Any]:

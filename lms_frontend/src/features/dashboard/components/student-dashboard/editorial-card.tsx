@@ -5,11 +5,13 @@ import { cn } from '@/lib/utils';
 interface EditorialCardProps {
   children: React.ReactNode;
   className?: string;
+  contentClassName?: string;
 }
 
 export const EditorialCard: React.FC<EditorialCardProps> = ({
   children,
   className,
+  contentClassName,
 }) => {
   return (
     <Card className={cn(
@@ -19,7 +21,7 @@ export const EditorialCard: React.FC<EditorialCardProps> = ({
     )}>
       <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[image:var(--noise-texture)] brightness-100 contrast-150" />
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 py-5 xl:px-6 xl:py-6">
+      <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col px-5 py-5 xl:px-6 xl:py-6", contentClassName)}>
         {children}
       </div>
     </Card>
