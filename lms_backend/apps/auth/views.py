@@ -15,6 +15,7 @@ from core.responses import success_response
 from core.throttles import AuthThrottle
 from apps.auth.serializers import (
     AuthSessionSerializer,
+    ChangeMyPasswordRequestSerializer,
     ChangePasswordRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
@@ -194,6 +195,37 @@ class ChangePasswordView(BaseAPIView):
         )
 
         return success_response(message='密码已修改')
+
+
+class ChangeMyPasswordView(BaseAPIView):
+    """
+    Current user password change endpoint.
+    """
+    permission_classes = [IsAuthenticated]
+    service_class = AuthenticationService
+
+    @extend_schema(
+        summary='修改当前用户密码',
+        description='当前登录用户验证旧密码后设置新密码，返回新的登录令牌',
+        request=ChangeMyPasswordRequestSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            400: OpenApiResponse(description='参数无效'),
+            401: OpenApiResponse(description='当前密码错误或未登录'),
+        },
+        tags=['认证']
+    )
+    def post(self, request):
+        serializer = ChangeMyPasswordRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = self.service.change_my_password(
+            user=request.user,
+            current_password=serializer.validated_data['current_password'],
+            password=serializer.validated_data['password'],
+        )
+
+        return success_response(result, message='密码已修改')
 
 
 class OneAccountAuthorizeUrlView(BaseAPIView):

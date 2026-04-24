@@ -10,12 +10,12 @@ import {
   useUserPermissionOverrides,
   useUserScopeGroupOverrides,
 } from '@/entities/authorization/api/authorization';
-import { ASSIGNABLE_ROLES } from '@/lib/role-config';
 import { showApiError } from '@/utils/error-handler';
 import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
 import {
+  getNextAssignableRoleCodes,
   getManagedRoleCodes,
-  getSelectedBusinessRoleCode,
+  isAssignableRoleCode,
 } from '@/entities/authorization/utils/user-role-assignment';
 import {
   USER_PERMISSION_ACCESS_PERMISSIONS,
@@ -150,12 +150,10 @@ export function useRolePermissionTemplateState({
       return allVisibleUsers
         .filter((user) => !user.is_superuser)
         .filter((user) => !user.roles.some((role) => role.code === resolvedActiveRole))
-        .filter((user) => user.roles.every((role) => !ASSIGNABLE_ROLES.includes(role.code as RoleCode)))
+        .filter((user) => user.roles.every((role) => !isAssignableRoleCode(role.code)))
         .filter((user) => isAllowedDepartmentCode(user.department?.code))
         .filter((user) => {
-          if (resolvedActiveRole === 'TEAM_MANAGER') {
-            return !hasActiveTeamManager;
-          }
+          if (resolvedActiveRole === 'TEAM_MANAGER') return !hasActiveTeamManager;
           if (resolvedActiveRole === 'DEPT_MANAGER') {
             return Boolean(user.department?.id) && !occupiedDeptManagerDepartmentIds.has(user.department.id);
           }
@@ -168,10 +166,6 @@ export function useRolePermissionTemplateState({
 
   const selectedUserRoleCodes = useMemo(
     () => selectedUserDetail?.roles.map((role) => role.code as RoleCode) ?? [],
-    [selectedUserDetail],
-  );
-  const selectedBusinessRoleCode = useMemo<RoleCode | null>(
-    () => getSelectedBusinessRoleCode(selectedUserDetail?.roles ?? []),
     [selectedUserDetail],
   );
   const currentRolePermissionOverrides = useMemo(
@@ -266,8 +260,8 @@ export function useRolePermissionTemplateState({
     if (!selectedUserDetail) {
       return;
     }
-    const nextRoles = selectedBusinessRoleCode === roleCode ? [] : [roleCode];
     const currentRoleCodes = getManagedRoleCodes(selectedUserDetail.roles);
+    const nextRoles = getNextAssignableRoleCodes(currentRoleCodes, roleCode);
     if (
       nextRoles.length === currentRoleCodes.length
       && nextRoles.every((code) => currentRoleCodes.includes(code))
@@ -280,6 +274,12 @@ export function useRolePermissionTemplateState({
         id: selectedUserDetail.id,
         roles: nextRoles,
       });
+      if (nextRoles.length > 0) {
+        setActiveRole(roleCode);
+        setSelectedUserId(selectedUserDetail.id);
+      } else {
+        setSelectedUserId(null);
+      }
     } catch (error) {
       showApiError(error);
     }

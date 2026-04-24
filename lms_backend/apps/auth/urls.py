@@ -6,11 +6,13 @@ Endpoints:
 - POST /api/auth/refresh/ - Refresh token
 - POST /api/auth/switch-role/ - Switch user role
 - POST /api/auth/change-password/ - Admin change user password
+- POST /api/auth/me/password/ - Current user change own password
 - GET /api/auth/me/ - Get current user info
 """
 from django.urls import path
 
 from apps.auth.views import (
+    ChangeMyPasswordView,
     ChangePasswordView,
     LoginView,
     LogoutView,
@@ -29,5 +31,6 @@ urlpatterns = [
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
     path('switch-role/', SwitchRoleView.as_view(), name='auth-switch-role'),
     path('me/', MeView.as_view(), name='auth-me'),
+    path('me/password/', ChangeMyPasswordView.as_view(), name='auth-change-my-password'),
     path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
 ]

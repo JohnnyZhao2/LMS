@@ -1,11 +1,12 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, LogOut } from 'lucide-react'
+import { ChevronDown, ChevronLeft, KeyRound, LogOut } from 'lucide-react'
 import { useAuth } from '@/session/auth/auth-context'
 import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
 import { type MenuItem, useRoleMenu } from '@/app/navigation/use-role-menu'
 import { RoleIndicatorDot } from '@/app/layouts/workspace-user-controls'
 import { useWorkspaceUserControls } from '@/app/layouts/use-workspace-user-controls'
+import { ChangeOwnPasswordDialog } from '@/features/auth/components/change-own-password-dialog'
 import { cn } from '@/lib/utils'
 import { ROUTES } from '@/config/routes'
 import {
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
+  const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
 
   const handleLogout = async () => {
     await logout()
@@ -326,19 +328,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 )}
               </div>
               {user && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  aria-label="退出登录"
-                  title="退出登录"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordDialogOpen(true)}
+                    aria-label="修改密码"
+                    title="修改密码"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-muted hover:text-black"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    aria-label="退出登录"
+                    title="退出登录"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive-50"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
+        <ChangeOwnPasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
       </div>
     </aside>
   )

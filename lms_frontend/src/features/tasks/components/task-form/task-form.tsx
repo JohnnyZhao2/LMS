@@ -16,6 +16,10 @@ import { TaskResourceLibraryPanel } from './task-resource-library-panel';
 import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
 import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
 
+const ASSIGNEE_ROLE_LABELS = new Map([
+  ['DEPT_MANAGER', '室经理'],
+]);
+
 export const TaskForm: React.FC = () => {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
@@ -62,7 +66,11 @@ export const TaskForm: React.FC = () => {
     id: user.id,
     name: user.username,
     avatarKey: user.avatar_key,
-    meta: `${user.employee_id || '-'} · ${user.department?.name || '无部门'}`,
+    meta: [
+      user.employee_id || '-',
+      user.department?.name || '无部门',
+      user.roles.map((role) => ASSIGNEE_ROLE_LABELS.get(role.code)).find(Boolean),
+    ].filter(Boolean).join(' · '),
   }));
 
   if (taskError) {

@@ -42,7 +42,6 @@ import {
   getSelectableScopeUsers,
   normalizeAvailableScopeTypes,
   resolveRoleScopeSelection,
-  STUDENT_ONLY_SCOPE_PERMISSION_CODES,
 } from './user-permission-scope.utils';
 import {
   ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
@@ -55,6 +54,7 @@ interface UserPermissionSectionProps {
   userDetail?: UserDetail;
   departments: Department[];
   selectedRoleCodes: RoleCode[];
+  selectedRoleCode?: RoleCode | null;
   departmentId?: number;
   isSuperuserAccount: boolean;
   dialogContentElement: HTMLDivElement | null;
@@ -65,6 +65,7 @@ export function UserPermissionSection({
   userDetail,
   departments,
   selectedRoleCodes,
+  selectedRoleCode,
   departmentId,
   isSuperuserAccount,
   dialogContentElement,
@@ -104,14 +105,9 @@ export function UserPermissionSection({
     { enabled: canViewUserAuthorization },
   );
 
-  const previewRoleCodes = useMemo<RoleCode[]>(() => {
-    if (isSuperuserAccount) {
-      return [];
-    }
-    return Array.from(new Set(
-      selectedRoleCodes.filter((roleCode) => roleCode !== 'STUDENT' && roleCode !== 'SUPER_ADMIN'),
-    ));
-  }, [selectedRoleCodes, isSuperuserAccount]);
+  const previewRoleCodes = !isSuperuserAccount && selectedRoleCode && selectedRoleCodes.includes(selectedRoleCode)
+    ? [selectedRoleCode]
+    : [];
   const hasConfigurablePermissionRoles = previewRoleCodes.length > 0;
 
   const roleTemplateQueries = useRolePermissionTemplates(
@@ -216,10 +212,7 @@ export function UserPermissionSection({
           const availableScopeTypes = normalizeAvailableScopeTypes(
             scopeGroupPermissions[0]?.allowed_scope_types ?? AVAILABLE_SCOPE_TYPES,
           );
-          const shouldRestrictToStudents = Boolean(
-            scopePoolPermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePoolPermissionCode),
-          );
-          const selectableScopeUsers = getSelectableScopeUsers(scopeUsers, shouldRestrictToStudents);
+          const selectableScopeUsers = getSelectableScopeUsers(scopeUsers, scopePoolPermissionCode);
           const selectableScopeUserIdSet = new Set(selectableScopeUsers.map((scopeUser) => scopeUser.id));
           const getPresetMatchedScopeUserIdsForSelection = (scopeTypes: PermissionOverrideScope[]) => getPresetMatchedScopeUserIds({
             departmentId: ownerDepartmentId,

@@ -218,6 +218,98 @@ def test_change_password_updates_password_and_invalidates_tokens():
 
 
 @pytest.mark.django_db
+def test_change_my_password_updates_password_and_returns_fresh_tokens():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Self Change Password', code='DEPT_SELF_CHANGE_PASSWORD')
+    user = User.objects.create_user(
+        employee_id='EMP_SELF_CHANGE_PASSWORD',
+        username='Self Change Password',
+        password='old-password',
+        department=department,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    old_refresh_token = login_response.data['data']['refresh_token']
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login_response.data['data']['access_token']}")
+
+    change_response = client.post(
+        '/api/auth/me/password/',
+        {'current_password': 'old-password', 'password': 'new-password'},
+        format='json',
+    )
+    assert change_response.status_code == 200
+    assert 'access_token' in change_response.data['data']
+    assert 'refresh_token' in change_response.data['data']
+
+    client.credentials()
+    old_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert old_login_response.status_code == 401
+
+    new_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': user.employee_id, 'password': 'new-password'},
+        format='json',
+    )
+    assert new_login_response.status_code == 200
+
+    old_refresh_response = client.post('/api/auth/refresh/', {'refresh_token': old_refresh_token}, format='json')
+    assert old_refresh_response.status_code == 401
+    fresh_refresh_response = client.post(
+        '/api/auth/refresh/',
+        {'refresh_token': change_response.data['data']['refresh_token']},
+        format='json',
+    )
+    assert fresh_refresh_response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_change_my_password_rejects_wrong_current_password():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept Self Change Reject', code='DEPT_SELF_CHANGE_REJECT')
+    user = User.objects.create_user(
+        employee_id='EMP_SELF_CHANGE_REJECT',
+        username='Self Change Reject',
+        password='old-password',
+        department=department,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login_response.data['data']['access_token']}")
+
+    change_response = client.post(
+        '/api/auth/me/password/',
+        {'current_password': 'wrong-password', 'password': 'new-password'},
+        format='json',
+    )
+    assert change_response.status_code == 401
+    assert change_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
+
+    client.credentials()
+    old_login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': user.employee_id, 'password': 'old-password'},
+        format='json',
+    )
+    assert old_login_response.status_code == 200
+
+
+@pytest.mark.django_db
 def test_token_current_role_is_request_source_of_truth():
     client = APIClient()
 

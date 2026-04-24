@@ -1,11 +1,12 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LogOut, ChevronDown, Menu, X } from 'lucide-react'
+import { LogOut, ChevronDown, KeyRound, Menu, X } from 'lucide-react'
 import { useAuth } from '@/session/auth/auth-context'
 import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
 import { type MenuItem, useRoleMenu } from '@/app/navigation/use-role-menu'
 import { RoleIndicatorDot } from '@/app/layouts/workspace-user-controls'
 import { useWorkspaceUserControls } from '@/app/layouts/use-workspace-user-controls'
+import { ChangeOwnPasswordDialog } from '@/features/auth/components/change-own-password-dialog'
 import { cn } from '@/lib/utils'
 import { ROUTES } from '@/config/routes'
 import {
@@ -40,6 +41,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
 
   const handleLogout = async () => {
     await logout()
@@ -152,20 +154,17 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                 >
                   {currentRole && (
                     <>
-                      <div className="rounded-[10px] px-3 py-2">
+                      <div className="rounded-[10px] px-3 pb-1 pt-2">
                         <div className="text-[11px] text-text-muted">当前身份</div>
                         <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-black">
                           <RoleIndicatorDot role={currentRole} />
                           <span>{roleLabel}</span>
                         </div>
                       </div>
-                      {roleOptions.filter((option) => option.value !== currentRole).length > 0 && (
-                        <DropdownMenuSeparator className="my-1 h-px bg-black/[0.06]" />
-                      )}
                     </>
                   )}
                   {roleOptions.filter((option) => option.value !== currentRole).length > 0 && (
-                    <>
+                    <div className="space-y-1">
                       {roleOptions
                         .filter((option) => option.value !== currentRole)
                         .map((option) => (
@@ -181,12 +180,19 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                           {option.label}
                         </DropdownMenuItem>
                         ))}
-                    </>
+                    </div>
                   )}
-                  <DropdownMenuSeparator className="my-1 h-px bg-black/[0.06]" />
+                  <DropdownMenuSeparator className="my-1.5 h-px bg-black/[0.06]" />
+                  <DropdownMenuItem
+                    onClick={() => setPasswordDialogOpen(true)}
+                    className="rounded-[10px] px-3 py-2 text-[13px] text-text-muted focus:bg-black/[0.04] focus:text-black"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    修改密码
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => void handleLogout()}
-                    className="rounded-[10px] px-3 py-2 text-[13px] text-destructive focus:bg-destructive/8 focus:text-destructive"
+                    className="mt-1 rounded-[10px] px-3 py-2 text-destructive focus:bg-destructive/8 focus:text-destructive"
                   >
                     <LogOut className="h-4 w-4" />
                     退出登录
@@ -258,13 +264,26 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                 <span className="text-[13px] font-medium text-black">{userLabel || 'LMS 用户'}</span>
               </div>
               {user && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-destructive hover:bg-destructive-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordDialogOpen(true)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-muted hover:text-black"
+                    aria-label="修改密码"
+                    title="修改密码"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-destructive hover:bg-destructive-50"
+                    aria-label="退出登录"
+                    title="退出登录"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -281,6 +300,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           </div>
         </div>
       </main>
+      <ChangeOwnPasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
     </div>
   )
 }

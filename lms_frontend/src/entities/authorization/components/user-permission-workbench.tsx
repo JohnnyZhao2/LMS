@@ -13,6 +13,7 @@ interface UserPermissionWorkbenchProps {
   userDetail?: UserDetail;
   departments: Department[];
   selectedRoleCodes: RoleCode[];
+  selectedRoleCode?: RoleCode | null;
   dialogContentElement: HTMLDivElement | null;
   roleNameMap: Map<string, string>;
   canManageRoles: boolean;
@@ -30,6 +31,7 @@ export function UserPermissionWorkbench({
   userDetail,
   departments,
   selectedRoleCodes,
+  selectedRoleCode,
   dialogContentElement,
   roleNameMap,
   canManageRoles,
@@ -91,6 +93,7 @@ export function UserPermissionWorkbench({
               userDetail={userDetail}
               departments={departments}
               selectedRoleCodes={selectedRoleCodes}
+              selectedRoleCode={selectedRoleCode}
               departmentId={userDetail.department?.id}
               isSuperuserAccount={Boolean(userDetail.is_superuser)}
               dialogContentElement={dialogContentElement}

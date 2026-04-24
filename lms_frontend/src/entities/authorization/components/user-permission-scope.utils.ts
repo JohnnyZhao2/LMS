@@ -45,20 +45,31 @@ const filterScopeTypesByAvailability = (
   );
 };
 
-export const STUDENT_ONLY_SCOPE_PERMISSION_CODES = new Set<string>([
+export const TASK_ASSIGNEE_SCOPE_PERMISSION_CODES = new Set<string>([
   'task.assign',
   'task.analytics.view',
+]);
+
+export const STUDENT_ONLY_SCOPE_PERMISSION_CODES = new Set<string>([
   'spot_check.view',
   'spot_check.create',
 ]);
 
 export const getSelectableScopeUsers = (
   scopeUsers: UserList[],
-  shouldRestrictToStudents: boolean,
-): UserList[] => scopeUsers.filter((scopeUser) => (
-  !scopeUser.is_superuser
-  && (!shouldRestrictToStudents || scopeUser.roles.some((role) => role.code === 'STUDENT'))
-));
+  scopePermissionCode?: string | null,
+): UserList[] => scopeUsers.filter((scopeUser) => {
+  if (scopeUser.is_superuser) {
+    return false;
+  }
+  if (scopePermissionCode && TASK_ASSIGNEE_SCOPE_PERMISSION_CODES.has(scopePermissionCode)) {
+    return scopeUser.roles.some((role) => role.code === 'STUDENT' || role.code === 'DEPT_MANAGER');
+  }
+  if (scopePermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePermissionCode)) {
+    return scopeUser.roles.some((role) => role.code === 'STUDENT');
+  }
+  return true;
+});
 
 export const getPresetMatchedScopeUserIds = ({
   departmentId,

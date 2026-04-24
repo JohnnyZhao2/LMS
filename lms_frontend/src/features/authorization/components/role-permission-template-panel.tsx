@@ -126,6 +126,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                   userDetail={selectedUserDetail}
                   departments={departments}
                   selectedRoleCodes={selectedUserRoleCodes}
+                  selectedRoleCode={resolvedActiveRole}
                   dialogContentElement={workbenchElement}
                   roleNameMap={roleNameMap}
                   canManageRoles={canManageRoleMembers}

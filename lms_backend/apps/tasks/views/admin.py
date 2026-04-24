@@ -66,16 +66,16 @@ def _parse_positive_int_list_query_param(request, name: str) -> list[int]:
 
 
 class AssignableUserListView(APIView):
-    """List students that the current user can assign tasks to."""
+    """List users that the current user can assign tasks to."""
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary='获取可分配学员列表',
+        summary='获取可分配人员列表',
         description='''
-        根据当前用户的角色和数据范围返回可分配的学员列表。
-        - 管理员：全平台所有学员
-        - 导师：仅名下学员
-        - 室经理：仅本室学员
+        根据当前用户的角色和数据范围返回可分配的执行人员列表。
+        - 管理员：全平台所有可执行任务人员
+        - 导师：仅名下可执行任务人员
+        - 室经理：仅本室可执行任务人员
         ''',
         parameters=[
             OpenApiParameter(name='search', type=str, description='按姓名或工号搜索'),
@@ -85,13 +85,11 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        enforce('task.assign', request, error_message='无权查看可分配学员列表')
+        enforce('task.assign', request, error_message='无权查看可分配人员列表')
         queryset = scope_filter(
             'task.assign',
             request,
             resource_model=User,
-        ).filter(
-            roles__code='STUDENT'
         ).select_related(
             'department', 'mentor'
         ).prefetch_related('roles').distinct()

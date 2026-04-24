@@ -18,9 +18,10 @@ from apps.users.models import User
 TASK_RESOURCE_SCOPE_GROUP = 'task_resource_scope'
 TASK_ASSIGNMENT_SCOPE_GROUP = 'task_assignment_scope'
 TASK_RESOURCE_SCOPE_SUMMARY = '任务可见范围'
-TASK_ASSIGNMENT_SCOPE_SUMMARY = '学员范围'
+TASK_ASSIGNMENT_SCOPE_SUMMARY = '指派人员范围'
 TASK_MANAGER_CODES = (*crud_codes('task'), 'task.assign', 'task.analytics.view')
 TASK_ADMIN_CODES = (*crud_codes('task'), 'task.assign')
+TASK_ASSIGNEE_ROLE_CODES = ('STUDENT', 'DEPT_MANAGER')
 
 
 def _authorize_task_resource(engine, permission_code, *, resource=None, context=None, error_message=None):
@@ -83,12 +84,27 @@ def _filter_task_queryset(engine, *, queryset, context=None):
     )
 
 
-def _filter_assignable_students(engine, *, queryset, context=None):
-    return engine.get_scoped_learning_members('task.assign')
+def _task_assignee_queryset():
+    return User.objects.filter(
+        is_active=True,
+        roles__code__in=TASK_ASSIGNEE_ROLE_CODES,
+    ).distinct()
 
 
-def _filter_task_analytics_students(engine, *, queryset, context=None):
-    return engine.get_scoped_learning_members('task.analytics.view')
+def _filter_assignable_users(engine, *, queryset, context=None):
+    return engine.get_scoped_user_queryset(
+        'task.assign',
+        _task_assignee_queryset(),
+        cache_key='task_assignees',
+    )
+
+
+def _filter_task_analytics_users(engine, *, queryset, context=None):
+    return engine.get_scoped_user_queryset(
+        'task.analytics.view',
+        _task_assignee_queryset(),
+        cache_key='task_assignees',
+    )
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
@@ -117,7 +133,7 @@ AUTHORIZATION_SPECS = (
             perm(
                 code='task.assign',
                 name='分配任务',
-                description='为任务分配学员',
+                description='为任务分配执行人',
                 scope_group_key=TASK_ASSIGNMENT_SCOPE_GROUP,
                 implies=('task.view',),
             ),
@@ -179,17 +195,17 @@ AUTHORIZATION_SPECS = (
                 constraint_summary=TASK_RESOURCE_SCOPE_SUMMARY,
             ),
             ScopeFilterHandler(
-                key='tasks.scope_filter.assignable_students',
+                key='tasks.scope_filter.assignable_users',
                 permission_code='task.assign',
                 resource_model=User,
-                filter_queryset=_filter_assignable_students,
+                filter_queryset=_filter_assignable_users,
                 constraint_summary=TASK_ASSIGNMENT_SCOPE_SUMMARY,
             ),
             ScopeFilterHandler(
-                key='tasks.scope_filter.analytics_students',
+                key='tasks.scope_filter.analytics_users',
                 permission_code='task.analytics.view',
                 resource_model=User,
-                filter_queryset=_filter_task_analytics_students,
+                filter_queryset=_filter_task_analytics_users,
                 constraint_summary=TASK_ASSIGNMENT_SCOPE_SUMMARY,
             ),
         ),

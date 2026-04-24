@@ -17,7 +17,6 @@ import {
   getSelectableScopeUsers,
   normalizeAvailableScopeTypes,
   resolveRoleScopeSelection,
-  STUDENT_ONLY_SCOPE_PERMISSION_CODES,
   syncRoleScopeSelection,
 } from './user-permission-scope.utils';
 import type { RoleScopeSelection } from './user-permission-scope.utils';
@@ -91,15 +90,11 @@ export const useUserPermissionScopeState = ({
     [availableScopeTypes],
   );
   const canSelectExplicitScopeUsers = normalizedAvailableScopeTypes.includes('EXPLICIT_USERS');
-  const shouldRestrictToStudents = useMemo(
-    () => Boolean(scopePermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePermissionCode)),
-    [scopePermissionCode],
-  );
   const ownerUserId = userId ?? userDetail?.id ?? null;
   const ownerDepartmentId = departmentId ?? userDetail?.department?.id ?? null;
   const selectableScopeUsers = useMemo(
-    () => getSelectableScopeUsers(scopeUsers, shouldRestrictToStudents),
-    [scopeUsers, shouldRestrictToStudents],
+    () => getSelectableScopeUsers(scopeUsers, scopePermissionCode),
+    [scopePermissionCode, scopeUsers],
   );
   const selectableScopeUserIdSet = useMemo(
     () => new Set(selectableScopeUsers.map((scopeUser) => scopeUser.id)),

@@ -173,7 +173,7 @@ class TaskCreateSerializer(serializers.Serializer):
 
     def validate_assignee_ids(self, value):
         if not value:
-            raise serializers.ValidationError('请至少选择一个学员')
+            raise serializers.ValidationError('请至少选择一名指派人员')
         return value
 
     def validate(self, attrs):
@@ -198,7 +198,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         if value is None:
             return value
         if not value:
-            raise serializers.ValidationError('请至少选择一个学员')
+            raise serializers.ValidationError('请至少选择一名指派人员')
         return value
 
     def validate(self, attrs):

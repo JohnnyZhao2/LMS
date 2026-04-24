@@ -30,5 +30,5 @@ def enforce_assignable_students_scope(assignee_ids: list[int], request) -> None:
     if invalid_ids:
         raise BusinessError(
             code=ErrorCodes.PERMISSION_DENIED,
-            message=f'以下学员不在当前可分配范围: {invalid_ids}',
+            message=f'以下人员不在当前可分配范围: {invalid_ids}',
         )

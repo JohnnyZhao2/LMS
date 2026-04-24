@@ -70,7 +70,7 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'create_and_assign',
-        '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
+        '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名人员',
         target_type='task',
         target_title_template='{title}',
         group='任务管理',
@@ -210,16 +210,16 @@ class TaskService(BaseService):
         self._validate_update_payload(knowledge_ids, quiz_ids, assignee_ids)
         has_progress = task.has_student_progress
         if has_progress:
-            # 已有执行痕迹后不允许破坏执行边界：不能换资源，也不能移除既有学员。
+            # 已有执行痕迹后不允许破坏执行边界：不能换资源，也不能移除既有执行人。
             if knowledge_ids is not None:
                 raise BusinessError(
                     code=ErrorCodes.INVALID_OPERATION,
-                    message='任务已有学员开始学习，无法修改知识文档',
+                    message='任务已有人员开始执行，无法修改知识文档',
                 )
             if quiz_ids is not None:
                 raise BusinessError(
                     code=ErrorCodes.INVALID_OPERATION,
-                    message='任务已有学员开始学习，无法修改试卷',
+                    message='任务已有人员开始执行，无法修改试卷',
                 )
             if assignee_ids is not None:
                 existing_ids = set(task.assignments.values_list('assignee_id', flat=True))
@@ -228,7 +228,7 @@ class TaskService(BaseService):
                 if removed_ids:
                     raise BusinessError(
                         code=ErrorCodes.INVALID_OPERATION,
-                        message='任务已有学员开始学习，无法移除已分配的学员',
+                        message='任务已有人员开始执行，无法移除已分配人员',
                     )
         if kwargs:
             for key, value in kwargs.items():
@@ -328,7 +328,7 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'delete_task',
-        '{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
+        '{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名人员',
         target_type='task',
         target_title_template='{result.title}',
         group='任务管理',
@@ -364,7 +364,7 @@ class TaskService(BaseService):
         if not is_valid:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message=f'学员不存在、已停用或无学员身份: {invalid_ids}',
+                message=f'指派人员不存在、已停用或不可执行任务: {invalid_ids}',
             )
         enforce_assignable_students_scope(normalized_ids, self.request)
         return normalized_ids
@@ -383,7 +383,7 @@ class TaskService(BaseService):
         if not assignee_ids:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='请至少选择一个学员',
+                message='请至少选择一名指派人员',
             )
         self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
         self._ensure_valid_resource_ids(quiz_ids, Quiz, '试卷')
@@ -408,7 +408,7 @@ class TaskService(BaseService):
             if not assignee_ids:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,
-                    message='请至少选择一个学员',
+                    message='请至少选择一名指派人员',
                 )
             self._ensure_valid_assignee_ids(assignee_ids)
 
@@ -435,7 +435,7 @@ class TaskService(BaseService):
         existing = User.objects.filter(
             id__in=assignee_ids,
             is_active=True,
-            roles__code='STUDENT',
+            roles__code__in=('STUDENT', 'DEPT_MANAGER'),
         ).distinct()
         existing_ids = set(existing.values_list('id', flat=True))
         invalid_ids = list(set(assignee_ids) - existing_ids)

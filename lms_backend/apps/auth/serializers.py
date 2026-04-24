@@ -85,6 +85,14 @@ class ChangePasswordRequestSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True, help_text='新密码')
 
 
+class ChangeMyPasswordRequestSerializer(serializers.Serializer):
+    """
+    Serializer for current user password change request.
+    """
+    current_password = serializers.CharField(required=True, write_only=True, help_text='当前密码')
+    password = serializers.CharField(required=True, write_only=True, min_length=6, help_text='新密码')
+
+
 class OneAccountAuthorizeUrlResponseSerializer(serializers.Serializer):
     authorize_url = serializers.CharField(help_text='统一认证授权跳转地址')
 

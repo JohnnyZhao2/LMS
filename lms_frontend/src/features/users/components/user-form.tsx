@@ -28,6 +28,10 @@ import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
 import { useAuth } from '@/session/auth/auth-context';
 import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import {
+  getNextAssignableRoleCodes,
+  isAssignableRoleCode,
+} from '@/entities/authorization/utils/user-role-assignment';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';
@@ -59,14 +63,6 @@ interface FormErrors {
   password?: string;
   department_id?: string;
 }
-
-const NON_STUDENT_ROLE_CODES: RoleCode[] = ['MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'];
-
-const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean): boolean => {
-  if (isSuperuserAccount) return roleCodes.length === 0;
-  const nonStudentCount = roleCodes.filter((code) => NON_STUDENT_ROLE_CODES.includes(code)).length;
-  return nonStudentCount <= 1;
-};
 
 /**
  * 用户表单组件 — 外层壳，负责数据获取与 Dialog 控制
@@ -168,7 +164,7 @@ const UserFormContent: React.FC<{
         ? (
           userDetail.is_superuser
             ? []
-            : userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode)
+            : userDetail.roles.map((role) => role.code).filter(isAssignableRoleCode)
         )
         : [],
     );
@@ -289,16 +285,9 @@ const UserFormContent: React.FC<{
 
     const toggleRole = (code: RoleCode) => {
       setFormData((prev) => {
-        const active = prev.role_codes.includes(code);
-        const nextRoleCodes = active
-          ? prev.role_codes.filter((c) => c !== code)
-          : [code];
-
-        if (!isRoleSelectionValid(nextRoleCodes, isSuperuserAccount)) return prev;
-
         return {
           ...prev,
-          role_codes: nextRoleCodes,
+          role_codes: isSuperuserAccount ? [] : getNextAssignableRoleCodes(prev.role_codes, code),
         };
       });
     };
@@ -498,7 +487,7 @@ const UserFormContent: React.FC<{
               </div>
 
               <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
-                {roles.filter(r => r.code !== 'STUDENT').map(role => {
+                {roles.filter((role) => isAssignableRoleCode(role.code)).map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
                   const disabled = !canAssignUserRole || isRoleToggleDisabled();

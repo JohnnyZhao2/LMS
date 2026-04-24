@@ -315,6 +315,27 @@ class AuthenticationService(BaseService):
             status='success',
         )
 
+    def change_my_password(self, user: User, current_password: str, password: str) -> Dict[str, Any]:
+        active_user = self._validate_active_user(get_user_by_id(user.id))
+        if not active_user.check_password(current_password):
+            raise BusinessError(
+                code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
+                message='当前密码错误',
+            )
+
+        active_user.set_password(password)
+        active_user.save(update_fields=['password'])
+        self.blacklist_all_tokens(active_user)
+
+        self._log_user_action(
+            user=active_user,
+            operator=active_user,
+            action='password_change',
+            description=f'账号自助修改密码：{active_user.username}（{active_user.employee_id}）',
+            status='success',
+        )
+        return self._build_auth_payload(active_user, requested_role=getattr(user, 'current_role', None))
+
     def _generate_tokens(self, user: User, current_role: Optional[str] = None) -> Dict[str, str]:
         """
         Generate JWT tokens for user.

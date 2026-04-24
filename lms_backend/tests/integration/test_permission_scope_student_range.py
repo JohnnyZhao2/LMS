@@ -218,7 +218,7 @@ def test_task_create_enforces_assignable_student_scope(grant_permissions_to_role
     )
     assert denied_response.status_code == 403
     assert denied_response.data['code'] == 'PERMISSION_DENIED'
-    assert '以下学员不在当前可分配范围' in denied_response.data['message']
+    assert '以下人员不在当前可分配范围' in denied_response.data['message']
 
     UserScopeGroupOverride.objects.create(
         user=mentor,
@@ -242,6 +242,62 @@ def test_task_create_enforces_assignable_student_scope(grant_permissions_to_role
         format='json',
     )
     assert override_response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_task_assign_scope_includes_dept_manager_assignee(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='室经理可分配部门', code='TASK_ASSIGN_DEPT_MANAGER_D1')
+    grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['task.create', 'task.assign'])
+
+    admin = _create_user(
+        employee_id='TASK_ASSIGN_ADMIN_001',
+        username='室经理分配管理员',
+        department=department,
+        role_codes=['ADMIN'],
+    )
+    dept_manager = _create_non_student_user(
+        employee_id='TASK_ASSIGN_DM_001',
+        username='可执行室经理',
+        department=department,
+        role_code='DEPT_MANAGER',
+    )
+    team_manager = _create_non_student_user(
+        employee_id='TASK_ASSIGN_TM_001',
+        username='不可执行团队经理',
+        department=department,
+        role_code='TEAM_MANAGER',
+    )
+    knowledge = Knowledge.objects.create(
+        title='室经理执行任务知识',
+        content='室经理执行任务内容',
+        created_by=admin,
+        updated_by=admin,
+    )
+
+    client.force_authenticate(user=admin)
+
+    response = client.get('/api/tasks/assignable-users/')
+    assert response.status_code == 200
+    assignee_ids = {item['id'] for item in response.data['data']}
+    assert dept_manager.id in assignee_ids
+    assert team_manager.id not in assignee_ids
+
+    create_response = client.post(
+        '/api/tasks/create/',
+        {
+            'title': '分配给室经理执行',
+            'description': '',
+            'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+            'knowledge_ids': [knowledge.id],
+            'assignee_ids': [dept_manager.id],
+        },
+        format='json',
+    )
+    assert create_response.status_code == 201
+    assert Task.objects.get(id=create_response.data['data']['id']).assignments.filter(
+        assignee=dept_manager,
+    ).exists()
 
 
 @pytest.mark.django_db

@@ -7,7 +7,14 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api-client';
-import type { AuthSessionPayload, LoginRequest, LoginResponse, SwitchRoleResponse } from '@/types/auth';
+import type {
+  AuthSessionPayload,
+  ChangeOwnPasswordRequest,
+  ChangeOwnPasswordResponse,
+  LoginRequest,
+  LoginResponse,
+  SwitchRoleResponse,
+} from '@/types/auth';
 import type { CapabilityMap } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
 import { tokenStorage } from '@/lib/token-storage';
@@ -27,6 +34,7 @@ interface AuthContextValue extends AuthState {
   loginByOneAccountCode: (code: string) => Promise<RoleCode>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
+  changeOwnPassword: (data: ChangeOwnPasswordRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasCapability: (permissionCode: string) => boolean;
   hasAnyCapability: (permissionCodes: string[]) => boolean;
@@ -173,6 +181,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [applyAuthSession]);
 
+  const changeOwnPassword = useCallback(async (data: ChangeOwnPasswordRequest) => {
+    const response = await apiClient.post<ChangeOwnPasswordResponse>('/auth/me/password/', data);
+    tokenStorage.setTokenPair(response);
+    applyAuthSession(response, { isSwitching: false });
+  }, [applyAuthSession]);
+
   const hasCapability = useCallback((permissionCode: string) => {
     if (!permissionCode) {
       return false;
@@ -217,6 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginByOneAccountCode,
     logout,
     switchRole,
+    changeOwnPassword,
     refreshUser,
     hasCapability,
     hasAnyCapability,

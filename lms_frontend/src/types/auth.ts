@@ -13,6 +13,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ChangeOwnPasswordRequest {
+  current_password: string;
+  password: string;
+}
+
 /**
  * 登录响应
  */
@@ -40,6 +45,8 @@ export interface LoginResponse extends AuthSessionPayload, TokenPair {}
  * 切换角色响应
  */
 export type SwitchRoleResponse = LoginResponse;
+
+export type ChangeOwnPasswordResponse = LoginResponse;
 
 export interface OneAccountAuthorizeUrlResponse {
   authorize_url: string;

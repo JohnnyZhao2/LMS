@@ -55,6 +55,7 @@ const scopeUsers = [
   buildUser({ id: 1, roleCode: 'ADMIN' }),
   buildUser({ id: 2, roleCode: 'MENTOR' }),
   buildUser({ id: 3, roleCode: 'STUDENT', mentorId: 1 }),
+  buildUser({ id: 4, roleCode: 'DEPT_MANAGER', mentorId: 1 }),
 ];
 
 const renderPermissionScopeHook = ({
@@ -103,27 +104,38 @@ describe('useUserPermissionScopeState', () => {
     const { result, onSelectionChange } = renderPermissionScopeHook();
 
     expect(result.current.selectedPermissionScopes).toEqual(['ALL']);
-    expect(result.current.selectedScopeUserIds).toEqual([1, 2, 3]);
+    expect(result.current.selectedScopeUserIds).toEqual([1, 2, 3, 4]);
 
     act(() => {
       result.current.toggleScopeUser(3);
     });
 
     expect(result.current.selectedPermissionScopes).toEqual(['EXPLICIT_USERS']);
-    expect(result.current.selectedScopeUserIds).toEqual([1, 2]);
+    expect(result.current.selectedScopeUserIds).toEqual([1, 2, 4]);
     await waitFor(() => {
       expect(onSelectionChange).toHaveBeenCalledWith({
         scopeTypes: ['EXPLICIT_USERS'],
-        scopeUserIds: [1, 2],
+        scopeUserIds: [1, 2, 4],
       });
     });
   });
 
-  it('学员范围权限只允许勾选学员，不会把管理员本人混入任务分配范围', () => {
+  it('任务执行人范围允许勾选学员和室经理，不会把管理员本人混入任务分配范围', () => {
     const { result } = renderPermissionScopeHook({
       availableScopeTypes: ['MENTEES', 'EXPLICIT_USERS'],
       selectedRoleDefaultScopeTypes: ['MENTEES'],
       scopePermissionCode: 'task.assign',
+    });
+
+    expect(result.current.filteredScopeUsers.map((user) => user.id)).toEqual([3, 4]);
+    expect(result.current.selectedScopeUserIds).toEqual([3, 4]);
+  });
+
+  it('抽查范围仍只允许勾选学员', () => {
+    const { result } = renderPermissionScopeHook({
+      availableScopeTypes: ['MENTEES', 'EXPLICIT_USERS'],
+      selectedRoleDefaultScopeTypes: ['MENTEES'],
+      scopePermissionCode: 'spot_check.create',
     });
 
     expect(result.current.filteredScopeUsers.map((user) => user.id)).toEqual([3]);
@@ -268,7 +280,7 @@ describe('UserPermissionScopePopover', () => {
     await user.click(screen.getByRole('button', { name: /用户2/ }));
     expect(onToggleScopeUser).toHaveBeenCalledWith(2);
 
-    await user.click(screen.getByText('1/3'));
+    await user.click(screen.getByText('1/4'));
     expect(onToggleSelectAllFilteredScopeUsers).toHaveBeenCalledTimes(1);
   });
 

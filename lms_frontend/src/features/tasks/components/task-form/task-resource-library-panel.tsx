@@ -96,7 +96,7 @@ export function TaskResourceLibraryPanel({
           {resourcesDisabled ? (
             <Alert variant="warning" className={TASK_FORM_WARNING_ALERT_CLASSNAME}>
               <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
-                任务已有学员开始学习，无法修改资源
+                任务已有人员开始执行，无法修改资源
               </AlertDescription>
             </Alert>
           ) : null}

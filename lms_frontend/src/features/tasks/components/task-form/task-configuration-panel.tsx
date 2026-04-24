@@ -125,7 +125,7 @@ export function TaskConfigurationPanel({
             <div className="px-4 pb-2 pt-1">
               <Alert variant="warning" className={TASK_FORM_WARNING_ALERT_CLASSNAME}>
                 <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
-                  任务已有学员开始学习，无法移除已分配学员
+                  任务已有人员开始执行，无法移除已分配人员
                 </AlertDescription>
               </Alert>
             </div>
@@ -178,8 +178,8 @@ export function TaskConfigurationPanel({
                 density="compact"
                 showGridSelectionIndicator={false}
                 isLoading={isUsersLoading}
-                emptyText="暂无可分配学员"
-                loadingText="加载学员列表..."
+                emptyText="暂无可分配人员"
+                loadingText="加载人员列表..."
                 className="pb-3 pt-1.5"
                 listClassName="px-4"
                 itemsClassName="gap-1.5"
