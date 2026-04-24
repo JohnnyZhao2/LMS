@@ -1,4 +1,7 @@
-from apps.authorization.decisions import AuthorizationDecision, conditional_allow, conditional_deny
+from django.db.models import Q
+
+from apps.authorization.decisions import conditional_allow, conditional_deny
+from apps.authorization.owner_scope import filter_queryset_by_owner_scope, is_owner_in_scope
 from apps.authorization.registry import (
     AuthorizationSpec,
     ResourceAuthorizationHandler,
@@ -8,13 +11,14 @@ from apps.authorization.registry import (
     scope_rules,
     perm,
 )
-from apps.authorization.roles import is_admin_like_role
 from apps.tasks.models import Task, TaskAssignment
 from apps.users.models import User
 
 
-TASK_OWNER_ROLES = {'MENTOR', 'DEPT_MANAGER'}
-TASK_SCOPE_SUMMARY = '学员范围'
+TASK_RESOURCE_SCOPE_GROUP = 'task_resource_scope'
+TASK_ASSIGNMENT_SCOPE_GROUP = 'task_assignment_scope'
+TASK_RESOURCE_SCOPE_SUMMARY = '任务可见范围'
+TASK_ASSIGNMENT_SCOPE_SUMMARY = '学员范围'
 TASK_MANAGER_CODES = (*crud_codes('task'), 'task.assign', 'task.analytics.view')
 TASK_ADMIN_CODES = (*crud_codes('task'), 'task.assign')
 
@@ -44,19 +48,11 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
             )
         return conditional_allow(permission_code, constraint='task_visibility')
 
-    current_role = engine.get_current_role()
-    if is_admin_like_role(current_role):
-        return AuthorizationDecision.allow(permission_code)
-
-    owns_task_in_current_role = (
-        current_role in TASK_OWNER_ROLES
-        and getattr(engine.user, 'id', None) == resource.created_by_id
-        and resource.created_role == current_role
-    )
-    has_allow_override = engine.has_allow_override(permission_code)
-
     if permission_code == 'task.view':
-        if owns_task_in_current_role or has_allow_override or resource.assignments.filter(assignee=engine.user).exists():
+        if (
+            is_owner_in_scope(engine, 'task.view', resource.created_by_id)
+            or resource.assignments.filter(assignee=engine.user).exists()
+        ):
             return conditional_allow(permission_code, constraint='task_visibility')
         return conditional_deny(
             permission_code,
@@ -66,7 +62,7 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
         )
 
     if permission_code in {'task.update', 'task.delete'}:
-        if owns_task_in_current_role or has_allow_override:
+        if is_owner_in_scope(engine, permission_code, resource.created_by_id):
             return conditional_allow(permission_code, constraint='task_owner')
         return conditional_deny(
             permission_code,
@@ -79,13 +75,12 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
 
 
 def _filter_task_queryset(engine, *, queryset, context=None):
-    current_role = engine.get_current_role()
-    if is_admin_like_role(current_role):
-        return queryset
-    if current_role in TASK_OWNER_ROLES:
-        return queryset.filter(created_by=engine.user, created_role=current_role)
+    scoped_owner_tasks = filter_queryset_by_owner_scope(engine, 'task.view', queryset)
     assigned_task_ids = TaskAssignment.objects.filter(assignee=engine.user).values_list('task_id', flat=True)
-    return queryset.filter(id__in=assigned_task_ids)
+    return queryset.filter(
+        Q(id__in=scoped_owner_tasks.values('id'))
+        | Q(id__in=assigned_task_ids)
+    )
 
 
 def _filter_assignable_students(engine, *, queryset, context=None):
@@ -100,19 +95,37 @@ AUTHORIZATION_SPECS = (
         key='tasks.permissions',
         module='task',
         permissions=(
-            *crud_permissions('task', '任务', descriptions={'update': '编辑任务和预览任务'}),
+            *crud_permissions(
+                'task',
+                '任务',
+                descriptions={'update': '编辑任务和预览任务'},
+                kwargs_by_action={
+                    'view': {
+                        'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
+                        'allowed_scope_types': ('SELF', 'ALL'),
+                    },
+                    'update': {
+                        'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
+                        'allowed_scope_types': ('SELF', 'ALL'),
+                    },
+                    'delete': {
+                        'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
+                        'allowed_scope_types': ('SELF', 'ALL'),
+                    },
+                },
+            ),
             perm(
                 code='task.assign',
                 name='分配任务',
                 description='为任务分配学员',
-                scope_group_key='task_student_scope',
+                scope_group_key=TASK_ASSIGNMENT_SCOPE_GROUP,
                 implies=('task.view',),
             ),
             perm(
                 code='task.analytics.view',
                 name='查看任务分析',
                 description='查看任务进度、执行情况和分析统计',
-                scope_group_key='task_student_scope',
+                scope_group_key=TASK_ASSIGNMENT_SCOPE_GROUP,
                 implies=('task.view',),
             ),
         ),
@@ -123,6 +136,15 @@ AUTHORIZATION_SPECS = (
             'ADMIN': TASK_ADMIN_CODES,
         },
         scope_rules=(
+            *scope_rules(
+                'task.view',
+                STUDENT='SELF',
+                MENTOR='SELF',
+                DEPT_MANAGER='SELF',
+                ADMIN='ALL',
+            ),
+            *scope_rules('task.update', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
+            *scope_rules('task.delete', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
             *scope_rules('task.assign', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
             *scope_rules('task.analytics.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
         ),
@@ -139,10 +161,10 @@ AUTHORIZATION_SPECS = (
                 ),
                 authorize=_authorize_task_resource,
                 constraint_summaries={
-                    'task.view': '自己创建或已分配',
-                    'task.update': '仅自己创建',
-                    'task.delete': '仅自己创建',
-                    'task.analytics.view': TASK_SCOPE_SUMMARY,
+                    'task.view': TASK_RESOURCE_SCOPE_SUMMARY,
+                    'task.update': TASK_RESOURCE_SCOPE_SUMMARY,
+                    'task.delete': TASK_RESOURCE_SCOPE_SUMMARY,
+                    'task.analytics.view': TASK_ASSIGNMENT_SCOPE_SUMMARY,
                     'grading.view': '任务可见后可阅卷',
                     'grading.score': '任务可见后可评分',
                 },
@@ -154,21 +176,21 @@ AUTHORIZATION_SPECS = (
                 permission_code='task.view',
                 resource_model=Task,
                 filter_queryset=_filter_task_queryset,
-                constraint_summary='自己创建或已分配',
+                constraint_summary=TASK_RESOURCE_SCOPE_SUMMARY,
             ),
             ScopeFilterHandler(
                 key='tasks.scope_filter.assignable_students',
                 permission_code='task.assign',
                 resource_model=User,
                 filter_queryset=_filter_assignable_students,
-                constraint_summary=TASK_SCOPE_SUMMARY,
+                constraint_summary=TASK_ASSIGNMENT_SCOPE_SUMMARY,
             ),
             ScopeFilterHandler(
                 key='tasks.scope_filter.analytics_students',
                 permission_code='task.analytics.view',
                 resource_model=User,
                 filter_queryset=_filter_task_analytics_students,
-                constraint_summary=TASK_SCOPE_SUMMARY,
+                constraint_summary=TASK_ASSIGNMENT_SCOPE_SUMMARY,
             ),
         ),
     ),

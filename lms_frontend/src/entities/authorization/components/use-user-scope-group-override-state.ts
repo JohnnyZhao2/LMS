@@ -134,24 +134,26 @@ export const useUserScopeGroupOverrideState = ({
       selection,
     });
 
-    const sameLength = activeOverrides.length === targetPayloads.length;
-    const matchesExactly = sameLength && activeOverrides.every((override) => (
-      targetPayloads.some((payload) => samePayload(override, payload))
+    const overridesToRevoke = activeOverrides.filter((override) => (
+      !targetPayloads.some((payload) => samePayload(override, payload))
     ));
-    if (matchesExactly) {
+    const payloadsToCreate = targetPayloads.filter((payload) => (
+      !activeOverrides.some((override) => samePayload(override, payload))
+    ));
+    if (overridesToRevoke.length === 0 && payloadsToCreate.length === 0) {
       return;
     }
 
     setIsSaving(true);
     try {
-      if (activeOverrides.length > 0) {
+      if (overridesToRevoke.length > 0) {
         await Promise.all(
-          activeOverrides.map((override) => revokeOverride({ userId, overrideId: override.id })),
+          overridesToRevoke.map((override) => revokeOverride({ userId, overrideId: override.id })),
         );
       }
-      if (targetPayloads.length > 0) {
+      if (payloadsToCreate.length > 0) {
         await Promise.all(
-          targetPayloads.map((payload) => createOverride({ userId, data: payload })),
+          payloadsToCreate.map((payload) => createOverride({ userId, data: payload })),
         );
       }
       await refreshUser();

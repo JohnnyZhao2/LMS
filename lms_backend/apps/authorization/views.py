@@ -10,7 +10,6 @@ from core.responses import created_response, list_response, success_response
 from .engine import enforce, enforce_any
 from .serializers import (
     PermissionSerializer,
-    RevokeUserPermissionOverrideSerializer,
     RolePermissionSerializer,
     RolePermissionTemplateSerializer,
     UserPermissionOverrideCreateSerializer,
@@ -190,15 +189,14 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         return created_response(response_serializer.data)
 
 
-class UserPermissionOverrideRevokeView(BaseAPIView):
-    """Revoke an override."""
+class UserPermissionOverrideDeleteView(BaseAPIView):
+    """Delete an override."""
 
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='撤销用户权限覆盖规则',
-        request=RevokeUserPermissionOverrideSerializer,
+        summary='删除用户权限覆盖规则',
         responses={
             200: UserPermissionOverrideSerializer,
             403: OpenApiResponse(description='无权限'),
@@ -206,16 +204,11 @@ class UserPermissionOverrideRevokeView(BaseAPIView):
         },
         tags=['授权管理'],
     )
-    def post(self, request, user_id: int, override_id: int):
-        enforce('user.permission.update', request, error_message='无权撤销用户权限覆盖')
-
-        serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        override = self.service.revoke_user_permission_override(
+    def delete(self, request, user_id: int, override_id: int):
+        enforce('user.permission.update', request, error_message='无权删除用户权限覆盖')
+        override = self.service.delete_user_permission_override(
             user_id=user_id,
             override_id=override_id,
-            revoke_reason=serializer.validated_data.get('revoke_reason', ''),
         )
         response_serializer = UserPermissionOverrideSerializer(override)
         return success_response(response_serializer.data)
@@ -273,13 +266,12 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
         return created_response(response_serializer.data)
 
 
-class UserScopeGroupOverrideRevokeView(BaseAPIView):
+class UserScopeGroupOverrideDeleteView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='撤销用户范围组覆盖规则',
-        request=RevokeUserPermissionOverrideSerializer,
+        summary='删除用户范围组覆盖规则',
         responses={
             200: UserScopeGroupOverrideSerializer,
             403: OpenApiResponse(description='无权限'),
@@ -287,14 +279,11 @@ class UserScopeGroupOverrideRevokeView(BaseAPIView):
         },
         tags=['授权管理'],
     )
-    def post(self, request, user_id: int, override_id: int):
-        enforce('user.permission.update', request, error_message='无权撤销用户范围组覆盖')
-        serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        override = self.service.revoke_user_scope_group_override(
+    def delete(self, request, user_id: int, override_id: int):
+        enforce('user.permission.update', request, error_message='无权删除用户范围组覆盖')
+        override = self.service.delete_user_scope_group_override(
             user_id=user_id,
             override_id=override_id,
-            revoke_reason=serializer.validated_data.get('revoke_reason', ''),
         )
         response_serializer = UserScopeGroupOverrideSerializer(override)
         return success_response(response_serializer.data)

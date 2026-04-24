@@ -99,13 +99,16 @@ class UserOverrideServiceMixin:
         if not resolved_role:
             return set(), set()
 
-        broad_allowed_scopes = set(
+        default_scope_types = set(
             self._get_scope_group_scope_types(
                 scope_group_key=scope_group_key,
                 current_role=resolved_role,
             )
         )
-        explicit_allowed_user_ids: set[int] = set()
+        broad_allow_scope_types: set[str] = set()
+        broad_deny_scope_types: set[str] = set()
+        explicit_allow_user_ids: set[int] = set()
+        explicit_deny_user_ids: set[int] = set()
 
         overrides = self._list_active_scope_group_overrides_cached(
             user_id=base_user.id,
@@ -114,19 +117,19 @@ class UserOverrideServiceMixin:
         )
         for override in overrides:
             if override.effect == EFFECT_DENY:
-                if override.scope_type == SCOPE_ALL:
-                    return set(), set()
                 if override.scope_type == SCOPE_EXPLICIT_USERS:
-                    explicit_allowed_user_ids -= set(override.scope_user_ids or [])
+                    explicit_deny_user_ids |= set(override.scope_user_ids or [])
                 else:
-                    broad_allowed_scopes.discard(override.scope_type)
+                    broad_deny_scope_types.add(override.scope_type)
                 continue
 
             if override.scope_type == SCOPE_EXPLICIT_USERS:
-                explicit_allowed_user_ids |= set(override.scope_user_ids or [])
+                explicit_allow_user_ids |= set(override.scope_user_ids or [])
             else:
-                broad_allowed_scopes.add(override.scope_type)
+                broad_allow_scope_types.add(override.scope_type)
 
+        broad_allowed_scopes = (default_scope_types - broad_deny_scope_types) | broad_allow_scope_types
+        explicit_allowed_user_ids = explicit_allow_user_ids - explicit_deny_user_ids
         return broad_allowed_scopes, explicit_allowed_user_ids
 
     def _is_scope_capability_granted(
@@ -284,11 +287,8 @@ class UserOverrideServiceMixin:
         *,
         user_id: int,
     ) -> List[UserPermissionOverride]:
-        queryset = UserPermissionOverride.objects.select_related('permission', 'granted_by', 'revoked_by').filter(user_id=user_id)
-        queryset = queryset.filter(
-            is_active=True,
-            revoked_at__isnull=True,
-        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+        queryset = UserPermissionOverride.objects.select_related('permission', 'granted_by').filter(user_id=user_id)
+        queryset = queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override
@@ -355,26 +355,26 @@ class UserOverrideServiceMixin:
                 message='学员角色为固定工作台角色，不支持配置用户权限覆盖',
             )
 
-        return UserPermissionOverride.objects.create(
+        override, _ = UserPermissionOverride.objects.update_or_create(
             user=target_user,
             permission=permission,
-            effect=effect,
             applies_to_role=normalized_applies_to_role,
-            reason=reason,
-            expires_at=expires_at,
-            granted_by=self.user,
+            defaults={
+                'effect': effect,
+                'reason': reason,
+                'expires_at': expires_at,
+                'granted_by': self.user,
+            },
         )
+        return override
 
     def list_user_scope_group_overrides(
         self,
         *,
         user_id: int,
     ) -> List[UserScopeGroupOverride]:
-        queryset = UserScopeGroupOverride.objects.select_related('granted_by', 'revoked_by').filter(user_id=user_id)
-        queryset = queryset.filter(
-            is_active=True,
-            revoked_at__isnull=True,
-        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+        queryset = UserScopeGroupOverride.objects.select_related('granted_by').filter(user_id=user_id)
+        queryset = queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override
@@ -457,73 +457,66 @@ class UserOverrideServiceMixin:
                 message='仅当范围为指定用户时才允许传 scope_user_ids',
             )
 
-        return UserScopeGroupOverride.objects.create(
+        override, _ = UserScopeGroupOverride.objects.update_or_create(
             user=target_user,
             scope_group_key=scope_group_key,
             effect=effect,
             applies_to_role=normalized_applies_to_role,
             scope_type=scope_type,
-            scope_user_ids=normalized_scope_user_ids,
-            reason=reason,
-            expires_at=expires_at,
-            granted_by=self.user,
+            defaults={
+                'scope_user_ids': normalized_scope_user_ids,
+                'reason': reason,
+                'expires_at': expires_at,
+                'granted_by': self.user,
+            },
         )
-
-    @transaction.atomic
-    @log_operation(
-        'authorization',
-        'revoke_user_scope_group_override',
-        '范围组：{result.scope_group_key}',
-        target_type='user',
-        target_title_template='{result.user.username}',
-        group='用户授权',
-        label='撤销用户范围组覆盖',
-    )
-    def revoke_user_scope_group_override(
-        self,
-        *,
-        user_id: int,
-        override_id: int,
-        revoke_reason: str = '',
-    ) -> UserScopeGroupOverride:
-        override = self.validate_not_none(
-            UserScopeGroupOverride.objects.filter(id=override_id, user_id=user_id).first(),
-            '范围组覆盖规则不存在',
-        )
-        override.is_active = False
-        override.revoked_at = timezone.now()
-        override.revoked_by = self.user
-        override.revoked_reason = revoke_reason
-        override.save(update_fields=['is_active', 'revoked_at', 'revoked_by', 'revoked_reason', 'updated_at'])
         return override
 
     @transaction.atomic
     @log_operation(
         'authorization',
-        'revoke_user_permission_override',
-        '权限：{result.permission.code}',
+        'delete_user_scope_group_override',
+        '范围组：{result.scope_group_key}',
         target_type='user',
         target_title_template='{result.user.username}',
         group='用户授权',
-        label='撤销用户权限覆盖',
+        label='删除用户范围组覆盖',
     )
-    def revoke_user_permission_override(
+    def delete_user_scope_group_override(
         self,
         *,
         user_id: int,
         override_id: int,
-        revoke_reason: str = '',
+    ) -> UserScopeGroupOverride:
+        override = self.validate_not_none(
+            UserScopeGroupOverride.objects.select_related('user').filter(id=override_id, user_id=user_id).first(),
+            '范围组覆盖规则不存在',
+        )
+        UserScopeGroupOverride.objects.filter(pk=override.pk).delete()
+        return override
+
+    @transaction.atomic
+    @log_operation(
+        'authorization',
+        'delete_user_permission_override',
+        '权限：{result.permission.code}',
+        target_type='user',
+        target_title_template='{result.user.username}',
+        group='用户授权',
+        label='删除用户权限覆盖',
+    )
+    def delete_user_permission_override(
+        self,
+        *,
+        user_id: int,
+        override_id: int,
     ) -> UserPermissionOverride:
         override = self.validate_not_none(
-            UserPermissionOverride.objects.select_related('permission').filter(
+            UserPermissionOverride.objects.select_related('permission', 'user').filter(
                 id=override_id,
                 user_id=user_id,
             ).first(),
             '权限覆盖规则不存在',
         )
-        override.is_active = False
-        override.revoked_at = timezone.now()
-        override.revoked_by = self.user
-        override.revoked_reason = revoke_reason
-        override.save(update_fields=['is_active', 'revoked_at', 'revoked_by', 'revoked_reason', 'updated_at'])
+        UserPermissionOverride.objects.filter(pk=override.pk).delete()
         return override

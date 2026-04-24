@@ -425,7 +425,7 @@ class TestMentorDashboardAPI:
 
         UserScopeGroupOverride.objects.create(
             user=mentor,
-            scope_group_key='task_student_scope',
+            scope_group_key='task_assignment_scope',
             effect='ALLOW',
             applies_to_role='MENTOR',
             scope_type='EXPLICIT_USERS',
@@ -434,7 +434,7 @@ class TestMentorDashboardAPI:
         )
         UserScopeGroupOverride.objects.create(
             user=mentor,
-            scope_group_key='task_student_scope',
+            scope_group_key='task_assignment_scope',
             effect='DENY',
             applies_to_role='MENTOR',
             scope_type='EXPLICIT_USERS',

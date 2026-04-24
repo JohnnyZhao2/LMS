@@ -39,11 +39,7 @@ export interface UserPermissionOverride {
   applies_to_role: RoleCode | null;
   reason: string;
   expires_at: string | null;
-  is_active: boolean;
   granted_by_name: string | null;
-  revoked_by_name: string | null;
-  revoked_at: string | null;
-  revoked_reason: string;
   created_at: string;
   updated_at: string;
 }
@@ -65,11 +61,7 @@ export interface UserScopeGroupOverride {
   scope_user_ids: number[];
   reason: string;
   expires_at: string | null;
-  is_active: boolean;
   granted_by_name: string | null;
-  revoked_by_name: string | null;
-  revoked_at: string | null;
-  revoked_reason: string;
   created_at: string;
   updated_at: string;
 }

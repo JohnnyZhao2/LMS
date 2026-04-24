@@ -6,6 +6,9 @@
 
 | Commit | 日期 | 内容 |
 |--------|------|------|
+| `0266f857` | 2026-04-24 | refactor(knowledge): 移除 agentation 依赖并优化知识详情模态框逻辑 - 从 package.json 和 package-lock.json 中移除了 agentation 依赖。 - 更新知识详情模态框，重构退出焦点模式的逻辑，确保在有更改... |
+| `a2936aff` | 2026-04-24 | feat(dashboard): 增强知识检索与 UI 组件 • 更新 get_latest_knowledge，在查询中加入 space_tag 以优化数据检索。 • 新增 CSS 类 .scrollbar-hidden 用于隐藏滚动条，使 UI 更简洁。 • 修改 Sc... |
+| `e0855870` | 2026-04-24 | refactor(dashboard)：简化任务参与者进度获取 • 移除了 limit 参数，并调整逻辑以直接返回所有参与者。 • 更新了 StudentDashboard 组件以反映参与者处理方式的变化。 • 通过精简 props 和布局增强了 EditorialCard... |
 | `71282b2f` | 2026-04-22 | refactor(auth): 优化 OneAccountClient 的 ID 令牌解码逻辑 - 移除了不必要的私钥规范化方法，简化了客户端配置。 - 更新了 ID 令牌解码方法，改为直接解析 JWT 载荷，提升了代码可读性。 - 调整了授权码请求的参数顺序，确保一致性。... |
 | `3022fb2d` | 2026-04-22 | feat(authorization): 更新权限模板和用户角色管理逻辑 - 修改了权限模板的命名和访问控制，确保一致性，更新了相关的权限代码。 - 在用户管理中引入新的角色分配和权限更新功能，提升了用户权限管理的灵活性。 - 更新了前端和后端的权限检查逻辑，确保用户角色和... |
 | `692bd098` | 2026-04-22 | delete(deploy): 移除前后端部署相关配置文件 - 删除了前端和后端的 Nginx 配置文件以及 Gunicorn 配置文件，清理不再需要的部署文档以提升项目整洁性。 |
@@ -33,6 +36,3 @@
 | `b5f15b84` | 2026-04-18 | refactor(authorization, services, dashboard, tasks): 重构授权引擎和服务逻辑 - 移除未使用的导入和冗余代码，简化授权引擎和服务的实现。 - 将 AuthorizationEngine 类的多个混入合并，提升代码的可读性和... |
 | `2dd8bea0` | 2026-04-18 | refactor(activity_logs, authorization): 更新日志记录和角色解析逻辑 • 在 ActivityLogsConfig 中集成 register_activity_log_audit_publisher 以增强审计日志记录。 • 在用户操作... |
 | `cc337416` | 2026-04-18 | refactor(grading): update layout and styling in GradingCenterTab component - Introduced a new grid class for better alignment of question... |
-| `97e4fb9f` | 2026-04-18 | feat(grading, authorization, tasks): 增强评分和权限管理功能 - 更新 README，添加 conda 环境激活指令和数据初始化说明。 - 修改 requirements.txt，锁定 pdfplumber 和 pdfminer.six ... |
-| `e58b02c5` | 2026-04-17 | refactor(tasks, authorization): 移除冗余参数并优化查询逻辑 - 更新任务查询函数，移除不必要的 include_deleted 参数，简化函数调用。 - 调整任务服务中的查询逻辑，确保一致性和可读性。 - 重构用户权限管理组件，提升权限模块的... |
-| `c53fedfe` | 2026-04-17 | refactor(activity_logs, tasks, authorization): 优化活动日志和任务管理逻辑 - 在活动日志中移除不再使用的提交操作，简化日志记录。 - 更新任务模型，移除软删除逻辑，增强任务管理的清晰度。 - 精简权限管理逻辑，确保用户权限的可... |

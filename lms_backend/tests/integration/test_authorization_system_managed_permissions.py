@@ -218,8 +218,12 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
     assert 'scope_aware' in permission_map['task.view']
-    assert permission_map['task.assign']['scope_group_key'] == 'task_student_scope'
-    assert permission_map['task.analytics.view']['scope_group_key'] == 'task_student_scope'
+    assert permission_map['task.view']['scope_group_key'] == 'task_resource_scope'
+    assert permission_map['task.update']['scope_group_key'] == 'task_resource_scope'
+    assert permission_map['task.delete']['scope_group_key'] == 'task_resource_scope'
+    assert permission_map['task.view']['allowed_scope_types'] == ['SELF', 'ALL']
+    assert permission_map['task.assign']['scope_group_key'] == 'task_assignment_scope'
+    assert permission_map['task.analytics.view']['scope_group_key'] == 'task_assignment_scope'
     assert permission_map['spot_check.view']['scope_group_key'] == 'spot_check_student_scope'
     assert permission_map['user.view']['scope_group_key'] == 'user_scope'
     assert permission_map['question.view']['scope_group_key'] == 'question_resource_scope'
@@ -231,7 +235,6 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert permission_map['quiz.delete']['scope_group_key'] == 'quiz_resource_scope'
     assert permission_map['quiz.view']['allowed_scope_types'] == ['SELF', 'ALL']
     assert 'EXPLICIT_USERS' in permission_map['task.assign']['allowed_scope_types']
-    assert permission_map['task.view']['scope_group_key'] is None
     assert 'role_template_visible' not in permission_map['task.view']
     assert 'user_authorization_visible' not in permission_map['task.view']
 
@@ -360,6 +363,17 @@ def test_permission_override_takes_effect_without_scope_payload():
     )
     assert patch_response.status_code == 200
 
+    _authenticate(client, employee_id=admin_user.employee_id)
+    delete_response = client.delete(
+        f'/api/authorization/users/{mentor_user.id}/overrides/{override_response.data["data"]["id"]}/',
+    )
+    assert delete_response.status_code == 200
+    assert not UserPermissionOverride.objects.filter(
+        user=mentor_user,
+        permission__code='knowledge.update',
+        applies_to_role='MENTOR',
+    ).exists()
+
 
 @pytest.mark.django_db
 def test_student_role_cannot_be_used_for_user_override_applies_to_role():
@@ -383,7 +397,6 @@ def test_student_role_cannot_be_used_for_user_override_applies_to_role():
     assert not UserPermissionOverride.objects.filter(
         user=target_user,
         permission__code='knowledge.update',
-        is_active=True,
     ).exists()
 
 
@@ -410,7 +423,6 @@ def test_super_admin_cannot_be_target_of_user_override():
     assert not UserPermissionOverride.objects.filter(
         user=target_super_user,
         permission__code='knowledge.update',
-        is_active=True,
     ).exists()
 
 
@@ -621,8 +633,14 @@ def test_role_permission_template_response_includes_default_scope_types():
         'quiz.update',
         'quiz.delete',
     }
-    assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
-    assert set(scope_group_map['task_student_scope']['permission_codes']) == {'task.assign', 'task.analytics.view'}
+    assert scope_group_map['task_resource_scope']['default_scope_types'] == ['SELF']
+    assert set(scope_group_map['task_resource_scope']['permission_codes']) == {
+        'task.view',
+        'task.update',
+        'task.delete',
+    }
+    assert scope_group_map['task_assignment_scope']['default_scope_types'] == ['MENTEES']
+    assert set(scope_group_map['task_assignment_scope']['permission_codes']) == {'task.assign', 'task.analytics.view'}
     assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
 
@@ -640,7 +658,8 @@ def test_sync_authorization_restores_role_default_scope_groups():
     scope_group_map = {item['key']: item for item in response.data['data']['scope_groups']}
     assert scope_group_map['question_resource_scope']['default_scope_types'] == ['SELF']
     assert scope_group_map['quiz_resource_scope']['default_scope_types'] == ['SELF']
-    assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
+    assert scope_group_map['task_resource_scope']['default_scope_types'] == ['SELF']
+    assert scope_group_map['task_assignment_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
     assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
 
@@ -698,7 +717,6 @@ def test_non_admin_role_can_create_log_management_permission_override():
         user=mentor_user,
         permission__code='activity_log.view',
         applies_to_role='MENTOR',
-        is_active=True,
     ).exists()
 
 
@@ -721,7 +739,7 @@ def test_user_scope_group_override_api_creates_and_lists_records():
     create_response = client.post(
         f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/',
         {
-            'scope_group_key': 'task_student_scope',
+            'scope_group_key': 'task_assignment_scope',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
             'scope_type': 'EXPLICIT_USERS',
@@ -731,21 +749,31 @@ def test_user_scope_group_override_api_creates_and_lists_records():
     )
 
     assert create_response.status_code == 201
-    assert create_response.data['data']['scope_group_key'] == 'task_student_scope'
+    assert create_response.data['data']['scope_group_key'] == 'task_assignment_scope'
     assert create_response.data['data']['scope_user_ids'] == [extra_user.id]
     assert UserScopeGroupOverride.objects.filter(
         user=mentor_user,
-        scope_group_key='task_student_scope',
+        scope_group_key='task_assignment_scope',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
-        is_active=True,
     ).exists()
 
     list_response = client.get(f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/')
     assert list_response.status_code == 200
     payload = list_response.data['data']
     assert len(payload) == 1
-    assert payload[0]['scope_group_key'] == 'task_student_scope'
+    assert payload[0]['scope_group_key'] == 'task_assignment_scope'
+
+    delete_response = client.delete(
+        f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/{create_response.data["data"]["id"]}/',
+    )
+    assert delete_response.status_code == 200
+    assert not UserScopeGroupOverride.objects.filter(
+        user=mentor_user,
+        scope_group_key='task_assignment_scope',
+        applies_to_role='MENTOR',
+        scope_type='EXPLICIT_USERS',
+    ).exists()
 
 
 @pytest.mark.django_db
@@ -783,7 +811,6 @@ def test_resource_scope_group_override_rejects_explicit_users():
         user=mentor_user,
         scope_group_key='question_resource_scope',
         scope_type='EXPLICIT_USERS',
-        is_active=True,
     ).exists()
 
 
@@ -822,7 +849,6 @@ def test_scope_aware_permission_override_api_rejects_scoped_payload():
         user=mentor_user,
         permission__code='task.assign',
         applies_to_role='MENTOR',
-        is_active=True,
     ).exists()
 
 

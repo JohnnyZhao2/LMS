@@ -6,6 +6,7 @@ from django.utils import timezone
 from apps.activity_logs.models import ActivityLog, ActivityLogPolicy
 from apps.activity_logs.services import ActivityLogService
 from apps.authorization.constants import PERMISSION_SCOPE_GROUPS, SCOPE_ALL
+from apps.authorization.models import UserPermissionOverride, UserScopeGroupOverride
 from apps.authorization.services import AuthorizationService
 from apps.submissions.models import Answer
 from apps.tags.models import Tag
@@ -130,19 +131,19 @@ def test_authorization_user_permission_override_writes_activity_logs():
         applies_to_role=None,
         reason='临时放开',
     )
-    service.revoke_user_permission_override(
+    service.delete_user_permission_override(
         user_id=target.id,
         override_id=override.id,
-        revoke_reason='恢复默认',
     )
 
     create_log = ActivityLog.objects.get(category='operation', action='create_user_permission_override', target_title=target.username)
-    revoke_log = ActivityLog.objects.get(category='operation', action='revoke_user_permission_override', target_title=target.username)
+    delete_log = ActivityLog.objects.get(category='operation', action='delete_user_permission_override', target_title=target.username)
     assert create_log.actor_id == actor.id
     assert '权限：knowledge.view' in create_log.description
     assert '效果：允许' in create_log.description
-    assert revoke_log.actor_id == actor.id
-    assert revoke_log.description == '权限：knowledge.view'
+    assert delete_log.actor_id == actor.id
+    assert delete_log.description == '权限：knowledge.view'
+    assert not UserPermissionOverride.objects.filter(id=override.id).exists()
 
 
 @pytest.mark.django_db
@@ -161,19 +162,19 @@ def test_authorization_scope_group_override_writes_activity_logs():
         scope_user_ids=[],
         reason='补充范围',
     )
-    service.revoke_user_scope_group_override(
+    service.delete_user_scope_group_override(
         user_id=target.id,
         override_id=override.id,
-        revoke_reason='恢复默认',
     )
 
     create_log = ActivityLog.objects.get(category='operation', action='create_user_scope_group_override', target_title=target.username)
-    revoke_log = ActivityLog.objects.get(category='operation', action='revoke_user_scope_group_override', target_title=target.username)
+    delete_log = ActivityLog.objects.get(category='operation', action='delete_user_scope_group_override', target_title=target.username)
     assert create_log.actor_id == actor.id
     assert f'范围组：{scope_group_key}' in create_log.description
     assert '效果：允许' in create_log.description
-    assert revoke_log.actor_id == actor.id
-    assert revoke_log.description == f'范围组：{scope_group_key}'
+    assert delete_log.actor_id == actor.id
+    assert delete_log.description == f'范围组：{scope_group_key}'
+    assert not UserScopeGroupOverride.objects.filter(id=override.id).exists()
 
 
 @pytest.mark.django_db

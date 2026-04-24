@@ -57,7 +57,7 @@ class RolePermission(TimestampMixin, models.Model):
 
 
 class UserPermissionOverride(TimestampMixin, models.Model):
-    """User-level allow/deny overrides."""
+    """Current user-level allow/deny permission override."""
 
     user = models.ForeignKey(
         User,
@@ -82,7 +82,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
     )
     reason = models.CharField(max_length=255, default='', blank=True, verbose_name='原因')
     expires_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='过期时间')
-    is_active = models.BooleanField(default=True, db_index=True, verbose_name='是否启用')
 
     granted_by = models.ForeignKey(
         User,
@@ -92,16 +91,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
         related_name='granted_permission_overrides',
         verbose_name='授权人',
     )
-    revoked_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='revoked_permission_overrides',
-        verbose_name='撤销人',
-    )
-    revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='撤销时间')
-    revoked_reason = models.CharField(max_length=255, default='', blank=True, verbose_name='撤销原因')
 
     class Meta:
         db_table = 'lms_user_permission_override'
@@ -109,7 +98,7 @@ class UserPermissionOverride(TimestampMixin, models.Model):
         verbose_name_plural = '用户权限覆盖'
         ordering = ['-created_at', '-id']
         indexes = [
-            models.Index(fields=['user', 'permission', 'is_active'], name='user_perm_override_u_p_a_idx'),
+            models.Index(fields=['user', 'permission'], name='user_perm_override_u_p_idx'),
             models.Index(fields=['user', 'applies_to_role'], name='user_perm_override_u_r_idx'),
         ]
 
@@ -119,7 +108,7 @@ class UserPermissionOverride(TimestampMixin, models.Model):
 
 
 class UserScopeGroupOverride(TimestampMixin, models.Model):
-    """User-level scope group allow/deny overrides."""
+    """Current user-level scope group allow/deny override."""
 
     user = models.ForeignKey(
         User,
@@ -146,7 +135,6 @@ class UserScopeGroupOverride(TimestampMixin, models.Model):
     scope_user_ids = models.JSONField(default=list, blank=True, verbose_name='指定用户ID列表')
     reason = models.CharField(max_length=255, default='', blank=True, verbose_name='原因')
     expires_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='过期时间')
-    is_active = models.BooleanField(default=True, db_index=True, verbose_name='是否启用')
     granted_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -155,16 +143,6 @@ class UserScopeGroupOverride(TimestampMixin, models.Model):
         related_name='granted_scope_group_overrides',
         verbose_name='授权人',
     )
-    revoked_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='revoked_scope_group_overrides',
-        verbose_name='撤销人',
-    )
-    revoked_at = models.DateTimeField(null=True, blank=True, verbose_name='撤销时间')
-    revoked_reason = models.CharField(max_length=255, default='', blank=True, verbose_name='撤销原因')
 
     class Meta:
         db_table = 'lms_user_scope_group_override'
@@ -172,7 +150,7 @@ class UserScopeGroupOverride(TimestampMixin, models.Model):
         verbose_name_plural = '用户范围组覆盖'
         ordering = ['-created_at', '-id']
         indexes = [
-            models.Index(fields=['user', 'scope_group_key', 'is_active'], name='user_scope_group_u_g_a_idx'),
+            models.Index(fields=['user', 'scope_group_key'], name='user_scope_group_u_g_idx'),
             models.Index(fields=['user', 'applies_to_role'], name='user_scope_group_u_r_idx'),
         ]
 

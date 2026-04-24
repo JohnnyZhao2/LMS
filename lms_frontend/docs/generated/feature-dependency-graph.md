@@ -26,7 +26,7 @@ flowchart LR
   app -->|8| types
   features -->|79| entities
   features -->|43| session
-  features -->|230| components
+  features -->|231| components
   features -->|3| hooks
   features -->|116| lib
   features -->|20| utils
@@ -65,7 +65,7 @@ flowchart LR
 | `app` | `types` | 8 |
 | `features` | `entities` | 79 |
 | `features` | `session` | 43 |
-| `features` | `components` | 230 |
+| `features` | `components` | 231 |
 | `features` | `hooks` | 3 |
 | `features` | `lib` | 116 |
 | `features` | `utils` | 20 |

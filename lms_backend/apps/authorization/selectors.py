@@ -41,8 +41,6 @@ def list_active_user_overrides(
 
     queryset = UserPermissionOverride.objects.select_related('permission', 'user').filter(
         user_id=user_id,
-        is_active=True,
-        revoked_at__isnull=True,
     ).exclude(
         applies_to_role='STUDENT',
     ).filter(
@@ -71,8 +69,6 @@ def list_active_scope_group_overrides(
 
     queryset = UserScopeGroupOverride.objects.select_related('user').filter(
         user_id=user_id,
-        is_active=True,
-        revoked_at__isnull=True,
     ).exclude(
         applies_to_role='STUDENT',
     ).filter(

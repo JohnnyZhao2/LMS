@@ -36,8 +36,6 @@ interface UserPermissionScopePopoverProps {
   filteredScopeUsers: UserList[];
   selectedScopeUserIds: number[];
   onToggleScopeUser: (scopeUserId: number) => void;
-  isExplicitUsersScopeSelected: boolean;
-  onEnsureExplicitUsersScopeSelected: () => void;
   isScopeUsersLoading: boolean;
   dialogContentElement: HTMLDivElement | null;
 }
@@ -45,7 +43,7 @@ interface UserPermissionScopePopoverProps {
 const SCOPE_TYPE_LABELS: Record<PermissionOverrideScope, string> = {
   ALL: '全部',
   SELF: '本人',
-  MENTEES: '名下',
+  MENTEES: '学生',
   DEPARTMENT: '同部门',
   EXPLICIT_USERS: '指定用户',
 };
@@ -71,8 +69,6 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
   filteredScopeUsers,
   selectedScopeUserIds,
   onToggleScopeUser,
-  isExplicitUsersScopeSelected,
-  onEnsureExplicitUsersScopeSelected,
   isScopeUsersLoading,
   dialogContentElement,
 }) => {
@@ -176,11 +172,6 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                 emptyText="无匹配用户"
                 loadingText="加载用户列表..."
                 listClassName="space-y-[6px]"
-                onBeforeSelect={() => {
-                  if (!isExplicitUsersScopeSelected) {
-                    onEnsureExplicitUsersScopeSelected();
-                  }
-                }}
               />
             </div>
           </div>

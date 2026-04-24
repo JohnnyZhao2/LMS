@@ -9,13 +9,17 @@ import type { PermissionState, ScopeFilterOption } from './user-permission-secti
 interface UserPermissionModuleSectionItem {
   module: string;
   permissions: PermissionCatalogItem[];
-  scopeGroupKey: string | null;
+  scopeGroups: UserPermissionScopeGroupItem[];
+}
+
+interface UserPermissionScopeGroupItem {
+  key: string;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
-  scopeSummary: string | null;
+  scopeSummary: string;
 }
 
 interface UserPermissionModuleListProps {
-  activeScopeSection: UserPermissionModuleSectionItem | null;
+  activeScopeGroup: UserPermissionScopeGroupItem | null;
   availableScopeTypes: PermissionOverrideScope[];
   dialogContentElement: HTMLDivElement | null;
   filteredScopeUsers: UserList[];
@@ -28,12 +32,10 @@ interface UserPermissionModuleListProps {
   handleScopeFilterChange: (filterValue: string) => void;
   hasPartialFilteredScopeSelection: boolean;
   isAllFilteredScopeUsersSelected: boolean;
-  isExplicitUsersScopeSelected: boolean;
   isPermissionSaving: (permissionCode: string) => boolean;
   isScopeUsersLoading: boolean;
   moduleSections: UserPermissionModuleSectionItem[];
   onApplyDefaultScopePreset: () => void;
-  onEnsureExplicitUsersScopeSelected: () => void;
   onOpenScopeGroupChange: (scopeGroupKey: string | null) => void;
   onScopeUserSearchChange: (value: string) => void;
   onSelectPresetScope: (scopeType: PermissionOverrideScope) => void;
@@ -52,7 +54,7 @@ interface UserPermissionModuleListProps {
 }
 
 export function UserPermissionModuleList({
-  activeScopeSection,
+  activeScopeGroup,
   availableScopeTypes,
   dialogContentElement,
   filteredScopeUsers,
@@ -62,12 +64,10 @@ export function UserPermissionModuleList({
   handleScopeFilterChange,
   hasPartialFilteredScopeSelection,
   isAllFilteredScopeUsersSelected,
-  isExplicitUsersScopeSelected,
   isPermissionSaving,
   isScopeUsersLoading,
   moduleSections,
   onApplyDefaultScopePreset,
-  onEnsureExplicitUsersScopeSelected,
   onOpenScopeGroupChange,
   onScopeUserSearchChange,
   onSelectPresetScope,
@@ -84,53 +84,64 @@ export function UserPermissionModuleList({
   selectedScopeUserIds,
   showScopeAdjustPanel,
 }: UserPermissionModuleListProps) {
+  const getScopeGroupLabel = (scopeGroupKey: string) => (
+    scopeGroupKey.endsWith('_resource_scope') ? '数据范围' : '作用范围'
+  );
+
   return (
     <PermissionModuleSections
       sections={moduleSections.map((section) => ({
         module: section.module,
         permissions: section.permissions,
-        sectionAction: section.scopeGroupKey ? (
-          <div className="w-full lg:w-[220px]">
-            <UserPermissionScopePopover
-              open={showScopeAdjustPanel && openScopeGroupKey === section.scopeGroupKey}
-              onOpenChange={(open) => {
-                onOpenScopeGroupChange(open ? section.scopeGroupKey : null);
-                onSetShowScopeAdjustPanel(open);
-              }}
-              summary={
-                openScopeGroupKey === section.scopeGroupKey
-                  ? formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)
-                  : (section.scopeSummary ?? '设置范围')
-              }
-              scopeFilterOptions={scopeFilterOptions}
-              availableScopeTypes={availableScopeTypes}
-              selectedPermissionScopes={selectedPermissionScopes}
-              onSelectPresetScope={onSelectPresetScope}
-              scopeUserFilter={scopeUserFilter}
-              onScopeFilterChange={handleScopeFilterChange}
-              showReset={openScopeGroupKey === section.scopeGroupKey
-                && !sameScopeTypes(
-                  selectedPermissionScopes,
-                  activeScopeSection?.selectedRoleDefaultScopeTypes ?? [],
-                )}
-              onReset={() => {
-                onApplyDefaultScopePreset();
-                onSetScopeUserFilter('all');
-              }}
-              scopeUserSearch={scopeUserSearch}
-              onScopeUserSearchChange={onScopeUserSearchChange}
-              isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
-              hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
-              onToggleSelectAllFilteredScopeUsers={onToggleSelectAllFilteredScopeUsers}
-              selectedFilteredScopeCount={selectedFilteredScopeCount}
-              filteredScopeUsers={filteredScopeUsers}
-              selectedScopeUserIds={selectedScopeUserIds}
-              onToggleScopeUser={onToggleScopeUser}
-              isExplicitUsersScopeSelected={isExplicitUsersScopeSelected}
-              onEnsureExplicitUsersScopeSelected={onEnsureExplicitUsersScopeSelected}
-              isScopeUsersLoading={isScopeUsersLoading}
-              dialogContentElement={dialogContentElement}
-            />
+        sectionAction: section.scopeGroups.length > 0 ? (
+          <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
+            {section.scopeGroups.map((scopeGroup) => (
+              <div key={scopeGroup.key} className="flex min-w-[210px] items-center gap-2">
+                <span className="shrink-0 text-[11px] font-bold text-slate-500">
+                  {getScopeGroupLabel(scopeGroup.key)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <UserPermissionScopePopover
+                    open={showScopeAdjustPanel && openScopeGroupKey === scopeGroup.key}
+                    onOpenChange={(open) => {
+                      onOpenScopeGroupChange(open ? scopeGroup.key : null);
+                      onSetShowScopeAdjustPanel(open);
+                    }}
+                    summary={
+                      openScopeGroupKey === scopeGroup.key
+                        ? formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)
+                        : scopeGroup.scopeSummary
+                    }
+                    scopeFilterOptions={scopeFilterOptions}
+                    availableScopeTypes={availableScopeTypes}
+                    selectedPermissionScopes={selectedPermissionScopes}
+                    onSelectPresetScope={onSelectPresetScope}
+                    scopeUserFilter={scopeUserFilter}
+                    onScopeFilterChange={handleScopeFilterChange}
+                    showReset={openScopeGroupKey === scopeGroup.key
+                      && !sameScopeTypes(
+                        selectedPermissionScopes,
+                        activeScopeGroup?.selectedRoleDefaultScopeTypes ?? [],
+                      )}
+                    onReset={() => {
+                      onApplyDefaultScopePreset();
+                      onSetScopeUserFilter('all');
+                    }}
+                    scopeUserSearch={scopeUserSearch}
+                    onScopeUserSearchChange={onScopeUserSearchChange}
+                    isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
+                    hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
+                    onToggleSelectAllFilteredScopeUsers={onToggleSelectAllFilteredScopeUsers}
+                    selectedFilteredScopeCount={selectedFilteredScopeCount}
+                    filteredScopeUsers={filteredScopeUsers}
+                    selectedScopeUserIds={selectedScopeUserIds}
+                    onToggleScopeUser={onToggleScopeUser}
+                    isScopeUsersLoading={isScopeUsersLoading}
+                    dialogContentElement={dialogContentElement}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         ) : null,
       }))}

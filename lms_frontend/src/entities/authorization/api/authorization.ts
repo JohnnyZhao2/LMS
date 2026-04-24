@@ -130,10 +130,9 @@ export const useRevokeUserPermissionOverride = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
-      apiClient.post<UserPermissionOverride>(
-        `/authorization/users/${userId}/overrides/${overrideId}/revoke/`,
-        { revoke_reason: revokeReason ?? '' },
+    mutationFn: ({ userId, overrideId }: RevokeUserOverridePayload) =>
+      apiClient.delete<UserPermissionOverride>(
+        `/authorization/users/${userId}/overrides/${overrideId}/`,
       ),
     onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });
@@ -153,10 +152,9 @@ export const useRevokeUserScopeGroupOverride = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
-      apiClient.post<UserScopeGroupOverride>(
-        `/authorization/users/${userId}/scope-group-overrides/${overrideId}/revoke/`,
-        { revoke_reason: revokeReason ?? '' },
+    mutationFn: ({ userId, overrideId }: RevokeUserOverridePayload) =>
+      apiClient.delete<UserScopeGroupOverride>(
+        `/authorization/users/${userId}/scope-group-overrides/${overrideId}/`,
       ),
     onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });

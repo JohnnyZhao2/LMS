@@ -123,7 +123,6 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
     permission_code = serializers.CharField(source='permission.code', read_only=True)
     permission_name = serializers.CharField(source='permission.name', read_only=True)
     granted_by_name = serializers.CharField(source='granted_by.username', read_only=True, allow_null=True)
-    revoked_by_name = serializers.CharField(source='revoked_by.username', read_only=True, allow_null=True)
 
     class Meta:
         model = UserPermissionOverride
@@ -135,11 +134,7 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
             'applies_to_role',
             'reason',
             'expires_at',
-            'is_active',
             'granted_by_name',
-            'revoked_by_name',
-            'revoked_at',
-            'revoked_reason',
             'created_at',
             'updated_at',
         ]
@@ -181,7 +176,6 @@ class UserScopeGroupOverrideCreateSerializer(StrictSerializer):
 
 class UserScopeGroupOverrideSerializer(serializers.ModelSerializer):
     granted_by_name = serializers.CharField(source='granted_by.username', read_only=True, allow_null=True)
-    revoked_by_name = serializers.CharField(source='revoked_by.username', read_only=True, allow_null=True)
 
     class Meta:
         model = UserScopeGroupOverride
@@ -194,15 +188,8 @@ class UserScopeGroupOverrideSerializer(serializers.ModelSerializer):
             'scope_user_ids',
             'reason',
             'expires_at',
-            'is_active',
             'granted_by_name',
-            'revoked_by_name',
-            'revoked_at',
-            'revoked_reason',
             'created_at',
             'updated_at',
         ]
 
-
-class RevokeUserPermissionOverrideSerializer(serializers.Serializer):
-    revoke_reason = serializers.CharField(required=False, allow_blank=True, default='')

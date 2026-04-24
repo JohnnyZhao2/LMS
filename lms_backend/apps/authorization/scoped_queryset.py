@@ -101,10 +101,11 @@ class ScopedQuerysetEngineMixin:
             return scoped_queryset.none()
 
         default_scope_types = self._get_default_scope_types(permission_code, current_role)
-        allow_ids = self._resolve_scope_ids(
+        default_ids = self._resolve_scope_ids(
             scope_types=default_scope_types,
             user_queryset=scoped_queryset,
         )
+        allow_ids: set[int] = set()
         deny_ids: set[int] = set()
 
         # 新模型优先用 scope_group 覆盖；没有范围组的旧权限点才读取单权限覆盖。
@@ -133,8 +134,9 @@ class ScopedQuerysetEngineMixin:
             elif override.effect == EFFECT_ALLOW:
                 allow_ids.update(scope_ids)
 
-        # 最终可见范围 = 默认允许 + 用户显式允许 - 用户显式拒绝。
-        final_ids = allow_ids - deny_ids
+        # 最终可见范围 = 默认范围移除显式拒绝，再加入显式允许。
+        # 角色默认范围和用户覆盖统一按同一规则合并。
+        final_ids = (default_ids - deny_ids) | allow_ids
         if cache_key:
             self._get_request_cache()['scoped_user_ids'][(permission_code, cache_key)] = final_ids
         if not final_ids:

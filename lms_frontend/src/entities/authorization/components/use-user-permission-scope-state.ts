@@ -9,6 +9,7 @@ import type { RoleCode } from '@/types/common';
 import type { Department, UserList, UserList as UserDetail } from '@/types/common';
 
 import { normalizeScopeTypes, sameScopeTypes, sameScopeUserIds } from './user-form.utils';
+import { normalizeScopeUserIds } from './user-permission-section.helpers';
 import type { ScopeFilterOption } from './user-permission-section.types';
 import {
   formatScopeSummaryForDisplay as formatScopeSummaryForDisplayValue,
@@ -63,7 +64,6 @@ interface UseUserPermissionScopeStateResult {
   applyDefaultScopePreset: () => void;
   selectPresetScope: (scopeType: PermissionOverrideScope) => void;
   toggleScopeUser: (scopeUserId: number) => void;
-  ensureExplicitUsersScopeSelected: () => void;
 }
 
 export const useUserPermissionScopeState = ({
@@ -232,35 +232,67 @@ export const useUserPermissionScopeState = ({
 
     return [
       { value: 'all', label: '全部' },
-      { value: 'mentees', label: shouldRestrictToStudents ? '学生' : '名下' },
+      { value: 'mentees', label: '学生' },
       ...departments
         .filter((department) => selectableDepartmentIds.has(department.id))
         .map((department) => ({ value: `dept_${department.id}`, label: department.name })),
     ];
-  }, [departments, selectableScopeUsers, shouldRestrictToStudents]);
+  }, [departments, selectableScopeUsers]);
+  const getScopeUsersByFilter = useCallback((filterValue: string) => selectableScopeUsers.filter((scopeUser) => {
+    if (filterValue === 'all') return true;
+    if (filterValue === 'mentees') return ownerUserId != null && scopeUser.mentor?.id === ownerUserId;
+    return scopeUser.department?.id === Number(filterValue.replace('dept_', ''));
+  }), [ownerUserId, selectableScopeUsers]);
   const filteredScopeUsers = useMemo<UserList[]>(() => {
     const keyword = scopeUserSearch.trim().toLowerCase();
 
-    return selectableScopeUsers.filter((scopeUser) => {
-      if (scopeUserFilter === 'mentees' && (ownerUserId == null || scopeUser.mentor?.id !== ownerUserId)) {
-        return false;
-      }
-      if (scopeUserFilter !== 'all' && scopeUserFilter !== 'mentees') {
-        const filterDepartmentId = Number(scopeUserFilter.replace('dept_', ''));
-        if (scopeUser.department?.id !== filterDepartmentId) {
-          return false;
-        }
-      }
-      if (!keyword) {
-        return true;
-      }
+    return getScopeUsersByFilter(scopeUserFilter).filter((scopeUser) => (
+      !keyword
+      || scopeUser.username.toLowerCase().includes(keyword)
+      || scopeUser.employee_id.toLowerCase().includes(keyword)
+    ));
+  }, [getScopeUsersByFilter, scopeUserFilter, scopeUserSearch]);
+  const explicitSelection = (scopeUserIds: number[]): RoleScopeSelection => ({
+    scopeTypes: scopeUserIds.length > 0 ? ['EXPLICIT_USERS'] : [],
+    scopeUserIds,
+  });
+  const getScopeSelectionByFilterValue = useCallback((filterValue: string): RoleScopeSelection => {
+    if (filterValue === 'all' && normalizedAvailableScopeTypes.includes('ALL')) {
+      return {
+        scopeTypes: ['ALL'],
+        scopeUserIds: getPresetMatchedScopeUserIdsForSelection(['ALL']),
+      };
+    }
 
-      return (
-        scopeUser.username.toLowerCase().includes(keyword)
-        || scopeUser.employee_id.toLowerCase().includes(keyword)
-      );
-    });
-  }, [ownerUserId, scopeUserFilter, scopeUserSearch, selectableScopeUsers]);
+    if (filterValue === 'mentees' && normalizedAvailableScopeTypes.includes('MENTEES')) {
+      return {
+        scopeTypes: ['MENTEES'],
+        scopeUserIds: getPresetMatchedScopeUserIdsForSelection(['MENTEES']),
+      };
+    }
+
+    if (filterValue.startsWith('dept_')) {
+      const filterDepartmentId = Number(filterValue.replace('dept_', ''));
+      if (
+        ownerDepartmentId === filterDepartmentId
+        && normalizedAvailableScopeTypes.includes('DEPARTMENT')
+      ) {
+        return {
+          scopeTypes: ['DEPARTMENT'],
+          scopeUserIds: getPresetMatchedScopeUserIdsForSelection(['DEPARTMENT']),
+        };
+      }
+    }
+
+    return explicitSelection(normalizeScopeUserIds(
+      getScopeUsersByFilter(filterValue).map((scopeUser) => scopeUser.id),
+    ));
+  }, [
+    getPresetMatchedScopeUserIdsForSelection,
+    getScopeUsersByFilter,
+    normalizedAvailableScopeTypes,
+    ownerDepartmentId,
+  ]);
   const filteredScopeUserIds = useMemo(
     () => filteredScopeUsers.map((scopeUser) => scopeUser.id),
     [filteredScopeUsers],
@@ -275,7 +307,7 @@ export const useUserPermissionScopeState = ({
     && !isAllFilteredScopeUsersSelected;
 
   const handleScopeFilterChange = (filterValue: string) => {
-    setScopeUserFilter(scopeUserFilter === filterValue ? 'all' : filterValue);
+    setScopeUserFilter(filterValue);
   };
 
   const toggleSelectAllFilteredScopeUsers = () => {
@@ -292,16 +324,14 @@ export const useUserPermissionScopeState = ({
 
       if (shouldUnselectAll) {
         filteredScopeUserIds.forEach((scopeUserId) => nextUserIdSet.delete(scopeUserId));
-      } else {
-        filteredScopeUserIds.forEach((scopeUserId) => nextUserIdSet.add(scopeUserId));
+        return explicitSelection(normalizeScopeUserIds(Array.from(nextUserIdSet)));
       }
 
-      return {
-        scopeTypes: currentSelection.scopeTypes.includes('EXPLICIT_USERS')
-          ? currentSelection.scopeTypes
-          : normalizeScopeTypes([...currentSelection.scopeTypes, 'EXPLICIT_USERS']),
-        scopeUserIds: Array.from(nextUserIdSet).sort((left, right) => left - right),
-      };
+      const nextSelection = getScopeSelectionByFilterValue(scopeUserFilter);
+      if (sameScopeUserIds(nextSelection.scopeUserIds, filteredScopeUserIds)) return nextSelection;
+
+      filteredScopeUserIds.forEach((scopeUserId) => nextUserIdSet.add(scopeUserId));
+      return explicitSelection(normalizeScopeUserIds(Array.from(nextUserIdSet)));
     });
   };
 
@@ -325,26 +355,16 @@ export const useUserPermissionScopeState = ({
     if (!canSelectExplicitScopeUsers) {
       return;
     }
-    updateCurrentRoleSelection((currentSelection) => ({
-      ...currentSelection,
-      scopeUserIds: currentSelection.scopeUserIds.includes(scopeUserId)
-        ? currentSelection.scopeUserIds.filter((id) => id !== scopeUserId)
-        : [...currentSelection.scopeUserIds, scopeUserId],
-    }));
-  };
+    updateCurrentRoleSelection(() => {
+      const nextUserIdSet = new Set(selectedScopeUserIds);
+      if (nextUserIdSet.has(scopeUserId)) {
+        nextUserIdSet.delete(scopeUserId);
+      } else {
+        nextUserIdSet.add(scopeUserId);
+      }
 
-  const ensureExplicitUsersScopeSelected = () => {
-    if (!canSelectExplicitScopeUsers) {
-      return;
-    }
-    if (selectedPermissionScopes.includes('EXPLICIT_USERS')) {
-      return;
-    }
-
-    updateCurrentRoleSelection((currentSelection) => ({
-      ...currentSelection,
-      scopeTypes: normalizeScopeTypes([...currentSelection.scopeTypes, 'EXPLICIT_USERS']),
-    }));
+      return explicitSelection(normalizeScopeUserIds(Array.from(nextUserIdSet)));
+    });
   };
 
   return {
@@ -368,6 +388,5 @@ export const useUserPermissionScopeState = ({
     applyDefaultScopePreset,
     selectPresetScope,
     toggleScopeUser,
-    ensureExplicitUsersScopeSelected,
   };
 };

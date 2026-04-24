@@ -176,13 +176,13 @@ export function useRolePermissionTemplateState({
   );
   const currentRolePermissionOverrides = useMemo(
     () => selectedUserPermissionOverrides.filter((override) => (
-      override.is_active && override.applies_to_role === resolvedActiveRole
+      override.applies_to_role === resolvedActiveRole
     )),
     [resolvedActiveRole, selectedUserPermissionOverrides],
   );
   const currentRoleScopeOverrides = useMemo(
     () => selectedUserScopeGroupOverrides.filter((override) => (
-      override.is_active && override.applies_to_role === resolvedActiveRole
+      override.applies_to_role === resolvedActiveRole
     )),
     [resolvedActiveRole, selectedUserScopeGroupOverrides],
   );

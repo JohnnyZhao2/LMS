@@ -6,9 +6,9 @@ from .views import (
     PermissionCatalogView,
     RolePermissionView,
     UserPermissionOverrideListCreateView,
-    UserPermissionOverrideRevokeView,
+    UserPermissionOverrideDeleteView,
     UserScopeGroupOverrideListCreateView,
-    UserScopeGroupOverrideRevokeView,
+    UserScopeGroupOverrideDeleteView,
 )
 
 urlpatterns = [
@@ -21,13 +21,13 @@ urlpatterns = [
         name='authorization-user-scope-group-overrides',
     ),
     path(
-        'users/<int:user_id>/overrides/<int:override_id>/revoke/',
-        UserPermissionOverrideRevokeView.as_view(),
-        name='authorization-user-override-revoke',
+        'users/<int:user_id>/overrides/<int:override_id>/',
+        UserPermissionOverrideDeleteView.as_view(),
+        name='authorization-user-override-delete',
     ),
     path(
-        'users/<int:user_id>/scope-group-overrides/<int:override_id>/revoke/',
-        UserScopeGroupOverrideRevokeView.as_view(),
-        name='authorization-user-scope-group-override-revoke',
+        'users/<int:user_id>/scope-group-overrides/<int:override_id>/',
+        UserScopeGroupOverrideDeleteView.as_view(),
+        name='authorization-user-scope-group-override-delete',
     ),
 ]

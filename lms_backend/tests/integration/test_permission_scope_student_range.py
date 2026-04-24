@@ -6,6 +6,9 @@ from rest_framework.test import APIClient
 
 from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
+from apps.questions.models import Question
+from apps.quizzes.models import Quiz
+from apps.tasks.models import Task
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -58,6 +61,25 @@ def _create_non_student_user(
 def _extract_list_items(response):
     return response.data['data']['results']
 
+
+def _create_question(*, content: str, created_by: User) -> Question:
+    return Question.objects.create(
+        content=content,
+        question_type='SHORT_ANSWER',
+        reference_answer='参考答案',
+        created_by=created_by,
+        updated_by=created_by,
+    )
+
+
+def _create_quiz(*, title: str, created_by: User) -> Quiz:
+    return Quiz.objects.create(
+        title=title,
+        quiz_type='PRACTICE',
+        created_by=created_by,
+        updated_by=created_by,
+    )
+
 @pytest.mark.django_db
 def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny(grant_permissions_to_roles):
     client = APIClient()
@@ -100,7 +122,7 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny(grant_p
 
     UserScopeGroupOverride.objects.create(
         user=mentor,
-        scope_group_key='task_student_scope',
+        scope_group_key='task_assignment_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -116,7 +138,7 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny(grant_p
 
     UserScopeGroupOverride.objects.create(
         user=mentor,
-        scope_group_key='task_student_scope',
+        scope_group_key='task_assignment_scope',
         effect='DENY',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -200,7 +222,7 @@ def test_task_create_enforces_assignable_student_scope(grant_permissions_to_role
 
     UserScopeGroupOverride.objects.create(
         user=mentor,
-        scope_group_key='task_student_scope',
+        scope_group_key='task_assignment_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -220,6 +242,301 @@ def test_task_create_enforces_assignable_student_scope(grant_permissions_to_role
         format='json',
     )
     assert override_response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_task_view_scope_switches_between_self_and_all_created_tasks(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='任务可见范围部门', code='TASK_VIEW_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['MENTOR'], permission_codes=['task.view'])
+
+    mentor = _create_user(
+        employee_id='TASK_VIEW_SCOPE_MENTOR',
+        username='任务可见导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    other_mentor = _create_user(
+        employee_id='TASK_VIEW_SCOPE_OTHER',
+        username='任务可见其他导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    self_task = Task.objects.create(
+        title='自己创建任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=mentor,
+        updated_by=mentor,
+    )
+    other_task = Task.objects.create(
+        title='他人创建任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=other_mentor,
+        updated_by=other_mentor,
+    )
+
+    client.force_authenticate(user=mentor)
+    response = client.get('/api/tasks/?page=1&page_size=10')
+    assert response.status_code == 200
+    task_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_task.id in task_ids
+    assert other_task.id not in task_ids
+
+    UserScopeGroupOverride.objects.create(
+        user=mentor,
+        scope_group_key='task_resource_scope',
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='ALL',
+        granted_by=other_mentor,
+    )
+
+    response = client.get('/api/tasks/?page=1&page_size=10')
+    assert response.status_code == 200
+    task_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_task.id in task_ids
+    assert other_task.id in task_ids
+
+
+@pytest.mark.django_db
+def test_task_view_default_all_scope_can_be_restricted_to_self(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='默认全量任务范围部门', code='TASK_ALL_VIEW_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['task.view'])
+
+    admin = _create_non_student_user(
+        employee_id='TASK_ALL_SCOPE_ADMIN',
+        username='默认全量角色用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    other_admin = _create_non_student_user(
+        employee_id='TASK_ALL_SCOPE_OTHER',
+        username='默认全量其他用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    self_task = Task.objects.create(
+        title='默认全量自己任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=admin,
+        updated_by=admin,
+    )
+    other_task = Task.objects.create(
+        title='默认全量他人任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=other_admin,
+        updated_by=other_admin,
+    )
+
+    client.force_authenticate(user=admin)
+    response = client.get('/api/tasks/?page=1&page_size=10')
+    assert response.status_code == 200
+    task_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_task.id in task_ids
+    assert other_task.id in task_ids
+
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='task_resource_scope',
+        effect='DENY',
+        applies_to_role='ADMIN',
+        scope_type='ALL',
+        granted_by=other_admin,
+    )
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='task_resource_scope',
+        effect='ALLOW',
+        applies_to_role='ADMIN',
+        scope_type='SELF',
+        granted_by=other_admin,
+    )
+
+    response = client.get('/api/tasks/?page=1&page_size=10')
+    assert response.status_code == 200
+    task_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_task.id in task_ids
+    assert other_task.id not in task_ids
+
+    self_detail_response = client.get(f'/api/tasks/{self_task.id}/')
+    assert self_detail_response.status_code == 200
+    assert self_detail_response.data['data']['id'] == self_task.id
+
+    other_detail_response = client.get(f'/api/tasks/{other_task.id}/')
+    assert other_detail_response.status_code == 403
+    assert other_detail_response.data['code'] == 'PERMISSION_DENIED'
+
+
+@pytest.mark.django_db
+def test_question_view_default_all_scope_can_be_restricted_to_self(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='默认全量题目范围部门', code='QUESTION_ALL_VIEW_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['question.view'])
+
+    admin = _create_non_student_user(
+        employee_id='QUESTION_ALL_SCOPE_ADMIN',
+        username='默认全量题目角色用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    other_admin = _create_non_student_user(
+        employee_id='QUESTION_ALL_SCOPE_OTHER',
+        username='默认全量题目其他用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    self_question = _create_question(content='默认全量自己题目', created_by=admin)
+    other_question = _create_question(content='默认全量他人题目', created_by=other_admin)
+
+    client.force_authenticate(user=admin)
+    response = client.get('/api/questions/?page=1&page_size=10')
+    assert response.status_code == 200
+    question_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_question.id in question_ids
+    assert other_question.id in question_ids
+
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='question_resource_scope',
+        effect='DENY',
+        applies_to_role='ADMIN',
+        scope_type='ALL',
+        granted_by=other_admin,
+    )
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='question_resource_scope',
+        effect='ALLOW',
+        applies_to_role='ADMIN',
+        scope_type='SELF',
+        granted_by=other_admin,
+    )
+
+    response = client.get('/api/questions/?page=1&page_size=10')
+    assert response.status_code == 200
+    question_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_question.id in question_ids
+    assert other_question.id not in question_ids
+
+    self_detail_response = client.get(f'/api/questions/{self_question.id}/')
+    assert self_detail_response.status_code == 200
+    assert self_detail_response.data['data']['id'] == self_question.id
+
+    other_detail_response = client.get(f'/api/questions/{other_question.id}/')
+    assert other_detail_response.status_code == 404
+    assert other_detail_response.data['code'] == 'RESOURCE_NOT_FOUND'
+
+
+@pytest.mark.django_db
+def test_quiz_view_default_all_scope_can_be_restricted_to_self(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='默认全量试卷范围部门', code='QUIZ_ALL_VIEW_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['quiz.view'])
+
+    admin = _create_non_student_user(
+        employee_id='QUIZ_ALL_SCOPE_ADMIN',
+        username='默认全量试卷角色用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    other_admin = _create_non_student_user(
+        employee_id='QUIZ_ALL_SCOPE_OTHER',
+        username='默认全量试卷其他用户',
+        department=department,
+        role_code='ADMIN',
+    )
+    self_quiz = _create_quiz(title='默认全量自己试卷', created_by=admin)
+    other_quiz = _create_quiz(title='默认全量他人试卷', created_by=other_admin)
+
+    client.force_authenticate(user=admin)
+    response = client.get('/api/quizzes/?page=1&page_size=10')
+    assert response.status_code == 200
+    quiz_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_quiz.id in quiz_ids
+    assert other_quiz.id in quiz_ids
+
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='quiz_resource_scope',
+        effect='DENY',
+        applies_to_role='ADMIN',
+        scope_type='ALL',
+        granted_by=other_admin,
+    )
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='quiz_resource_scope',
+        effect='ALLOW',
+        applies_to_role='ADMIN',
+        scope_type='SELF',
+        granted_by=other_admin,
+    )
+
+    response = client.get('/api/quizzes/?page=1&page_size=10')
+    assert response.status_code == 200
+    quiz_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_quiz.id in quiz_ids
+    assert other_quiz.id not in quiz_ids
+
+    self_detail_response = client.get(f'/api/quizzes/{self_quiz.id}/')
+    assert self_detail_response.status_code == 200
+    assert self_detail_response.data['data']['id'] == self_quiz.id
+
+    other_detail_response = client.get(f'/api/quizzes/{other_quiz.id}/')
+    assert other_detail_response.status_code == 404
+    assert other_detail_response.data['code'] == 'RESOURCE_NOT_FOUND'
+
+
+@pytest.mark.django_db
+def test_task_resource_options_respect_admin_self_quiz_scope(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='任务资源试卷范围部门', code='TASK_RESOURCE_QUIZ_SCOPE_D1')
+    grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['task.create', 'quiz.view'])
+
+    admin = _create_non_student_user(
+        employee_id='TASK_RESOURCE_SCOPE_ADMIN',
+        username='任务资源范围管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+    other_admin = _create_non_student_user(
+        employee_id='TASK_RESOURCE_SCOPE_OTHER',
+        username='任务资源范围其他管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+    self_quiz = _create_quiz(title='资源库自己试卷', created_by=admin)
+    other_quiz = _create_quiz(title='资源库他人试卷', created_by=other_admin)
+
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='quiz_resource_scope',
+        effect='DENY',
+        applies_to_role='ADMIN',
+        scope_type='ALL',
+        granted_by=other_admin,
+    )
+    UserScopeGroupOverride.objects.create(
+        user=admin,
+        scope_group_key='quiz_resource_scope',
+        effect='ALLOW',
+        applies_to_role='ADMIN',
+        scope_type='SELF',
+        granted_by=other_admin,
+    )
+
+    client.force_authenticate(user=admin)
+    response = client.get('/api/tasks/resource-options/?resource_type=QUIZ&page=1&page_size=10')
+
+    assert response.status_code == 200
+    resource_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_quiz.id in resource_ids
+    assert other_quiz.id not in resource_ids
 
 
 @pytest.mark.django_db
@@ -435,7 +752,7 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides(create_spot_chec
     mentee.save(update_fields=['mentor'])
 
     for permission_code in ('task.assign', 'spot_check.view'):
-        scope_group_key = 'task_student_scope' if permission_code == 'task.assign' else 'spot_check_student_scope'
+        scope_group_key = 'task_assignment_scope' if permission_code == 'task.assign' else 'spot_check_student_scope'
         UserScopeGroupOverride.objects.create(
             user=super_admin,
             scope_group_key=scope_group_key,
