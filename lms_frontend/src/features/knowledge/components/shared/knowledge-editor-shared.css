@@ -122,7 +122,7 @@
 .akm-tag-panel .taginput-add-btn:not(:disabled):hover{background:#8a7dab}
 .akm-tag-panel .taginput-suggestion-create{color:#8b7fad}
 
-.akm-bottom-bar{position:absolute;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:space-between;padding:14px 22px;pointer-events:none}
+.akm-bottom-bar{position:absolute;right:0;bottom:18px;left:0;display:flex;align-items:center;justify-content:space-between;padding:14px 40px 14px 22px;pointer-events:none}
 .akm-bottom-tools-zone{position:relative;display:flex;min-height:52px;align-items:flex-end;pointer-events:auto}
 .akm-bottom-tools-trigger{position:absolute;left:-18px;bottom:-18px;height:92px;width:240px}
 .akm-bottom-tools{position:relative;z-index:1;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease}
@@ -148,6 +148,8 @@
 .akm-tool-btn{color:#777;cursor:pointer;font-family:inherit;font-size:12px;padding:6px 14px;transition:background .15s ease,color .15s ease,box-shadow .15s ease}
 .akm-tool-btn:hover,.akm-tool-btn-active{background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.05);color:#5c657c}
 .akm-bottom-actions{display:flex;align-items:center;gap:12px;pointer-events:auto}
+.akm-bottom-actions .kab-btn-floating{border:1px solid rgba(15,23,42,.14);background:#fff;box-shadow:0 8px 24px rgba(37,49,72,.22);backdrop-filter:none;color:#222}
+.akm-bottom-actions .kab-btn-floating:hover:not(:disabled){background:#fff;box-shadow:0 10px 30px rgba(37,49,72,.28);color:#111}
 .akm-upload-btn{display:inline-flex;height:34px;align-items:center;gap:5px;border:none;border-radius:999px;background:rgba(255,255,255,.82);color:#5b6574;cursor:pointer;font-family:inherit;font-size:12px;padding:0 14px;transition:background .15s ease,color .15s ease,opacity .15s ease}
 .akm-upload-btn:hover:not(:disabled){background:rgba(255,255,255,.96);color:#374151}
 .akm-upload-btn:disabled{opacity:.5;cursor:not-allowed}

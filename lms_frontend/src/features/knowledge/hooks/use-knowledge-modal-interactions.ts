@@ -27,7 +27,9 @@ export function useKnowledgeModalInteractions({
         return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      const isSubmitShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's';
+
+      if (isSubmitShortcut) {
         const didHandleSubmit = handleSubmit();
         if (didHandleSubmit) {
           event.preventDefault();

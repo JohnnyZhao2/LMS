@@ -143,8 +143,8 @@
     --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
     /* 字体 */
-    --theme-font-sans: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
-    --theme-font-heading: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
+    --theme-font-sans: "Microsoft YaHei", "Microsoft YaHei UI", "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
+    --theme-font-heading: "Microsoft YaHei", "Microsoft YaHei UI", "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
 
     /* 圆角 - 扁平风格使用较小圆角 */
     --theme-radius-sm: 4px;
@@ -264,8 +264,8 @@
     --theme-radius-xl: 8px;
 
     /* 强制重写字体 */
-    --theme-font-sans: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
-    --theme-font-heading: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+    --theme-font-sans: "Microsoft YaHei", "Microsoft YaHei UI", "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+    --theme-font-heading: "Microsoft YaHei", "Microsoft YaHei UI", "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
 }
 
 .auth-page-scope .theme-button {

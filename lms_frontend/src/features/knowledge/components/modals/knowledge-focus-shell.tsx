@@ -57,7 +57,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
     <div className={classes} style={shellStyle}>
       <button
         type="button"
-        onClick={onExit}
+        onClick={() => void onExit()}
         className="kfs-minimize-btn"
         title="收起"
         aria-label="收起"

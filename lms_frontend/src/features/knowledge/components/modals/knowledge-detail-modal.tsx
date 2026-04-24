@@ -441,16 +441,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     );
   }, [commitPatch, updateRelatedLinksDraft]);
 
-  const handleExitFocusMode = useCallback(() => {
-    setShowFocusTagPanel(false);
-    setShowFocusRelatedLinksPanel(false);
-    if (closeOnExitFocus || forceFocus) {
-      onClose();
-      return;
-    }
-    setIsFocusMode(false);
-  }, [closeOnExitFocus, forceFocus, onClose]);
-
   const handleTitleBlur = useCallback(() => {
     if (!knowledge || editTitle === undefined || editTitle === knowledge.title) {
       return;
@@ -534,12 +524,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [editingLinks, handleRelatedLinksBlur]);
 
   const handleSave = useCallback(async () => {
-    if (!hasChanges) return;
-    if (!knowledge) return;
+    if (!hasChanges) return true;
+    if (!knowledge) return false;
     const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
     if (draftError) {
       toast.error(draftError);
-      return;
+      return false;
     }
     try {
       const updateDerivedTitle = editContent !== undefined ? getKnowledgeTitleFromHtml(editContent) : '';
@@ -570,10 +560,26 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setShowFocusTagPanel(false);
       setShowFocusRelatedLinksPanel(false);
       onUpdated?.();
+      return true;
     } catch (error) {
       showApiError(error, '保存失败');
+      return false;
     }
   }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
+
+  const handleExitFocusMode = useCallback(async () => {
+    setShowFocusTagPanel(false);
+    setShowFocusRelatedLinksPanel(false);
+    if (hasChanges && canUpdateKnowledge) {
+      const saved = await handleSave();
+      if (!saved) return;
+    }
+    if (closeOnExitFocus || forceFocus) {
+      onClose();
+      return;
+    }
+    setIsFocusMode(false);
+  }, [canUpdateKnowledge, closeOnExitFocus, forceFocus, handleSave, hasChanges, onClose]);
 
   useKnowledgeModalInteractions({
     onEscape: () => {

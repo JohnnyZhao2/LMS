@@ -4,7 +4,6 @@
  */
 import { Route, Navigate, createBrowserRouter, createRoutesFromElements } from 'react-router-dom';
 import { Suspense } from 'react';
-import { Agentation } from 'agentation';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/app/guards/route-guard';
 import { useAuth } from '@/session/auth/auth-context';
@@ -40,7 +39,6 @@ const AppRoot: React.FC = () => {
       <Suspense fallback={<RouteSkeleton />}>
         <AppContent />
       </Suspense>
-      {import.meta.env.DEV ? <Agentation /> : null}
     </AppProvider>
   );
 };
