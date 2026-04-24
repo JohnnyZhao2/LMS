@@ -275,6 +275,15 @@ def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, unwrap_r
 
 
 @pytest.mark.django_db
+def test_user_role_instance_delete_has_no_role_assignment_business_rule(normal_user):
+    student_user_role = UserRole.objects.get(user=normal_user, role__code='STUDENT')
+
+    student_user_role.delete()
+
+    assert set(normal_user.roles.values_list('code', flat=True)) == {'MENTOR'}
+
+
+@pytest.mark.django_db
 def test_superuser_detail_exposes_dedicated_super_admin_role(api_client, unwrap_response_data, admin_user, super_admin_user):
     api_client.force_authenticate(user=admin_user)
 

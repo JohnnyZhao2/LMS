@@ -6,6 +6,13 @@
 
 | Commit | 日期 | 内容 |
 |--------|------|------|
+| `71282b2f` | 2026-04-22 | refactor(auth): 优化 OneAccountClient 的 ID 令牌解码逻辑 - 移除了不必要的私钥规范化方法，简化了客户端配置。 - 更新了 ID 令牌解码方法，改为直接解析 JWT 载荷，提升了代码可读性。 - 调整了授权码请求的参数顺序，确保一致性。... |
+| `3022fb2d` | 2026-04-22 | feat(authorization): 更新权限模板和用户角色管理逻辑 - 修改了权限模板的命名和访问控制，确保一致性，更新了相关的权限代码。 - 在用户管理中引入新的角色分配和权限更新功能，提升了用户权限管理的灵活性。 - 更新了前端和后端的权限检查逻辑，确保用户角色和... |
+| `692bd098` | 2026-04-22 | delete(deploy): 移除前后端部署相关配置文件 - 删除了前端和后端的 Nginx 配置文件以及 Gunicorn 配置文件，清理不再需要的部署文档以提升项目整洁性。 |
+| `f19eb543` | 2026-04-22 | delete(docs): 移除统一认证服务基础说明文档 - 删除了统一认证服务的基础说明文档，清理不再需要的文件以提升项目整洁性。 |
+| `9ef8b988` | 2026-04-22 | chore(.gitignore): 添加忽略文件规则以排除特定文档 - 在 .gitignore 文件中添加了对 '招乎统一认证-API使用文档_副本.md' 的忽略规则，确保该文档不被纳入版本控制。 |
+| `ad49f41d` | 2026-04-22 | refactor(vite): 移除构建配置中的手动分块逻辑 - 删除了 `vite.config.ts` 中的手动分块配置，简化了构建设置。 - 该更改有助于提升配置的可读性和维护性。 |
+| `730bbc7d` | 2026-04-21 | feat(docs): 增强文档生成和检查流程 - 添加了 `npm run docs:generate` 和 `npm run docs:check` 命令，以自动生成和校验文档。 - 更新了 README.md，详细说明了文档维护流程和生成内容。 - 在多个模块中增加了... |
 | `45e3a8ec` | 2026-04-21 | fix(docs): 更新特性依赖图中的组件和类型引用 - 修正了特性依赖图中组件和类型的引用数量，确保文档的准确性。 - 更新了相关的依赖关系，以反映最新的代码结构和组件数量。 |
 | `26a71f72` | 2026-04-21 | refactor(authorization): 更新权限范围和覆盖逻辑 - 在 `constants.py` 中移除了 `VISIBLE_SCOPE_CHOICES` 和相关描述，改为使用 `SCOPE_CHOICES`。 - 在 `decisions.py` 中简化了 ... |
 | `b71b0cc8` | 2026-04-21 | refactor(auth): 重命名和更新密码相关功能 - 将密码重置功能重命名为密码修改，更新相关序列化器和视图以反映这一变化。 - 修改了用户注销逻辑，确保在注销时黑名单刷新令牌的处理更加严谨。 - 更新前端 API 调用，调整密码修改的请求结构，提升代码一致性和可读性。 |
@@ -29,10 +36,3 @@
 | `97e4fb9f` | 2026-04-18 | feat(grading, authorization, tasks): 增强评分和权限管理功能 - 更新 README，添加 conda 环境激活指令和数据初始化说明。 - 修改 requirements.txt，锁定 pdfplumber 和 pdfminer.six ... |
 | `e58b02c5` | 2026-04-17 | refactor(tasks, authorization): 移除冗余参数并优化查询逻辑 - 更新任务查询函数，移除不必要的 include_deleted 参数，简化函数调用。 - 调整任务服务中的查询逻辑，确保一致性和可读性。 - 重构用户权限管理组件，提升权限模块的... |
 | `c53fedfe` | 2026-04-17 | refactor(activity_logs, tasks, authorization): 优化活动日志和任务管理逻辑 - 在活动日志中移除不再使用的提交操作，简化日志记录。 - 更新任务模型，移除软删除逻辑，增强任务管理的清晰度。 - 精简权限管理逻辑，确保用户权限的可... |
-| `9720db58` | 2026-04-17 | feat(authorization, activity_logs, grading, questions): 增强同步和评分功能 • 更新了部署流程，在运行 python manage.py migrate 时自动同步权限和日志策略，消除了手动执行 sync_author... |
-| `506116aa` | 2026-04-16 | refactor(knowledge): 优化知识文档模型与服务 - 移除不再使用的版本管理逻辑，简化知识文档的创建与更新流程。 - 添加 `created_from_quiz` 字段以追踪题目来源，增强题库管理。 - 更新序列化器以支持新字段，并优化相关数据处理逻辑。 -... |
-| `c5320d52` | 2026-04-16 | feat(questions)：通过使用统计数据增强问题和测验模型 • 在 Question 模型中添加了 usage_count 和 is_referenced 字段，用于跟踪在测验中的使用情况。 • 更新了 QuestionSerializer 以包含这些新字段并计算其... |
-| `a77eb77b` | 2026-04-14 | refactor(knowledge-focus-metadata-bar)：优化空间选择界面与滚动条样式 • 更新了空间选择界面以增强易用性，包括新增清除按钮并改进了布局。 • 调整了滚动条样式，提升了美观性以及各组件间的一致性。 • 重构了相关 CSS 类，以精简样式并... |
-| `7fa4cc57` | 2026-04-14 | feat(segmented-control): 增强分段控制器组件 • 更新了 SegmentedControl，以支持可选的反选（取消选择）和清除按钮功能。 • 改进了按钮交互逻辑，以处理禁用选项，并允许在已选中状态下进行反选。 • 增加了用于自定义类名和清除按钮可见性... |
-| `e396254f` | 2026-04-14 | feat(activity_logs): 重构活动日志模型和服务 • 将用户、内容和操作日志整合到统一的 ActivityLog 模型中。 • 更新了 ActivityLogService，以更清晰、更合理的结构处理日志记录操作。 • 增强了活动日志的过滤和序列化逻辑，确保... |
-| `3f6506c4` | 2026-04-14 | feat(grading): add answer content validation and update grading response |

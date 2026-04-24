@@ -274,6 +274,44 @@ class TestTaskParticipantsAPI:
         has_is_me = any(p.get('is_me', False) for p in data)
         assert has_is_me
 
+    def test_get_participants_returns_all_assignees(
+        self,
+        api_client,
+        unwrap_response_data,
+        department,
+        mentor,
+        student,
+        student2,
+        student_role,
+        task,
+        task_assignment,
+        task_assignment2,
+    ):
+        """测试参与者列表返回该任务全部分配人"""
+        extra_students = [
+            User.objects.create_user(
+                employee_id=f'STU_EXTRA_{index}',
+                username=f'额外学员{index}',
+                password='password123',
+                department=department,
+                mentor=mentor,
+            )
+            for index in range(6)
+        ]
+        TaskAssignment.objects.bulk_create([
+            TaskAssignment(task=task, assignee=user, status='IN_PROGRESS')
+            for user in extra_students
+        ])
+
+        api_client.force_authenticate(user=student)
+        response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
+        data = unwrap_response_data(response)
+
+        expected_user_ids = {student.id, student2.id, *(user.id for user in extra_students)}
+        assert response.status_code == 200
+        assert {item['id'] for item in data} == expected_user_ids
+        assert [item['rank'] for item in data] == list(range(1, len(data) + 1))
+
     def test_get_participants_unauthenticated(self, api_client, task):
         """测试未认证用户无法访问"""
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')

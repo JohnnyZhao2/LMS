@@ -183,17 +183,6 @@ class UserRole(TimestampMixin, models.Model):
         ordering = ['user', 'role']
     def __str__(self):
         return f"{self.user.username} - {self.role.name}"
-    def delete(self, *args, **kwargs):
-        """
-        非室经理/团队经理用户必须保留学员角色。
-        仅 DEPT_MANAGER/TEAM_MANAGER 可移除学员角色。
-        """
-        if self.role.code == 'STUDENT':
-            leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
-            user_roles = set(self.user.roles.values_list('code', flat=True))
-            if not user_roles.intersection(leadership_roles):
-                raise ValidationError('非室经理/团队经理用户必须保留学员角色')
-        super().delete(*args, **kwargs)
 # Signal handlers for automatic role assignment
 from django.db.models.signals import post_save
 from django.dispatch import receiver

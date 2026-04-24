@@ -17,14 +17,14 @@ flowchart LR
   config["config"]
   types["types"]
   app -->|26| features
-  app -->|3| entities
-  app -->|19| session
-  app -->|11| components
+  app -->|4| entities
+  app -->|21| session
+  app -->|12| components
   app -->|6| lib
   app -->|2| utils
   app -->|9| config
   app -->|8| types
-  features -->|75| entities
+  features -->|79| entities
   features -->|43| session
   features -->|230| components
   features -->|3| hooks
@@ -56,14 +56,14 @@ flowchart LR
 | From | To | Imports |
 |------|----|---------|
 | `app` | `features` | 26 |
-| `app` | `entities` | 3 |
-| `app` | `session` | 19 |
-| `app` | `components` | 11 |
+| `app` | `entities` | 4 |
+| `app` | `session` | 21 |
+| `app` | `components` | 12 |
 | `app` | `lib` | 6 |
 | `app` | `utils` | 2 |
 | `app` | `config` | 9 |
 | `app` | `types` | 8 |
-| `features` | `entities` | 75 |
+| `features` | `entities` | 79 |
 | `features` | `session` | 43 |
 | `features` | `components` | 230 |
 | `features` | `hooks` | 3 |

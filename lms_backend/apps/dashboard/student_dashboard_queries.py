@@ -59,7 +59,6 @@ def calculate_assignment_progress(
 def get_task_participants_progress(
     task_id: int,
     current_user_id: int,
-    limit: int = 5,
 ) -> List[Dict[str, Any]]:
     assignments = TaskAssignment.objects.filter(task_id=task_id).select_related(
         'assignee', 'task'
@@ -87,10 +86,4 @@ def get_task_participants_progress(
     for index, participant in enumerate(participants):
         participant['rank'] = index + 1
 
-    my_index = next((index for index, item in enumerate(participants) if item['is_me']), 0)
-    start = max(0, my_index - 2)
-    end = min(len(participants), start + limit)
-    if end - start < limit:
-        start = max(0, end - limit)
-
-    return participants[start:end]
+    return participants
