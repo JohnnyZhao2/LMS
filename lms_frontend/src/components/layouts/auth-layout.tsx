@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { config } from "@/config/app-config"
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -111,7 +112,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         <div className="absolute bottom-12 flex flex-col items-center gap-4">
           <div className="h-10 w-[1px] bg-gradient-to-b from-transparent to-primary/30" />
           <p className="text-[10px] font-bold text-foreground/20 tracking-[0.5em] uppercase">
-            &copy; {new Date().getFullYear()} 学习平台
+            &copy; {new Date().getFullYear()} {config.appName}
           </p>
         </div>
       </div>
