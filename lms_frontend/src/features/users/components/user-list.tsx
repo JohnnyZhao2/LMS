@@ -6,7 +6,7 @@ import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
   Pencil,
-  Lock,
+  KeyRound,
   Ban,
   CheckCircle,
   Trash2,
@@ -306,7 +306,7 @@ export const UserList: React.FC = () => {
                 className={LIST_ACTION_ICON_WARNING_CLASS}
                 onClick={() => openChangePasswordDialog(row.original)}
               >
-                <Lock className="h-4 w-4" />
+                <KeyRound className="h-4 w-4" />
               </Button>
             </Tooltip>
           )}
@@ -443,7 +443,7 @@ export const UserList: React.FC = () => {
         <DialogContent className="max-w-md rounded-xl border border-border p-7 [&>button]:hidden">
           <DialogHeader>
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-warning-100 text-warning">
-              <Lock className="h-6 w-6" />
+              <KeyRound className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-xl font-bold text-foreground">修改密码</DialogTitle>
             <DialogDescription className="text-center text-sm text-text-muted">
