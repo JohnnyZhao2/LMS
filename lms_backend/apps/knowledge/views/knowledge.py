@@ -5,6 +5,7 @@ Implements:
 - Student knowledge list
 - View count increment
 """
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
@@ -18,7 +19,7 @@ from apps.knowledge.serializers import (
 )
 from apps.knowledge.selectors import get_knowledge_queryset
 from apps.knowledge.services import KnowledgeService
-from apps.tasks.models import TaskKnowledge
+from apps.tasks.models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
@@ -210,6 +211,16 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='任务知识不存在',
+            )
+        assignment = TaskAssignment.objects.filter(
+            task_id=task_knowledge.task_id,
+            assignee_id=request.user.id,
+        ).first()
+        if assignment:
+            KnowledgeLearningProgress.objects.get_or_create(
+                assignment=assignment,
+                task_knowledge=task_knowledge,
+                defaults={'is_completed': False, 'started_at': timezone.now()},
             )
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)

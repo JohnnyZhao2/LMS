@@ -12,7 +12,7 @@ from apps.questions.models import Question, QuestionOption
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.quizzes.services import ensure_quiz_revision
 from apps.submissions.models import Answer, Submission
-from apps.tasks.models import Task, TaskAssignment, TaskQuiz
+from apps.tasks.models import KnowledgeLearningProgress, Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
 
@@ -1443,6 +1443,105 @@ class TestStudentTaskApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['page_size'] == 100
 
+    def test_complete_knowledge_syncs_assignment_completion(
+        self,
+        api_client,
+        student_user,
+        mentor_user,
+        sample_knowledge,
+    ):
+        task = Task.objects.create(
+            title='知识完成任务',
+            description='用于验证完成状态同步',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        assignment = TaskAssignment.objects.create(
+            task=task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+        knowledge_revision = ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
+        task_knowledge = TaskKnowledge.objects.create(
+            task=task,
+            knowledge=knowledge_revision,
+            source_knowledge=sample_knowledge,
+            order=1,
+        )
+
+        response = auth(api_client, student_user).post(
+            f'/api/tasks/{task.id}/complete-knowledge/',
+            {'task_knowledge_id': task_knowledge.id},
+            format='json',
+        )
+
+        assert_success(response)
+        assignment.refresh_from_db()
+        assert response.data['data']['task_completed'] is True
+        assert assignment.status == 'COMPLETED'
+        assert assignment.completed_at is not None
+
+    def test_student_assignment_status_distinguishes_not_started_and_pending_grading(
+        self,
+        api_client,
+        student_user,
+        mentor_user,
+        sample_quiz,
+    ):
+        not_started_task = Task.objects.create(
+            title='未开始任务',
+            description='',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        not_started_assignment = TaskAssignment.objects.create(
+            task=not_started_task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+
+        pending_task = Task.objects.create(
+            title='待批改任务',
+            description='',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        pending_assignment = TaskAssignment.objects.create(
+            task=pending_task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+        task_quiz = _ensure_task_quiz(task=pending_task, quiz=sample_quiz, actor=mentor_user, order=1)
+        Submission.objects.create(
+            task_assignment=pending_assignment,
+            task_quiz=task_quiz,
+            quiz=task_quiz.quiz,
+            user=student_user,
+            status='GRADING',
+            submitted_at=timezone.now(),
+        )
+
+        response = auth(api_client, student_user).get('/api/tasks/my-assignments/?page=1&page_size=20')
+
+        assert_success(response)
+        status_by_task_id = {
+            item['task_id']: (item['status'], item['status_display'])
+            for item in response.data['data']['results']
+        }
+        assert status_by_task_id[not_started_assignment.task_id] == ('NOT_STARTED', '未开始')
+        assert status_by_task_id[pending_assignment.task_id] == ('PENDING_GRADING', '待批改')
+
+        not_started_response = auth(api_client, student_user).get('/api/tasks/my-assignments/?status=NOT_STARTED&page=1&page_size=20')
+        pending_response = auth(api_client, student_user).get('/api/tasks/my-assignments/?status=PENDING_GRADING&page=1&page_size=20')
+
+        assert_success(not_started_response)
+        assert [item['task_id'] for item in not_started_response.data['data']['results']] == [not_started_task.id]
+        assert_success(pending_response)
+        assert [item['task_id'] for item in pending_response.data['data']['results']] == [pending_task.id]
+
 
 @pytest.mark.django_db
 class TestTaskListApiContracts:
@@ -1876,6 +1975,91 @@ class TestTaskAnalyticsApiContracts:
 
         assert_success(response)
         assert isinstance(response.data['data'], list)
+        assert response.data['data'][0]['status'] == 'NOT_STARTED'
+
+    def test_student_executions_marks_pending_grading(
+        self,
+        api_client,
+        mentor_user,
+        student_user,
+        sample_quiz,
+    ):
+        task = self._create_mentor_task(mentor_user, student_user)
+        assignment = TaskAssignment.objects.get(task=task, assignee=student_user)
+        task_quiz = _ensure_task_quiz(task=task, quiz=sample_quiz, actor=mentor_user, order=1)
+        Submission.objects.create(
+            task_assignment=assignment,
+            task_quiz=task_quiz,
+            quiz=task_quiz.quiz,
+            user=student_user,
+            status='GRADING',
+            submitted_at=timezone.now(),
+        )
+
+        mentor = as_role(mentor_user, 'MENTOR')
+        response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/student-executions/')
+
+        assert_success(response)
+        assert response.data['data'][0]['status'] == 'PENDING_GRADING'
+
+    def test_task_time_uses_learning_and_submission_duration(
+        self,
+        api_client,
+        mentor_user,
+        student_user,
+        sample_knowledge,
+        sample_quiz,
+    ):
+        task = self._create_mentor_task(mentor_user, student_user)
+        assignment = TaskAssignment.objects.get(task=task, assignee=student_user)
+        now = timezone.now()
+        TaskAssignment.objects.filter(pk=assignment.pk).update(
+            status='COMPLETED',
+            created_at=now - timezone.timedelta(minutes=305),
+            completed_at=now,
+        )
+        assignment.refresh_from_db()
+
+        knowledge_revision = ensure_knowledge_revision(sample_knowledge, actor=mentor_user)
+        task_knowledge = TaskKnowledge.objects.create(
+            task=task,
+            knowledge=knowledge_revision,
+            source_knowledge=sample_knowledge,
+            order=1,
+        )
+        KnowledgeLearningProgress.objects.create(
+            assignment=assignment,
+            task_knowledge=task_knowledge,
+            is_completed=True,
+            started_at=now - timezone.timedelta(minutes=40),
+            completed_at=now,
+        )
+
+        task_quiz = _ensure_task_quiz(task=task, quiz=sample_quiz, actor=mentor_user, order=1)
+        submission = Submission.objects.create(
+            task_assignment=assignment,
+            task_quiz=task_quiz,
+            quiz=task_quiz.quiz,
+            user=student_user,
+            status='GRADED',
+            submitted_at=now,
+        )
+        Submission.objects.filter(pk=submission.pk).update(
+            started_at=now - timezone.timedelta(minutes=25)
+        )
+
+        mentor = as_role(mentor_user, 'MENTOR')
+        analytics_response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/analytics/')
+        executions_response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/student-executions/')
+
+        assert_success(analytics_response)
+        assert analytics_response.data['data']['average_time'] == 65.0
+        assert analytics_response.data['data']['time_distribution'][-1] == {
+            'range': '60+',
+            'count': 1,
+        }
+        assert_success(executions_response)
+        assert executions_response.data['data'][0]['time_spent'] == 65
 
 
 @pytest.mark.django_db

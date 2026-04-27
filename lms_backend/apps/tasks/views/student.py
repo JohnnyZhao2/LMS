@@ -30,10 +30,10 @@ class StudentAssignmentListView(BaseAPIView):
         description='''
         获取当前学员的任务分配列表。
         支持筛选：
-        - status: 任务状态（IN_PROGRESS/COMPLETED/OVERDUE）
+        - status: 任务状态（NOT_STARTED/IN_PROGRESS/PENDING_GRADING/COMPLETED/OVERDUE）
         ''',
         parameters=[
-            OpenApiParameter(name='status', type=str, description='任务状态（IN_PROGRESS/COMPLETED/OVERDUE）'),
+            OpenApiParameter(name='status', type=str, description='任务状态（NOT_STARTED/IN_PROGRESS/PENDING_GRADING/COMPLETED/OVERDUE）'),
             OpenApiParameter(name='search', type=str, description='按任务标题搜索'),
         ],
         responses={200: StudentAssignmentListSerializer(many=True)},
@@ -78,9 +78,6 @@ class StudentTaskDetailView(BaseAPIView):
     def get(self, request, task_id):
         # Use StudentTaskService to get assignment (user context injected)
         assignment = self.service.get_student_assignment(task_id)
-        
-        # Ensure knowledge progress records exist
-        self.service.ensure_knowledge_progress(assignment)
         
         serializer = StudentTaskDetailSerializer(assignment)
         return success_response(serializer.data)

@@ -3,6 +3,7 @@
  */
 
 import type { LatestKnowledge } from './knowledge';
+import type { TaskStatus } from './common';
 
 /**
  * 学员统计数据
@@ -37,7 +38,7 @@ export interface StudentDashboardTask {
   task_title: string;
   deadline: string;
   created_by_name: string;
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+  status: TaskStatus;
   status_display: string;
   progress: {
     completed: number;

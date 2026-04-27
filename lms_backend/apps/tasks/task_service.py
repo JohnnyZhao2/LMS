@@ -228,7 +228,7 @@ class TaskService(BaseService):
                 if removed_ids:
                     raise BusinessError(
                         code=ErrorCodes.INVALID_OPERATION,
-                        message='任务已有人员开始执行，无法移除已分配人员',
+                        message='任务已有人员开始执行，无法移除已分配的学员',
                     )
         if kwargs:
             for key, value in kwargs.items():

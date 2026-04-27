@@ -8,11 +8,12 @@ from rest_framework import serializers
 
 from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.tasks.models import TaskAssignment
+from apps.tasks.status_serializers import AssignmentExecutionStatusSerializerMixin
 
 from .selectors import calculate_assignment_progress
 
 
-class StudentTaskSerializer(serializers.ModelSerializer):
+class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
     """
     学员任务序列化器（包含进行中和已完成）
     """
@@ -20,7 +21,8 @@ class StudentTaskSerializer(serializers.ModelSerializer):
     task_title = serializers.CharField(source='task.title', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
     created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True, allow_null=True)
 

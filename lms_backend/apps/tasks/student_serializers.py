@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .assignment_workflow import get_assignment_progress_data
 from .models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
+from .status_serializers import AssignmentExecutionStatusSerializerMixin
 from .student_task_service import StudentTaskService
 
 
@@ -18,20 +19,22 @@ class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
             'knowledge_title',
             'order',
             'is_completed',
+            'started_at',
             'completed_at',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['is_completed', 'completed_at', 'created_at', 'updated_at']
+        read_only_fields = ['is_completed', 'started_at', 'completed_at', 'created_at', 'updated_at']
 
 
-class StudentAssignmentListSerializer(serializers.ModelSerializer):
+class StudentAssignmentListSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
     task_id = serializers.IntegerField(source='task.id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     task_description = serializers.CharField(source='task.description', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
     created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
     has_quiz = serializers.SerializerMethodField()
     has_knowledge = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
@@ -66,13 +69,14 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
         return get_assignment_progress_data(obj)
 
 
-class StudentTaskDetailSerializer(serializers.ModelSerializer):
+class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
     task_id = serializers.IntegerField(source='task.id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     task_description = serializers.CharField(source='task.description', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
     created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     knowledge_items = serializers.SerializerMethodField()
     quiz_items = serializers.SerializerMethodField()

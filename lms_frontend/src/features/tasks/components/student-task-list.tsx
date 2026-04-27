@@ -6,26 +6,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
+import { STUDENT_TASK_STATUS_OPTIONS } from '@/lib/task-status';
 import type { TaskStatus } from '@/types/common';
 
 const statusOptions = [
-    { value: 'IN_PROGRESS', label: '进行中' },
-    { value: 'COMPLETED', label: '已完成' },
-    { value: 'OVERDUE', label: '已逾期' },
+    ...STUDENT_TASK_STATUS_OPTIONS,
     { value: 'all', label: '全部' },
 ];
 
-/**
- * 学员任务列表组件 - Flat Design 版本
- * 
- * 设计规范：
- * - 无阴影 
- * - 无渐变 (no gradient)
- * - 实心背景色
- * - hover:scale 交互反馈
- */
 export const StudentTaskList: React.FC = () => {
-    const [statusFilter, setStatusFilter] = useState<string>("IN_PROGRESS");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [search, setSearch] = useState('');
 
     const { data, isLoading } = useStudentTasks({

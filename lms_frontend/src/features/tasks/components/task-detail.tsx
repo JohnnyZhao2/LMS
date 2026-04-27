@@ -29,16 +29,12 @@ import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
+import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 import { cn } from '@/lib/utils';
+import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
 import { useStudentLearningTaskDetail, useTaskDetail } from '@/entities/task/api/get-task-detail';
-
-const assignmentStatusLabelMap: Record<string, string> = {
-  IN_PROGRESS: '进行中',
-  COMPLETED: '已完成',
-  OVERDUE: '已逾期',
-};
 
 interface KnowledgeListViewItem {
   id: number;
@@ -50,24 +46,22 @@ interface KnowledgeListViewItem {
 type TaskQuizViewItem = LearningTaskQuizItem | TaskQuiz;
 
 const TaskStatusBadge: React.FC<{
-  status: string;
+  status: TaskStatus;
   label: string;
 }> = ({ status, label }) => {
-  const isCompleted = status === 'COMPLETED';
+  const statusMeta = TASK_EXECUTION_STATUS_META[status];
 
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold',
-        isCompleted
-          ? 'border-secondary-200 bg-secondary-50 text-secondary-700'
-          : 'border-primary-200 bg-primary-50 text-primary-700',
+        statusMeta.outlineClassName,
       )}
     >
       <span
         className={cn(
           'h-1.5 w-1.5 rounded-full',
-          isCompleted ? 'bg-secondary-500' : 'bg-primary-500',
+          statusMeta.dotClassName,
         )}
       />
       {label}
@@ -293,7 +287,7 @@ export const TaskDetail: React.FC = () => {
   const studentStatusDisplay = learningDetail?.status_display;
 
   const canStartExam = isStudent
-    ? studentStatus === 'IN_PROGRESS'
+    ? studentStatus === 'NOT_STARTED' || studentStatus === 'IN_PROGRESS'
     : Boolean(myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && Boolean(task.actions.update) && dayjs(task.deadline).isAfter(dayjs());
 
@@ -311,8 +305,8 @@ export const TaskDetail: React.FC = () => {
     ? studentStatus
     : myAssignment?.status;
   const statusLabel = isStudent
-    ? (studentStatusDisplay || (studentStatus ? assignmentStatusLabelMap[studentStatus] : ''))
-    : (myAssignment ? assignmentStatusLabelMap[myAssignment.status] || myAssignment.status : '');
+    ? studentStatusDisplay
+    : (statusValue ? TASK_EXECUTION_STATUS_META[statusValue].label : undefined);
   const totalNodeCount = knowledgeList.length + practiceQuizzes.length + examQuizzes.length;
 
   const handleStartQuiz = (quizId: number, quizType?: string) => {

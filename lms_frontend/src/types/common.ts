@@ -13,7 +13,8 @@ export type RoleCode = 'STUDENT' | 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN' | 'TEAM_M
 /**
  * 任务状态
  */
-export type TaskStatus = 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_GRADING' | 'COMPLETED' | 'OVERDUE';
+export type TaskExecutionStatus = TaskStatus | 'COMPLETED_ABNORMAL';
 
 /**
  * 提交状态

@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { cn } from '@/lib/utils';
+import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
@@ -46,13 +47,6 @@ const progressCategories: Omit<AggregatedProgressCategory, 'nodeCount' | 'comple
   { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, textClass: 'text-primary', bgClass: 'bg-primary-50', barClass: 'bg-primary' },
   { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
 ];
-
-const studentStatusMap: Record<StudentExecution['status'], { text: string; textClass: string; bgClass: string }> = {
-  COMPLETED: { text: '已完成', textClass: 'text-secondary', bgClass: 'bg-secondary-100' },
-  IN_PROGRESS: { text: '进行中', textClass: 'text-primary-600', bgClass: 'bg-primary-100' },
-  OVERDUE: { text: '已逾期', textClass: 'text-destructive', bgClass: 'bg-destructive-100' },
-  COMPLETED_ABNORMAL: { text: '完成但异常', textClass: 'text-warning', bgClass: 'bg-warning-100' },
-};
 
 export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
   const [chartType, setChartType] = React.useState<'time' | 'score'>('time');
@@ -111,16 +105,16 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       size: 126,
       minSize: 110,
       cell: ({ row }) => {
-        const status = studentStatusMap[row.original.status];
+        const status = TASK_EXECUTION_STATUS_META[row.original.status];
         return (
           <span
             className={cn(
               'inline-flex rounded-md px-2 py-1 text-[11px] font-semibold whitespace-nowrap',
-              status.textClass,
-              status.bgClass,
+              status.textClassName,
+              status.bgClassName,
             )}
           >
-            {status.text}
+            {status.label}
           </span>
         );
       },

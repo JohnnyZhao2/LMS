@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { richTextToPlainText } from '@/lib/rich-text';
+import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 
@@ -74,6 +75,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
   ].filter(Boolean) as string[];
   const deadlineLabel = dayjs(task.deadline).format('MM.DD');
   const deadlineYear = dayjs(task.deadline).format('YYYY');
+  const statusClassName = TASK_EXECUTION_STATUS_META[task.status].badgeClassName;
 
   return (
     <div
@@ -112,6 +114,9 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
         <p className="mt-2 line-clamp-3 text-[11px] font-medium leading-[1.1rem] tracking-tight text-slate-400/85">
           {compositionParts.length > 0 ? compositionParts.join(' · ') : '暂无任务项'}
         </p>
+        <span className={cn('mt-2 inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold', statusClassName)}>
+          {task.status_display}
+        </span>
       </div>
 
       <div className="mt-4">

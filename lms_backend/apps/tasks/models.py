@@ -280,6 +280,7 @@ class KnowledgeLearningProgress(TimestampMixin, models.Model):
         verbose_name='任务知识',
     )
     is_completed = models.BooleanField(default=False, verbose_name='是否完成')
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='开始学习时间')
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完成时间')
 
     class Meta:

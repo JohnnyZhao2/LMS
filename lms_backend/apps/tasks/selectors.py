@@ -14,6 +14,14 @@ from .models import KnowledgeLearningProgress, Task, TaskAssignment, TaskKnowled
 
 ANALYTICS_SUBMISSION_STATUSES = ['SUBMITTED', 'GRADING', 'GRADED']
 ACCURACY_SUBMISSION_STATUSES = ['SUBMITTED', 'GRADED']
+TASK_EXECUTION_STATUS_LABELS = {
+    'NOT_STARTED': '未开始',
+    'IN_PROGRESS': '进行中',
+    'PENDING_GRADING': '待批改',
+    'COMPLETED': '已完成',
+    'OVERDUE': '已逾期',
+    'COMPLETED_ABNORMAL': '完成但异常',
+}
 
 TIME_DISTRIBUTION_RANGES = [
     ('0-15', 0, 15),
@@ -277,12 +285,51 @@ def task_exam_submissions_queryset(task_id: int) -> QuerySet:
     ).select_related('quiz')
 
 
+def assignment_has_pending_grading(assignment: TaskAssignment) -> bool:
+    submissions = getattr(assignment, 'all_submissions_for_status', None)
+    if submissions is not None:
+        return any(submission.status == 'GRADING' for submission in submissions)
+    return Submission.objects.filter(task_assignment_id=assignment.id, status='GRADING').exists()
+
+
+def assignment_has_started(assignment: TaskAssignment) -> bool:
+    for progress in assignment.knowledge_progress.all():
+        if progress.started_at or progress.completed_at or progress.is_completed:
+            return True
+    submissions = getattr(assignment, 'all_submissions_for_status', None)
+    if submissions is not None:
+        return len(submissions) > 0
+    return Submission.objects.filter(task_assignment_id=assignment.id).exists()
+
+
+def assignment_execution_status(
+    assignment: TaskAssignment,
+    *,
+    abnormal: bool = False,
+    now=None,
+) -> str:
+    now = now or timezone.now()
+    if assignment.status == 'COMPLETED':
+        return 'COMPLETED_ABNORMAL' if abnormal else 'COMPLETED'
+    if assignment_has_pending_grading(assignment):
+        return 'PENDING_GRADING'
+    if assignment.status == 'OVERDUE' or assignment.task.deadline < now:
+        return 'OVERDUE'
+    if not assignment_has_started(assignment):
+        return 'NOT_STARTED'
+    return 'IN_PROGRESS'
+
+
+def assignment_execution_status_display(status: str) -> str:
+    return TASK_EXECUTION_STATUS_LABELS[status]
+
+
 def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
     for progress in assignment.knowledge_progress.all():
         if not progress.is_completed:
             continue
-        if progress.completed_at and progress.created_at:
-            duration = (progress.completed_at - progress.created_at).total_seconds() / 60
+        if progress.completed_at and progress.started_at:
+            duration = (progress.completed_at - progress.started_at).total_seconds() / 60
             if duration < 5:
                 return True
     for submission in assignment.submissions.all():
@@ -292,6 +339,19 @@ def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
             if duration < threshold:
                 return True
     return False
+
+
+def assignment_activity_minutes(assignment: TaskAssignment) -> float:
+    total_seconds = 0.0
+    for progress in assignment.knowledge_progress.all():
+        if not progress.is_completed:
+            continue
+        if progress.completed_at and progress.started_at:
+            total_seconds += max(0.0, (progress.completed_at - progress.started_at).total_seconds())
+    for submission in assignment.submissions.all():
+        if submission.submitted_at and submission.started_at:
+            total_seconds += max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
+    return total_seconds / 60
 
 
 def task_completion_stats(task_id: int) -> dict[str, Any]:
@@ -312,10 +372,7 @@ def task_average_completion_minutes(task_id: int) -> float:
     )
     if not completed_assignments.exists():
         return 0.0
-    total_time = sum(
-        (assignment.completed_at - assignment.created_at).total_seconds() / 60
-        for assignment in completed_assignments
-    )
+    total_time = sum(assignment_activity_minutes(assignment) for assignment in completed_assignments)
     return round(total_time / completed_assignments.count(), 1)
 
 
@@ -380,12 +437,11 @@ def task_time_distribution(task_id: int) -> list[dict[str, int]]:
         completed_at__isnull=False,
     )
     for assignment in completed_assignments:
-        if assignment.completed_at and assignment.created_at:
-            duration = (assignment.completed_at - assignment.created_at).total_seconds() / 60
-            for label, minimum, maximum in TIME_DISTRIBUTION_RANGES:
-                if minimum <= duration < maximum:
-                    distribution[label] += 1
-                    break
+        duration = assignment_activity_minutes(assignment)
+        for label, minimum, maximum in TIME_DISTRIBUTION_RANGES:
+            if minimum <= duration < maximum:
+                distribution[label] += 1
+                break
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
@@ -446,17 +502,11 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
         completed_quiz_count = len({submission.task_quiz_id for submission in assignment.submissions.all()})
         completed_nodes = completed_knowledge + completed_quiz_count
 
-        time_spent = 0
-        if assignment.completed_at and assignment.created_at:
-            time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
+        time_spent = int(assignment_activity_minutes(assignment))
 
         score = float(assignment.score) if assignment.score is not None else None
         abnormal = is_assignment_abnormal(assignment)
-        status = assignment.status
-        if status != 'COMPLETED' and assignment.task.deadline < now:
-            status = 'OVERDUE'
-        if status == 'COMPLETED' and abnormal:
-            status = 'COMPLETED_ABNORMAL'
+        status = assignment_execution_status(assignment, abnormal=abnormal, now=now)
 
         results.append(
             {

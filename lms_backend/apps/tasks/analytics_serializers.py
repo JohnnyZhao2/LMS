@@ -44,7 +44,14 @@ class StudentExecutionSerializer(serializers.Serializer):
     employee_id = serializers.CharField()
     department = serializers.CharField()
     status = serializers.ChoiceField(
-        choices=['COMPLETED', 'IN_PROGRESS', 'OVERDUE', 'COMPLETED_ABNORMAL']
+        choices=[
+            'NOT_STARTED',
+            'IN_PROGRESS',
+            'PENDING_GRADING',
+            'COMPLETED',
+            'OVERDUE',
+            'COMPLETED_ABNORMAL',
+        ]
     )
     node_progress = serializers.CharField()
     score = serializers.FloatField(allow_null=True)

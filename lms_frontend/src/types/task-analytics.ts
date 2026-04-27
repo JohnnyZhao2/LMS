@@ -2,6 +2,8 @@
  * 任务分析相关类型定义
  */
 
+import type { TaskExecutionStatus } from './common';
+
 export interface TaskAnalytics {
   completion: {
     completed_count: number;
@@ -40,7 +42,7 @@ export interface StudentExecution {
   avatar_key: string;
   employee_id: string;
   department: string;
-  status: 'COMPLETED' | 'IN_PROGRESS' | 'OVERDUE' | 'COMPLETED_ABNORMAL';
+  status: TaskExecutionStatus;
   node_progress: string;
   score: number | null;
   time_spent: number;

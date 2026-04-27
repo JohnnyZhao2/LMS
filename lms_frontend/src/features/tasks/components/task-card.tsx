@@ -7,6 +7,7 @@ import type { StudentTaskCenterItem } from '@/types/task';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { ListTag } from '@/components/ui/list-tag';
+import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 
 interface TaskCardProps {
   task: StudentTaskCenterItem;
@@ -48,16 +49,6 @@ const TaskCategoryBadge: React.FC<{
   </ListTag>
 );
 
-/**
- * 任务卡片组件 - Flat Design 版本
- *
- * 设计规范：
- * - 无阴影
- * - 无渐变 (no gradient)
- * - 实心背景色
- * - hover:scale 交互反馈
- * - rounded-lg 圆角
- */
 export const TaskCard: React.FC<TaskCardProps> = ({ task }) => (
   <ErrorBoundary>
     <TaskCardContent task={task} />
@@ -106,37 +97,45 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   return (
     <div
       className={cn(
-        'group relative flex h-[188px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background p-5 transition-all duration-200 hover:-translate-y-0.5',
+        'group relative flex h-[188px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background px-5 pb-5 pt-4 transition-all duration-200 hover:-translate-y-0.5',
         task.status === 'COMPLETED' && 'border-transparent bg-muted'
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
-      <div className="min-h-0 flex-1">
-        <div className="mb-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          <h3 className="line-clamp-2 text-[17px] font-semibold leading-[1.35] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary-600">
-            {task.task_title}
-          </h3>
-          <div className="flex shrink-0 items-center gap-2.5 text-[10.5px] font-semibold tracking-[0.01em] text-text-muted">
-            <div className="max-w-[5.5rem] truncate">
-              {task.created_by_name || '发布人'}
-            </div>
-            <div className="shrink-0">
-              {dayjs(task.deadline).format('YYYY-MM-DD')}
-            </div>
-            {isUrgent ? (
-              <div className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-destructive-600">
-                <TaskStatusDot color="bg-destructive-500" animate />
-                紧急
-              </div>
-            ) : null}
-          </div>
+      <div className="mb-5 flex min-w-0 items-center justify-between gap-3">
+        <span className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 text-[10.5px] font-semibold tracking-[0.01em]',
+          TASK_EXECUTION_STATUS_META[task.status].textClassName
+        )}>
+          <TaskStatusDot color={TASK_EXECUTION_STATUS_META[task.status].dotClassName} />
+          {task.status_display}
+        </span>
+        <div className="flex min-w-0 items-center justify-end gap-2.5 text-[10.5px] font-semibold tracking-[0.01em] text-text-muted">
+          <span className="max-w-[7rem] truncate">
+            {task.created_by_name || '发布人'}
+          </span>
+          <span className="shrink-0">
+            {dayjs(task.deadline).format('YYYY-MM-DD')}
+          </span>
+          {isUrgent ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-destructive-600">
+              <TaskStatusDot color="bg-destructive-500" animate />
+              紧急
+            </span>
+          ) : null}
         </div>
-        <p className="line-clamp-2 text-[13px] font-medium leading-[1.5] text-text-muted/80">
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <h3 className="mb-2.5 line-clamp-2 text-[17px] font-semibold leading-[1.35] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary-600">
+          {task.task_title}
+        </h3>
+        <p className="line-clamp-1 text-[13px] font-medium leading-[1.5] text-text-muted/80">
           {task.task_description || '此任务暂无描述...'}
         </p>
       </div>
 
-      <div className="mt-auto space-y-3.5">
+      <div className="mt-auto space-y-2.5">
         <div className="flex items-end justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
             {progressBadges.map((item) => {
