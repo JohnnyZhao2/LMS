@@ -115,9 +115,6 @@ class UserPermissionOverrideCreateSerializer(StrictSerializer):
         allow_null=True,
         help_text='仅对某个激活角色生效（可选）',
     )
-    reason = serializers.CharField(required=False, allow_blank=True, default='')
-    expires_at = serializers.DateTimeField(required=False, allow_null=True)
-
 
 class UserPermissionOverrideSerializer(serializers.ModelSerializer):
     permission_code = serializers.CharField(source='permission.code', read_only=True)
@@ -136,8 +133,6 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
             'permission_name',
             'effect',
             'applies_to_role',
-            'reason',
-            'expires_at',
             'granted_by_name',
             'created_at',
             'updated_at',
@@ -160,9 +155,6 @@ class UserScopeGroupOverrideCreateSerializer(StrictSerializer):
         allow_empty=True,
         help_text='指定用户ID列表（scope_type=EXPLICIT_USERS 时使用）',
     )
-    reason = serializers.CharField(required=False, allow_blank=True, default='')
-    expires_at = serializers.DateTimeField(required=False, allow_null=True)
-
     def validate(self, attrs):
         scope_type = attrs.get('scope_type')
         scope_user_ids = attrs.get('scope_user_ids') or []
@@ -190,8 +182,6 @@ class UserScopeGroupOverrideSerializer(serializers.ModelSerializer):
             'applies_to_role',
             'scope_type',
             'scope_user_ids',
-            'reason',
-            'expires_at',
             'granted_by_name',
             'created_at',
             'updated_at',

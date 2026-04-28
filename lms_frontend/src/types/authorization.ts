@@ -37,8 +37,6 @@ export interface UserPermissionOverride {
   permission_name: string;
   effect: PermissionOverrideEffect;
   applies_to_role: RoleCode | null;
-  reason: string;
-  expires_at: string | null;
   granted_by_name: string | null;
   created_at: string;
   updated_at: string;
@@ -48,8 +46,6 @@ export interface CreateUserPermissionOverrideRequest {
   permission_code: string;
   effect: PermissionOverrideEffect;
   applies_to_role?: RoleCode | null;
-  reason?: string;
-  expires_at?: string | null;
 }
 
 export interface UserScopeGroupOverride {
@@ -59,8 +55,6 @@ export interface UserScopeGroupOverride {
   applies_to_role: RoleCode | null;
   scope_type: PermissionOverrideScope;
   scope_user_ids: number[];
-  reason: string;
-  expires_at: string | null;
   granted_by_name: string | null;
   created_at: string;
   updated_at: string;
@@ -72,8 +66,6 @@ export interface CreateUserScopeGroupOverrideRequest {
   applies_to_role?: RoleCode | null;
   scope_type: PermissionOverrideScope;
   scope_user_ids?: number[];
-  reason?: string;
-  expires_at?: string | null;
 }
 
 interface PermissionCapability {

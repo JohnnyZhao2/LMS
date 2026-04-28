@@ -339,7 +339,6 @@ def test_system_managed_permissions_cannot_be_overridden_per_user():
         {
             'permission_code': 'submission.answer',
             'effect': 'ALLOW',
-            'reason': 'should fail',
         },
         format='json',
     )
@@ -362,7 +361,6 @@ def test_permission_override_takes_effect_without_scope_payload():
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
-            'reason': 'grant permission',
         },
         format='json',
     )
@@ -413,7 +411,6 @@ def test_student_role_cannot_be_used_for_user_override_applies_to_role():
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
             'applies_to_role': 'STUDENT',
-            'reason': 'should reject student role',
         },
         format='json',
     )
@@ -437,7 +434,6 @@ def test_super_admin_cannot_be_target_of_user_override():
         {
             'permission_code': 'knowledge.update',
             'effect': 'DENY',
-            'reason': 'should reject super admin target',
         },
         format='json',
     )
@@ -463,7 +459,6 @@ def test_student_current_role_ignores_user_overrides():
         {
             'permission_code': 'knowledge.update',
             'effect': 'ALLOW',
-            'reason': 'global override for non-student roles',
         },
         format='json',
     )
@@ -731,7 +726,6 @@ def test_non_admin_role_can_create_log_management_permission_override():
             'permission_code': 'activity_log.view',
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
-            'reason': 'grant log management access',
         },
         format='json',
     )

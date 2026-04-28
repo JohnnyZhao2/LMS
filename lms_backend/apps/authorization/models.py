@@ -80,9 +80,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
         db_index=True,
         verbose_name='生效角色',
     )
-    reason = models.CharField(max_length=255, default='', blank=True, verbose_name='原因')
-    expires_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='过期时间')
-
     granted_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -139,8 +136,6 @@ class UserScopeGroupOverride(TimestampMixin, models.Model):
         verbose_name='作用域类型',
     )
     scope_user_ids = models.JSONField(default=list, blank=True, verbose_name='指定用户ID列表')
-    reason = models.CharField(max_length=255, default='', blank=True, verbose_name='原因')
-    expires_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='过期时间')
     granted_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

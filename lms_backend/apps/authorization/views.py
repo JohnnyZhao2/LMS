@@ -182,8 +182,6 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
             permission_code=serializer.validated_data['permission_code'],
             effect=serializer.validated_data['effect'],
             applies_to_role=serializer.validated_data.get('applies_to_role'),
-            reason=serializer.validated_data.get('reason', ''),
-            expires_at=serializer.validated_data.get('expires_at'),
         )
         response_serializer = UserPermissionOverrideSerializer(override)
         return created_response(response_serializer.data)
@@ -259,8 +257,6 @@ class UserScopeGroupOverrideListCreateView(BaseAPIView):
             applies_to_role=serializer.validated_data.get('applies_to_role'),
             scope_type=serializer.validated_data['scope_type'],
             scope_user_ids=serializer.validated_data.get('scope_user_ids') or [],
-            reason=serializer.validated_data.get('reason', ''),
-            expires_at=serializer.validated_data.get('expires_at'),
         )
         response_serializer = UserScopeGroupOverrideSerializer(override)
         return created_response(response_serializer.data)

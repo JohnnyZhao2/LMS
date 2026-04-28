@@ -1,8 +1,6 @@
 from typing import List, Optional
 
 from django.db import transaction
-from django.db.models import Q
-from django.utils import timezone
 
 from apps.activity_logs.decorators import log_operation
 from apps.authorization.roles import resolve_current_role
@@ -288,7 +286,6 @@ class UserOverrideServiceMixin:
         user_id: int,
     ) -> List[UserPermissionOverride]:
         queryset = UserPermissionOverride.objects.select_related('permission', 'granted_by').filter(user_id=user_id)
-        queryset = queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override
@@ -316,8 +313,6 @@ class UserOverrideServiceMixin:
         permission_code: str,
         effect: str,
         applies_to_role: Optional[str],
-        reason: str = '',
-        expires_at=None,
     ) -> UserPermissionOverride:
         target_user = self.validate_not_none(
             User.objects.filter(pk=user_id).first(),
@@ -361,8 +356,6 @@ class UserOverrideServiceMixin:
             applies_to_role=normalized_applies_to_role,
             defaults={
                 'effect': effect,
-                'reason': reason,
-                'expires_at': expires_at,
                 'granted_by': self.user,
             },
         )
@@ -374,7 +367,6 @@ class UserOverrideServiceMixin:
         user_id: int,
     ) -> List[UserScopeGroupOverride]:
         queryset = UserScopeGroupOverride.objects.select_related('granted_by').filter(user_id=user_id)
-        queryset = queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         overrides = list(queryset.order_by('-created_at', '-id'))
         return [
             override
@@ -404,8 +396,6 @@ class UserOverrideServiceMixin:
         applies_to_role: Optional[str],
         scope_type: str,
         scope_user_ids: Optional[List[int]] = None,
-        reason: str = '',
-        expires_at=None,
     ) -> UserScopeGroupOverride:
         target_user = self.validate_not_none(
             User.objects.filter(pk=user_id).first(),
@@ -465,8 +455,6 @@ class UserOverrideServiceMixin:
             scope_type=scope_type,
             defaults={
                 'scope_user_ids': normalized_scope_user_ids,
-                'reason': reason,
-                'expires_at': expires_at,
                 'granted_by': self.user,
             },
         )

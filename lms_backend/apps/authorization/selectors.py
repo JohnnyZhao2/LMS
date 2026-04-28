@@ -3,7 +3,6 @@
 from typing import Iterable, List, Optional
 
 from django.db.models import Q
-from django.utils import timezone
 
 from .constants import (
     CONFIG_PERMISSION_MODULE,
@@ -43,8 +42,6 @@ def list_active_user_overrides(
         user_id=user_id,
     ).exclude(
         applies_to_role='STUDENT',
-    ).filter(
-        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
     )
 
     if current_role:
@@ -71,8 +68,6 @@ def list_active_scope_group_overrides(
         user_id=user_id,
     ).exclude(
         applies_to_role='STUDENT',
-    ).filter(
-        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
     )
 
     if current_role:

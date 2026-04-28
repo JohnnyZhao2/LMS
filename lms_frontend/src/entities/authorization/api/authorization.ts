@@ -36,7 +36,6 @@ interface CreateUserOverridePayload {
 interface RevokeUserOverridePayload {
   userId: number;
   overrideId: number;
-  revokeReason?: string;
 }
 
 interface CreateUserScopeGroupOverridePayload {

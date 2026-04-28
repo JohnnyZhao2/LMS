@@ -129,7 +129,6 @@ def test_authorization_user_permission_override_writes_activity_logs():
         permission_code='knowledge.view',
         effect='ALLOW',
         applies_to_role=None,
-        reason='临时放开',
     )
     service.delete_user_permission_override(
         user_id=target.id,
@@ -160,7 +159,6 @@ def test_authorization_scope_group_override_writes_activity_logs():
         applies_to_role=None,
         scope_type=SCOPE_ALL,
         scope_user_ids=[],
-        reason='补充范围',
     )
     service.delete_user_scope_group_override(
         user_id=target.id,
