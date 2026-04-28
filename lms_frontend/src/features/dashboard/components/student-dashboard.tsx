@@ -37,7 +37,7 @@ const DashboardSectionHeader: React.FC<DashboardSectionHeaderProps> = ({
   <div className="flex items-center justify-between px-1">
     <div className="flex items-center gap-2.5">
       <Icon className={cn("h-3.5 w-3.5 opacity-45", accentColor)} strokeWidth={2.5} />
-      <h3 className="truncate text-[10px] font-bold leading-none tracking-[0.24em] text-muted-foreground/80 uppercase">
+      <h3 className="truncate text-[12px] font-bold leading-[1.15] tracking-[0.08em] text-muted-foreground/85">
         {title}
       </h3>
     </div>
@@ -80,7 +80,7 @@ export const StudentDashboard: React.FC = () => {
                 action={
                   <button
                     onClick={() => roleNavigate('knowledge')}
-                    className="group/btn flex items-center gap-1.5 text-xs font-semibold text-muted-foreground/55 transition-colors duration-300 hover:text-foreground"
+                    className="group/btn flex items-center gap-1.5 text-[12px] font-semibold leading-5 text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
                   >
                     探索大千世界
                     <ArrowRight className="h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
@@ -153,7 +153,7 @@ export const StudentDashboard: React.FC = () => {
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     {!selectedTask ? (
                       <div className="px-1 py-2">
-                        <p className="text-[10px] font-black tracking-[0.18em] text-slate-400/55">
+                        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
                           选择任务查看同伴进度
                         </p>
                       </div>
@@ -189,7 +189,7 @@ export const StudentDashboard: React.FC = () => {
                               )}
                             >
                               <div className={cn(
-                                "flex h-5 w-5 shrink-0 items-center justify-center text-[11px] font-black italic tracking-tighter transition-transform duration-500 group-hover/peer:scale-110",
+                                "flex h-5 w-5 shrink-0 items-center justify-center text-[12px] font-black italic tabular-nums tracking-normal transition-transform duration-500 group-hover/peer:scale-110",
                                 p.rank === 1 ? "text-amber-500" :
                                   p.rank === 2 ? "text-slate-400" :
                                     "text-slate-300"
@@ -200,13 +200,13 @@ export const StudentDashboard: React.FC = () => {
                               <div className="min-w-0 flex-1">
                                 <div className="mb-1.5 flex items-center justify-between">
                                   <span className={cn(
-                                    "truncate text-[12px] font-bold tracking-tight transition-colors",
+                                    "truncate text-[13px] font-bold tracking-normal transition-colors",
                                     p.is_me ? "text-primary" : "text-slate-600"
                                   )}>
                                     {p.is_me ? '我' : p.name}
                                   </span>
                                   <span className={cn(
-                                    "text-[10px] font-black transition-colors",
+                                    "text-[11px] font-black tabular-nums transition-colors",
                                     p.is_me ? "text-primary/70" : "text-slate-300"
                                   )}>
                                     {Math.round(p.progress)}%
@@ -229,7 +229,7 @@ export const StudentDashboard: React.FC = () => {
                       </ScrollContainer>
                     ) : (
                       <div className="px-1 py-2">
-                        <p className="text-[10px] font-black tracking-[0.18em] text-slate-400/55">
+                        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
                           暂无参与者
                         </p>
                       </div>

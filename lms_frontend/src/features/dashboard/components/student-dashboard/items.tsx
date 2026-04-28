@@ -3,7 +3,6 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { richTextToPlainText } from '@/lib/rich-text';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 
@@ -25,26 +24,26 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
       )}
     >
       <div className="relative z-10 flex h-full min-h-0 flex-col">
-        <h5 className="mb-2 line-clamp-2 text-[14px] font-bold leading-tight tracking-tight text-slate-800 transition-colors duration-300 group-hover:text-slate-950">
+        <h5 className="mb-2 line-clamp-2 text-[15px] font-bold leading-snug tracking-normal text-slate-800 transition-colors duration-300 group-hover:text-slate-950">
           {knowledge.title}
         </h5>
 
         <div
-          className="min-h-0 flex-1 overflow-hidden whitespace-pre-line break-words text-[12.5px] font-medium leading-[1.72] tracking-[0.01em] text-slate-500/90"
+          className="min-h-0 flex-1 overflow-hidden whitespace-pre-line break-words text-[13px] font-medium leading-[1.64] tracking-normal text-slate-500/95"
         >
           {previewText}
         </div>
 
         <div className="mt-3 flex shrink-0 items-end justify-between border-t border-slate-200/60 pt-2.5">
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/50">
+            <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
               最近更新
             </p>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-[11px] font-mono font-bold tracking-wider text-slate-500/85">
+              <span className="text-[12px] font-mono font-bold tabular-nums tracking-normal text-slate-500/90">
                 {dayjs(knowledge.updated_at).format('MM.DD')}
               </span>
-              <span className="text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-slate-400/50">
+              <span className="text-[10.5px] font-mono font-bold tabular-nums tracking-[0.06em] text-slate-400/70">
                 {dayjs(knowledge.updated_at).format('YYYY')}
               </span>
             </div>
@@ -68,6 +67,8 @@ interface TaskItemProps {
 
 export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, onNavigate }) => {
   const isCompleted = task.status === 'COMPLETED';
+  const isOverdue = task.status === 'OVERDUE';
+  const isMuted = isCompleted || isOverdue;
   const progress = task.progress?.percentage ?? 0;
   const compositionParts = [
     task.progress?.knowledge_total ? `知识 ${task.progress.knowledge_total}` : null,
@@ -75,7 +76,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
   ].filter(Boolean) as string[];
   const deadlineLabel = dayjs(task.deadline).format('MM.DD');
   const deadlineYear = dayjs(task.deadline).format('YYYY');
-  const statusClassName = TASK_EXECUTION_STATUS_META[task.status].badgeClassName;
 
   return (
     <div
@@ -104,30 +104,30 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
 
       <div className="min-w-0 flex-1 pr-9">
         <h5 className={cn(
-          "line-clamp-2 text-[14px] font-bold leading-tight tracking-tight transition-colors duration-300",
-          isCompleted ? "text-slate-400 line-through" : "text-slate-800",
-          isSelected && !isCompleted && "text-slate-950"
+          "line-clamp-2 text-[15px] font-bold leading-snug tracking-normal transition-colors duration-300",
+          isMuted ? "text-slate-400" : "text-slate-800",
+          isCompleted && "line-through",
+          isSelected && !isMuted && "text-slate-950"
         )}>
           {task.task_title}
         </h5>
 
-        <p className="mt-2 line-clamp-3 text-[11px] font-medium leading-[1.1rem] tracking-tight text-slate-400/85">
+        <p className="mt-2 line-clamp-3 text-[12px] font-medium leading-[1.35rem] tracking-normal text-slate-400/90">
           {compositionParts.length > 0 ? compositionParts.join(' · ') : '暂无任务项'}
         </p>
-        <span className={cn('mt-2 inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold', statusClassName)}>
-          {task.status_display}
-        </span>
       </div>
 
       <div className="mt-4">
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/55">
+          <span className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
             进度
           </span>
           <span className={cn(
-            "flex items-center gap-1 text-[10px] font-black tracking-[0.18em]",
+            "flex items-center gap-1 text-[11px] font-black tabular-nums tracking-[0.04em]",
             isCompleted
               ? "text-emerald-500/80"
+              : isOverdue
+                ? "text-slate-400/80"
               : isSelected
                 ? "text-primary/80"
                 : "text-slate-400/80"
@@ -140,38 +140,38 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
           <div
             className={cn(
               "h-full transition-all duration-1000",
-              isCompleted ? "bg-emerald-500/75" : isSelected ? "bg-primary" : "bg-slate-300/60"
+              isCompleted ? "bg-emerald-500/75" : isOverdue ? "bg-slate-300/60" : isSelected ? "bg-primary" : "bg-slate-300/60"
             )}
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-1.5 text-[11px] font-medium tracking-tight text-slate-400/80">
+        <p className="mt-1.5 text-[12px] font-medium tracking-normal text-slate-400/85">
           已完成 {task.progress?.completed ?? 0}/{task.progress?.total ?? 0}
         </p>
       </div>
 
       <div className="mt-auto grid grid-cols-2 gap-3 border-t border-slate-200/60 pt-3">
         <div className="min-w-0">
-          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/55">
+          <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
             分配人
           </p>
-          <p className="mt-1 truncate text-[12px] font-semibold tracking-tight text-slate-600">
+          <p className="mt-1 truncate text-[13px] font-semibold tracking-normal text-slate-600">
             {task.created_by_name}
           </p>
         </div>
 
         <div className="text-right">
-          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/55">
+          <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
             截止时间
           </p>
           <div className="mt-1 flex items-baseline justify-end gap-1.5">
             <span className={cn(
-              "text-[12px] font-mono font-bold tracking-wider",
-              isSelected ? "text-primary/85" : "text-slate-600"
+              "text-[13px] font-mono font-bold tabular-nums tracking-normal",
+              isOverdue ? "text-slate-400" : isSelected ? "text-primary/85" : "text-slate-600"
             )}>
               {deadlineLabel}
             </span>
-            <span className="text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-slate-400/55">
+            <span className="text-[10.5px] font-mono font-bold tabular-nums tracking-[0.06em] text-slate-400/70">
               {deadlineYear}
             </span>
           </div>

@@ -57,7 +57,7 @@ function Calendar({
         months: "flex flex-col gap-4 sm:flex-row sm:gap-4",
         month: "relative space-y-4",
         month_caption: "relative flex h-8 items-center justify-center px-10",
-        caption_label: "text-sm font-semibold tracking-[0.01em] text-foreground",
+        caption_label: "text-[15px] font-semibold tracking-normal text-foreground",
         nav: "contents",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
@@ -69,12 +69,12 @@ function Calendar({
         ),
         month_grid: "w-full border-collapse",
         weekdays: "mb-1 flex",
-        weekday: "w-9 rounded-md text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted",
-        week: "mt-1 flex w-full",
+        weekday: "w-9 rounded-md text-[12px] font-semibold tracking-[0.02em] text-text-muted",
+        week: "mt-1.5 flex w-full",
         day: "relative h-9 w-9 p-0 text-center text-sm text-foreground focus-within:relative focus-within:z-20",
         day_button: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 rounded-xl border-none bg-transparent p-0 text-[13px] font-medium text-foreground shadow-none transition-[background-color,color,transform] duration-150 hover:bg-primary-50 hover:text-primary aria-selected:opacity-100"
+          "h-9 w-9 rounded-xl border-none bg-transparent p-0 text-[14px] font-medium tabular-nums text-foreground shadow-none transition-[background-color,color,transform] duration-150 hover:bg-primary-50 hover:text-primary aria-selected:opacity-100"
         ),
         selected:
           "[&>.rdp-day_button]:bg-primary-500 [&>.rdp-day_button]:text-white [&>.rdp-day_button]:shadow-[0_10px_22px_rgba(37,99,235,0.18)] [&>.rdp-day_button]:hover:bg-primary-600 [&>.rdp-day_button]:hover:text-white [&>.rdp-day_button]:focus:bg-primary-500 [&>.rdp-day_button]:focus:text-white",

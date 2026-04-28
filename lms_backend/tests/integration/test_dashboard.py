@@ -9,6 +9,7 @@ Dashboard 模块集成测试
 import pytest
 from django.utils import timezone
 
+from apps.activity_logs.models import ActivityLog
 from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
@@ -353,6 +354,43 @@ class TestMentorDashboardAPI:
 
         assert response.status_code == 200
 
+    def test_admin_weekly_active_users_does_not_require_activity_log_permission(
+        self,
+        api_client,
+        unwrap_response_data,
+        admin,
+        student,
+    ):
+        ActivityLog.objects.create(
+            category='user',
+            actor=student,
+            action='login',
+            summary=f'{student.username} 登录成功',
+            description=f'账号：{student.username}（{student.employee_id}）',
+            status='success',
+            target_type='user',
+            target_id=str(student.id),
+            target_title=student.username,
+        )
+        ActivityLog.objects.create(
+            category='user',
+            actor=admin,
+            action='login',
+            summary=f'{admin.username} 登录成功',
+            description=f'账号：{admin.username}（{admin.employee_id}）',
+            status='success',
+            target_type='user',
+            target_id=str(admin.id),
+            target_title=admin.username,
+        )
+
+        api_client.force_authenticate(user=admin)
+        response = api_client.get('/api/dashboard/admin/')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        assert data['summary']['weekly_active_users'] == 2
+
     def test_get_dashboard_as_student_forbidden(self, api_client, student):
         """测试学员无法访问导师仪表盘"""
         api_client.force_authenticate(user=student)
@@ -373,7 +411,7 @@ class TestMentorDashboardAPI:
 
         summary = data['summary']
         assert 'total_students' in summary
-        assert 'weekly_active_users' in summary
+        assert 'weekly_active_users' not in summary
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
 

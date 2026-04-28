@@ -40,6 +40,12 @@ MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE = 'task.analytics.view'
 TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE = 'dashboard.team_manager.view'
 
 
+def get_dashboard_user_queryset() -> QuerySet:
+    return User.objects.filter(
+        is_active=True,
+    ).exclude(is_superuser=True).distinct()
+
+
 class StudentDashboardService(BaseService):
     """
     学员仪表盘服务
@@ -116,6 +122,9 @@ class MentorDashboardService(BaseService):
             self.request,
             resource_model=User,
         )
+        return self._build_dashboard_data(students)
+
+    def _build_dashboard_data(self, students: QuerySet) -> Dict[str, Any]:
         student_ids = list(students.values_list('id', flat=True))
         monthly_active_ids = get_monthly_active_user_ids(student_ids)
         spot_check_map = get_monthly_spot_check_stats_by_student(student_ids)
@@ -147,7 +156,6 @@ class MentorDashboardService(BaseService):
         if not student_ids:
             return {
                 'total_students': 0,
-                'weekly_active_users': 0,
                 'monthly_tasks': monthly_tasks,
                 'total_tasks': 0,
                 'completed_tasks': 0,
@@ -162,11 +170,9 @@ class MentorDashboardService(BaseService):
         assignments = get_assignments_by_students(student_ids=student_ids)
         stats = calculate_task_stats(assignments)
         overall_avg_score = calculate_avg_score(student_ids=student_ids)
-        weekly_active_users = get_weekly_active_users_count(user_ids=student_ids)
         default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         return {
             'total_students': len(student_ids),
-            'weekly_active_users': weekly_active_users,
             'monthly_tasks': monthly_tasks,
             'total_tasks': stats['total_tasks'],
             'completed_tasks': stats['completed_tasks'],
@@ -233,6 +239,19 @@ class MentorDashboardService(BaseService):
                 }
             })
         return student_stats
+
+
+class AdminDashboardService(BaseService):
+    """管理员系统概览。"""
+
+    def get_dashboard_data(self) -> Dict[str, Any]:
+        user_ids = list(get_dashboard_user_queryset().values_list('id', flat=True))
+        return {
+            'summary': {
+                'weekly_active_users': get_weekly_active_users_count(user_ids=user_ids),
+                'monthly_tasks': get_monthly_tasks_count(),
+            }
+        }
 
 
 class TeamManagerDashboardService(BaseService):

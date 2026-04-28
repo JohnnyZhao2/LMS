@@ -5,6 +5,8 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 
+from apps.dashboard.services import AdminDashboardService
+
 from .base import MentorScopedDashboardView
 
 
@@ -26,3 +28,4 @@ class AdminDashboardView(MentorScopedDashboardView):
     """
     permission_code = 'dashboard.admin.view'
     permission_error_message = '只有管理员或超管可以访问此仪表盘'
+    service_class = AdminDashboardService

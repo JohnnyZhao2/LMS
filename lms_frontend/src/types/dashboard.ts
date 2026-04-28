@@ -76,7 +76,6 @@ export interface MentorDashboard {
 
 export interface MentorDashboardSummary {
   total_students: number;
-  weekly_active_users: number;
   monthly_tasks: number;
   total_tasks: number;
   completed_tasks: number;
@@ -126,6 +125,15 @@ export interface MentorDashboardStudent {
   spot_check_count_month: number;
   spot_check_avg_score_month: number | null;
   radar_metrics: MentorDashboardRadarMetrics;
+}
+
+export interface AdminDashboard {
+  summary: AdminDashboardSummary;
+}
+
+export interface AdminDashboardSummary {
+  weekly_active_users: number;
+  monthly_tasks: number;
 }
 
 /**
