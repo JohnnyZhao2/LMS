@@ -34,7 +34,7 @@ const DashboardSectionHeader: React.FC<DashboardSectionHeaderProps> = ({
   action,
   accentColor = 'text-primary',
 }) => (
-  <div className="flex items-center justify-between px-1">
+  <div className="flex min-h-5 items-center justify-between px-1">
     <div className="flex items-center gap-2.5">
       <Icon className={cn("h-3.5 w-3.5 opacity-45", accentColor)} strokeWidth={2.5} />
       <h3 className="truncate text-[12px] font-bold leading-[1.15] tracking-[0.08em] text-muted-foreground/85">
@@ -133,7 +133,7 @@ export const StudentDashboard: React.FC = () => {
                 />
                 <MiniCalendar
                   selectedTask={selectedTask}
-                  className="xl:h-full xl:min-h-0 xl:flex-1"
+                  className="min-h-0 flex-1"
                 />
               </div>
             </div>
@@ -147,12 +147,12 @@ export const StudentDashboard: React.FC = () => {
                   accentColor="text-violet-500"
                 />
                 <EditorialCard
-                  className="min-h-0 xl:h-full xl:flex-1"
-                  contentClassName="pr-0 xl:pr-0"
+                  className="min-h-0 flex-1"
+                  contentClassName="px-4 py-4 xl:px-5 xl:py-5"
                 >
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     {!selectedTask ? (
-                      <div className="px-1 py-2">
+                      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
                         <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
                           选择任务查看同伴进度
                         </p>
@@ -177,7 +177,7 @@ export const StudentDashboard: React.FC = () => {
                         scrollbar="hidden"
                         className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-2"
                       >
-                        <div className="flex flex-col gap-2 pl-1 pr-6">
+                        <div className="flex flex-col gap-2">
                           {participantItems.map((p) => (
                             <div
                               key={p.id}
@@ -228,7 +228,7 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </ScrollContainer>
                     ) : (
-                      <div className="px-1 py-2">
+                      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
                         <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
                           暂无参与者
                         </p>

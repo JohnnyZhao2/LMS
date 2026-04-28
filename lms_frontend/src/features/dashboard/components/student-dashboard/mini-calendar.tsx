@@ -38,7 +38,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
 
   return (
     <Card className={cn(
-      "relative flex h-full w-full min-h-[252px] flex-col overflow-hidden border-border/40 bg-card shadow-xl shadow-slate-200/30 transition-all duration-700 group/calendar hover:shadow-primary/5 sm:min-h-[276px] lg:min-h-[292px] xl:min-h-0",
+      "relative flex w-full min-h-[224px] flex-col overflow-hidden border-border/40 bg-card shadow-xl shadow-slate-200/30 transition-all duration-700 group/calendar hover:shadow-primary/5 sm:min-h-[236px] lg:min-h-[248px] xl:min-h-0",
       className
     )}>
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
