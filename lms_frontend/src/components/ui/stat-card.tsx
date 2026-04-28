@@ -71,7 +71,8 @@ export const StatCard: React.FC<StatCardProps> = ({
                             "w-1 rounded-full transition-all duration-500 ease-out",
                             isCompact ? "h-2.5 group-hover:h-4" : "h-3 group-hover:h-5",
                             accentClassName,
-                            "shadow-[0_0_12px_rgba(0,0,0,0.3)]"
+                            inferredTextColor,
+                            "shadow-[0_0_10px_currentColor]"
                         )}
                         />
                         <p className={cn(

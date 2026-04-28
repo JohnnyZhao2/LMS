@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：66 个
+- Feature 作用域视觉组件：67 个
 
 ## 共享组件
 
@@ -77,10 +77,11 @@
 - `src/features/activity-logs/components/activity-log-policy-panel.tsx`
 - `src/features/activity-logs/components/activity-logs-panel.tsx`
 
-### auth (2 个)
+### auth (3 个)
 
 #### components
 
+- `src/features/auth/components/change-own-password-dialog.tsx`
 - `src/features/auth/components/login-form.tsx`
 - `src/features/auth/components/role-switch-overlay.tsx`
 

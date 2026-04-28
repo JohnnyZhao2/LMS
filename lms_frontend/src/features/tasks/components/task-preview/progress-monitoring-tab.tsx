@@ -220,8 +220,8 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       value={`${analytics.completion.completed_count}/${analytics.completion.total_count}`}
       subtitle={`${analytics.completion.percentage}%`}
       icon={Users}
-      iconClassName="text-primary"
-      accentClassName="bg-primary-50"
+      iconClassName="text-secondary"
+      accentClassName="bg-secondary-500"
       size="xs"
       className="xl:h-full"
     />
@@ -230,8 +230,8 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       value={`${analytics.average_time}`}
       subtitle="分钟"
       icon={Clock}
-      iconClassName="text-secondary"
-      accentClassName="bg-secondary-50"
+      iconClassName="text-primary"
+      accentClassName="bg-primary-500"
       size="xs"
       className="xl:h-full"
     />
@@ -240,8 +240,8 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       value={analytics.accuracy.has_quiz ? `${analytics.accuracy.percentage}%` : '无考试'}
       subtitle={analytics.accuracy.has_quiz ? '平均正确率' : ''}
       icon={Target}
-      iconClassName="text-primary-500"
-      accentClassName="bg-primary-50"
+      iconClassName={analytics.accuracy.has_quiz ? 'text-secondary' : 'text-text-muted'}
+      accentClassName={analytics.accuracy.has_quiz ? 'bg-secondary-500' : 'bg-muted'}
       size="xs"
       className="xl:h-full"
     />
@@ -251,7 +251,7 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       subtitle="需关注"
       icon={AlertTriangle}
       iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-text-muted'}
-      accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-muted'}
+      accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-500' : 'bg-muted'}
       size="xs"
       className="xl:h-full"
     />
@@ -291,29 +291,27 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
   onChartTypeChange,
 }) => (
   <Card className="flex h-full flex-col border border-border/70 p-4">
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="space-y-1">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">结果分布</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {analytics.pass_rate !== null && (
-            <div className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
-              analytics.pass_rate >= 80 ? 'border-secondary-200 bg-secondary-50 text-secondary-700' :
-              analytics.pass_rate >= 60 ? 'border-warning-200 bg-warning-50 text-warning-700' :
-              'border-destructive-200 bg-destructive-50 text-destructive-700',
+        {analytics.pass_rate !== null && (
+          <div className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
+            analytics.pass_rate >= 80 ? 'border-secondary-200 bg-secondary-50 text-secondary-700' :
+            analytics.pass_rate >= 60 ? 'border-warning-200 bg-warning-50 text-warning-700' :
+            'border-destructive-200 bg-destructive-50 text-destructive-700',
+          )}>
+            <span className="text-[11px] font-medium">通过率</span>
+            <span className={cn(
+              'text-xs font-bold tabular-nums',
+              analytics.pass_rate >= 80 ? 'text-secondary-900' :
+              analytics.pass_rate >= 60 ? 'text-warning-900' :
+              'text-destructive-900',
             )}>
-              <span className="text-[11px] font-medium">通过率</span>
-              <span className={cn(
-                'text-xs font-bold tabular-nums',
-                analytics.pass_rate >= 80 ? 'text-secondary-900' :
-                analytics.pass_rate >= 60 ? 'text-warning-900' :
-                'text-destructive-900',
-              )}>
-                {analytics.pass_rate}%
-              </span>
-            </div>
-          )}
-        </div>
+              {analytics.pass_rate}%
+            </span>
+          </div>
+        )}
       </div>
 
       {hasScoreDistribution && (

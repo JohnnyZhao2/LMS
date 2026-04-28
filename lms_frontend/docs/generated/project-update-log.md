@@ -6,6 +6,13 @@
 
 | Commit | 日期 | 内容 |
 |--------|------|------|
+| `a916c661` | 2026-04-28 | feat(dashboard): 添加管理员仪表盘服务和视图 - 新增 AdminDashboardService，提供管理员仪表盘数据的获取功能。 - 更新 AdminDashboardView，集成 AdminDashboardService 以支持管理员数据展示。 -... |
+| `4b2d080f` | 2026-04-27 | fix(logo): 更新 logo.svg 的尺寸和样式以符合新的设计要求 |
+| `9c365bdf` | 2026-04-27 | feat(tasks): 增强任务执行状态处理与进度追踪 • 更新了 StudentTaskSerializer 和 StudentAssignmentListSerializer，通过 SerializerMethodField 引入了 status 和 status_d... |
+| `c470a4de` | 2026-04-24 | feat(localization): 更新前端语言和品牌标识 - 将 index.html 的语言设置更改为中文（zh-CN），并更新标题为“LMS学习平台”。 - 修改 logo.svg 的尺寸和样式以适应新的设计要求。 - 在 brand-mark.tsx 中更新品牌... |
+| `3296f3c3` | 2026-04-24 | fix(user-list): replace Lock icon with KeyRound in user password change dialogs |
+| `70748e50` | 2026-04-24 | feat(auth): 添加当前用户修改密码功能 - 新增 ChangeMyPasswordRequestSerializer 用于处理当前用户的密码修改请求。 - 实现 change_my_password 方法，验证当前密码并更新为新密码，返回新的登录令牌。 - 添加 ... |
+| `a1ba4fa1` | 2026-04-24 | refactor(authorization): 重命名撤销用户权限和范围组覆盖的视图及服务方法 - 将用户权限覆盖的撤销视图和服务方法重命名为删除操作，增强语义清晰度。 - 更新相关的序列化器和查询逻辑，移除不再使用的字段，简化数据处理。 - 调整权限模板和范围组的逻辑，... |
 | `0266f857` | 2026-04-24 | refactor(knowledge): 移除 agentation 依赖并优化知识详情模态框逻辑 - 从 package.json 和 package-lock.json 中移除了 agentation 依赖。 - 更新知识详情模态框，重构退出焦点模式的逻辑，确保在有更改... |
 | `a2936aff` | 2026-04-24 | feat(dashboard): 增强知识检索与 UI 组件 • 更新 get_latest_knowledge，在查询中加入 space_tag 以优化数据检索。 • 新增 CSS 类 .scrollbar-hidden 用于隐藏滚动条，使 UI 更简洁。 • 修改 Sc... |
 | `e0855870` | 2026-04-24 | refactor(dashboard)：简化任务参与者进度获取 • 移除了 limit 参数，并调整逻辑以直接返回所有参与者。 • 更新了 StudentDashboard 组件以反映参与者处理方式的变化。 • 通过精简 props 和布局增强了 EditorialCard... |
@@ -29,10 +36,3 @@
 | `7d80ee55` | 2026-04-20 | refactor(gitignore): 清理 .gitignore 文件，移除环境配置文件条目 - 从 lms_backend 和 lms_frontend 的 .gitignore 中删除环境文件相关条目，以简化环境管理和版本控制。 |
 | `c4d71870` | 2026-04-20 | refactor(dependencies, configuration): 更新包版本并清理 .gitignore • 在 package.json 和 package-lock.json 中降低了多个包的版本以解决兼容性问题。 • 从 .gitignore 中删除了 '... |
 | `df8d1202` | 2026-04-19 | feat(deployment, user_management): 更新后端部署流程和用户管理逻辑 - 在 DEPLOY.md 中添加后端初始化数据的说明，明确首次上线时需执行 `init_data`。 - 在 UserManager 中引入默认学生角色的创建逻辑，确保新... |
-| `eefa6dc5` | 2026-04-19 | refactor(activity_logs, authorization): 重构活动日志和授权逻辑 - 移除冗余的日志常量定义，改为使用注册机制以提高可维护性。 - 更新日志记录装饰器，增强用户和内容操作的日志记录功能，确保一致性。 - 优化权限覆盖和范围组覆盖的日志记... |
-| `21800a4c` | 2026-04-19 | refactor(architecture, dependencies): 更新项目结构和依赖管理 - 重构项目文档，明确前端架构原则，移除手动维护的事实清单，改为自动生成。 - 更新 package.json 和 package-lock.json，添加测试库依赖以增强测... |
-| `97eb56d1` | 2026-04-19 | refactor(api, queries): 优化查询键和缓存失效逻辑 - 更新多个 API 查询中的 queryKey，使用统一的 queryKeys 模块以提高可读性和一致性。 - 移除冗余的缓存失效逻辑，替换为集中管理的失效函数，简化代码结构。 - 增强各个功能模块... |
-| `338f4122` | 2026-04-19 | refactor(grading, submissions, tasks): 重构评分和任务管理逻辑 - 将主观题评分逻辑从 Answer 模型中提取到独立的工作流函数中，提升代码可读性和可维护性。 - 更新 GradingSubmitView 以使用新的评分工作流函数，简... |
-| `b5f15b84` | 2026-04-18 | refactor(authorization, services, dashboard, tasks): 重构授权引擎和服务逻辑 - 移除未使用的导入和冗余代码，简化授权引擎和服务的实现。 - 将 AuthorizationEngine 类的多个混入合并，提升代码的可读性和... |
-| `2dd8bea0` | 2026-04-18 | refactor(activity_logs, authorization): 更新日志记录和角色解析逻辑 • 在 ActivityLogsConfig 中集成 register_activity_log_audit_publisher 以增强审计日志记录。 • 在用户操作... |
-| `cc337416` | 2026-04-18 | refactor(grading): update layout and styling in GradingCenterTab component - Introduced a new grid class for better alignment of question... |

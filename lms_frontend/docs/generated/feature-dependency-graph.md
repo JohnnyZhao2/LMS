@@ -16,22 +16,22 @@ flowchart LR
   utils["utils"]
   config["config"]
   types["types"]
-  app -->|26| features
+  app -->|28| features
   app -->|4| entities
   app -->|21| session
   app -->|12| components
   app -->|6| lib
   app -->|2| utils
-  app -->|9| config
+  app -->|10| config
   app -->|8| types
-  features -->|79| entities
-  features -->|43| session
-  features -->|231| components
+  features -->|80| entities
+  features -->|44| session
+  features -->|234| components
   features -->|3| hooks
-  features -->|116| lib
-  features -->|20| utils
+  features -->|119| lib
+  features -->|21| utils
   features -->|11| config
-  features -->|79| types
+  features -->|80| types
   entities -->|1| features
   entities -->|11| session
   entities -->|51| components
@@ -45,9 +45,10 @@ flowchart LR
   components -->|2| entities
   components -->|3| session
   components -->|46| lib
+  components -->|1| config
   lib -->|1| utils
   lib -->|2| config
-  lib -->|2| types
+  lib -->|3| types
   utils -->|1| lib
   config -->|1| lib
   config -->|1| types
@@ -55,22 +56,22 @@ flowchart LR
 
 | From | To | Imports |
 |------|----|---------|
-| `app` | `features` | 26 |
+| `app` | `features` | 28 |
 | `app` | `entities` | 4 |
 | `app` | `session` | 21 |
 | `app` | `components` | 12 |
 | `app` | `lib` | 6 |
 | `app` | `utils` | 2 |
-| `app` | `config` | 9 |
+| `app` | `config` | 10 |
 | `app` | `types` | 8 |
-| `features` | `entities` | 79 |
-| `features` | `session` | 43 |
-| `features` | `components` | 231 |
+| `features` | `entities` | 80 |
+| `features` | `session` | 44 |
+| `features` | `components` | 234 |
 | `features` | `hooks` | 3 |
-| `features` | `lib` | 116 |
-| `features` | `utils` | 20 |
+| `features` | `lib` | 119 |
+| `features` | `utils` | 21 |
 | `features` | `config` | 11 |
-| `features` | `types` | 79 |
+| `features` | `types` | 80 |
 | `entities` | `features` | 1 |
 | `entities` | `session` | 11 |
 | `entities` | `components` | 51 |
@@ -84,9 +85,10 @@ flowchart LR
 | `components` | `entities` | 2 |
 | `components` | `session` | 3 |
 | `components` | `lib` | 46 |
+| `components` | `config` | 1 |
 | `lib` | `utils` | 1 |
 | `lib` | `config` | 2 |
-| `lib` | `types` | 2 |
+| `lib` | `types` | 3 |
 | `utils` | `lib` | 1 |
 | `config` | `lib` | 1 |
 | `config` | `types` | 1 |

@@ -287,7 +287,7 @@ export const TaskDetail: React.FC = () => {
   const studentStatusDisplay = learningDetail?.status_display;
 
   const canStartExam = isStudent
-    ? studentStatus === 'NOT_STARTED' || studentStatus === 'IN_PROGRESS'
+    ? Boolean(studentStatus && studentStatus !== 'COMPLETED' && studentStatus !== 'OVERDUE')
     : Boolean(myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && Boolean(task.actions.update) && dayjs(task.deadline).isAfter(dayjs());
 
@@ -481,9 +481,7 @@ export const TaskDetail: React.FC = () => {
                                           {studentQuizItem?.score ?? '--'} 分
                                         </span>
                                       )
-                                      : isDisabled
-                                        ? <span className="text-warning-700">待解锁</span>
-                                        : null
+                                      : null
                                     : null
                                 }
                                 tone={isCompleted ? 'success' : 'warning'}

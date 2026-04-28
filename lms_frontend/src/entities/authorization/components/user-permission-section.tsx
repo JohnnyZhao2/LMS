@@ -105,9 +105,11 @@ export function UserPermissionSection({
     { enabled: canViewUserAuthorization },
   );
 
-  const previewRoleCodes = !isSuperuserAccount && selectedRoleCode && selectedRoleCodes.includes(selectedRoleCode)
-    ? [selectedRoleCode]
-    : [];
+  const previewRoleCodes = useMemo<RoleCode[]>(() => (
+    !isSuperuserAccount && selectedRoleCode && selectedRoleCodes.includes(selectedRoleCode)
+      ? [selectedRoleCode]
+      : []
+  ), [isSuperuserAccount, selectedRoleCode, selectedRoleCodes]);
   const hasConfigurablePermissionRoles = previewRoleCodes.length > 0;
 
   const roleTemplateQueries = useRolePermissionTemplates(
