@@ -2,6 +2,7 @@ from typing import Optional
 
 import pytest
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, UserPermissionOverride, UserScopeGroupOverride
@@ -254,6 +255,30 @@ def test_permission_catalog_supports_view_filter():
     assert 'task.view' in {item['code'] for item in user_authorization_response.data['data']}
     assert 'activity_log.view' in {item['code'] for item in role_template_response.data['data']}
     assert 'activity_log.view' in {item['code'] for item in user_authorization_response.data['data']}
+
+
+@pytest.mark.django_db
+def test_user_permission_override_is_unique_per_user_permission_and_role():
+    target_user = _create_user_with_role(
+        employee_id='EMP_AUTH_OVERRIDE_UNIQ',
+        username='Override Unique Target',
+        role_code='MENTOR',
+    )
+    permission = Permission.objects.get(code='knowledge.view')
+
+    UserPermissionOverride.objects.create(
+        user=target_user,
+        permission=permission,
+        effect='ALLOW',
+    )
+
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            UserPermissionOverride.objects.create(
+                user=target_user,
+                permission=permission,
+                effect='DENY',
+            )
 
 
 @pytest.mark.django_db

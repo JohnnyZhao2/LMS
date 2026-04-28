@@ -12,6 +12,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -46,6 +47,11 @@ const progressCategories: Omit<AggregatedProgressCategory, 'nodeCount' | 'comple
   { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, textClass: 'text-secondary', bgClass: 'bg-secondary-50', barClass: 'bg-secondary' },
   { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, textClass: 'text-primary', bgClass: 'bg-primary-50', barClass: 'bg-primary' },
   { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
+];
+
+const chartTypeOptions = [
+  { label: '时间', value: 'time' },
+  { label: '分数', value: 'score' },
 ];
 
 export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
@@ -258,12 +264,18 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
   </div>
 );
 
+const PanelTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="text-xs font-semibold leading-5 tracking-[0.08em] text-text-muted">
+    {children}
+  </p>
+);
+
 const NodeProgressPanel: React.FC<{
   aggregatedProgress: AggregatedProgressCategory[];
 }> = ({ aggregatedProgress }) => (
   <Card className="flex h-full flex-col border border-border/70 p-4">
     <div className="mb-3">
-      <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">节点概览</p>
+      <PanelTitle>节点概览</PanelTitle>
     </div>
 
     <div className="space-y-3">
@@ -291,15 +303,15 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
   onChartTypeChange,
 }) => (
   <Card className="flex h-full flex-col border border-border/70 p-4">
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">结果分布</p>
+    <div className="mb-4 flex min-h-7 items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <PanelTitle>结果分布</PanelTitle>
         {analytics.pass_rate !== null && (
           <div className={cn(
-            'inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
-            analytics.pass_rate >= 80 ? 'border-secondary-200 bg-secondary-50 text-secondary-700' :
-            analytics.pass_rate >= 60 ? 'border-warning-200 bg-warning-50 text-warning-700' :
-            'border-destructive-200 bg-destructive-50 text-destructive-700',
+            'inline-flex h-6 items-center gap-1.5 rounded-md px-2',
+            analytics.pass_rate >= 80 ? 'bg-secondary-50 text-secondary-700' :
+            analytics.pass_rate >= 60 ? 'bg-warning-50 text-warning-700' :
+            'bg-destructive-50 text-destructive-700',
           )}>
             <span className="text-[11px] font-medium">通过率</span>
             <span className={cn(
@@ -315,34 +327,17 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
       </div>
 
       {hasScoreDistribution && (
-        <div className="flex rounded-xl bg-muted p-1">
-          <button
-            onClick={() => onChartTypeChange('time')}
-            className={cn(
-              'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-200',
-              chartType === 'time'
-                ? 'bg-background text-foreground'
-                : 'text-text-muted hover:text-foreground'
-            )}
-          >
-            时间分布
-          </button>
-          <button
-            onClick={() => onChartTypeChange('score')}
-            className={cn(
-              'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-200',
-              chartType === 'score'
-                ? 'bg-background text-foreground'
-                : 'text-text-muted hover:text-foreground'
-            )}
-          >
-            分数分布
-          </button>
-        </div>
+        <SegmentedControl
+          options={chartTypeOptions}
+          value={chartType}
+          onChange={(value) => onChartTypeChange(value as 'time' | 'score')}
+          size="xs"
+          className="shrink-0"
+        />
       )}
     </div>
 
-    <div className="flex flex-1 flex-col justify-center">
+    <div className="flex min-h-0 flex-1 flex-col">
       <DistributionChart
         data={chartType === 'time' ? analytics.time_distribution : (analytics.score_distribution || [])}
         type={chartType}
@@ -389,7 +384,7 @@ interface DistributionChartProps {
 const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => {
   if (data.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-text-muted">
+      <div className="flex h-full min-h-40 items-center justify-center text-sm text-text-muted">
         暂无分布数据
       </div>
     );
@@ -399,13 +394,13 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
   const barClassName = type === 'time' ? 'bg-primary' : 'bg-secondary';
 
   return (
-    <div className="space-y-2.5">
+    <div className="flex h-full min-h-40 flex-col justify-between pb-1.5">
       {data.map((item) => (
         <div key={item.range} className="group flex items-center gap-3">
           <span className="w-14 text-[11px] font-medium text-right text-text-muted tabular-nums">
             {item.range}
           </span>
-          <div className="h-5 flex-1 overflow-hidden rounded-md bg-muted/80">
+          <div className="h-7 flex-1 overflow-hidden rounded-md bg-muted/80">
             <div
               className={cn(
                 "flex h-full items-center justify-end rounded-md pr-2 text-white transition-all duration-300 ease-out group-hover:opacity-85",

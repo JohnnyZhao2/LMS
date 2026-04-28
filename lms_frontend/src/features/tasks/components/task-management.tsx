@@ -273,6 +273,10 @@ export const TaskManagement: React.FC = () => {
         roleNavigate(`${ROUTES.TASKS}/${task.id}/edit`)
     }
 
+    const openTaskProgress = (task: Pick<TaskListItem, 'id'>) => {
+        roleNavigate(`${ROUTES.TASKS}/${task.id}/preview?tab=progress&entry=task-management`)
+    }
+
     const columns: ColumnDef<TaskListItem>[] = [
         {
             header: "任务名称",
@@ -327,7 +331,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className={LIST_ACTION_ICON_ANALYTICS_CLASS}
-                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
+                                        onClick={() => openTaskProgress(row.original)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
                                     </Button>
@@ -460,7 +464,7 @@ export const TaskManagement: React.FC = () => {
                                     },
                                 }}
                                 rowClassName="group"
-                                onRowClick={(row: TaskListItem) => openTaskEditor(row)}
+                                onRowClick={(row: TaskListItem) => openTaskProgress(row)}
                             />
                         </div>
                     )}

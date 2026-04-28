@@ -17,7 +17,7 @@ interface SegmentedControlProps {
   onClear?: () => void;
   label?: string;
   className?: string;
-  size?: 'default' | 'sm';
+  size?: 'default' | 'sm' | 'xs';
   fill?: boolean;
   allowDeselect?: boolean;
   showClearOnSelected?: boolean;
@@ -49,6 +49,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
     sm: {
       wrapper: 'h-8 rounded-xl p-0.5',
       button: 'rounded-[9px] px-3 py-1 text-[12px] font-semibold sm:px-4',
+    },
+    xs: {
+      wrapper: 'h-7 rounded-lg p-0.5',
+      button: 'rounded-md px-2.5 text-[11px] font-semibold',
     },
   };
 

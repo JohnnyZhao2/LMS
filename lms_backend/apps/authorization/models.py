@@ -75,8 +75,8 @@ class UserPermissionOverride(TimestampMixin, models.Model):
     applies_to_role = models.CharField(
         max_length=20,
         choices=Role.ROLE_CHOICES,
-        null=True,
         blank=True,
+        default='',
         db_index=True,
         verbose_name='生效角色',
     )
@@ -100,6 +100,12 @@ class UserPermissionOverride(TimestampMixin, models.Model):
         indexes = [
             models.Index(fields=['user', 'permission'], name='user_perm_override_u_p_idx'),
             models.Index(fields=['user', 'applies_to_role'], name='user_perm_override_u_r_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'permission', 'applies_to_role'],
+                name='uniq_user_perm_override_role',
+            ),
         ]
 
     def __str__(self):

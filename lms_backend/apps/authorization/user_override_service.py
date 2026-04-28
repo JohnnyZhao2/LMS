@@ -348,7 +348,7 @@ class UserOverrideServiceMixin:
                 message='配置管理模块不在用户授权范围内，请通过超管入口配置',
             )
 
-        normalized_applies_to_role = applies_to_role or None
+        normalized_applies_to_role = applies_to_role or ''
         if normalized_applies_to_role == 'STUDENT':
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,

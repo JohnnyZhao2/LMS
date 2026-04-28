@@ -123,6 +123,10 @@ class UserPermissionOverrideSerializer(serializers.ModelSerializer):
     permission_code = serializers.CharField(source='permission.code', read_only=True)
     permission_name = serializers.CharField(source='permission.name', read_only=True)
     granted_by_name = serializers.CharField(source='granted_by.username', read_only=True, allow_null=True)
+    applies_to_role = serializers.SerializerMethodField()
+
+    def get_applies_to_role(self, obj: UserPermissionOverride):
+        return obj.applies_to_role or None
 
     class Meta:
         model = UserPermissionOverride
@@ -192,4 +196,3 @@ class UserScopeGroupOverrideSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-

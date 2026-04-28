@@ -121,12 +121,14 @@ const TaskDetailRoutePage = () => {
   const { hasCapability } = useAuth();
   const normalizedRole = normalizeRoleCode(role);
 
-  if (normalizedRole === 'STUDENT' || !hasCapability('task.update')) {
+  const canOpenTaskPreview = hasCapability('task.update') || hasCapability('task.analytics.view') || hasCapability('grading.view');
+
+  if (normalizedRole === 'STUDENT' || !canOpenTaskPreview) {
     return <TaskDetail />;
   }
 
   const rolePrefix = getRolePathPrefix(normalizedRole);
-  return <Navigate to={`${rolePrefix}/tasks/${id}/edit`} replace />;
+  return <Navigate to={`${rolePrefix}/tasks/${id}/preview?tab=progress&entry=task-management`} replace />;
 };
 
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [

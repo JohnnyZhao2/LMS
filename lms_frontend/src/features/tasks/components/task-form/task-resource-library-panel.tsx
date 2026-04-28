@@ -102,8 +102,8 @@ export function TaskResourceLibraryPanel({
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 pl-4 pr-0 pb-3">
-          <ScrollContainer className="h-full overflow-y-auto pr-4">
+        <div className="min-h-0 flex-1 px-4 pb-3">
+          <ScrollContainer className="-mr-4 h-full overflow-x-hidden overflow-y-auto pr-[10px]">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: pageSize }).map((_, index) => (
