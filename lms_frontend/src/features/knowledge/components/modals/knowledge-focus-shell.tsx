@@ -89,7 +89,6 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
       <ScrollContainer className="kfs-editor-area">
         <div className="kfs-editor-inner">
           <SlashQuillEditor
-            key={readOnly ? 'readonly' : 'editable'}
             value={content}
             onChange={onContentChange}
             placeholder="键入 / 调出快捷指令"

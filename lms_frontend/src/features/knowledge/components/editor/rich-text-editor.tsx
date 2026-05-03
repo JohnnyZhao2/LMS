@@ -1,7 +1,7 @@
 import 'quill/dist/quill.bubble.css';
 import '../shared/knowledge-editor-shared.css';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Quill from 'quill';
 
 import { cn } from '@/lib/utils';
@@ -31,6 +31,9 @@ type ToolbarFormatState = {
 type BlockEmbedCtor = new (...args: never[]) => object;
 type QuillLine = Exclude<ReturnType<Quill['getLine']>[0], null>;
 type QuillLineLike = QuillLine & { length: () => number };
+type DocumentWithCaretRange = Document & {
+  caretRangeFromPoint?: (x: number, y: number) => globalThis.Range | null;
+};
 
 const EMPTY_HTML = '<p><br></p>';
 const BlockEmbed = Quill.import('blots/block/embed') as BlockEmbedCtor;
@@ -81,6 +84,21 @@ function getTextThroughIndex(quill: Quill, index: number): string {
 function getEditorHtml(quill: Quill): string {
   if (quill.getLength() <= 1) return '';
   return quill.getSemanticHTML();
+}
+
+function getRangeFromPoint(quill: Quill, clientX: number, clientY: number): RangeState | null {
+  const nativeRange = (document as DocumentWithCaretRange).caretRangeFromPoint?.(clientX, clientY);
+  if (!nativeRange || !quill.root.contains(nativeRange.startContainer)) {
+    return null;
+  }
+
+  const normalized = quill.selection.normalizeNative(nativeRange);
+  if (!normalized) {
+    return null;
+  }
+
+  const range = quill.selection.normalizedToRange(normalized);
+  return { index: range.index, length: 0 };
 }
 
 function applyShortcutToQuill(quill: Quill, shortcutId: SlashShortcutId, trigger: SlashTrigger) {
@@ -160,7 +178,12 @@ interface SlashQuillEditorProps {
   enableSelectionToolbar?: boolean;
 }
 
-export function SlashQuillEditor({
+export interface SlashQuillEditorHandle {
+  focus: () => void;
+  focusAtPoint: (clientX: number, clientY: number) => boolean;
+}
+
+export const SlashQuillEditor = forwardRef<SlashQuillEditorHandle, SlashQuillEditorProps>(function SlashQuillEditor({
   value,
   onChange,
   placeholder = '键入 / 调出快捷指令',
@@ -174,7 +197,7 @@ export function SlashQuillEditor({
   readOnly = false,
   enableSlashMenu = true,
   enableSelectionToolbar = true,
-}: SlashQuillEditorProps) {
+}, ref) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -187,6 +210,10 @@ export function SlashQuillEditor({
   const onFocusRef = useRef(onFocus);
   const onBlurRef = useRef(onBlur);
   const readOnlyRef = useRef(readOnly);
+  const autoFocusRef = useRef(autoFocus);
+  const placeholderRef = useRef(placeholder);
+  const placeholderModeRef = useRef(placeholderMode);
+  const placeholderWrapRef = useRef(placeholderWrap);
   const enableSlashMenuRef = useRef(enableSlashMenu);
   const enableSelectionToolbarRef = useRef(enableSelectionToolbar);
   const slashTriggerRef = useRef<SlashTrigger | null>(null);
@@ -237,9 +264,33 @@ export function SlashQuillEditor({
     onBlurRef.current = onBlur;
   }, [onBlur]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     readOnlyRef.current = readOnly;
+    const quill = quillRef.current;
+    if (!quill) return;
+    quill.enable(!readOnly);
+    if (readOnly) {
+      setSlashTrigger(null);
+      setInlinePlaceholderVisible(false);
+      setToolbarVisible(false);
+    }
   }, [readOnly]);
+
+  useEffect(() => {
+    autoFocusRef.current = autoFocus;
+  }, [autoFocus]);
+
+  useEffect(() => {
+    placeholderRef.current = placeholder;
+  }, [placeholder]);
+
+  useEffect(() => {
+    placeholderModeRef.current = placeholderMode;
+  }, [placeholderMode]);
+
+  useEffect(() => {
+    placeholderWrapRef.current = placeholderWrap;
+  }, [placeholderWrap]);
 
   useEffect(() => {
     enableSlashMenuRef.current = enableSlashMenu;
@@ -255,7 +306,7 @@ export function SlashQuillEditor({
     const quill = new Quill(editorRef.current, {
       theme: 'bubble',
       placeholder: '',
-      readOnly,
+      readOnly: readOnlyRef.current,
       modules: {
         toolbar: false,
         keyboard: {
@@ -272,7 +323,7 @@ export function SlashQuillEditor({
       quill.clipboard.dangerouslyPasteHTML(lastValueRef.current);
     }
 
-    if (autoFocus && !readOnly) {
+    if (autoFocusRef.current && !readOnlyRef.current) {
       quill.focus();
     }
 
@@ -329,17 +380,20 @@ export function SlashQuillEditor({
       }
 
       const caretBounds = quill.getBounds(selection.index);
+      const currentPlaceholder = placeholderRef.current;
+      const currentPlaceholderMode = placeholderModeRef.current;
+      const currentPlaceholderWrap = placeholderWrapRef.current;
       if (
-        placeholder &&
+        currentPlaceholder &&
         caretBounds &&
         (
-          placeholderMode === 'empty-only'
+          currentPlaceholderMode === 'empty-only'
             ? quill.getText().trim().length === 0
             : isCurrentLineEmpty(quill, selection)
         )
       ) {
         setInlinePlaceholderPosition({
-          top: placeholderWrap ? caretBounds.top : caretBounds.top + (caretBounds.height / 2),
+          top: currentPlaceholderWrap ? caretBounds.top : caretBounds.top + (caretBounds.height / 2),
           left: caretBounds.left + 8,
         });
         setInlinePlaceholderVisible(true);
@@ -494,7 +548,7 @@ export function SlashQuillEditor({
       }
       quillRef.current = null;
     };
-  }, [autoFocus, placeholder, placeholderMode, placeholderWrap, readOnly]);
+  }, []);
 
   useEffect(() => {
     const quill = quillRef.current;
@@ -524,6 +578,24 @@ export function SlashQuillEditor({
 
     quill.focus();
   }, [autoFocus, readOnly]);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      quillRef.current?.focus({ preventScroll: true });
+    },
+    focusAtPoint: (clientX, clientY) => {
+      const quill = quillRef.current;
+      if (!quill) return false;
+
+      quill.focus({ preventScroll: true });
+      const range = getRangeFromPoint(quill, clientX, clientY);
+      if (!range) return false;
+
+      quill.setSelection(range.index, range.length, Quill.sources.USER);
+      selectionRef.current = range;
+      return true;
+    },
+  }), []);
 
   const restoreSelection = () => {
     const quill = quillRef.current;
@@ -610,7 +682,7 @@ export function SlashQuillEditor({
             left: inlinePlaceholderPosition.left,
           }}
         >
-          {placeholder}
+          {placeholderRef.current}
         </span>
       )}
       {enableSlashMenu && slashTrigger && (
@@ -634,4 +706,4 @@ export function SlashQuillEditor({
       )}
     </div>
   );
-}
+});

@@ -21,7 +21,7 @@ import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { KnowledgeActionButton } from '../shared/knowledge-action-button';
-import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { SlashQuillEditor, type SlashQuillEditorHandle } from '../editor/rich-text-editor';
 import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
@@ -43,43 +43,6 @@ function relTime(dateStr: string): string {
   if (d === 1) return '昨天';
   if (d < 30) return `${d} 天前`;
   return `${Math.floor(d / 30)} 个月前`;
-}
-
-function placeCaretAtPoint(container: HTMLElement, clientX: number, clientY: number) {
-  const selection = window.getSelection();
-  if (!selection) return;
-
-  const docWithCaret = document as Document & {
-    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
-    caretRangeFromPoint?: (x: number, y: number) => Range | null;
-  };
-
-  if (docWithCaret.caretPositionFromPoint) {
-    const position = docWithCaret.caretPositionFromPoint(clientX, clientY);
-    if (position && container.contains(position.offsetNode)) {
-      const range = document.createRange();
-      range.setStart(position.offsetNode, position.offset);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
-  }
-
-  if (docWithCaret.caretRangeFromPoint) {
-    const range = docWithCaret.caretRangeFromPoint(clientX, clientY);
-    if (range && container.contains(range.startContainer)) {
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
-  }
-
-  const fallbackRange = document.createRange();
-  fallbackRange.selectNodeContents(container);
-  fallbackRange.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(fallbackRange);
 }
 
 function hasSameTagIds(left: { id: number }[], right: { id: number }[]) {
@@ -230,7 +193,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
-  const knowledgeContentShellRef = useRef<HTMLDivElement | null>(null);
+  const knowledgeEditorRef = useRef<SlashQuillEditorHandle | null>(null);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
   const [editingLinks, setEditingLinks] = useState(false);
 
@@ -914,30 +877,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <ScrollContainer className="kd-left">
               <div
-                ref={(node) => {
-                  knowledgeContentShellRef.current = node;
-                }}
-                onMouseDownCapture={() => {
+                onMouseDownCapture={(event) => {
                   if (!editing && canUpdateKnowledge) {
-                    const event = window.event as MouseEvent | undefined;
-                    const point = event ? { x: event.clientX, y: event.clientY } : null;
+                    const point = { x: event.clientX, y: event.clientY };
+                    event.preventDefault();
                     flushSync(() => {
                       setEditing(true);
                     });
                     window.requestAnimationFrame(() => {
-                      const editorRoot = knowledgeContentShellRef.current?.querySelector('.ql-editor') as HTMLElement | null;
-                      if (!editorRoot) return;
-                      editorRoot.focus();
-                      if (point) {
-                        placeCaretAtPoint(editorRoot, point.x, point.y);
-                      }
+                      knowledgeEditorRef.current?.focusAtPoint(point.x, point.y);
                     });
                   }
                 }}
                 style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
               >
                 <SlashQuillEditor
-                  key={editing ? 'editable' : 'readonly'}
+                  ref={knowledgeEditorRef}
                   value={activeContent}
                   onChange={handleContentChange}
                   onBlur={handleContentBlur}
