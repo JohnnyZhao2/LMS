@@ -153,8 +153,8 @@ class TestDocxParser:
             # 列表项应该被合并
             assert '<ul><li>列表项1</li><li>列表项2</li></ul>' in content
 
-    def test_parse_docx_empty_paragraphs_skipped(self, parser_service):
-        """测试空段落被跳过"""
+    def test_parse_docx_empty_paragraphs_preserved(self, parser_service):
+        """测试空段落会保留为编辑器空行"""
         with patch('docx.Document') as mock_document_class:
             mock_para1 = MagicMock()
             mock_para1.text = ''
@@ -181,7 +181,7 @@ class TestDocxParser:
             title, content = parser_service._parse_docx(file)
 
             assert '<p>有效内容</p>' in content
-            assert content.count('<p>') == 1  # 只有一个段落
+            assert content == '<p><br></p>\n<p><br></p>\n<p>有效内容</p>'
 
 
 class TestPptxParser:
@@ -224,7 +224,7 @@ class TestPptxParser:
             mock_shape1.text = '标题'
 
             mock_shape2 = MagicMock()
-            mock_shape2.text = '第一行\n第二行\n第三行'
+            mock_shape2.text = '第一行\n\n第三行'
 
             mock_slide = MagicMock()
             mock_slide.shapes = [mock_shape1, mock_shape2]
@@ -242,7 +242,7 @@ class TestPptxParser:
             title, content = parser_service._parse_pptx(file)
 
             assert '<p>第一行</p>' in content
-            assert '<p>第二行</p>' in content
+            assert '<p><br></p>' in content
             assert '<p>第三行</p>' in content
 
 

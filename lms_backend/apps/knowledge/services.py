@@ -194,6 +194,7 @@ class DocumentParserService:
         for para in doc.paragraphs:
             text = para.text.strip()
             if not text:
+                html_parts.append('<p><br></p>')
                 continue
             style_name = para.style.name if para.style else ''
             if style_name.startswith('Heading'):
@@ -240,6 +241,8 @@ class DocumentParserService:
                         line = line.strip()
                         if line:
                             html_parts.append(f'<p>{escape(line)}</p>')
+                        else:
+                            html_parts.append('<p><br></p>')
 
         return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
 
@@ -261,6 +264,8 @@ class DocumentParserService:
                         line = line.strip()
                         if line:
                             html_parts.append(f'<p>{escape(line)}</p>')
+                        else:
+                            html_parts.append('<p><br></p>')
         return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
 
     def _merge_consecutive_lists(self, html: str) -> str:
