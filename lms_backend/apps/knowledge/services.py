@@ -168,6 +168,13 @@ class DocumentParserService:
 
     SUPPORTED_EXTENSIONS = {'.docx', '.pptx', '.pdf'}
     MAX_FILE_SIZE = 10 * 1024 * 1024
+    DOCX_HEADING_STYLE_PATTERNS = (
+        re.compile(r'^Heading\s*(\d+)$', re.IGNORECASE),
+        re.compile(r'^标题\s*(\d+)$'),
+    )
+    DOCX_DECIMAL_HEADING_PATTERN = re.compile(r'^\s*(\d+(?:[.．]\d+)+)\s*\S+')
+    DOCX_TITLE_STYLES = {'Title', '标题'}
+    DOCX_SUBTITLE_STYLES = {'Subtitle', '副标题'}
 
     def parse(self, file) -> Tuple[str, str]:
         if file.size > self.MAX_FILE_SIZE:
@@ -197,13 +204,12 @@ class DocumentParserService:
                 html_parts.append('<p><br></p>')
                 continue
             style_name = para.style.name if para.style else ''
-            if style_name.startswith('Heading'):
-                level_match = re.search(r'\d+', style_name)
-                level = int(level_match.group()) if level_match else 1
-                level = min(level, 6)
-                if title is None and level == 1:
+            heading_level = self._resolve_docx_heading_level(para, text)
+            if heading_level:
+                if title is None and heading_level == 1:
                     title = text
-                html_parts.append(f'<h{level}>{escape(text)}</h{level}>')
+                content_level = self._resolve_docx_content_heading_level(heading_level)
+                html_parts.append(f'<h{content_level}>{escape(text)}</h{content_level}>')
             elif style_name == 'List Bullet':
                 html_parts.append(f'<ul><li>{escape(text)}</li></ul>')
             elif style_name == 'List Number':
@@ -214,6 +220,67 @@ class DocumentParserService:
         content = '\n'.join(html_parts)
         content = self._merge_consecutive_lists(content)
         return title or self._extract_title_from_filename(file.name), content
+
+    def _resolve_docx_heading_level(self, para, text: str) -> Optional[int]:
+        style_name = para.style.name if para.style else ''
+
+        numbered_level = self._resolve_docx_numbered_heading_level(text)
+        if numbered_level:
+            return numbered_level
+
+        style_level = self._resolve_docx_style_heading_level(style_name)
+        if style_level:
+            return style_level
+
+        outline_level = self._resolve_docx_outline_level(para)
+        if outline_level:
+            return outline_level
+
+        return None
+
+    def _resolve_docx_numbered_heading_level(self, text: str) -> Optional[int]:
+        level_match = self.DOCX_DECIMAL_HEADING_PATTERN.match(text.strip())
+        if not level_match:
+            return None
+
+        section_number = level_match.group(1).replace('．', '.')
+        return min(section_number.count('.') + 1, 6)
+
+    def _resolve_docx_content_heading_level(self, heading_level: int) -> int:
+        return min(heading_level + 1, 6)
+
+    def _resolve_docx_style_heading_level(self, style_name: str) -> Optional[int]:
+        normalized_style_name = style_name.strip()
+        if normalized_style_name in self.DOCX_TITLE_STYLES:
+            return 1
+        if normalized_style_name in self.DOCX_SUBTITLE_STYLES:
+            return 2
+
+        for pattern in self.DOCX_HEADING_STYLE_PATTERNS:
+            level_match = pattern.match(normalized_style_name)
+            if level_match:
+                return int(level_match.group(1))
+        return None
+
+    def _resolve_docx_outline_level(self, para) -> Optional[int]:
+        direct_level = self._read_docx_outline_level_value(getattr(getattr(para, '_p', None), 'pPr', None))
+        if direct_level:
+            return direct_level
+
+        style_element = getattr(getattr(para, 'style', None), 'element', None)
+        return self._read_docx_outline_level_value(getattr(style_element, 'pPr', None))
+
+    def _read_docx_outline_level_value(self, ppr) -> Optional[int]:
+        outline_level = getattr(ppr, 'outlineLvl', None)
+        if outline_level is None:
+            return None
+
+        raw_value = outline_level.val
+        if isinstance(raw_value, int):
+            return raw_value + 1
+        if isinstance(raw_value, str) and raw_value.isdigit():
+            return int(raw_value) + 1
+        return None
 
     def _parse_pptx(self, file) -> Tuple[str, str]:
         from pptx import Presentation

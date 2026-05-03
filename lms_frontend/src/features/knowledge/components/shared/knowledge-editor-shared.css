@@ -41,13 +41,16 @@
 .ke-content-base .ql-editor hr{margin:12px 0 18px;border:none;border-top:1px solid rgba(148,163,184,.45)}
 .ke-content-base .ql-editor a{color:#2563eb;text-decoration:underline;text-decoration-color:rgba(37,99,235,.35)}
 
-.ke-content-detail .ql-editor{min-height:300px;height:auto;overflow-y:visible;color:#333;font-size:16px;line-height:1.68}
+.ke-content-detail .ql-editor{--ke-content-block-gap:14px;--ke-content-heading-gap-before:18px;--ke-content-heading-gap-after:10px;min-height:300px;height:auto;overflow-y:visible;color:#333;font-size:16px;line-height:1.76}
 .ke-content-detail .ql-editor[contenteditable="false"]{cursor:inherit}
 .ke-content-detail .ql-editor.ql-blank::before{left:0;right:0;display:block;color:#9aa0aa;font-size:14px;font-style:normal}
-.ke-content-detail .ql-editor h1{margin:0 0 28px;color:#111;text-align:center;font-size:32px;font-weight:600;line-height:1.2;letter-spacing:-.02em}
-.ke-content-detail .ql-editor h2{margin:32px 0 18px;color:#111;font-size:24px;font-weight:600;line-height:1.3;letter-spacing:-.02em}
-.ke-content-detail .ql-editor h3{margin:28px 0 14px;color:#222;font-size:17px;font-weight:600}
-.ke-content-detail .ql-editor p{margin:0 0 4px;color:#333;font-size:16px;line-height:1.68}
+.ke-content-detail .ql-editor h1{margin:var(--ke-content-heading-gap-before) 0 var(--ke-content-heading-gap-after);color:#111;text-align:center;font-size:32px;font-weight:600;line-height:1.2;letter-spacing:-.02em}
+.ke-content-detail .ql-editor h2{margin:var(--ke-content-heading-gap-before) 0 var(--ke-content-heading-gap-after);color:#111;font-size:20px;font-weight:600;line-height:1.35;letter-spacing:0}
+.ke-content-detail .ql-editor h3{margin:var(--ke-content-heading-gap-before) 0 var(--ke-content-heading-gap-after);color:#222;font-size:18px;font-weight:600;line-height:1.45}
+.ke-content-detail .ql-editor :is(h4,h5,h6){margin:var(--ke-content-heading-gap-before) 0 var(--ke-content-heading-gap-after);color:#222;font-size:16px;font-weight:600;line-height:1.55}
+.ke-content-detail .ql-editor :is(h1,h2,h3,h4,h5,h6):first-child{margin-top:0}
+.ke-content-detail .ql-editor p{margin:0;color:#333;font-size:16px;line-height:1.76}
+.ke-content-detail .ql-editor p:has(> br:only-child){min-height:var(--ke-content-block-gap);line-height:var(--ke-content-block-gap)}
 .ke-content-detail .ql-editor :is(ul,ol){margin:8px 0 12px;padding-left:24px}
 .ke-content-detail .ql-editor li{margin-bottom:4px;color:#444;font-size:15px;line-height:1.65}
 .ke-content-detail .ql-editor strong{color:#111;font-weight:700}

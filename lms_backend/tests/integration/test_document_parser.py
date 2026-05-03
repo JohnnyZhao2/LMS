@@ -124,8 +124,85 @@ class TestDocxParser:
             title, content = parser_service._parse_docx(file)
 
             assert title == '文档标题'
-            assert '<h1>文档标题</h1>' in content
+            assert '<h2>文档标题</h2>' in content
             assert '<p>正文内容</p>' in content
+
+    def test_parse_docx_with_chinese_heading_styles(self, parser_service):
+        """测试解析中文标题样式"""
+        with patch('docx.Document') as mock_document_class:
+            mock_para1 = MagicMock()
+            mock_para1.text = '一级标题'
+            mock_para1.style.name = '标题 1'
+            mock_para1.runs = []
+
+            mock_para2 = MagicMock()
+            mock_para2.text = '二级标题'
+            mock_para2.style.name = '标题 2'
+            mock_para2.runs = []
+
+            mock_doc = MagicMock()
+            mock_doc.paragraphs = [mock_para1, mock_para2]
+            mock_document_class.return_value = mock_doc
+
+            file = SimpleUploadedFile(
+                name='chinese-heading.docx',
+                content=b'fake docx content',
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+
+            title, content = parser_service._parse_docx(file)
+
+            assert title == '一级标题'
+            assert '<h2>一级标题</h2>' in content
+            assert '<h3>二级标题</h3>' in content
+
+    def test_parse_docx_with_outline_level(self, parser_service):
+        """测试解析 Word 大纲级别"""
+        mock_para = MagicMock()
+        mock_para.text = '大纲子标题'
+        mock_para.style.name = 'Normal'
+        mock_para.runs = []
+        mock_para._p.pPr.outlineLvl.val = '1'
+
+        level = parser_service._resolve_docx_heading_level(mock_para, mock_para.text)
+
+        assert level == 2
+
+    def test_parse_docx_numbered_heading_overrides_top_level_style(self, parser_service):
+        """测试多级编号标题不会被样式误判为一级标题"""
+        mock_para = MagicMock()
+        mock_para.text = '1.2.3 权限审批'
+        mock_para.style.name = 'Heading 1'
+        mock_para.runs = []
+        mock_para._p.pPr.outlineLvl.val = '0'
+
+        level = parser_service._resolve_docx_heading_level(mock_para, mock_para.text)
+
+        assert level == 3
+
+    def test_parse_docx_content_heading_starts_from_h2(self, parser_service):
+        """测试正文标题不输出 h1"""
+        assert parser_service._resolve_docx_content_heading_level(1) == 2
+        assert parser_service._resolve_docx_content_heading_level(2) == 3
+        assert parser_service._resolve_docx_content_heading_level(6) == 6
+
+    def test_parse_docx_does_not_guess_visual_heading(self, parser_service):
+        """测试不靠字号加粗猜标题"""
+        mock_run = MagicMock()
+        mock_run.text = '强调内容'
+        mock_run.bold = True
+        mock_run.font.size.pt = 18
+        mock_run.font.bold = True
+
+        mock_para = MagicMock()
+        mock_para.text = '强调内容'
+        mock_para.style.name = 'Normal'
+        mock_para.runs = [mock_run]
+        mock_para._p.pPr.outlineLvl = None
+
+        level = parser_service._resolve_docx_heading_level(mock_para, mock_para.text)
+
+        assert level is None
 
     def test_parse_docx_with_list(self, parser_service):
         """测试解析带列表的 Word 文档"""
