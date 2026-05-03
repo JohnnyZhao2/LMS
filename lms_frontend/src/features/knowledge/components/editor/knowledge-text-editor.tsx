@@ -42,7 +42,7 @@ type DocumentWithCaretRange = Document & {
 const EMPTY_HTML = '<p><br></p>';
 const MENU_LEFT = 16;
 const ORDERED_LIST_TRIGGER_TEXT = '1.';
-const TEXT_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,blockquote,li';
+const TEXT_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,blockquote,li,div';
 
 function hasMeaningfulDomContent(root: HTMLElement) {
   return root.textContent?.trim() || root.querySelector('hr,img,pre,blockquote,ol,ul');
@@ -57,6 +57,14 @@ function setRootHtml(root: HTMLElement, html: string) {
 }
 
 function getTextRange(root: Node, start: number, end: number) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    const range = document.createRange();
+    const textLength = root.textContent?.length ?? 0;
+    range.setStart(root, Math.max(0, Math.min(start, textLength)));
+    range.setEnd(root, Math.max(0, Math.min(end, textLength)));
+    return range;
+  }
+
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
   let offset = 0;
@@ -157,10 +165,28 @@ function getElementFromNode(node: Node) {
   return node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
 }
 
+function getRangeStartNode(root: HTMLElement, range: Range) {
+  if (range.startContainer !== root) return range.startContainer;
+
+  const previousNode = root.childNodes.item(Math.max(0, range.startOffset - 1));
+  const nextNode = root.childNodes.item(range.startOffset);
+  return previousNode || nextNode || root;
+}
+
+function getDirectEditorChild(root: HTMLElement, node: Node) {
+  let current: Node | null = node;
+  while (current && current.parentNode && current.parentNode !== root) {
+    current = current.parentNode;
+  }
+  return current && current !== root && root.contains(current) ? current : root;
+}
+
 function getCaretTextBlock(root: HTMLElement, range: Range) {
-  const block = getElementFromNode(range.startContainer)?.closest(TEXT_BLOCK_SELECTOR);
-  if (!block || !root.contains(block)) return root;
-  return block;
+  const startNode = getRangeStartNode(root, range);
+  const block = getElementFromNode(startNode)?.closest(TEXT_BLOCK_SELECTOR);
+  if (block && block !== root && root.contains(block)) return block;
+
+  return getDirectEditorChild(root, startNode);
 }
 
 function getTextBeforeRangeInBlock(block: Node, range: Range) {
