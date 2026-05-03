@@ -7,7 +7,7 @@ from apps.knowledge.services import KnowledgeService, ensure_knowledge_revision
 from apps.questions.models import Question
 from apps.quizzes.models import QuizQuestion, QuizRevision
 from apps.quizzes.services import QuizService, ensure_quiz_revision
-from apps.tasks.tests.factories import TaskFactory, TaskKnowledgeFactory, UserFactory
+from apps.tasks.tests.factories import TaskFactory, TaskKnowledgeFactory, TaskQuizFactory, UserFactory
 from apps.users.models import Role, UserRole
 
 
@@ -218,3 +218,25 @@ def test_delete_quiz_removes_inline_bank_question_when_no_execution_snapshot_is_
 
     assert not Question.objects.filter(id=created_question_id).exists()
     assert not QuizRevision.objects.filter(source_quiz_id=quiz.id).exists()
+
+
+@pytest.mark.django_db
+def test_quiz_list_total_score_is_not_multiplied_by_task_bindings():
+    user = UserFactory()
+    service = QuizService(build_request(user))
+    quiz = service.create(
+        {'title': '试卷 A', 'quiz_type': 'PRACTICE'},
+        questions=[
+            build_choice_payload(content='题目 A', score='2'),
+            build_choice_payload(content='题目 B', score='3'),
+        ],
+    )
+    revision = ensure_quiz_revision(quiz, actor=user)
+    TaskQuizFactory(task=TaskFactory(created_by=user, updated_by=user), quiz=revision, source_quiz=quiz)
+    TaskQuizFactory(task=TaskFactory(created_by=user, updated_by=user), quiz=revision, source_quiz=quiz)
+
+    [item] = service.get_list(search='试卷 A')
+
+    assert item.question_count_value == 2
+    assert item.total_score_value == 5
+    assert item.usage_count_value == 2

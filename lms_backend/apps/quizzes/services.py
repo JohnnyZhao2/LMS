@@ -9,7 +9,7 @@ from typing import Any, List
 
 from apps.activity_logs.decorators import log_content_action
 from django.db import transaction
-from django.db.models import Count, DecimalField, Sum, Value
+from django.db.models import Count, DecimalField, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 
 from apps.authorization.engine import scope_filter
@@ -138,21 +138,36 @@ class QuizService(BaseService):
         limit: int = None,
         offset: int = None,
     ) -> List[Quiz]:
+        from apps.tasks.models import TaskQuiz
+
+        score_field = DecimalField(max_digits=10, decimal_places=2)
+        question_stats = QuizQuestion.objects.filter(quiz_id=OuterRef('pk')).values('quiz_id').annotate(
+            question_count=Count('id'),
+            total_score=Sum('score', output_field=score_field),
+        )
+        usage_stats = TaskQuiz.objects.filter(source_quiz_id=OuterRef('pk')).values('source_quiz_id').annotate(
+            usage_count=Count('task_id', distinct=True),
+        )
         qs = scope_filter(
             'quiz.view',
             self.request,
             base_queryset=Quiz.objects.select_related('created_by', 'updated_by'),
         ).annotate(
-            question_count_value=Count('quiz_questions', distinct=True),
-            total_score_value=Coalesce(
-                Sum(
-                    'quiz_questions__score',
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
+            question_count_value=Coalesce(
+                Subquery(question_stats.values('question_count')[:1], output_field=IntegerField()),
                 Value(0),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
+                output_field=IntegerField(),
             ),
-            usage_count_value=Count('task_bindings__task_id', distinct=True),
+            total_score_value=Coalesce(
+                Subquery(question_stats.values('total_score')[:1], output_field=score_field),
+                Value(Decimal('0')),
+                output_field=score_field,
+            ),
+            usage_count_value=Coalesce(
+                Subquery(usage_stats.values('usage_count')[:1], output_field=IntegerField()),
+                Value(0),
+                output_field=IntegerField(),
+            ),
         )
         if filters:
             if filters.get('created_by_id'):
