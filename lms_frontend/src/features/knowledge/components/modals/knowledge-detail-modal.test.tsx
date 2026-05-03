@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -201,6 +201,26 @@ describe('KnowledgeDetailModal', () => {
       });
     });
     expect(onUpdated).toHaveBeenCalled();
+  });
+
+  it('首次按住正文进入编辑时不阻断原生选区', () => {
+    useAuthMock.mockReturnValue({
+      currentRole: 'ADMIN',
+      hasCapability: vi.fn((permissionCode: string) => permissionCode.startsWith('knowledge.')),
+    });
+
+    render(
+      <KnowledgeDetailModal
+        knowledgeId={1}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const editor = screen.getByLabelText('knowledge-editor') as HTMLTextAreaElement;
+
+    expect(editor.readOnly).toBe(true);
+    expect(fireEvent.mouseDown(editor, { button: 0 })).toBe(true);
+    expect((screen.getByLabelText('knowledge-editor') as HTMLTextAreaElement).readOnly).toBe(false);
   });
 
   it('学员点击标记已学习时会提交完成请求', async () => {

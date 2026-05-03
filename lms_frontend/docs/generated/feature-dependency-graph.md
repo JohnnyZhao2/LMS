@@ -28,7 +28,7 @@ flowchart LR
   features -->|44| session
   features -->|235| components
   features -->|3| hooks
-  features -->|119| lib
+  features -->|120| lib
   features -->|21| utils
   features -->|11| config
   features -->|80| types
@@ -68,7 +68,7 @@ flowchart LR
 | `features` | `session` | 44 |
 | `features` | `components` | 235 |
 | `features` | `hooks` | 3 |
-| `features` | `lib` | 119 |
+| `features` | `lib` | 120 |
 | `features` | `utils` | 21 |
 | `features` | `config` | 11 |
 | `features` | `types` | 80 |

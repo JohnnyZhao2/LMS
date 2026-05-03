@@ -21,7 +21,7 @@ import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { KnowledgeActionButton } from '../shared/knowledge-action-button';
-import { KnowledgeTextEditor, type KnowledgeTextEditorHandle } from '../editor/knowledge-text-editor';
+import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
 import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
@@ -193,7 +193,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
-  const knowledgeEditorRef = useRef<KnowledgeTextEditorHandle | null>(null);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
   const [editingLinks, setEditingLinks] = useState(false);
 
@@ -878,21 +877,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             <ScrollContainer className="kd-left">
               <div
                 onMouseDownCapture={(event) => {
-                  if (!editing && canUpdateKnowledge) {
-                    const point = { x: event.clientX, y: event.clientY };
-                    event.preventDefault();
+                  if (!editing && canUpdateKnowledge && event.button === 0) {
                     flushSync(() => {
                       setEditing(true);
-                    });
-                    window.requestAnimationFrame(() => {
-                      knowledgeEditorRef.current?.focusAtPoint(point.x, point.y);
                     });
                   }
                 }}
                 style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
               >
                 <KnowledgeTextEditor
-                  ref={knowledgeEditorRef}
                   value={activeContent}
                   onChange={handleContentChange}
                   onBlur={handleContentBlur}

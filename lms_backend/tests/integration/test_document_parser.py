@@ -95,6 +95,17 @@ class TestDocumentParserService:
         result_ol = parser_service._merge_consecutive_lists(html_ol)
         assert result_ol == '<ol><li>item1</li><li>item2</li></ol>'
 
+    def test_render_inline_ordered_list_blocks(self, parser_service):
+        """测试段内连续编号会拆成有序列表"""
+        result = parser_service._render_text_blocks(
+            '角色与权限控制： 1. 所有用户默认拥有普通学员角色； 2. 管理员可切换角色； 3. 超级管理员可见全平台入口。'
+        )
+
+        assert result == [
+            '<p>角色与权限控制：</p>',
+            '<ol><li>所有用户默认拥有普通学员角色</li><li>管理员可切换角色</li><li>超级管理员可见全平台入口。</li></ol>',
+        ]
+
 
 class TestDocxParser:
     """Word 文档解析测试"""
@@ -351,6 +362,30 @@ class TestPdfParser:
             assert '第 1 页' in content
             assert '<p>PDF标题</p>' in content
             assert '<p>正文内容第一行</p>' in content
+
+    def test_parse_pdf_with_numbered_lines(self, parser_service):
+        """测试 PDF 行首编号会解析为有序列表"""
+        with patch('pdfplumber.open') as mock_pdfplumber_open:
+            mock_page = MagicMock()
+            mock_page.extract_text.return_value = 'PDF标题\n1. 第一项\n2. 第二项'
+
+            mock_pdf = MagicMock()
+            mock_pdf.pages = [mock_page]
+            mock_pdf.__enter__ = MagicMock(return_value=mock_pdf)
+            mock_pdf.__exit__ = MagicMock(return_value=False)
+
+            mock_pdfplumber_open.return_value = mock_pdf
+
+            file = SimpleUploadedFile(
+                name='numbered.pdf',
+                content=b'fake pdf content',
+                content_type='application/pdf'
+            )
+
+            title, content = parser_service._parse_pdf(file)
+
+            assert title == 'PDF标题'
+            assert '<ol><li>第一项</li><li>第二项</li></ol>' in content
 
     def test_parse_pdf_multiple_pages(self, parser_service):
         """测试解析多页 PDF 文档"""

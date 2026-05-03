@@ -3,7 +3,8 @@ import {
   Link as LinkGlyph,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/knowledge';
-import { plain, isLong, bionicHtml } from '../../utils/content-utils';
+import { plain, isLong } from '../../utils/content-utils';
+import { KnowledgeContentRenderer } from '../shared/knowledge-content-renderer';
 import { FocusOrbIcon } from '../shared/focus-icon';
 
 interface KnowledgeCardMymindProps {
@@ -22,10 +23,6 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   const long = isLong(item.content);
   const text = plain(item.content);
   const short = !long && text.length < 80;
-  const previewClassName = [
-    'card-rich',
-    short ? 'card-rich--short' : 'card-rich--regular',
-  ].join(' ');
 
   const getSourceHost = React.useCallback((url?: string) => {
     if (!url) return '';
@@ -77,16 +74,17 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
         )}
 
         {/* 内容显示 */}
-        <div
-          className={previewClassName}
-          style={{
+        <KnowledgeContentRenderer
+          html={item.content}
+          variant="card"
+          compact={short}
+          contentStyle={{
             maxHeight: long ? 400 : undefined,
             overflow: 'hidden',
             display: '-webkit-box',
             WebkitLineClamp: long ? 15 : short ? 6 : 8,
             WebkitBoxOrient: 'vertical',
           }}
-          dangerouslySetInnerHTML={{ __html: bionicHtml(item.content) }}
         />
 
         {sourceHost && firstRelatedLink?.url && (

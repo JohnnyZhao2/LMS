@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：67 个
+- Feature 作用域视觉组件：68 个
 
 ## 共享组件
 
@@ -115,7 +115,7 @@
 
 - `src/features/grading/components/grading-center-page.tsx`
 
-### knowledge (13 个)
+### knowledge (14 个)
 
 #### components
 
@@ -131,6 +131,7 @@
 - `src/features/knowledge/components/modals/knowledge-focus-shell.tsx`
 - `src/features/knowledge/components/shared/focus-icon.tsx`
 - `src/features/knowledge/components/shared/knowledge-action-button.tsx`
+- `src/features/knowledge/components/shared/knowledge-content-renderer.tsx`
 - `src/features/knowledge/components/shared/related-links-editor.tsx`
 
 ### questions (4 个)

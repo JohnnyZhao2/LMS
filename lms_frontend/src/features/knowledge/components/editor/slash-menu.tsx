@@ -7,7 +7,7 @@ import {
 
 import { cn } from '@/lib/utils';
 
-import type { SlashShortcut, SlashShortcutId, SlashTrigger } from '../../utils/slash-shortcuts';
+import type { SlashShortcut, SlashShortcutId } from '../../utils/slash-shortcuts';
 
 const SLASH_SHORTCUT_META = {
   heading: { icon: Heading1, label: '标题' },
@@ -23,15 +23,13 @@ interface SlashCommandMenuProps {
     top: number;
     left: number;
   };
-  trigger: SlashTrigger;
-  onSelect: (shortcutId: SlashShortcutId, trigger: SlashTrigger) => void;
+  onSelect: (shortcutId: SlashShortcutId) => void;
 }
 
 export function SlashCommandMenu({
   activeIndex,
   items,
   position,
-  trigger,
   onSelect,
 }: SlashCommandMenuProps) {
   return (
@@ -54,7 +52,7 @@ export function SlashCommandMenu({
               className={cn('sqe-menu-item', index === activeIndex && 'sqe-menu-item-active')}
               onMouseDown={(event) => {
                 event.preventDefault();
-                onSelect(shortcut.id, trigger);
+                onSelect(shortcut.id);
               }}
             >
               <span className="sqe-menu-icon">

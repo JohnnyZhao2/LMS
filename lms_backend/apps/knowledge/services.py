@@ -173,6 +173,7 @@ class DocumentParserService:
         re.compile(r'^标题\s*(\d+)$'),
     )
     DOCX_DECIMAL_HEADING_PATTERN = re.compile(r'^\s*(\d+(?:[.．]\d+)+)\s*\S+')
+    INLINE_ORDERED_LIST_PATTERN = re.compile(r'(?<![\d.．])(\d+)[.．、]\s+')
     DOCX_TITLE_STYLES = {'Title', '标题'}
     DOCX_SUBTITLE_STYLES = {'Subtitle', '副标题'}
 
@@ -215,7 +216,7 @@ class DocumentParserService:
             elif style_name == 'List Number':
                 html_parts.append(f'<ol><li>{escape(text)}</li></ol>')
             else:
-                html_parts.append(f'<p>{escape(text)}</p>')
+                html_parts.extend(self._render_text_blocks(text))
 
         content = '\n'.join(html_parts)
         content = self._merge_consecutive_lists(content)
@@ -307,11 +308,13 @@ class DocumentParserService:
                     for line in text.split('\n'):
                         line = line.strip()
                         if line:
-                            html_parts.append(f'<p>{escape(line)}</p>')
+                            html_parts.extend(self._render_text_blocks(line))
                         else:
                             html_parts.append('<p><br></p>')
 
-        return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
+        content = '\n'.join(html_parts)
+        content = self._merge_consecutive_lists(content)
+        return title or self._extract_title_from_filename(file.name), content
 
     def _parse_pdf(self, file) -> Tuple[str, str]:
         import pdfplumber
@@ -330,10 +333,44 @@ class DocumentParserService:
                     for line in lines:
                         line = line.strip()
                         if line:
-                            html_parts.append(f'<p>{escape(line)}</p>')
+                            html_parts.extend(self._render_text_blocks(line))
                         else:
                             html_parts.append('<p><br></p>')
-        return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
+        content = '\n'.join(html_parts)
+        content = self._merge_consecutive_lists(content)
+        return title or self._extract_title_from_filename(file.name), content
+
+    def _render_text_blocks(self, text: str) -> list[str]:
+        inline_list = self._split_inline_ordered_list(text)
+        if not inline_list:
+            return [f'<p>{escape(text)}</p>']
+
+        prefix, items = inline_list
+        blocks = []
+        if prefix:
+            blocks.append(f'<p>{escape(prefix)}</p>')
+        blocks.append('<ol>' + ''.join(f'<li>{escape(item)}</li>' for item in items) + '</ol>')
+        return blocks
+
+    def _split_inline_ordered_list(self, text: str) -> Optional[tuple[str, list[str]]]:
+        matches = list(self.INLINE_ORDERED_LIST_PATTERN.finditer(text))
+        if not matches:
+            return None
+
+        first_match = matches[0]
+        prefix = text[:first_match.start()].strip()
+        if prefix and (first_match.group(1) != '1' or len(matches) == 1):
+            return None
+
+        items = []
+        for index, match in enumerate(matches):
+            next_match = matches[index + 1] if index + 1 < len(matches) else None
+            item = text[match.end():next_match.start() if next_match else len(text)].strip()
+            item = re.sub(r'[;；]\s*$', '', item).strip()
+            if item:
+                items.append(item)
+
+        return (prefix, items) if items else None
 
     def _merge_consecutive_lists(self, html: str) -> str:
         html = re.sub(r'</ul>\s*<ul>', '', html)

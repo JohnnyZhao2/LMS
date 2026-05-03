@@ -41,9 +41,11 @@ type DocumentWithCaretRange = Document & {
 
 const EMPTY_HTML = '<p><br></p>';
 const MENU_LEFT = 16;
+const ORDERED_LIST_TRIGGER_TEXT = '1.';
+const TEXT_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,blockquote,li';
 
 function hasMeaningfulDomContent(root: HTMLElement) {
-  return root.textContent?.trim() || root.querySelector('hr,img,pre,blockquote');
+  return root.textContent?.trim() || root.querySelector('hr,img,pre,blockquote,ol,ul');
 }
 
 function normalizeEditorHtml(root: HTMLElement) {
@@ -54,20 +56,7 @@ function setRootHtml(root: HTMLElement, html: string) {
   root.innerHTML = html || EMPTY_HTML;
 }
 
-function getTextBeforeCaret(root: HTMLElement) {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return '';
-
-  const range = selection.getRangeAt(0);
-  if (!root.contains(range.startContainer)) return '';
-
-  const prefixRange = range.cloneRange();
-  prefixRange.selectNodeContents(root);
-  prefixRange.setEnd(range.startContainer, range.startOffset);
-  return prefixRange.toString();
-}
-
-function getTextRange(root: HTMLElement, start: number, end: number) {
+function getTextRange(root: Node, start: number, end: number) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
   let offset = 0;
@@ -159,17 +148,56 @@ function insertHtmlAtSelection(html: string) {
   document.execCommand('insertHTML', false, html);
 }
 
-function removeTriggerText(root: HTMLElement, trigger: SlashTrigger) {
-  const triggerRange = getTextRange(root, trigger.start, trigger.end);
+function removeTriggerText(triggerRange: Range) {
   triggerRange.deleteContents();
-
-  const selection = window.getSelection();
-  selection?.removeAllRanges();
-  selection?.addRange(triggerRange);
+  restoreRange(triggerRange);
 }
 
-function applyShortcut(root: HTMLElement, shortcutId: SlashShortcutId, trigger: SlashTrigger) {
-  removeTriggerText(root, trigger);
+function getElementFromNode(node: Node) {
+  return node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+}
+
+function getCaretTextBlock(root: HTMLElement, range: Range) {
+  const block = getElementFromNode(range.startContainer)?.closest(TEXT_BLOCK_SELECTOR);
+  if (!block || !root.contains(block)) return root;
+  return block;
+}
+
+function getTextBeforeRangeInBlock(block: Node, range: Range) {
+  const prefixRange = range.cloneRange();
+  prefixRange.selectNodeContents(block);
+  prefixRange.setEnd(range.startContainer, range.startOffset);
+  return prefixRange.toString();
+}
+
+function getSlashTriggerRange(root: HTMLElement, range: Range): { trigger: SlashTrigger; range: Range } | null {
+  if (!range.collapsed) return null;
+
+  const block = getCaretTextBlock(root, range);
+  const textBeforeCaret = getTextBeforeRangeInBlock(block, range);
+  const trigger = detectSlashTrigger(textBeforeCaret, textBeforeCaret.length);
+  if (!trigger) return null;
+
+  return {
+    trigger,
+    range: getTextRange(block, trigger.start, trigger.end),
+  };
+}
+
+function getOrderedListTriggerRange(root: HTMLElement): Range | null {
+  const range = getSelectionRangeInside(root);
+  if (!range?.collapsed) return null;
+
+  const block = getCaretTextBlock(root, range);
+  const triggerRange = range.cloneRange();
+  triggerRange.selectNodeContents(block);
+  triggerRange.setEnd(range.startContainer, range.startOffset);
+
+  return triggerRange.toString() === ORDERED_LIST_TRIGGER_TEXT ? triggerRange : null;
+}
+
+function applyShortcut(shortcutId: SlashShortcutId, triggerRange: Range) {
+  removeTriggerText(triggerRange);
 
   switch (shortcutId) {
     case 'heading':
@@ -185,6 +213,12 @@ function applyShortcut(root: HTMLElement, shortcutId: SlashShortcutId, trigger: 
       insertHtmlAtSelection('<pre><code><br></code></pre><p><br></p>');
       break;
   }
+}
+
+function applyOrderedListTrigger(triggerRange: Range) {
+  triggerRange.deleteContents();
+  restoreRange(triggerRange);
+  execFormat('insertOrderedList');
 }
 
 interface KnowledgeTextEditorProps {
@@ -227,6 +261,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
   const editorRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
   const savedRangeRef = useRef<Range | null>(null);
+  const savedSlashTriggerRangeRef = useRef<Range | null>(null);
   const lastValueRef = useRef(value);
   const blurTimerRef = useRef<number | null>(null);
   const hasFocusWithinRef = useRef(false);
@@ -262,6 +297,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     const editor = editorRef.current;
     const shell = shellRef.current;
     if (!editor || !shell || readOnly) {
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       setToolbarVisible(false);
       return;
@@ -269,6 +305,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
 
     const range = getSelectionRangeInside(editor);
     if (!range) {
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       setToolbarVisible(false);
       return;
@@ -277,6 +314,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     savedRangeRef.current = range.cloneRange();
 
     if (!range.collapsed && enableSelectionToolbar) {
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       setToolbarFormats(getToolbarFormats(range));
       setToolbarPosition(getRangePosition(range, shell));
@@ -286,19 +324,21 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
 
     setToolbarVisible(false);
     if (!enableSlashMenu) {
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       return;
     }
 
-    const textBeforeCaret = getTextBeforeCaret(editor);
-    const trigger = detectSlashTrigger(textBeforeCaret, textBeforeCaret.length);
-    if (!trigger) {
+    const slashMatch = getSlashTriggerRange(editor, range);
+    if (!slashMatch) {
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       return;
     }
 
     const position = getRangePosition(range, shell);
-    setSlashTrigger(trigger);
+    savedSlashTriggerRangeRef.current = slashMatch.range.cloneRange();
+    setSlashTrigger(slashMatch.trigger);
     setActiveSlashIndex(0);
     setSlashMenuPosition({
       top: position.top + 56,
@@ -330,7 +370,10 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
 
   useEffect(() => {
     const handleSelectionChange = () => {
-      if (!hasFocusWithinRef.current) return;
+      const editor = editorRef.current;
+      if (!editor) return;
+      if (!hasFocusWithinRef.current && !getSelectionRangeInside(editor)) return;
+
       updateFloatingUi();
     };
 
@@ -372,17 +415,47 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     updateFloatingUi();
   };
 
-  const handleApplyShortcut = (shortcutId: SlashShortcutId, trigger: SlashTrigger) => {
+  const handleApplyShortcut = (shortcutId: SlashShortcutId) => {
     const editor = editorRef.current;
-    if (!editor || !restoreRange(savedRangeRef.current)) return;
+    const triggerRange = savedSlashTriggerRangeRef.current?.cloneRange();
+    if (!editor || !triggerRange) return;
 
-    applyShortcut(editor, shortcutId, trigger);
+    applyShortcut(shortcutId, triggerRange);
+    savedSlashTriggerRangeRef.current = null;
     setSlashTrigger(null);
     editor.focus();
     emitChange();
   };
 
+  const handleOrderedListTrigger = () => {
+    const editor = editorRef.current;
+    if (!editor) return false;
+
+    const triggerRange = getOrderedListTriggerRange(editor);
+    if (!triggerRange) return false;
+
+    applyOrderedListTrigger(triggerRange);
+    savedSlashTriggerRangeRef.current = null;
+    setSlashTrigger(null);
+    editor.focus();
+    emitChange();
+    updateFloatingUi();
+    return true;
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.key === ' ' &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      handleOrderedListTrigger()
+    ) {
+      event.preventDefault();
+      return;
+    }
+
     if (!slashTrigger) return;
 
     if (event.key === 'ArrowDown') {
@@ -405,13 +478,14 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
       if (filteredSlashShortcuts.length > 0) {
         event.preventDefault();
         const selected = filteredSlashShortcuts[activeSlashIndex] ?? filteredSlashShortcuts[0];
-        if (selected) handleApplyShortcut(selected.id, slashTrigger);
+        if (selected) handleApplyShortcut(selected.id);
       }
       return;
     }
 
     if (event.key === 'Escape') {
       event.preventDefault();
+      savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
     }
   };
@@ -433,6 +507,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
           updateFloatingUi();
         }}
         onKeyDown={handleKeyDown}
+        onMouseUp={updateFloatingUi}
         onFocus={() => {
           if (blurTimerRef.current) {
             window.clearTimeout(blurTimerRef.current);
@@ -448,6 +523,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
           blurTimerRef.current = window.setTimeout(() => {
             if (shellRef.current?.contains(document.activeElement)) return;
             hasFocusWithinRef.current = false;
+            savedSlashTriggerRangeRef.current = null;
             setSlashTrigger(null);
             setToolbarVisible(false);
             onBlur?.();
@@ -466,7 +542,6 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
           activeIndex={activeSlashIndex}
           items={filteredSlashShortcuts}
           position={slashMenuPosition}
-          trigger={slashTrigger}
           onSelect={handleApplyShortcut}
         />
       )}

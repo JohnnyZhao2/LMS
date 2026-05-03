@@ -20,16 +20,3 @@ export function getKnowledgeTitleFromHtml(html: string): string {
   const match = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
   return match ? plain(match[1]) : '';
 }
-
-/**
- * Bionic Reading - 只对英文单词前 60% 加粗显示
- * 保护 HTML 实体（如 &nbsp; &lt; &gt; 等）不被处理
- */
-export function bionicHtml(html: string): string {
-  return html.replace(/(<[^>]+>)|(&[a-zA-Z]+;)|([a-zA-Z]{3,})/g, (_match, tag, entity, word) => {
-    if (tag) return tag;
-    if (entity) return entity;
-    const n = Math.ceil(word.length * 0.6);
-    return `<b style="font-weight:800;color:#111">${word.slice(0, n)}</b><span style="color:#aaa">${word.slice(n)}</span>`;
-  });
-}

@@ -13,6 +13,7 @@ export interface SlashTrigger {
 }
 
 const DIVIDER_MARKERS = new Set(['---', '***', '___']);
+const INLINE_ORDERED_LIST_PATTERN = /(?<![\d.．])(\d+)[.．、]\s+/g;
 
 const SLASH_SHORTCUTS: SlashShortcut[] = [
   {
@@ -81,6 +82,36 @@ function buildList(items: string[], tagName: 'ol' | 'ul'): string {
   return `<${tagName}>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</${tagName}>`;
 }
 
+function splitInlineOrderedList(text: string): { prefix: string; items: string[] } | null {
+  const matches = [...text.matchAll(INLINE_ORDERED_LIST_PATTERN)];
+  if (!matches.length || matches[0][1] !== '1') return null;
+
+  const firstIndex = matches[0].index ?? 0;
+  const prefix = text.slice(0, firstIndex).trim();
+  if (matches.length === 1) return null;
+
+  const items = matches
+    .map((match, index) => {
+      const nextMatch = matches[index + 1];
+      const start = (match.index ?? 0) + match[0].length;
+      const end = nextMatch?.index ?? text.length;
+      return text.slice(start, end).trim().replace(/[;；]\s*$/, '').trim();
+    })
+    .filter(Boolean);
+
+  return items.length ? { prefix, items } : null;
+}
+
+function buildInlineOrderedListBlocks(text: string): string[] | null {
+  const inlineList = splitInlineOrderedList(text);
+  if (!inlineList) return null;
+
+  return [
+    ...(inlineList.prefix ? [buildParagraph(inlineList.prefix)] : []),
+    buildList(inlineList.items, 'ol'),
+  ];
+}
+
 export function textToKnowledgeHtml(content: string): string {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const blocks: string[] = [];
@@ -124,6 +155,13 @@ export function textToKnowledgeHtml(content: string): string {
 
     if (line.startsWith('# ')) {
       blocks.push(`<h1>${escapeHtml(line.slice(2).trim())}</h1>`);
+      i += 1;
+      continue;
+    }
+
+    const inlineOrderedListBlocks = buildInlineOrderedListBlocks(line);
+    if (inlineOrderedListBlocks) {
+      blocks.push(...inlineOrderedListBlocks);
       i += 1;
       continue;
     }
