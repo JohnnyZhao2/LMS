@@ -6,6 +6,14 @@
 
 | Commit | 日期 | 内容 |
 |--------|------|------|
+| `77ff14a8` | 2026-05-03 | 修复光标点击功能 |
+| `126aa5a1` | 2026-05-03 | 优化文档解析样式 |
+| `1ef70d78` | 2026-05-03 | 调整正文段落间距，优化阅读体验 |
+| `6704a3f9` | 2026-05-03 | 修复试卷分数受引用次数影响bug |
+| `4aad65ad` | 2026-04-28 | refactor(dashboard): 优化学生仪表盘组件的样式和布局 - 调整了 DashboardSectionHeader 和 MiniCalendar 组件的样式，确保更好的响应性和一致性。 - 更新了相关的 CSS 类，简化了布局，提升了用户界面的可用性和视觉效... |
+| `fce0f055` | 2026-04-28 | refactor(authorization): 移除 UserPermissionOverride 和 UserScopeGroupOverride 中的 reason 和 expires_at 字段 - 从 UserPermissionOverride 和 UserSc... |
+| `945fd75a` | 2026-04-28 | feat(authorization)：增强 UserPermissionOverride 模型与序列化器 • 更新了 UserPermissionOverride 模型，为 applies_to_role 添加了默认值，并为 user、permission 和 appli... |
+| `a10b404e` | 2026-04-28 | fix(docs): 更新文档以反映后端模块和前端组件的最新状态 - 在 backend-module-map.md 中，修正了 tasks 模块的引用计数。 - 在 component-inventory.md 中，更新了 Feature 作用域视觉组件的数量。 - 在 ... |
 | `a916c661` | 2026-04-28 | feat(dashboard): 添加管理员仪表盘服务和视图 - 新增 AdminDashboardService，提供管理员仪表盘数据的获取功能。 - 更新 AdminDashboardView，集成 AdminDashboardService 以支持管理员数据展示。 -... |
 | `4b2d080f` | 2026-04-27 | fix(logo): 更新 logo.svg 的尺寸和样式以符合新的设计要求 |
 | `9c365bdf` | 2026-04-27 | feat(tasks): 增强任务执行状态处理与进度追踪 • 更新了 StudentTaskSerializer 和 StudentAssignmentListSerializer，通过 SerializerMethodField 引入了 status 和 status_d... |
@@ -28,11 +36,3 @@
 | `b71b0cc8` | 2026-04-21 | refactor(auth): 重命名和更新密码相关功能 - 将密码重置功能重命名为密码修改，更新相关序列化器和视图以反映这一变化。 - 修改了用户注销逻辑，确保在注销时黑名单刷新令牌的处理更加严谨。 - 更新前端 API 调用，调整密码修改的请求结构，提升代码一致性和可读性。 |
 | `05262ab7` | 2026-04-21 | refactor(authorization): 删除用户权限模块侧边栏组件 - 移除了 `UserPermissionModuleSidebar` 组件，简化了权限管理界面。 - 该组件的删除有助于减少代码冗余，提升整体可维护性。 |
 | `504e1dcf` | 2026-04-21 | refactor(authorization): 重构权限范围组和授权逻辑 - 移除了 `PERMISSION_SCOPE_GROUPS` 的静态定义，改为动态构建，提升灵活性和可维护性。 - 引入 `allowed_scope_types` 属性到权限定义中，支持更细粒度... |
-| `ff33bcdd` | 2026-04-20 | refactor(tests): 提升测试代码可读性和重用性 - 引入多个辅助函数，如 `auth`, `assert_status`, `assert_success` 等，简化测试用例中的认证和断言逻辑。 - 更新测试用例以使用新引入的辅助函数，减少重复代码，提高可维护... |
-| `e3efd505` | 2026-04-20 | refactor(authorization): 重构权限定义和授权逻辑 - 将权限定义从 `PermissionDefinition` 更新为 `perm` 函数，简化权限创建过程。 - 引入 `crud_permissions` 和 `crud_authorizatio... |
-| `82b7b447` | 2026-04-20 | refactor(docs, components): 更新文档和组件结构 - 删除了未使用的 `searchable-select` 组件，减少代码冗余。 - 更新了组件清单，调整了共享组件和功能组件的数量。 - 优化了特性依赖图，修正了组件与特性之间的引用关系。 - 移... |
-| `7cf3f56e` | 2026-04-20 | feat(auth): 增强签名生成与验证 • 更新了 _sm2_sign_base64 方法，通过私钥派生公钥以提升安全性。 • 引入了新的 _derive_public_key 方法来封装公钥派生逻辑。 • 添加了测试用例，以验证使用派生公钥可以正确校验签名。 • 重构... |
-| `304e5003` | 2026-04-20 | feat(auth, activity_logs): 增强身份验证和日志记录机制 • 更新了开发和生产环境的配置文件，以包含新的 OIDC 设置。 • 重构了活动日志模型以统一日志结构，使用单一的 ActivityLog 模型取代了多种日志类型。 • 删除了旧的迁移文件，并... |
-| `7d80ee55` | 2026-04-20 | refactor(gitignore): 清理 .gitignore 文件，移除环境配置文件条目 - 从 lms_backend 和 lms_frontend 的 .gitignore 中删除环境文件相关条目，以简化环境管理和版本控制。 |
-| `c4d71870` | 2026-04-20 | refactor(dependencies, configuration): 更新包版本并清理 .gitignore • 在 package.json 和 package-lock.json 中降低了多个包的版本以解决兼容性问题。 • 从 .gitignore 中删除了 '... |
-| `df8d1202` | 2026-04-19 | feat(deployment, user_management): 更新后端部署流程和用户管理逻辑 - 在 DEPLOY.md 中添加后端初始化数据的说明，明确首次上线时需执行 `init_data`。 - 在 UserManager 中引入默认学生角色的创建逻辑，确保新... |

@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import {
   Bold,
   Check,
-  Link2,
-  PaintBucket,
   Heading2,
   Heading3,
+  Link2,
+  PaintBucket,
   X,
 } from 'lucide-react';
 
@@ -64,162 +64,160 @@ export function FloatingFormatToolbar({
   const shouldShowApplyAction = normalizedLinkValue.length > 0 && normalizedLinkValue !== currentLink;
 
   return (
-    <>
-      <div
-        className="sqe-toolbar"
-        style={{
-          top: position.top,
-          left: position.left,
-        }}
+    <div
+      className="sqe-toolbar"
+      style={{
+        top: position.top,
+        left: position.left,
+      }}
+    >
+      <button
+        type="button"
+        className={cn('sqe-toolbar-btn', activeFormats.header === 2 && 'sqe-toolbar-btn-active')}
+        aria-label="二级标题"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => onApplyHeader(activeFormats.header === 2 ? false : 2)}
       >
-        <button
-          type="button"
-          className={cn('sqe-toolbar-btn', activeFormats.header === 2 && 'sqe-toolbar-btn-active')}
-          aria-label="二级标题"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => onApplyHeader(activeFormats.header === 2 ? false : 2)}
-        >
-          <Heading2 size={16} />
-        </button>
-        <button
-          type="button"
-          className={cn('sqe-toolbar-btn', activeFormats.header === 3 && 'sqe-toolbar-btn-active')}
-          aria-label="三级标题"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => onApplyHeader(activeFormats.header === 3 ? false : 3)}
-        >
-          <Heading3 size={16} />
-        </button>
-        <button
-          type="button"
-          className={cn('sqe-toolbar-btn', activeFormats.bold && 'sqe-toolbar-btn-active')}
-          aria-label="粗体"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={onToggleBold}
-        >
-          <Bold size={16} />
-        </button>
-        <button
-          type="button"
-          className={cn('sqe-toolbar-btn', Boolean(activeFormats.link) && 'sqe-toolbar-btn-active')}
-          aria-label="链接"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenPanel((current) => {
-            const nextPanel = current === 'link' ? null : 'link';
-            if (nextPanel === 'link') {
-              setLinkValue(activeFormats.link ?? '');
-            }
-            return nextPanel;
-          })}
-        >
-          <Link2 size={16} />
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'sqe-toolbar-btn',
-            (hasActiveBackground || openPanel === 'background') && 'sqe-toolbar-btn-active',
-          )}
-          aria-label="高亮"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenPanel((current) => current === 'background' ? null : 'background')}
-        >
-          <PaintBucket size={16} />
-        </button>
-
-        {openPanel === 'link' && (
-          <div className="sqe-toolbar-popover">
-            <div className="sqe-toolbar-link-row">
-              <input
-                autoFocus
-                value={linkValue}
-                onChange={(event) => setLinkValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    onApplyLink(linkValue ? normalizeLink(linkValue) : null);
-                    setOpenPanel(null);
-                  }
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    setOpenPanel(null);
-                  }
-                }}
-                placeholder="粘贴或输入链接"
-                className="sqe-toolbar-link-input"
-              />
-              <div className="sqe-toolbar-link-actions">
-                {shouldShowApplyAction ? (
-                  <button
-                    type="button"
-                    className="sqe-toolbar-link-action sqe-toolbar-link-action-confirm"
-                    aria-label="应用链接"
-                    onClick={() => {
-                      onApplyLink(normalizedLinkValue);
-                      setOpenPanel(null);
-                    }}
-                  >
-                    <Check size={14} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="sqe-toolbar-link-action"
-                    aria-label={activeFormats.link ? '清除链接' : '关闭'}
-                    onClick={() => {
-                      if (activeFormats.link) {
-                        onApplyLink(null);
-                      }
-                      setOpenPanel(null);
-                    }}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <Heading2 size={16} />
+      </button>
+      <button
+        type="button"
+        className={cn('sqe-toolbar-btn', activeFormats.header === 3 && 'sqe-toolbar-btn-active')}
+        aria-label="三级标题"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => onApplyHeader(activeFormats.header === 3 ? false : 3)}
+      >
+        <Heading3 size={16} />
+      </button>
+      <button
+        type="button"
+        className={cn('sqe-toolbar-btn', activeFormats.bold && 'sqe-toolbar-btn-active')}
+        aria-label="粗体"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onToggleBold}
+      >
+        <Bold size={16} />
+      </button>
+      <button
+        type="button"
+        className={cn('sqe-toolbar-btn', Boolean(activeFormats.link) && 'sqe-toolbar-btn-active')}
+        aria-label="链接"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setOpenPanel((current) => {
+          const nextPanel = current === 'link' ? null : 'link';
+          if (nextPanel === 'link') {
+            setLinkValue(activeFormats.link ?? '');
+          }
+          return nextPanel;
+        })}
+      >
+        <Link2 size={16} />
+      </button>
+      <button
+        type="button"
+        className={cn(
+          'sqe-toolbar-btn',
+          (hasActiveBackground || openPanel === 'background') && 'sqe-toolbar-btn-active',
         )}
+        aria-label="高亮"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setOpenPanel((current) => current === 'background' ? null : 'background')}
+      >
+        <PaintBucket size={16} />
+      </button>
 
-        {openPanel === 'background' && (
-          <div className="sqe-toolbar-popover">
-            <div className="sqe-toolbar-color-grid">
-              {BACKGROUND_COLORS.map((color) => (
+      {openPanel === 'link' && (
+        <div className="sqe-toolbar-popover">
+          <div className="sqe-toolbar-link-row">
+            <input
+              autoFocus
+              value={linkValue}
+              onChange={(event) => setLinkValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  onApplyLink(linkValue ? normalizeLink(linkValue) : null);
+                  setOpenPanel(null);
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setOpenPanel(null);
+                }
+              }}
+              placeholder="粘贴或输入链接"
+              className="sqe-toolbar-link-input"
+            />
+            <div className="sqe-toolbar-link-actions">
+              {shouldShowApplyAction ? (
                 <button
-                  key={color.value}
                   type="button"
-                  aria-label={color.label}
-                  title={color.label}
-                  className={cn(
-                    'sqe-toolbar-color-swatch',
-                    color.value.toLowerCase() === normalizedBackground && 'sqe-toolbar-color-swatch-active',
-                  )}
-                  style={{ background: color.value }}
+                  className="sqe-toolbar-link-action sqe-toolbar-link-action-confirm"
+                  aria-label="应用链接"
                   onClick={() => {
-                    onApplyBackground(color.value);
+                    onApplyLink(normalizedLinkValue);
                     setOpenPanel(null);
                   }}
-                />
-              ))}
-              <button
-                type="button"
-                aria-label="清除背景色"
-                title="清除背景色"
-                className={cn(
-                  'sqe-toolbar-color-swatch sqe-toolbar-color-clear',
-                  !normalizedBackground && 'sqe-toolbar-color-swatch-active',
-                )}
-                onClick={() => {
-                  onApplyBackground(null);
-                  setOpenPanel(null);
-                }}
-              >
-                <X size={14} />
-              </button>
+                >
+                  <Check size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sqe-toolbar-link-action"
+                  aria-label={activeFormats.link ? '清除链接' : '关闭'}
+                  onClick={() => {
+                    if (activeFormats.link) {
+                      onApplyLink(null);
+                    }
+                    setOpenPanel(null);
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+
+      {openPanel === 'background' && (
+        <div className="sqe-toolbar-popover">
+          <div className="sqe-toolbar-color-grid">
+            {BACKGROUND_COLORS.map((color) => (
+              <button
+                key={color.value}
+                type="button"
+                aria-label={color.label}
+                title={color.label}
+                className={cn(
+                  'sqe-toolbar-color-swatch',
+                  color.value.toLowerCase() === normalizedBackground && 'sqe-toolbar-color-swatch-active',
+                )}
+                style={{ background: color.value }}
+                onClick={() => {
+                  onApplyBackground(color.value);
+                  setOpenPanel(null);
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              aria-label="清除背景色"
+              title="清除背景色"
+              className={cn(
+                'sqe-toolbar-color-swatch sqe-toolbar-color-clear',
+                !normalizedBackground && 'sqe-toolbar-color-swatch-active',
+              )}
+              onClick={() => {
+                onApplyBackground(null);
+                setOpenPanel(null);
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

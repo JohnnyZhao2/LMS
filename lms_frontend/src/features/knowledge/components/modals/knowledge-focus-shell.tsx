@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
 import '../shared/knowledge-editor-shared.css';
 
 interface KnowledgeFocusShellProps {
@@ -88,7 +88,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
 
       <ScrollContainer className="kfs-editor-area">
         <div className="kfs-editor-inner">
-          <SlashQuillEditor
+          <KnowledgeTextEditor
             value={content}
             onChange={onContentChange}
             placeholder="键入 / 调出快捷指令"

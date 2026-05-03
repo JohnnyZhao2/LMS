@@ -61,8 +61,8 @@ vi.mock('@/entities/tag/api/tags', () => ({
   }),
 }));
 
-vi.mock('../editor/rich-text-editor', () => ({
-  SlashQuillEditor: ({
+vi.mock('../editor/knowledge-text-editor', () => ({
+  KnowledgeTextEditor: ({
     value,
     onChange,
     readOnly,

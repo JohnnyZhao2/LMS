@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 
-vi.mock('../editor/rich-text-editor', () => ({
-  SlashQuillEditor: ({ className }: { className?: string }) => (
+vi.mock('../editor/knowledge-text-editor', () => ({
+  KnowledgeTextEditor: ({ className }: { className?: string }) => (
     <div data-testid="focus-editor" className={className} />
   ),
 }));

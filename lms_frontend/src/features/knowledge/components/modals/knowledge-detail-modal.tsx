@@ -21,7 +21,7 @@ import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { KnowledgeActionButton } from '../shared/knowledge-action-button';
-import { SlashQuillEditor, type SlashQuillEditorHandle } from '../editor/rich-text-editor';
+import { KnowledgeTextEditor, type KnowledgeTextEditorHandle } from '../editor/knowledge-text-editor';
 import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
@@ -193,7 +193,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
-  const knowledgeEditorRef = useRef<SlashQuillEditorHandle | null>(null);
+  const knowledgeEditorRef = useRef<KnowledgeTextEditorHandle | null>(null);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
   const [editingLinks, setEditingLinks] = useState(false);
 
@@ -891,7 +891,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 }}
                 style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
               >
-                <SlashQuillEditor
+                <KnowledgeTextEditor
                   ref={knowledgeEditorRef}
                   value={activeContent}
                   onChange={handleContentChange}

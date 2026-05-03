@@ -77,6 +77,10 @@ function buildParagraph(text: string): string {
   return `<p>${escapeHtml(text)}</p>`;
 }
 
+function buildList(items: string[], tagName: 'ol' | 'ul'): string {
+  return `<${tagName}>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</${tagName}>`;
+}
+
 export function textToKnowledgeHtml(content: string): string {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const blocks: string[] = [];
@@ -106,9 +110,41 @@ export function textToKnowledgeHtml(content: string): string {
       continue;
     }
 
+    if (line.startsWith('### ')) {
+      blocks.push(`<h3>${escapeHtml(line.slice(4).trim())}</h3>`);
+      i += 1;
+      continue;
+    }
+
+    if (line.startsWith('## ')) {
+      blocks.push(`<h2>${escapeHtml(line.slice(3).trim())}</h2>`);
+      i += 1;
+      continue;
+    }
+
     if (line.startsWith('# ')) {
       blocks.push(`<h1>${escapeHtml(line.slice(2).trim())}</h1>`);
       i += 1;
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\d+\.\s+/, ''));
+        i += 1;
+      }
+      blocks.push(buildList(items, 'ol'));
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*]\s+/, ''));
+        i += 1;
+      }
+      blocks.push(buildList(items, 'ul'));
       continue;
     }
 

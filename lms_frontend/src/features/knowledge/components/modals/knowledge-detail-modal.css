@@ -53,9 +53,8 @@
 .kd-edit-icon-btn{color:#9aa3af;transition:color .15s ease,background .15s ease,opacity .15s ease}
 .kd-edit-icon-btn:hover{color:#7f8998}
 .kd-content{flex:1;min-height:100%;width:100%;max-width:820px;margin:0 auto;font-family:var(--theme-font-sans)}
-.kd-content-shell .ql-container{height:auto;overflow:visible;font-family:inherit}
 .kd-content-editable{position:relative;min-height:300px}
-.kd-content-editable .ql-editor{cursor:text}
+.kd-content-editable .sqe-editor{cursor:text}
 @keyframes kdFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes kdPopIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 @media (max-width:1360px){.kd-overlay{padding:20px}.kd-container{width:min(1320px,calc(100vw - 40px));height:min(800px,calc(100dvh - 40px))}.kd-left{padding:44px 56px 52px}.kd-right{width:288px}}

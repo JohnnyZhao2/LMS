@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { hasMeaningfulKnowledgeHtml } from '../../utils/slash-shortcuts';
 import { FocusOrbIcon } from '../shared/focus-icon';
-import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
 import { KnowledgeActionButton } from '../shared/knowledge-action-button';
 
 interface AddKnowledgeCardProps {
@@ -27,14 +27,14 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   const hasContent = hasMeaningfulKnowledgeHtml(value);
 
   const focusEditor = React.useCallback(() => {
-    const editor = cardRef.current?.querySelector<HTMLElement>('.ql-editor');
+    const editor = cardRef.current?.querySelector<HTMLElement>('.sqe-editor');
     editor?.focus();
   }, []);
 
   const handleCardMouseDown = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    if (target.closest('button, .ql-editor, .sqe-menu, .sqe-toolbar, .sqe-toolbar-popover')) {
+    if (target.closest('button, .sqe-editor, .sqe-menu')) {
       return;
     }
 
@@ -139,7 +139,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             添加知识
           </p>
 
-          <SlashQuillEditor
+          <KnowledgeTextEditor
             value={value}
             onChange={setValue}
             onFocus={() => setFocused(true)}

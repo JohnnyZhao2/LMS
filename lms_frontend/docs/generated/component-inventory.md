@@ -122,7 +122,7 @@
 - `src/features/knowledge/components/cards/knowledge-add-card.tsx`
 - `src/features/knowledge/components/cards/knowledge-card.tsx`
 - `src/features/knowledge/components/editor/format-toolbar.tsx`
-- `src/features/knowledge/components/editor/rich-text-editor.tsx`
+- `src/features/knowledge/components/editor/knowledge-text-editor.tsx`
 - `src/features/knowledge/components/editor/slash-menu.tsx`
 - `src/features/knowledge/components/knowledge-center.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-modal.tsx`
