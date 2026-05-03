@@ -43,6 +43,9 @@ const EMPTY_HTML = '<p><br></p>';
 const MENU_LEFT = 16;
 const ORDERED_LIST_TRIGGER_TEXT = '1.';
 const TEXT_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,blockquote,li,div';
+const SELECTION_TOOLBAR_HEIGHT = 44;
+const FLOATING_UI_GAP = 10;
+const VIEWPORT_SAFE_GAP = 8;
 
 function hasMeaningfulDomContent(root: HTMLElement) {
   return root.textContent?.trim() || root.querySelector('hr,img,pre,blockquote,ol,ul');
@@ -118,9 +121,19 @@ function getSelectionRangeInside(root: HTMLElement) {
 function getRangePosition(range: Range, shell: HTMLElement): MenuPosition {
   const rangeRect = range.getBoundingClientRect();
   const shellRect = shell.getBoundingClientRect();
+  const topAboveSelection = rangeRect.top - shellRect.top - SELECTION_TOOLBAR_HEIGHT - FLOATING_UI_GAP;
+  const topBelowSelection = rangeRect.bottom - shellRect.top + FLOATING_UI_GAP;
+  const hasRoomAboveSelection = rangeRect.top >= SELECTION_TOOLBAR_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
+  const hasRoomBelowSelection = window.innerHeight - rangeRect.bottom >= SELECTION_TOOLBAR_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
+  const preferredTop = hasRoomAboveSelection || !hasRoomBelowSelection ? topAboveSelection : topBelowSelection;
+  const minViewportTop = VIEWPORT_SAFE_GAP - shellRect.top;
+  const maxViewportTop = window.innerHeight - shellRect.top - SELECTION_TOOLBAR_HEIGHT - VIEWPORT_SAFE_GAP;
+  const constrainedTop = maxViewportTop > minViewportTop
+    ? Math.min(Math.max(preferredTop, minViewportTop), maxViewportTop)
+    : preferredTop;
 
   return {
-    top: Math.max(8, rangeRect.top - shellRect.top - 48),
+    top: constrainedTop,
     left: Math.max(28, rangeRect.left - shellRect.left + (rangeRect.width / 2)),
   };
 }
