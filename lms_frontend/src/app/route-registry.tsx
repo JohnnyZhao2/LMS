@@ -139,7 +139,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['task.view'],
     showInMenu: true,
     menu: {
-      label: (workspace) => (workspace.menuVariant === 'admin' ? '任务管理' : '任务中心'),
+      label: (_workspace, role) => (role === 'STUDENT' ? '任务中心' : '任务管理'),
       icon: ListTodo,
       order: 50,
     },

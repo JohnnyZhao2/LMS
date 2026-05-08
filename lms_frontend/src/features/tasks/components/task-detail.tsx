@@ -191,6 +191,7 @@ export const TaskDetail: React.FC = () => {
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
   const isStudent = !authLoading && currentRole === 'STUDENT';
+  const taskListLabel = isStudent ? '任务中心' : '任务管理';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
@@ -274,7 +275,7 @@ export const TaskDetail: React.FC = () => {
             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">任务不存在</h3>
             <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看。</p>
             <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
-              返回任务中心
+              返回{taskListLabel}
             </Button>
           </div>
         </div>

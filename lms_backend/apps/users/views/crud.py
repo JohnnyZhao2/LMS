@@ -54,7 +54,7 @@ class UserListCreateView(APIView):
 
     @extend_schema(
         summary='创建用户',
-        description='创建新用户，按角色规则自动处理学员角色（默认保留学员，室经理/团队经理不保留）',
+        description='创建新用户，不传角色时默认学员；传入 role_codes 时按最终角色集合保存',
         request=UserCreateSerializer,
         responses={
             201: UserDetailSerializer,
@@ -67,7 +67,7 @@ class UserListCreateView(APIView):
         enforce('user.create', request, error_message='只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        if serializer.validated_data.get('role_codes'):
+        if 'role_codes' in serializer.validated_data:
             enforce('user.role.assign', request, error_message='无权分配用户角色')
         user = UserManagementService(request).create_user(dict(serializer.validated_data))
         return created_response(UserDetailSerializer(user).data)

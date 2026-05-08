@@ -7,10 +7,7 @@ import { getWorkspaceHome, getWorkspacePath } from '@/session/workspace/role-pat
 import type { RoleCode } from '@/types/common';
 import { getWorkspaceConfig } from '@/app/workspace-config';
 
-const resolveTaskLabel = (role: RoleCode | null) => {
-  const workspace = getWorkspaceConfig(role);
-  return workspace?.menuVariant === 'admin' ? '任务管理' : '任务中心';
-}
+const resolveTaskLabel = (role: RoleCode | null) => (role === 'STUDENT' ? '任务中心' : '任务管理');
 
 const resolveKnowledgeLabel = (role: RoleCode | null) => {
   const workspace = getWorkspaceConfig(role);

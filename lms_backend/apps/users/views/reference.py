@@ -74,5 +74,5 @@ class RolesListView(APIView):
             request,
             error_message='无权查看角色列表',
         )
-        roles = Role.objects.exclude(code='STUDENT').order_by('code')
+        roles = Role.objects.order_by('code')
         return list_response(RoleSerializer(roles, many=True).data)

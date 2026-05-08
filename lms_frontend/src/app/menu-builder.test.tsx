@@ -37,6 +37,17 @@ describe('menu-builder', () => {
     expect(authorizationRoute?.permissionMode).toBe('any');
   });
 
+  it('学员工作台显示任务中心，管理台显示任务管理', () => {
+    const grantedCodes = new Set(['task.view']);
+    const hasCapability = vi.fn((permissionCode: string) => grantedCodes.has(permissionCode));
+    const hasAnyCapability = vi.fn((permissionCodes: string[]) => (
+      permissionCodes.some((permissionCode) => grantedCodes.has(permissionCode))
+    ));
+
+    expect(collectMenuLabels(getMenuItemsBySection('STUDENT', hasCapability, hasAnyCapability))).toContain('任务中心');
+    expect(collectMenuLabels(getMenuItemsBySection('DEPT_MANAGER', hasCapability, hasAnyCapability))).toContain('任务管理');
+  });
+
   it('菜单路由按自身权限声明显示入口', () => {
     BUSINESS_ROUTE_META
       .filter((route) => route.showInMenu && route.menu)

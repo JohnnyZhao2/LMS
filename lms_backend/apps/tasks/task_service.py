@@ -435,7 +435,7 @@ class TaskService(BaseService):
         existing = User.objects.filter(
             id__in=assignee_ids,
             is_active=True,
-            roles__code__in=('STUDENT', 'DEPT_MANAGER'),
+            roles__code='STUDENT',
         ).distinct()
         existing_ids = set(existing.values_list('id', flat=True))
         invalid_ids = list(set(assignee_ids) - existing_ids)

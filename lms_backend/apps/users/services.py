@@ -107,7 +107,7 @@ class UserManagementService(BaseService):
         employee_id = validated_data['employee_id']
         username = validated_data['username']
         mentor_id = validated_data.get('mentor_id')
-        role_codes = validated_data.get('role_codes', [])
+        role_codes = validated_data.get('role_codes', ['STUDENT'])
 
         user = User(
             username=username,
@@ -185,12 +185,12 @@ class UserManagementService(BaseService):
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
-        For non-superusers, STUDENT role is preserved unless user is assigned
-        department/team manager role.
+        role_codes is the final business role set. STUDENT can be added or removed
+        like other business roles.
         Superuser accounts are dedicated and cannot be assigned business roles.
         Args:
             user_id: The user ID to assign roles to
-            role_codes: List of role codes to assign (excluding STUDENT)
+            role_codes: List of role codes to assign
             assigned_by: The user performing the assignment
         Returns:
             The updated user
@@ -198,7 +198,7 @@ class UserManagementService(BaseService):
             BusinessError: If user not found or role constraints violated
         Properties:
         - 非 STUDENT 系统角色单选（最多一个）
-        - Property 9: 室经理/团队经理与学员角色互斥；ADMIN 可叠加学员角色
+        - STUDENT 可与非 STUDENT 系统角色叠加，也可被移除
         - 每个部门只能有一个室经理
         - 全局只能有一个团队经理
         """
@@ -218,23 +218,9 @@ class UserManagementService(BaseService):
             exclude_user_id=user.id,
         )
 
-        leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
-        should_keep_student = (
-            not user.is_superuser
-            and leadership_roles.isdisjoint(set(role_codes))
-        )
-
-        # Get all roles to assign
         roles_to_assign = set(role_codes)
-        if should_keep_student:
-            roles_to_assign.add('STUDENT')
-        # Get current roles
         current_role_codes = set(user.roles.values_list('code', flat=True))
-        # Remove roles that are not in the new list (except STUDENT)
         roles_to_remove = current_role_codes - roles_to_assign
-        if should_keep_student and 'STUDENT' in roles_to_remove:
-            roles_to_remove.remove('STUDENT')  # 普通用户永不移除 STUDENT
-        # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
 
         if not roles_to_add and not roles_to_remove:

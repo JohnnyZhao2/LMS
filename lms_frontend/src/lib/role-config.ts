@@ -106,6 +106,6 @@ export const getRoleColor = (code: string): RoleColorConfig => {
 };
 
 /**
- * 可分配的角色列表（不含 STUDENT）
+ * 可分配的角色列表
  */
-export const ASSIGNABLE_ROLES: RoleCode[] = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER'];
+export const ASSIGNABLE_ROLES: RoleCode[] = ['STUDENT', 'ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER'];

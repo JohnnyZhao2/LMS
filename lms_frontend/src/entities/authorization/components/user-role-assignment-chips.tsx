@@ -42,48 +42,34 @@ export function UserRoleAssignmentChips({
     });
   }
 
-  const remainingAssignableRoles = ASSIGNABLE_ROLES.filter((roleCode) => roleCode !== selectedBusinessRoleCode);
+  const remainingAssignableRoles = ASSIGNABLE_ROLES.filter(
+    (roleCode) => roleCode !== selectedBusinessRoleCode && !(roleCode === 'STUDENT' && hasStudentRole),
+  );
 
   return (
     <div className={cn('flex shrink-0 flex-wrap items-center gap-1.5', className)}>
       {currentAssignedRoleTags.map((role) => {
         const color = getRoleColor(role.code);
-        const canClearRole = role.code === selectedBusinessRoleCode;
-        if (canClearRole) {
-          return (
-            <button
-              key={role.code}
-              type="button"
-              disabled={!canManageRoles || isBusy}
-              onClick={() => { onToggleRole(role.code); }}
-              aria-label={`取消${role.name}角色`}
-              className={cn(
-                'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
-                color.bgClass,
-                color.mutedTextClass,
-                canManageRoles && !isBusy
-                  ? 'cursor-pointer hover:brightness-95'
-                  : 'cursor-not-allowed opacity-55',
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
-              {role.name}
-              <X className="h-3 w-3 opacity-70" />
-            </button>
-          );
-        }
         return (
-          <span
+          <button
             key={role.code}
+            type="button"
+            disabled={!canManageRoles || isBusy}
+            onClick={() => { onToggleRole(role.code); }}
+            aria-label={`取消${role.name}角色`}
             className={cn(
-              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
+              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
               color.bgClass,
               color.mutedTextClass,
+              canManageRoles && !isBusy
+                ? 'cursor-pointer hover:brightness-95'
+                : 'cursor-not-allowed opacity-55',
             )}
           >
             <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
             {role.name}
-          </span>
+            <X className="h-3 w-3 opacity-70" />
+          </button>
         );
       })}
       {currentAssignedRoleTags.length > 0 && remainingAssignableRoles.length > 0 ? (

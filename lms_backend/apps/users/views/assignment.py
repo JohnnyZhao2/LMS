@@ -14,7 +14,7 @@ class UserAssignRolesView(BaseAPIView):
 
     @extend_schema(
         summary='分配角色',
-        description='为用户分配角色，学员角色自动保留',
+        description='为用户分配最终角色集合，学员角色可添加或移除',
         request=AssignRolesSerializer,
         responses={
             200: UserDetailSerializer,

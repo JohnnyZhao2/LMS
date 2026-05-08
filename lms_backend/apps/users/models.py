@@ -74,7 +74,7 @@ class Role(TimestampMixin, models.Model):
     """
     角色模型
     系统预定义角色:
-    - STUDENT: 学员（默认角色；与 DEPT_MANAGER/TEAM_MANAGER 互斥）
+    - STUDENT: 学员（默认角色；可与管理角色共存）
     - MENTOR: 导师
     - DEPT_MANAGER: 室经理
     - ADMIN: 管理员（能力叠加角色，可与学员共存）
@@ -191,8 +191,7 @@ from django.dispatch import receiver
 @receiver(post_save, sender=User)
 def assign_default_student_role(sender, instance, created, **kwargs):
     """
-    新用户创建后自动分配学员角色。
-    后续仅在分配室经理/团队经理时，角色分配流程会移除学员角色。
+    新用户创建后自动分配学员角色，后续可通过角色分配流程移除。
     - Property 5: 新用户默认学员角色
     """
     if created and not instance.is_superuser:

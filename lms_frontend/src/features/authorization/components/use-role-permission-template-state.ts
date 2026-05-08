@@ -13,6 +13,7 @@ import {
 import { showApiError } from '@/utils/error-handler';
 import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
 import {
+  getNextUserPermissionEditorRoleCode,
   getNextAssignableRoleCodes,
   getManagedRoleCodes,
   isAssignableRoleCode,
@@ -150,7 +151,7 @@ export function useRolePermissionTemplateState({
       return allVisibleUsers
         .filter((user) => !user.is_superuser)
         .filter((user) => !user.roles.some((role) => role.code === resolvedActiveRole))
-        .filter((user) => user.roles.every((role) => !isAssignableRoleCode(role.code)))
+        .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
         .filter((user) => isAllowedDepartmentCode(user.department?.code))
         .filter((user) => {
           if (resolvedActiveRole === 'TEAM_MANAGER') return !hasActiveTeamManager;
@@ -215,7 +216,7 @@ export function useRolePermissionTemplateState({
     try {
       await assignRoles.mutateAsync({
         id: user.id,
-        roles: [resolvedActiveRole],
+        roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), resolvedActiveRole),
       });
     } catch (error) {
       showApiError(error);
@@ -274,8 +275,13 @@ export function useRolePermissionTemplateState({
         id: selectedUserDetail.id,
         roles: nextRoles,
       });
-      if (nextRoles.length > 0) {
-        setActiveRole(roleCode);
+      const nextEditorRoleCode = getNextUserPermissionEditorRoleCode({
+        currentRoleCode: resolvedActiveRole,
+        nextRoleCodes: nextRoles,
+        toggledRoleCode: roleCode,
+      });
+      if (nextEditorRoleCode) {
+        setActiveRole(nextEditorRoleCode);
         setSelectedUserId(selectedUserDetail.id);
       } else {
         setSelectedUserId(null);

@@ -21,7 +21,7 @@ TASK_RESOURCE_SCOPE_SUMMARY = '任务可见范围'
 TASK_ASSIGNMENT_SCOPE_SUMMARY = '指派人员范围'
 TASK_MANAGER_CODES = (*crud_codes('task'), 'task.assign', 'task.analytics.view')
 TASK_ADMIN_CODES = (*crud_codes('task'), 'task.assign')
-TASK_ASSIGNEE_ROLE_CODES = ('STUDENT', 'DEPT_MANAGER')
+TASK_ASSIGNEE_ROLE_CODES = ('STUDENT',)
 
 
 def _authorize_task_resource(engine, permission_code, *, resource=None, context=None, error_message=None):
@@ -52,7 +52,10 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
     if permission_code == 'task.view':
         if (
             is_owner_in_scope(engine, 'task.view', resource.created_by_id)
-            or resource.assignments.filter(assignee=engine.user).exists()
+            or (
+                engine.get_current_role() == 'STUDENT'
+                and resource.assignments.filter(assignee=engine.user).exists()
+            )
         ):
             return conditional_allow(permission_code, constraint='task_visibility')
         return conditional_deny(
@@ -77,11 +80,11 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
 
 def _filter_task_queryset(engine, *, queryset, context=None):
     scoped_owner_tasks = filter_queryset_by_owner_scope(engine, 'task.view', queryset)
+    if engine.get_current_role() != 'STUDENT':
+        return scoped_owner_tasks
+
     assigned_task_ids = TaskAssignment.objects.filter(assignee=engine.user).values_list('task_id', flat=True)
-    return queryset.filter(
-        Q(id__in=scoped_owner_tasks.values('id'))
-        | Q(id__in=assigned_task_ids)
-    )
+    return queryset.filter(Q(id__in=scoped_owner_tasks.values('id')) | Q(id__in=assigned_task_ids))
 
 
 def _task_assignee_queryset():

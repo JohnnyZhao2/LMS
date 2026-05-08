@@ -106,7 +106,10 @@ export function UserPermissionSection({
   );
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => (
-    !isSuperuserAccount && selectedRoleCode && selectedRoleCodes.includes(selectedRoleCode)
+    !isSuperuserAccount
+    && selectedRoleCode
+    && selectedRoleCode !== 'STUDENT'
+    && selectedRoleCodes.includes(selectedRoleCode)
       ? [selectedRoleCode]
       : []
   ), [isSuperuserAccount, selectedRoleCode, selectedRoleCodes]);

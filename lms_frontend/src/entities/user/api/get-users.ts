@@ -100,7 +100,6 @@ export const useMentors = () => {
 /**
  * 获取角色列表（管理员使用）
  * 用于分配角色时选择可用的角色
- * 不包含学员角色，学员角色自动保留
  */
 export const useRoles = () => {
   const currentRole = useCurrentRole();

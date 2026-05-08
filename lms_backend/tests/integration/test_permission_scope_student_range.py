@@ -8,7 +8,7 @@ from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
-from apps.tasks.models import Task
+from apps.tasks.models import Task, TaskAssignment
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -245,9 +245,10 @@ def test_task_create_enforces_assignable_student_scope(grant_permissions_to_role
 
 
 @pytest.mark.django_db
-def test_task_assign_scope_includes_dept_manager_assignee(grant_permissions_to_roles):
+def test_task_assign_scope_excludes_dept_manager_assignee(grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='室经理可分配部门', code='TASK_ASSIGN_DEPT_MANAGER_D1')
+    another_department = Department.objects.create(name='室经理学员可分配部门', code='TASK_ASSIGN_DM_STUDENT_D2')
     grant_permissions_to_roles(role_codes=['ADMIN'], permission_codes=['task.create', 'task.assign'])
 
     admin = _create_user(
@@ -258,9 +259,15 @@ def test_task_assign_scope_includes_dept_manager_assignee(grant_permissions_to_r
     )
     dept_manager = _create_non_student_user(
         employee_id='TASK_ASSIGN_DM_001',
-        username='可执行室经理',
+        username='无学员角色室经理',
         department=department,
         role_code='DEPT_MANAGER',
+    )
+    dept_manager_student = _create_user(
+        employee_id='TASK_ASSIGN_DM_STUDENT_001',
+        username='兼任学员室经理',
+        department=another_department,
+        role_codes=['DEPT_MANAGER', 'STUDENT'],
     )
     team_manager = _create_non_student_user(
         employee_id='TASK_ASSIGN_TM_001',
@@ -280,7 +287,8 @@ def test_task_assign_scope_includes_dept_manager_assignee(grant_permissions_to_r
     response = client.get('/api/tasks/assignable-users/')
     assert response.status_code == 200
     assignee_ids = {item['id'] for item in response.data['data']}
-    assert dept_manager.id in assignee_ids
+    assert dept_manager.id not in assignee_ids
+    assert dept_manager_student.id in assignee_ids
     assert team_manager.id not in assignee_ids
 
     create_response = client.post(
@@ -294,10 +302,22 @@ def test_task_assign_scope_includes_dept_manager_assignee(grant_permissions_to_r
         },
         format='json',
     )
-    assert create_response.status_code == 201
-    assert Task.objects.get(id=create_response.data['data']['id']).assignments.filter(
-        assignee=dept_manager,
-    ).exists()
+    assert create_response.status_code == 400
+    assert create_response.data['code'] == 'VALIDATION_ERROR'
+    assert '不可执行任务' in create_response.data['message']
+
+    student_role_response = client.post(
+        '/api/tasks/create/',
+        {
+            'title': '分配给兼任学员室经理执行',
+            'description': '',
+            'deadline': (timezone.now() + timezone.timedelta(days=1)).isoformat(),
+            'knowledge_ids': [knowledge.id],
+            'assignee_ids': [dept_manager_student.id],
+        },
+        format='json',
+    )
+    assert student_role_response.status_code == 201
 
 
 @pytest.mark.django_db
@@ -354,6 +374,51 @@ def test_task_view_scope_switches_between_self_and_all_created_tasks(grant_permi
     task_ids = {item['id'] for item in _extract_list_items(response)}
     assert self_task.id in task_ids
     assert other_task.id in task_ids
+
+
+@pytest.mark.django_db
+def test_task_view_self_scope_excludes_assigned_task_for_dept_manager(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='室经理任务可见部门', code='TASK_VIEW_DM_ASSIGNED_D1')
+    grant_permissions_to_roles(role_codes=['DEPT_MANAGER'], permission_codes=['task.view'])
+
+    dept_manager = _create_non_student_user(
+        employee_id='TASK_VIEW_DM_ASSIGNED_001',
+        username='仅本人室经理',
+        department=department,
+        role_code='DEPT_MANAGER',
+    )
+    other_manager = _create_non_student_user(
+        employee_id='TASK_VIEW_DM_ASSIGNED_OTHER',
+        username='其他室经理',
+        department=department,
+        role_code='DEPT_MANAGER',
+    )
+    self_task = Task.objects.create(
+        title='室经理自己创建任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=dept_manager,
+        updated_by=dept_manager,
+    )
+    assigned_task = Task.objects.create(
+        title='分配给室经理但非本人创建任务',
+        description='',
+        deadline=timezone.now() + timezone.timedelta(days=1),
+        created_by=other_manager,
+        updated_by=other_manager,
+    )
+    TaskAssignment.objects.create(task=assigned_task, assignee=dept_manager, status='IN_PROGRESS')
+
+    client.force_authenticate(user=dept_manager)
+    response = client.get('/api/tasks/?page=1&page_size=10')
+    assert response.status_code == 200
+    task_ids = {item['id'] for item in _extract_list_items(response)}
+    assert self_task.id in task_ids
+    assert assigned_task.id not in task_ids
+
+    detail_response = client.get(f'/api/tasks/{assigned_task.id}/')
+    assert detail_response.status_code == 403
 
 
 @pytest.mark.django_db

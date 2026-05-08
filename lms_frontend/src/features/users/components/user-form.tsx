@@ -152,7 +152,7 @@ const UserFormContent: React.FC<{
     const canCreateUser = hasCapability('user.create');
     const canUpdateUser = hasCapability('user.update');
     const canAssignUserRole = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
-    const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
+    const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : (canCreateUser && canAssignUserRole);
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
@@ -257,21 +257,18 @@ const UserFormContent: React.FC<{
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
-          if (formData.role_codes.length > 0 && !canAssignUserRole) {
+          if (!canAssignUserRole) {
             toast.error('当前账号没有用户角色分配权限，无法分配角色');
             return;
           }
-          const newUser = await createUser.mutateAsync({
+          await createUser.mutateAsync({
             username: formData.username,
             employee_id: formData.employee_id,
             password: formData.password,
             department_id: formData.department_id!,
             mentor_id: formData.mentor_id,
+            role_codes: formData.role_codes,
           });
-          // 创建成功后分配额外角色
-          if (formData.role_codes.length > 0) {
-            await assignRoles.mutateAsync({ id: newUser.id, roles: formData.role_codes });
-          }
           toast.success("新账号已创建");
         }
         onClose();
@@ -483,7 +480,7 @@ const UserFormContent: React.FC<{
               <div className="flex items-center gap-2 pb-1 text-slate-400">
                 <Shield className="w-4 h-4" />
                 <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
-                <span className="text-xs text-slate-400">学员角色默认保留，扩展角色单选</span>
+                <span className="text-xs text-slate-400">学员可独立切换，系统角色单选</span>
               </div>
 
               <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
