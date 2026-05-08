@@ -251,7 +251,7 @@ class GradingAnswersView(GradingBaseView):
                 'avatar_key': user.avatar_key,
                 'employee_id': user.employee_id or '',
                 'department': user.department.name if user.department else '',
-                'answer_text': answer.user_answer if isinstance(answer.user_answer, str) else str(answer.user_answer or ''),
+                'answer_text': answer.text_answer,
                 'submitted_at': answer.submission.submitted_at,
                 'score': float(answer.obtained_score) if answer.graded_by else None,
             })

@@ -2102,6 +2102,63 @@ class TestGradingApiContracts:
 
         assert_validation_error(response, field)
 
+    def test_subjective_answer_keeps_text_format(
+        self,
+        api_client,
+        mentor_user,
+        student_user,
+        student_assignment,
+        sample_quiz,
+    ):
+        question = Question.objects.create(
+            content='简答格式保留题',
+            question_type='SHORT_ANSWER',
+            score=1,
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        QuizQuestion.objects.create(
+            quiz=sample_quiz,
+            question=question,
+            content=question.content,
+            question_type=question.question_type,
+            reference_answer=question.reference_answer,
+            explanation=question.explanation,
+            score=question.score,
+            order=1,
+        )
+        quiz_revision = ensure_quiz_revision(sample_quiz, actor=mentor_user)
+        task_quiz = TaskQuiz.objects.create(
+            task=student_assignment.task,
+            quiz=quiz_revision,
+            source_quiz=sample_quiz,
+            order=1,
+        )
+        submission = Submission.objects.create(
+            task_assignment=student_assignment,
+            task_quiz=task_quiz,
+            quiz=quiz_revision,
+            user=student_user,
+            status='GRADING',
+            submitted_at=timezone.now(),
+        )
+        revision_question = quiz_revision.quiz_questions.get(order=1)
+        answer_text = '  第一行\n第二行\n\n    缩进内容'
+        Answer.objects.create(
+            submission=submission,
+            question=revision_question,
+            text_answer=answer_text,
+        )
+
+        response = auth(api_client, as_role(mentor_user, 'MENTOR')).get(
+            f'/api/grading/tasks/{student_assignment.task.id}/answers/'
+            f'?quiz_id={task_quiz.id}&question_id={revision_question.id}',
+        )
+
+        assert_success(response)
+        subjective_answers = response.data['data']['subjective_answers']
+        assert subjective_answers[0]['answer_text'] == answer_text
+
 
 @pytest.mark.django_db
 class TestActivityLogApiContracts:

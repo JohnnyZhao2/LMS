@@ -70,7 +70,9 @@ const getPassRateColor = (rate?: number | null) => {
 };
 
 const formatAnswerText = (answer?: string | null) => {
-  if (!answer) return <span className="text-text-muted italic">(未作答)</span>;
+  if (answer === null || answer === undefined || answer.trim() === '') {
+    return <span className="text-text-muted italic">(未作答)</span>;
+  }
   return answer;
 };
 
@@ -83,6 +85,7 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
 const SELECTOR_TRIGGER_CLASSNAME = 'h-10 rounded-xl border-border/70 bg-background/90 px-3 shadow-none';
 const SELECTOR_ICON_CLASSNAME = 'h-4 w-4 shrink-0 text-primary-500';
 const QUESTION_LIST_GRID_CLASSNAME = 'grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem] items-center gap-x-2';
+const GRADING_ANSWER_EXIT_MS = 520;
 
 export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   taskId,
@@ -95,6 +98,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   const [displayedQuestion, setDisplayedQuestion] = React.useState<GradingQuestion | null>(null);
   const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
+  const [exitingAnswerIds, setExitingAnswerIds] = React.useState<Record<number, boolean>>({});
+  const pendingExitAnswerIdsRef = React.useRef(new Set<number>());
+  const exitTimersRef = React.useRef<Record<number, number>>({});
 
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
     enabled: Boolean(taskId) && Boolean(quizId),
@@ -149,7 +155,28 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     quizId ?? null,
     { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
   );
-  const submitGrading = useSubmitGrading(taskId || 0);
+  const submitGrading = useSubmitGrading(taskId || 0, {
+    beforeInvalidate: async (variables) => {
+      if (!pendingExitAnswerIdsRef.current.has(variables.student_id)) {
+        return;
+      }
+
+      setExitingAnswerIds((prev) => ({ ...prev, [variables.student_id]: true }));
+      await new Promise<void>((resolve) => window.setTimeout(resolve, GRADING_ANSWER_EXIT_MS));
+    },
+    afterInvalidate: (variables) => {
+      pendingExitAnswerIdsRef.current.delete(variables.student_id);
+      window.clearTimeout(exitTimersRef.current[variables.student_id]);
+      exitTimersRef.current[variables.student_id] = window.setTimeout(() => {
+        setExitingAnswerIds((prev) => {
+          const next = { ...prev };
+          delete next[variables.student_id];
+          return next;
+        });
+        delete exitTimersRef.current[variables.student_id];
+      }, 180);
+    },
+  });
   const effectiveQuestion = React.useMemo<GradingQuestion | null>(
     () => questions?.find((question) => question.question_id === effectiveQuestionId) ?? null,
     [effectiveQuestionId, questions]
@@ -178,6 +205,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     }
     setScoresByStudent({});
   }, [displayedQuestionDetail]);
+
+  React.useEffect(() => () => {
+    Object.values(exitTimersRef.current).forEach(window.clearTimeout);
+  }, []);
 
   const shouldHoldPreviousDetail =
     detailLoading
@@ -219,9 +250,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     const parsedScore = Number(rawScore);
     if (Number.isNaN(parsedScore)) return;
     const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
+    const shouldAnimateCompletion =
+      selectedQuestion.question_type === 'SHORT_ANSWER'
+      && activeQuestionDetail?.subjective_answers?.some((answer) => answer.student_id === studentId && answer.score === null);
 
-    // Optimistic update
     setScoresByStudent((prev) => ({ ...prev, [studentId]: normalizedScore.toString() }));
+    if (shouldAnimateCompletion) {
+      pendingExitAnswerIdsRef.current.add(studentId);
+    }
 
     try {
       await submitGrading.mutateAsync({
@@ -232,6 +268,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
         comments: '',
       });
     } catch (error) {
+      pendingExitAnswerIdsRef.current.delete(studentId);
       showApiError(error, '评分保存失败，请重试');
     }
   };
@@ -576,10 +613,25 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                             暂无学员回答
                           </div>
                         )}
-                        {activeQuestionDetail?.subjective_answers?.map((answer) => (
+                        {activeQuestionDetail?.subjective_answers?.map((answer) => {
+                          const isExiting = Boolean(exitingAnswerIds[answer.student_id]);
+
+                          return (
                           <div
                             key={answer.student_id}
-                            className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
+                            className={cn(
+                              'grid transform-gpu overflow-hidden transition-[grid-template-rows,opacity,transform,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                              isExiting
+                                ? 'mb-0 grid-rows-[0fr] -translate-y-1 opacity-0'
+                                : 'mb-4 grid-rows-[1fr] translate-y-0 opacity-100',
+                            )}
+                          >
+                          <div className="min-h-0 overflow-hidden">
+                          <div
+                            className={cn(
+                              'overflow-hidden rounded-xl border border-border bg-background group transition-colors duration-300',
+                              isExiting && 'border-secondary-200 bg-secondary-50/40 pointer-events-none',
+                            )}
                           >
                             {/* Header: Student Info + Score */}
                             <div className="flex flex-col gap-3 border-b border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -622,7 +674,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
-                                  <div className="min-h-[80px] rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-relaxed text-foreground">
+                                  <div className="min-h-[80px] whitespace-pre-wrap break-words rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-relaxed text-foreground">
                                     {formatAnswerText(answer.answer_text)}
                                   </div>
                                 </div>
@@ -640,11 +692,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                       <ThumbsDown className="w-3.5 h-3.5" /> 零分
                                     </button>
                                   </div>
-                                </div>
                               </div>
                             </div>
                           </div>
-                        ))}
+                          </div>
+                          </div>
+                          </div>
+                          );
+                        })}
                       </div>
                     )}
                   </>
