@@ -6,15 +6,21 @@ import {
   AlertTriangle,
   BookOpen,
   FileQuestion,
+  FileText,
   GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Tooltip } from '@/components/ui/tooltip';
+import { LIST_ACTION_ICON_VIEW_CLASS } from '@/components/ui/data-table/action-icon-styles';
 import { cn } from '@/lib/utils';
 import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
@@ -28,6 +34,7 @@ import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
 
 interface ProgressMonitoringTabProps {
   taskId?: number;
+  taskTitle?: string;
 }
 
 type AggregatedProgressCategory = {
@@ -49,16 +56,24 @@ const progressCategories: Omit<AggregatedProgressCategory, 'nodeCount' | 'comple
   { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
 ];
 
-type DistributionChartType = 'learning_time' | 'quiz_time' | 'score';
+type DistributionChartType = 'learning_time' | 'practice_time' | 'exam_time' | 'score';
 
 const chartTypeOptions = [
   { label: '学习', value: 'learning_time' },
-  { label: '测验/考试', value: 'quiz_time' },
+  { label: '测验', value: 'practice_time' },
+  { label: '考试', value: 'exam_time' },
   { label: '分数', value: 'score' },
 ];
 
-export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
+const timeChartOptions = chartTypeOptions.filter((option) => option.value !== 'score');
+
+const formatMinutes = (value: number | null) => (
+  value === null ? '-' : `${value} 分钟`
+);
+
+export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId, taskTitle }) => {
   const [chartType, setChartType] = React.useState<DistributionChartType>('learning_time');
+  const { roleNavigate } = useRoleNavigate();
 
   const { data: analytics, isLoading: analyticsLoading } = useTaskAnalytics(taskId || 0, {
     enabled: Boolean(taskId),
@@ -71,17 +86,15 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
   const hasScoreDistribution = analytics?.score_distribution != null;
   const studentExecutions = students || [];
   const availableChartOptions = React.useMemo(
-    () => hasScoreDistribution
-      ? chartTypeOptions
-      : chartTypeOptions.filter((option) => option.value !== 'score'),
+    () => hasScoreDistribution ? chartTypeOptions : timeChartOptions,
     [hasScoreDistribution],
   );
 
   React.useEffect(() => {
-    if (!hasScoreDistribution && chartType === 'score') {
-      setChartType('learning_time');
+    if (availableChartOptions.length > 0 && !availableChartOptions.some((option) => option.value === chartType)) {
+      setChartType(availableChartOptions[0].value as DistributionChartType);
     }
-  }, [chartType, hasScoreDistribution]);
+  }, [availableChartOptions, chartType]);
 
   const aggregatedProgress = React.useMemo(() => {
     if (!analytics?.node_progress) return [];
@@ -99,6 +112,22 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       return { key, label, icon, textClass, bgClass, barClass, nodeCount, completedCount: avgCompleted, totalCount, percentage };
     }).filter(Boolean) as AggregatedProgressCategory[];
   }, [analytics]);
+
+  const openStudentAnswers = React.useCallback((student: StudentExecution) => {
+    if (!taskId) {
+      return;
+    }
+    const searchParams = new URLSearchParams({
+      task: String(taskId),
+      entry: 'task-management',
+      view: 'student',
+      student: String(student.student_id),
+    });
+    if (taskTitle) {
+      searchParams.set('taskTitle', taskTitle);
+    }
+    roleNavigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`);
+  }, [roleNavigate, taskId, taskTitle]);
 
   const columns = React.useMemo<ColumnDef<StudentExecution>[]>(() => [
     {
@@ -172,22 +201,51 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       minSize: 96,
       cell: ({ row }) => (
         <span className="text-sm text-text-muted tabular-nums">
-          {row.original.learning_time_spent} 分钟
+          {formatMinutes(row.original.learning_time_spent)}
         </span>
       ),
     },
     {
-      header: '测验/考试用时',
-      id: 'quiz_time_spent',
-      size: 128,
-      minSize: 118,
+      header: '测验用时',
+      id: 'practice_time_spent',
+      size: 104,
+      minSize: 96,
       cell: ({ row }) => (
         <span className="text-sm text-text-muted tabular-nums">
-          {row.original.quiz_time_spent} 分钟
+          {formatMinutes(row.original.practice_time_spent)}
         </span>
       ),
     },
-  ], []);
+    {
+      header: '考试用时',
+      id: 'exam_time_spent',
+      size: 104,
+      minSize: 96,
+      cell: ({ row }) => (
+        <span className="text-sm text-text-muted tabular-nums">
+          {formatMinutes(row.original.exam_time_spent)}
+        </span>
+      ),
+    },
+    {
+      header: '答题详情',
+      id: 'answer_detail',
+      size: 90,
+      minSize: 86,
+      cell: ({ row }) => (
+        <Tooltip title="查看个人答题详情">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={LIST_ACTION_ICON_VIEW_CLASS}
+            onClick={() => openStudentAnswers(row.original)}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
+        </Tooltip>
+      ),
+    },
+  ], [openStudentAnswers]);
 
   if (isLoading || !analytics) {
     return (
@@ -343,13 +401,15 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
         )}
       </div>
 
-      <SegmentedControl
-        options={chartOptions}
-        value={chartType}
-        onChange={(value) => onChartTypeChange(value as DistributionChartType)}
-        size="xs"
-        className="shrink-0"
-      />
+      {chartOptions.length > 0 && (
+        <SegmentedControl
+          options={chartOptions}
+          value={chartType}
+          onChange={(value) => onChartTypeChange(value as DistributionChartType)}
+          size="xs"
+          className="shrink-0"
+        />
+      )}
     </div>
 
     <div className="flex min-h-0 flex-1 flex-col">
@@ -357,9 +417,11 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
         data={
           chartType === 'learning_time'
             ? analytics.learning_time_distribution
-            : chartType === 'quiz_time'
-              ? analytics.quiz_time_distribution
-              : (analytics.score_distribution || [])
+            : chartType === 'practice_time'
+              ? analytics.practice_time_distribution
+              : chartType === 'exam_time'
+                ? analytics.exam_time_distribution
+                : (analytics.score_distribution || [])
         }
         type={chartType}
       />
@@ -376,9 +438,10 @@ const AverageTimeCard: React.FC<{ analytics: TaskAnalytics }> = ({ analytics }) 
           平均用时
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         <TimeValue label="学习" value={analytics.average_learning_time} />
-        <TimeValue label="测验/考试" value={analytics.average_quiz_time} />
+        <TimeValue label="测验" value={analytics.average_practice_time} />
+        <TimeValue label="考试" value={analytics.average_exam_time} />
       </div>
     </div>
     <Clock
@@ -388,15 +451,17 @@ const AverageTimeCard: React.FC<{ analytics: TaskAnalytics }> = ({ analytics }) 
   </Card>
 );
 
-const TimeValue: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+const TimeValue: React.FC<{ label: string; value: number | null }> = ({ label, value }) => (
   <div className="min-w-0">
     <div className="flex items-end gap-1">
-      <span className="text-[1.75rem] leading-none font-bold text-foreground tabular-nums">
-        {value}
+      <span className="text-[1.45rem] leading-none font-bold text-foreground tabular-nums">
+        {value === null ? '-' : value}
       </span>
-      <span className="mb-0.5 text-[11px] font-medium whitespace-nowrap text-muted-foreground/60">
-        分钟
-      </span>
+      {value !== null && (
+        <span className="mb-0.5 text-[10px] font-medium whitespace-nowrap text-muted-foreground/60">
+          分钟
+        </span>
+      )}
     </div>
     <p className="mt-1 text-[11px] font-medium text-text-muted">{label}</p>
   </div>
@@ -451,7 +516,9 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
     ? 'bg-secondary'
     : type === 'learning_time'
       ? 'bg-primary'
-      : 'bg-primary-500';
+      : type === 'practice_time'
+        ? 'bg-primary-500'
+        : 'bg-warning-500';
 
   return (
     <div className="flex h-full min-h-40 flex-col justify-between pb-1.5">

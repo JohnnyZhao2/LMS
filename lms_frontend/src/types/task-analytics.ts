@@ -10,8 +10,9 @@ export interface TaskAnalytics {
     total_count: number;
     percentage: number;
   };
-  average_learning_time: number; // in minutes
-  average_quiz_time: number; // in minutes
+  average_learning_time: number | null; // in minutes
+  average_practice_time: number | null; // in minutes
+  average_exam_time: number | null; // in minutes
   accuracy: {
     has_quiz: boolean;
     percentage: number | null;
@@ -19,7 +20,8 @@ export interface TaskAnalytics {
   abnormal_count: number;
   node_progress: TaskNodeProgress[];
   learning_time_distribution: DistributionItem[];
-  quiz_time_distribution: DistributionItem[];
+  practice_time_distribution: DistributionItem[];
+  exam_time_distribution: DistributionItem[];
   score_distribution: DistributionItem[] | null;
   pass_rate: number | null;
 }
@@ -47,8 +49,9 @@ export interface StudentExecution {
   status: TaskExecutionStatus;
   node_progress: string;
   score: number | null;
-  learning_time_spent: number;
-  quiz_time_spent: number;
+  learning_time_spent: number | null;
+  practice_time_spent: number | null;
+  exam_time_spent: number | null;
   is_abnormal: boolean;
 }
 
@@ -64,7 +67,7 @@ export interface GradingQuestion {
   pass_rate: number | null;
 }
 
-interface GradingOptionStudent {
+export interface GradingOptionStudent {
   student_id: number;
   student_name: string;
   avatar_key: string;
@@ -72,7 +75,7 @@ interface GradingOptionStudent {
   department: string;
 }
 
-interface GradingOption {
+export interface GradingOption {
   option_key: string;
   option_text: string;
   selected_count: number;
@@ -107,7 +110,7 @@ export interface GradingStudentAnswerOption {
   is_correct: boolean;
 }
 
-export type GradingStudentAnswerStatus = 'UNANSWERED' | 'ANSWERED' | 'PENDING_GRADING' | 'GRADED';
+export type GradingStudentAnswerStatus = 'UNANSWERED' | 'PENDING_GRADING' | 'GRADED';
 
 export interface GradingStudentAnswerItem {
   question_id: number;

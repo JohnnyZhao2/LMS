@@ -188,7 +188,7 @@ export const TaskPreviewPage: React.FC = () => {
 
       {activeTab === 'progress' ? (
         <PageWorkbench className="gap-4">
-          <ProgressMonitoringTab taskId={taskId} />
+          <ProgressMonitoringTab taskId={taskId} taskTitle={task.title} />
         </PageWorkbench>
       ) : (
         <PageWorkbench className="gap-6">

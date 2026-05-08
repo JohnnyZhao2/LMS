@@ -1965,7 +1965,11 @@ class TestTaskAnalyticsApiContracts:
         assert 'completion' in response.data['data']
         assert 'accuracy' in response.data['data']
         assert 'learning_time_distribution' in response.data['data']
-        assert 'quiz_time_distribution' in response.data['data']
+        assert 'practice_time_distribution' in response.data['data']
+        assert 'exam_time_distribution' in response.data['data']
+        assert response.data['data']['average_learning_time'] is None
+        assert response.data['data']['average_practice_time'] is None
+        assert response.data['data']['average_exam_time'] is None
 
     def test_student_executions_response_is_wrapped(self, api_client, mentor_user, student_user):
         task = self._create_mentor_task(mentor_user, student_user)
@@ -1977,6 +1981,9 @@ class TestTaskAnalyticsApiContracts:
         assert_success(response)
         assert isinstance(response.data['data'], list)
         assert response.data['data'][0]['status'] == 'NOT_STARTED'
+        assert response.data['data'][0]['learning_time_spent'] is None
+        assert response.data['data'][0]['practice_time_spent'] is None
+        assert response.data['data'][0]['exam_time_spent'] is None
 
     def test_student_executions_marks_pending_grading(
         self,
@@ -2010,6 +2017,7 @@ class TestTaskAnalyticsApiContracts:
         student_user,
         sample_knowledge,
         sample_quiz,
+        sample_exam_quiz,
     ):
         task = self._create_mentor_task(mentor_user, student_user)
         assignment = TaskAssignment.objects.get(task=task, assignee=student_user)
@@ -2049,19 +2057,37 @@ class TestTaskAnalyticsApiContracts:
             started_at=now - timezone.timedelta(minutes=25)
         )
 
+        task_exam = _ensure_task_quiz(task=task, quiz=sample_exam_quiz, actor=mentor_user, order=2)
+        exam_submission = Submission.objects.create(
+            task_assignment=assignment,
+            task_quiz=task_exam,
+            quiz=task_exam.quiz,
+            user=student_user,
+            status='GRADED',
+            submitted_at=now,
+        )
+        Submission.objects.filter(pk=exam_submission.pk).update(
+            started_at=now - timezone.timedelta(minutes=35)
+        )
+
         mentor = as_role(mentor_user, 'MENTOR')
         analytics_response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/analytics/')
         executions_response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/student-executions/')
 
         assert_success(analytics_response)
         assert analytics_response.data['data']['average_learning_time'] == 40.0
-        assert analytics_response.data['data']['average_quiz_time'] == 25.0
+        assert analytics_response.data['data']['average_practice_time'] == 25.0
+        assert analytics_response.data['data']['average_exam_time'] == 35.0
         assert analytics_response.data['data']['learning_time_distribution'][2] == {
             'range': '30-45',
             'count': 1,
         }
-        assert analytics_response.data['data']['quiz_time_distribution'][1] == {
+        assert analytics_response.data['data']['practice_time_distribution'][1] == {
             'range': '15-30',
+            'count': 1,
+        }
+        assert analytics_response.data['data']['exam_time_distribution'][2] == {
+            'range': '30-45',
             'count': 1,
         }
         assert analytics_response.data['data']['learning_time_distribution'][-1] == {
@@ -2070,7 +2096,8 @@ class TestTaskAnalyticsApiContracts:
         }
         assert_success(executions_response)
         assert executions_response.data['data'][0]['learning_time_spent'] == 40
-        assert executions_response.data['data'][0]['quiz_time_spent'] == 25
+        assert executions_response.data['data'][0]['practice_time_spent'] == 25
+        assert executions_response.data['data'][0]['exam_time_spent'] == 35
 
 
 @pytest.mark.django_db
