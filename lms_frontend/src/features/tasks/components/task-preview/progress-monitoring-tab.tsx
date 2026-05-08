@@ -49,13 +49,16 @@ const progressCategories: Omit<AggregatedProgressCategory, 'nodeCount' | 'comple
   { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
 ];
 
+type DistributionChartType = 'learning_time' | 'quiz_time' | 'score';
+
 const chartTypeOptions = [
-  { label: '时间', value: 'time' },
+  { label: '学习', value: 'learning_time' },
+  { label: '测验/考试', value: 'quiz_time' },
   { label: '分数', value: 'score' },
 ];
 
 export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
-  const [chartType, setChartType] = React.useState<'time' | 'score'>('time');
+  const [chartType, setChartType] = React.useState<DistributionChartType>('learning_time');
 
   const { data: analytics, isLoading: analyticsLoading } = useTaskAnalytics(taskId || 0, {
     enabled: Boolean(taskId),
@@ -67,6 +70,18 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
   const isLoading = analyticsLoading || studentsLoading;
   const hasScoreDistribution = analytics?.score_distribution != null;
   const studentExecutions = students || [];
+  const availableChartOptions = React.useMemo(
+    () => hasScoreDistribution
+      ? chartTypeOptions
+      : chartTypeOptions.filter((option) => option.value !== 'score'),
+    [hasScoreDistribution],
+  );
+
+  React.useEffect(() => {
+    if (!hasScoreDistribution && chartType === 'score') {
+      setChartType('learning_time');
+    }
+  }, [chartType, hasScoreDistribution]);
 
   const aggregatedProgress = React.useMemo(() => {
     if (!analytics?.node_progress) return [];
@@ -151,13 +166,24 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       ),
     },
     {
-      header: '用时',
-      id: 'time_spent',
-      size: 110,
-      minSize: 100,
+      header: '学习用时',
+      id: 'learning_time_spent',
+      size: 104,
+      minSize: 96,
       cell: ({ row }) => (
         <span className="text-sm text-text-muted tabular-nums">
-          {row.original.time_spent} 分钟
+          {row.original.learning_time_spent} 分钟
+        </span>
+      ),
+    },
+    {
+      header: '测验/考试用时',
+      id: 'quiz_time_spent',
+      size: 128,
+      minSize: 118,
+      cell: ({ row }) => (
+        <span className="text-sm text-text-muted tabular-nums">
+          {row.original.quiz_time_spent} 分钟
         </span>
       ),
     },
@@ -193,7 +219,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
           <DistributionPanel
             analytics={analytics}
             chartType={chartType}
-            hasScoreDistribution={hasScoreDistribution}
+            chartOptions={availableChartOptions}
             onChartTypeChange={setChartType}
           />
         </div>
@@ -231,16 +257,7 @@ const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics 
       size="xs"
       className="xl:h-full"
     />
-    <StatCard
-      title="平均用时"
-      value={`${analytics.average_time}`}
-      subtitle="分钟"
-      icon={Clock}
-      iconClassName="text-primary"
-      accentClassName="bg-primary-500"
-      size="xs"
-      className="xl:h-full"
-    />
+    <AverageTimeCard analytics={analytics} />
     <StatCard
       title={analytics.accuracy.has_quiz ? '准确率' : '考试情况'}
       value={analytics.accuracy.has_quiz ? `${analytics.accuracy.percentage}%` : '无考试'}
@@ -291,15 +308,15 @@ const NodeProgressPanel: React.FC<{
 
 interface DistributionPanelProps {
   analytics: TaskAnalytics;
-  chartType: 'time' | 'score';
-  hasScoreDistribution: boolean;
-  onChartTypeChange: (type: 'time' | 'score') => void;
+  chartType: DistributionChartType;
+  chartOptions: typeof chartTypeOptions;
+  onChartTypeChange: (type: DistributionChartType) => void;
 }
 
 const DistributionPanel: React.FC<DistributionPanelProps> = ({
   analytics,
   chartType,
-  hasScoreDistribution,
+  chartOptions,
   onChartTypeChange,
 }) => (
   <Card className="flex h-full flex-col border border-border/70 p-4">
@@ -326,24 +343,63 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
         )}
       </div>
 
-      {hasScoreDistribution && (
-        <SegmentedControl
-          options={chartTypeOptions}
-          value={chartType}
-          onChange={(value) => onChartTypeChange(value as 'time' | 'score')}
-          size="xs"
-          className="shrink-0"
-        />
-      )}
+      <SegmentedControl
+        options={chartOptions}
+        value={chartType}
+        onChange={(value) => onChartTypeChange(value as DistributionChartType)}
+        size="xs"
+        className="shrink-0"
+      />
     </div>
 
     <div className="flex min-h-0 flex-1 flex-col">
       <DistributionChart
-        data={chartType === 'time' ? analytics.time_distribution : (analytics.score_distribution || [])}
+        data={
+          chartType === 'learning_time'
+            ? analytics.learning_time_distribution
+            : chartType === 'quiz_time'
+              ? analytics.quiz_time_distribution
+              : (analytics.score_distribution || [])
+        }
         type={chartType}
       />
     </div>
   </Card>
+);
+
+const AverageTimeCard: React.FC<{ analytics: TaskAnalytics }> = ({ analytics }) => (
+  <Card className="group relative h-24 overflow-hidden border-border/50 bg-card transition-all duration-500 hover:border-primary/20 hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)] xl:h-full">
+    <div className="relative z-10 flex h-full flex-col justify-between px-4 py-4">
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-1 rounded-full bg-primary-500 text-primary-500 shadow-[0_0_10px_currentColor] transition-all duration-500 ease-out group-hover:h-4" />
+        <p className="truncate text-[9px] font-semibold leading-none tracking-[0.22em] text-muted-foreground/80 uppercase transition-colors duration-300 group-hover:text-foreground">
+          平均用时
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <TimeValue label="学习" value={analytics.average_learning_time} />
+        <TimeValue label="测验/考试" value={analytics.average_quiz_time} />
+      </div>
+    </div>
+    <Clock
+      className="absolute -right-5 -bottom-5 h-24 w-24 text-primary opacity-[0.12] transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:-translate-y-2 group-hover:-rotate-6 group-hover:scale-110 group-hover:opacity-[0.2]"
+      strokeWidth={0.5}
+    />
+  </Card>
+);
+
+const TimeValue: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+  <div className="min-w-0">
+    <div className="flex items-end gap-1">
+      <span className="text-[1.75rem] leading-none font-bold text-foreground tabular-nums">
+        {value}
+      </span>
+      <span className="mb-0.5 text-[11px] font-medium whitespace-nowrap text-muted-foreground/60">
+        分钟
+      </span>
+    </div>
+    <p className="mt-1 text-[11px] font-medium text-text-muted">{label}</p>
+  </div>
 );
 
 interface CategoryProgressBarProps {
@@ -378,7 +434,7 @@ const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) =
 
 interface DistributionChartProps {
   data: { range: string; count: number }[];
-  type: 'time' | 'score';
+  type: DistributionChartType;
 }
 
 const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => {
@@ -391,7 +447,11 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
   }
 
   const maxCount = Math.max(...data.map((d) => d.count), 1);
-  const barClassName = type === 'time' ? 'bg-primary' : 'bg-secondary';
+  const barClassName = type === 'score'
+    ? 'bg-secondary'
+    : type === 'learning_time'
+      ? 'bg-primary'
+      : 'bg-primary-500';
 
   return (
     <div className="flex h-full min-h-40 flex-col justify-between pb-1.5">

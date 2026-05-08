@@ -1964,7 +1964,8 @@ class TestTaskAnalyticsApiContracts:
         assert_success(response)
         assert 'completion' in response.data['data']
         assert 'accuracy' in response.data['data']
-        assert 'time_distribution' in response.data['data']
+        assert 'learning_time_distribution' in response.data['data']
+        assert 'quiz_time_distribution' in response.data['data']
 
     def test_student_executions_response_is_wrapped(self, api_client, mentor_user, student_user):
         task = self._create_mentor_task(mentor_user, student_user)
@@ -2053,13 +2054,23 @@ class TestTaskAnalyticsApiContracts:
         executions_response = auth(api_client, mentor).get(f'/api/tasks/{task.id}/student-executions/')
 
         assert_success(analytics_response)
-        assert analytics_response.data['data']['average_time'] == 65.0
-        assert analytics_response.data['data']['time_distribution'][-1] == {
-            'range': '60+',
+        assert analytics_response.data['data']['average_learning_time'] == 40.0
+        assert analytics_response.data['data']['average_quiz_time'] == 25.0
+        assert analytics_response.data['data']['learning_time_distribution'][2] == {
+            'range': '30-45',
             'count': 1,
         }
+        assert analytics_response.data['data']['quiz_time_distribution'][1] == {
+            'range': '15-30',
+            'count': 1,
+        }
+        assert analytics_response.data['data']['learning_time_distribution'][-1] == {
+            'range': '60+',
+            'count': 0,
+        }
         assert_success(executions_response)
-        assert executions_response.data['data'][0]['time_spent'] == 65
+        assert executions_response.data['data'][0]['learning_time_spent'] == 40
+        assert executions_response.data['data'][0]['quiz_time_spent'] == 25
 
 
 @pytest.mark.django_db

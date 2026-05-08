@@ -341,17 +341,21 @@ def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
     return False
 
 
-def assignment_activity_minutes(assignment: TaskAssignment) -> float:
-    total_seconds = 0.0
+def assignment_activity_minutes(assignment: TaskAssignment) -> dict[str, float]:
+    learning_seconds = 0.0
+    quiz_seconds = 0.0
     for progress in assignment.knowledge_progress.all():
         if not progress.is_completed:
             continue
         if progress.completed_at and progress.started_at:
-            total_seconds += max(0.0, (progress.completed_at - progress.started_at).total_seconds())
+            learning_seconds += max(0.0, (progress.completed_at - progress.started_at).total_seconds())
     for submission in assignment.submissions.all():
         if submission.submitted_at and submission.started_at:
-            total_seconds += max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
-    return total_seconds / 60
+            quiz_seconds += max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
+    return {
+        'learning': learning_seconds / 60,
+        'quiz': quiz_seconds / 60,
+    }
 
 
 def task_completion_stats(task_id: int) -> dict[str, Any]:
@@ -365,15 +369,26 @@ def task_completion_stats(task_id: int) -> dict[str, Any]:
     }
 
 
-def task_average_completion_minutes(task_id: int) -> float:
+def task_average_completion_minutes(task_id: int) -> dict[str, float]:
     completed_assignments = analytics_assignment_queryset(task_id=task_id).filter(
         status='COMPLETED',
         completed_at__isnull=False,
     )
     if not completed_assignments.exists():
-        return 0.0
-    total_time = sum(assignment_activity_minutes(assignment) for assignment in completed_assignments)
-    return round(total_time / completed_assignments.count(), 1)
+        return {'learning': 0.0, 'quiz': 0.0}
+
+    learning_total = 0.0
+    quiz_total = 0.0
+    for assignment in completed_assignments:
+        duration = assignment_activity_minutes(assignment)
+        learning_total += duration['learning']
+        quiz_total += duration['quiz']
+
+    assignment_count = completed_assignments.count()
+    return {
+        'learning': round(learning_total / assignment_count, 1),
+        'quiz': round(quiz_total / assignment_count, 1),
+    }
 
 
 def task_accuracy_stats(task_id: int) -> dict[str, Any]:
@@ -430,14 +445,14 @@ def task_node_progress(task_id: int, total_count: int) -> list[dict[str, Any]]:
     return nodes
 
 
-def task_time_distribution(task_id: int) -> list[dict[str, int]]:
+def task_time_distribution(task_id: int, duration_type: str) -> list[dict[str, int]]:
     distribution = {item[0]: 0 for item in TIME_DISTRIBUTION_RANGES}
     completed_assignments = analytics_assignment_queryset(task_id=task_id).filter(
         status='COMPLETED',
         completed_at__isnull=False,
     )
     for assignment in completed_assignments:
-        duration = assignment_activity_minutes(assignment)
+        duration = assignment_activity_minutes(assignment)[duration_type]
         for label, minimum, maximum in TIME_DISTRIBUTION_RANGES:
             if minimum <= duration < maximum:
                 distribution[label] += 1
@@ -474,6 +489,7 @@ def task_exam_pass_rate(task_id: int) -> Optional[float]:
 def task_analytics_payload(task_id: int) -> dict[str, Any]:
     completion = task_completion_stats(task_id)
     accuracy = task_accuracy_stats(task_id)
+    average_time = task_average_completion_minutes(task_id)
     score_distribution = None
     pass_rate = None
     if accuracy['has_quiz']:
@@ -481,11 +497,13 @@ def task_analytics_payload(task_id: int) -> dict[str, Any]:
         pass_rate = task_exam_pass_rate(task_id)
     return {
         'completion': completion,
-        'average_time': task_average_completion_minutes(task_id),
+        'average_learning_time': average_time['learning'],
+        'average_quiz_time': average_time['quiz'],
         'accuracy': accuracy,
         'abnormal_count': task_abnormal_count(task_id),
         'node_progress': task_node_progress(task_id, completion['total_count']),
-        'time_distribution': task_time_distribution(task_id),
+        'learning_time_distribution': task_time_distribution(task_id, 'learning'),
+        'quiz_time_distribution': task_time_distribution(task_id, 'quiz'),
         'score_distribution': score_distribution,
         'pass_rate': pass_rate,
     }
@@ -502,7 +520,7 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
         completed_quiz_count = len({submission.task_quiz_id for submission in assignment.submissions.all()})
         completed_nodes = completed_knowledge + completed_quiz_count
 
-        time_spent = int(assignment_activity_minutes(assignment))
+        time_spent = assignment_activity_minutes(assignment)
 
         score = float(assignment.score) if assignment.score is not None else None
         abnormal = is_assignment_abnormal(assignment)
@@ -518,7 +536,8 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
                 'status': status,
                 'node_progress': f'{completed_nodes}/{total_nodes}',
                 'score': score,
-                'time_spent': time_spent,
+                'learning_time_spent': int(time_spent['learning']),
+                'quiz_time_spent': int(time_spent['quiz']),
                 'is_abnormal': abnormal,
             }
         )

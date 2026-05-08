@@ -28,11 +28,13 @@ class DistributionItemSerializer(serializers.Serializer):
 
 class TaskAnalyticsSerializer(serializers.Serializer):
     completion = CompletionSerializer()
-    average_time = serializers.FloatField()
+    average_learning_time = serializers.FloatField()
+    average_quiz_time = serializers.FloatField()
     accuracy = AccuracySerializer()
     abnormal_count = serializers.IntegerField()
     node_progress = NodeProgressSerializer(many=True)
-    time_distribution = DistributionItemSerializer(many=True)
+    learning_time_distribution = DistributionItemSerializer(many=True)
+    quiz_time_distribution = DistributionItemSerializer(many=True)
     score_distribution = DistributionItemSerializer(many=True, allow_null=True)
     pass_rate = serializers.FloatField(allow_null=True)
 
@@ -55,5 +57,6 @@ class StudentExecutionSerializer(serializers.Serializer):
     )
     node_progress = serializers.CharField()
     score = serializers.FloatField(allow_null=True)
-    time_spent = serializers.IntegerField()
+    learning_time_spent = serializers.IntegerField()
+    quiz_time_spent = serializers.IntegerField()
     is_abnormal = serializers.BooleanField()

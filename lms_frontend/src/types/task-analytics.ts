@@ -10,14 +10,16 @@ export interface TaskAnalytics {
     total_count: number;
     percentage: number;
   };
-  average_time: number; // in minutes
+  average_learning_time: number; // in minutes
+  average_quiz_time: number; // in minutes
   accuracy: {
     has_quiz: boolean;
     percentage: number | null;
   };
   abnormal_count: number;
   node_progress: TaskNodeProgress[];
-  time_distribution: DistributionItem[];
+  learning_time_distribution: DistributionItem[];
+  quiz_time_distribution: DistributionItem[];
   score_distribution: DistributionItem[] | null;
   pass_rate: number | null;
 }
@@ -45,7 +47,8 @@ export interface StudentExecution {
   status: TaskExecutionStatus;
   node_progress: string;
   score: number | null;
-  time_spent: number;
+  learning_time_spent: number;
+  quiz_time_spent: number;
   is_abnormal: boolean;
 }
 
@@ -95,6 +98,40 @@ export interface GradingAnswerResponse {
   answered_count?: number;
   options?: GradingOption[];
   subjective_answers?: GradingSubjectiveAnswer[];
+}
+
+export interface GradingStudentAnswerOption {
+  option_key: string;
+  option_text: string;
+  is_selected: boolean;
+  is_correct: boolean;
+}
+
+export type GradingStudentAnswerStatus = 'UNANSWERED' | 'ANSWERED' | 'PENDING_GRADING' | 'GRADED';
+
+export interface GradingStudentAnswerItem {
+  question_id: number;
+  question_text: string;
+  question_analysis: string;
+  question_type: GradingQuestionType;
+  question_type_display: string;
+  max_score: number;
+  answer_text: string | null;
+  selected_keys: string[];
+  options: GradingStudentAnswerOption[];
+  is_correct: boolean | null;
+  score: number | null;
+  submitted_at: string | null;
+  answer_status: GradingStudentAnswerStatus;
+}
+
+export interface GradingStudentAnswerResponse {
+  student_id: number;
+  student_name: string;
+  avatar_key: string;
+  employee_id: string;
+  department: string;
+  answers: GradingStudentAnswerItem[];
 }
 
 export interface GradingSubmitRequest {
