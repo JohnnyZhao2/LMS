@@ -417,7 +417,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   const selectedStudentScopeLabel = selectedStudentId === null ? '全部人员' : selectedStudentScope?.student_name;
 
   return (
-    <div className="grid h-full min-h-0 gap-4 lg:gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
+    <div className="grid h-full min-h-0 min-w-[1080px] grid-cols-[minmax(300px,27fr)_minmax(748px,73fr)] gap-4 lg:gap-6">
       {/* Left Column: Question List */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
         <div className="border-b border-border bg-background p-3 sm:p-4">
@@ -590,9 +590,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                 ) : null}
               </div>
 
-              <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+              <div className="grid min-h-0 flex-1 grid-cols-[minmax(520px,77fr)_minmax(212px,23fr)] gap-4">
               <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-background">
-              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
+              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 2xl:p-6">
                 {!activeQuestionDetail && detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -603,7 +603,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   <>
                     {/* OBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
-                      <div className="relative space-y-4">
+                      <div className="relative space-y-3 2xl:space-y-4">
                         {sortedOptions.length === 0 && (
                           <div className="bg-background rounded-xl border border-dashed">
                             <EmptyState
@@ -624,7 +624,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                             <div
                               key={option.option_key}
                               className={cn(
-                                'group relative rounded-xl px-4 py-5 transition-all',
+                                'group relative rounded-xl px-4 py-4 transition-all 2xl:py-5',
                                 isCorrect
                                   ? 'border border-secondary-300 bg-background ring-1 ring-secondary-100'
                                   : 'border border-transparent bg-transparent',
@@ -649,7 +649,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                 </div>
                               </div>
 
-                              <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
+                              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted 2xl:mt-5">
                                 <div
                                   className={cn(
                                     'h-full',
@@ -659,7 +659,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                 />
                               </div>
 
-                              <div className="mt-5 flex items-center justify-between gap-3">
+                              <div className="mt-4 flex items-center justify-between gap-3 2xl:mt-5">
                                 <div className="flex min-w-0 items-center">
                                   {previewStudents.map((student, index) => (
                                     <UserAvatar

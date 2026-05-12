@@ -156,7 +156,7 @@ export const GradingCenterPage: React.FC = () => {
       />
 
       {/* Main Content */}
-      <PageWorkbench>
+      <PageWorkbench className="overflow-x-auto overflow-y-hidden">
         {isTaskManagementEntry ? (
           selectedTask && resolvedQuizId ? (
             <GradingCenterTab
