@@ -2,7 +2,6 @@ import React from 'react';
 import {
   BookOpen,
   ArrowRight,
-  TrendingUp,
   Calendar as CalendarIcon,
   Activity,
   AlertCircle,
@@ -14,7 +13,7 @@ import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import type { StudentDashboardTask } from '@/types/dashboard';
+import type { StudentDashboardTask, TaskParticipant } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
 
 import { MiniCalendar } from './student-dashboard/mini-calendar';
@@ -44,6 +43,114 @@ const DashboardSectionHeader: React.FC<DashboardSectionHeaderProps> = ({
     {action}
   </div>
 );
+
+interface PeerProgressPanelProps {
+  selectedTask: StudentDashboardTask | null;
+  participants: TaskParticipant[];
+  isLoading: boolean;
+}
+
+const PeerProgressPanel: React.FC<PeerProgressPanelProps> = ({
+  selectedTask,
+  participants,
+  isLoading,
+}) => {
+  if (!selectedTask) {
+    return (
+      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
+        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
+          选择任务查看截止日期和同伴进度
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 px-1 py-2">
+        {[1, 2].map(i => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-14 rounded" />
+                <Skeleton className="h-3 w-8 rounded" />
+              </div>
+              <Skeleton className="h-[2px] w-full rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (participants.length === 0) {
+    return (
+      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
+        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
+          暂无参与者
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollContainer
+      scrollbar="hidden"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-2"
+    >
+      <div className="flex flex-col gap-2">
+        {participants.map((p) => (
+          <div
+            key={p.id}
+            className={cn(
+              "group/peer flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-500",
+              p.is_me
+                ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
+                : "hover:bg-slate-50"
+            )}
+          >
+            <div className={cn(
+              "flex h-5 w-5 shrink-0 items-center justify-center text-[12px] font-black italic tabular-nums tracking-normal transition-transform duration-500 group-hover/peer:scale-110",
+              p.rank === 1 ? "text-amber-500" :
+                p.rank === 2 ? "text-slate-400" :
+                  "text-slate-300"
+            )}>
+              {String(p.rank).padStart(2, '0')}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className={cn(
+                  "truncate text-[13px] font-bold tracking-normal transition-colors",
+                  p.is_me ? "text-primary" : "text-slate-600"
+                )}>
+                  {p.is_me ? '我' : p.name}
+                </span>
+                <span className={cn(
+                  "text-[11px] font-black tabular-nums transition-colors",
+                  p.is_me ? "text-primary/70" : "text-slate-300"
+                )}>
+                  {Math.round(p.progress)}%
+                </span>
+              </div>
+
+              <div className="h-[2px] w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-1000 ease-out",
+                    p.is_me ? "bg-primary" : "bg-slate-300/40"
+                  )}
+                  style={{ width: `${p.progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScrollContainer>
+  );
+};
 
 export const StudentDashboard: React.FC = () => {
   const { data, isLoading } = useStudentDashboard(4, 4);
@@ -123,122 +230,33 @@ export const StudentDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:contents">
-            <div className="min-h-0 min-w-0 xl:col-span-3 xl:col-start-10 xl:row-start-1 xl:h-full">
+          <div className="min-h-0 min-w-0 xl:col-span-3 xl:col-start-10 xl:row-span-2 xl:row-start-1 xl:h-full">
               <div className="flex min-h-0 flex-col gap-3 xl:h-full">
                 <DashboardSectionHeader
                   title="日历"
                   icon={CalendarIcon}
                   accentColor="text-blue-500"
                 />
-                <MiniCalendar
-                  selectedTask={selectedTask}
-                  className="min-h-0 flex-1"
-                />
-              </div>
-            </div>
-
-            {/* 同伴进度 */}
-            <div className="min-h-0 min-w-0 xl:col-span-3 xl:col-start-10 xl:row-start-2 xl:h-full">
-              <div className="flex min-h-0 flex-col gap-3 xl:h-full">
-                <DashboardSectionHeader
-                  title="同伴进度"
-                  icon={TrendingUp}
-                  accentColor="text-violet-500"
-                />
                 <EditorialCard
-                  className="min-h-0 flex-1"
-                  contentClassName="px-4 py-4 xl:px-5 xl:py-5"
+                  className="min-h-[420px] flex-1"
+                  contentClassName="px-0 py-0 xl:px-0 xl:py-0"
                 >
-                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    {!selectedTask ? (
-                      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
-                        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
-                          选择任务查看同伴进度
-                        </p>
-                      </div>
-                    ) : participantsLoading ? (
-                      <div className="space-y-4 px-1 py-2">
-                        {[1, 2].map(i => (
-                          <div key={i} className="flex items-center gap-3">
-                            <Skeleton className="h-6 w-6 rounded-full" />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Skeleton className="h-3 w-14 rounded" />
-                                <Skeleton className="h-3 w-8 rounded" />
-                              </div>
-                              <Skeleton className="h-[2px] w-full rounded-full" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : participantItems.length > 0 ? (
-                      <ScrollContainer
-                        scrollbar="hidden"
-                        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-2"
-                      >
-                        <div className="flex flex-col gap-2">
-                          {participantItems.map((p) => (
-                            <div
-                              key={p.id}
-                              className={cn(
-                                "group/peer flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-500",
-                                p.is_me
-                                  ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
-                                  : "hover:bg-slate-50"
-                              )}
-                            >
-                              <div className={cn(
-                                "flex h-5 w-5 shrink-0 items-center justify-center text-[12px] font-black italic tabular-nums tracking-normal transition-transform duration-500 group-hover/peer:scale-110",
-                                p.rank === 1 ? "text-amber-500" :
-                                  p.rank === 2 ? "text-slate-400" :
-                                    "text-slate-300"
-                              )}>
-                                {String(p.rank).padStart(2, '0')}
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="mb-1.5 flex items-center justify-between">
-                                  <span className={cn(
-                                    "truncate text-[13px] font-bold tracking-normal transition-colors",
-                                    p.is_me ? "text-primary" : "text-slate-600"
-                                  )}>
-                                    {p.is_me ? '我' : p.name}
-                                  </span>
-                                  <span className={cn(
-                                    "text-[11px] font-black tabular-nums transition-colors",
-                                    p.is_me ? "text-primary/70" : "text-slate-300"
-                                  )}>
-                                    {Math.round(p.progress)}%
-                                  </span>
-                                </div>
-
-                                <div className="h-[2px] w-full overflow-hidden rounded-full bg-slate-100">
-                                  <div
-                                    className={cn(
-                                      "h-full transition-all duration-1000 ease-out",
-                                      p.is_me ? "bg-primary" : "bg-slate-300/40"
-                                    )}
-                                    style={{ width: `${p.progress}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollContainer>
-                    ) : (
-                      <div className="flex min-h-[72px] flex-1 items-center justify-center px-1 py-2 text-center">
-                        <p className="text-[11px] font-bold tracking-[0.08em] text-slate-400/75">
-                          暂无参与者
-                        </p>
-                      </div>
-                    )}
+                  <div className="grid min-h-0 flex-1 grid-rows-[minmax(220px,52fr)_minmax(164px,48fr)] overflow-hidden xl:grid-rows-[minmax(0,52fr)_minmax(0,48fr)]">
+                    <MiniCalendar
+                      selectedTask={selectedTask}
+                      className="min-h-0 border-b border-dashed border-border/45 bg-transparent px-0"
+                    />
+                    <div className="flex min-h-0 flex-col overflow-hidden px-4 py-3 xl:px-5 xl:py-4">
+                      <PeerProgressPanel
+                        selectedTask={selectedTask}
+                        participants={participantItems}
+                        isLoading={participantsLoading}
+                      />
+                    </div>
                   </div>
                 </EditorialCard>
               </div>
             </div>
-          </div>
         </div>
     </div>
   );
