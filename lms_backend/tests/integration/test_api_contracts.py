@@ -2123,6 +2123,7 @@ class TestGradingApiContracts:
         [
             ('/api/grading/tasks/{task_id}/questions/', 'quiz_id'),
             ('/api/grading/tasks/{task_id}/answers/?quiz_id=1&question_id=bad', 'question_id'),
+            ('/api/grading/tasks/{task_id}/answers/?quiz_id=1&question_id=1&student_id=bad', 'student_id'),
         ],
     )
     def test_grading_rejects_invalid_queries(

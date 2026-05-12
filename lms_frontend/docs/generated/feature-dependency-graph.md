@@ -25,12 +25,12 @@ flowchart LR
   app -->|10| config
   app -->|8| types
   features -->|80| entities
-  features -->|44| session
-  features -->|235| components
+  features -->|45| session
+  features -->|238| components
   features -->|3| hooks
   features -->|120| lib
   features -->|21| utils
-  features -->|11| config
+  features -->|12| config
   features -->|80| types
   entities -->|1| features
   entities -->|11| session
@@ -65,12 +65,12 @@ flowchart LR
 | `app` | `config` | 10 |
 | `app` | `types` | 8 |
 | `features` | `entities` | 80 |
-| `features` | `session` | 44 |
-| `features` | `components` | 235 |
+| `features` | `session` | 45 |
+| `features` | `components` | 238 |
 | `features` | `hooks` | 3 |
 | `features` | `lib` | 120 |
 | `features` | `utils` | 21 |
-| `features` | `config` | 11 |
+| `features` | `config` | 12 |
 | `features` | `types` | 80 |
 | `entities` | `features` | 1 |
 | `entities` | `session` | 11 |

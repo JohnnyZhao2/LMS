@@ -14,6 +14,7 @@ export const GradingCenterPage: React.FC = () => {
   const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
   const preferredTaskId = Number(searchParams.get('task') || 0);
+  const preferredStudentId = Number(searchParams.get('student') || 0);
   const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
   const lockedTaskTitle = searchParams.get('taskTitle')?.trim() || '';
 
@@ -110,6 +111,18 @@ export const GradingCenterPage: React.FC = () => {
     setSelectedQuizId(quiz.quiz_id);
   };
 
+  const handleStudentScopeChange = React.useCallback((studentId: number | null) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (studentId === null) {
+      nextSearchParams.delete('view');
+      nextSearchParams.delete('student');
+    } else {
+      nextSearchParams.set('view', 'student');
+      nextSearchParams.set('student', String(studentId));
+    }
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const selectorConfig: GradingCenterSelectorConfig | undefined = selectorTasks.length > 0
     ? {
       tasks: selectorTasks,
@@ -150,6 +163,8 @@ export const GradingCenterPage: React.FC = () => {
               taskId={selectedTask.task_id}
               quizId={resolvedQuizId}
               selectorConfig={selectorConfig}
+              initialSelectedStudentId={preferredStudentId > 0 ? preferredStudentId : null}
+              onStudentScopeChange={handleStudentScopeChange}
             />
         ) : (
           <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
@@ -173,6 +188,8 @@ export const GradingCenterPage: React.FC = () => {
             taskId={selectedTask.task_id}
             quizId={resolvedQuizId}
             selectorConfig={selectorConfig}
+            initialSelectedStudentId={preferredStudentId > 0 ? preferredStudentId : null}
+            onStudentScopeChange={handleStudentScopeChange}
           />
         ) : (
           <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">

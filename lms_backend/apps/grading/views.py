@@ -112,6 +112,7 @@ class GradingAnswersView(GradingBaseView):
         description='获取指定题目的作答分布与学员答案',
         parameters=[
             OpenApiParameter(name='question_id', type=int, required=True, description='题目ID'),
+            OpenApiParameter(name='student_id', type=int, required=False, description='按学员ID筛选'),
         ],
         responses={
             200: GradingAnswerResponseSerializer,
@@ -124,13 +125,14 @@ class GradingAnswersView(GradingBaseView):
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
+        student_id = parse_int_query_param(request, name='student_id', minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
 
-        answers = self._get_grading_answers(task, question_id, quiz_id)
+        answers = self._get_grading_answers(task, question_id, quiz_id, student_id=student_id)
         serializer = GradingAnswerResponseSerializer(answers)
         return success_response(serializer.data)
 
-    def _get_grading_answers(self, task, question_id, quiz_id):
+    def _get_grading_answers(self, task, question_id, quiz_id, *, student_id=None):
         """获取题目分析详情"""
         task_quiz = TaskQuiz.objects.select_related('quiz').filter(
             id=quiz_id,
@@ -154,7 +156,7 @@ class GradingAnswersView(GradingBaseView):
             if relation.is_objective
             else REVIEWABLE_SUBMISSION_STATUSES
         )
-        answers = list(get_latest_quiz_answers(
+        answers_query = get_latest_quiz_answers(
             task,
             quiz_id,
             submission_statuses=answer_statuses,
@@ -162,7 +164,9 @@ class GradingAnswersView(GradingBaseView):
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
-        )
+        if student_id is not None:
+            answers_query = answers_query.filter(submission__task_assignment__assignee_id=student_id)
+        answers = list(answers_query)
         answered_count = sum(1 for answer in answers if has_answer_content(answer.user_answer))
 
         pass_rate = calculate_question_pass_rate(

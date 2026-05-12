@@ -7,6 +7,7 @@ import {
   Check,
   BarChart3,
   Filter,
+  UserRound,
 } from 'lucide-react';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ import type { PendingTask, PendingQuiz } from '@/entities/grading/api/pending-qu
 import {
   useGradingAnswers,
   useGradingQuestions,
+  useStudentExecutions,
   useSubmitGrading,
 } from '@/entities/grading/api/task-analytics';
 
@@ -34,6 +36,8 @@ interface GradingCenterTabProps {
   taskId?: number;
   quizId?: number | null;
   selectorConfig?: GradingCenterSelectorConfig;
+  initialSelectedStudentId?: number | null;
+  onStudentScopeChange?: (studentId: number | null) => void;
 }
 
 type QuestionFilter = QuestionType | null;
@@ -91,10 +95,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   taskId,
   quizId,
   selectorConfig,
+  initialSelectedStudentId = null,
+  onStudentScopeChange,
 }) => {
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
+  const [selectedStudentId, setSelectedStudentId] = React.useState<number | null>(initialSelectedStudentId);
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
   const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
+  const [displayedStudentId, setDisplayedStudentId] = React.useState<number | null>(initialSelectedStudentId);
   const [displayedQuestion, setDisplayedQuestion] = React.useState<GradingQuestion | null>(null);
   const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
@@ -105,6 +113,31 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
     enabled: Boolean(taskId) && Boolean(quizId),
   });
+  const { data: studentExecutions } = useStudentExecutions(taskId || 0, {
+    enabled: Boolean(taskId),
+  });
+
+  React.useEffect(() => {
+    setSelectedStudentId(initialSelectedStudentId ?? null);
+    setQuestionFilter(null);
+    setSelectedQuestionId(null);
+    setDisplayedQuestionId(null);
+    setDisplayedStudentId(initialSelectedStudentId ?? null);
+    setDisplayedQuestion(null);
+    setDisplayedQuestionDetail(null);
+  }, [initialSelectedStudentId, quizId, taskId]);
+
+  React.useEffect(() => {
+    if (selectedStudentId === null || !studentExecutions || studentExecutions.length === 0) {
+      return;
+    }
+
+    const stillExists = studentExecutions.some((student) => student.student_id === selectedStudentId);
+    if (!stillExists) {
+      setSelectedStudentId(null);
+      onStudentScopeChange?.(null);
+    }
+  }, [onStudentScopeChange, selectedStudentId, studentExecutions]);
 
   React.useEffect(() => {
     if (!questions || questions.length === 0) {
@@ -134,6 +167,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     () => new Set((questions ?? []).map((question) => question.question_type)),
     [questions],
   );
+  const groupedQuestions = React.useMemo(
+    () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
+    [filteredQuestions],
+  );
   const effectiveQuestionId = React.useMemo(() => {
     if (filteredQuestions.length === 0) {
       return null;
@@ -143,16 +180,13 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
       return selectedQuestionId;
     }
 
-    return filteredQuestions[0].question_id;
-  }, [filteredQuestions, selectedQuestionId]);
-  const groupedQuestions = React.useMemo(
-    () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
-    [filteredQuestions],
-  );
+    return groupedQuestions[0]?.entries[0]?.item.question_id ?? null;
+  }, [filteredQuestions, groupedQuestions, selectedQuestionId]);
   const { data: questionDetail, isLoading: detailLoading } = useGradingAnswers(
     taskId || 0,
     effectiveQuestionId,
     quizId ?? null,
+    selectedStudentId,
     { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
   );
   const submitGrading = useSubmitGrading(taskId || 0, {
@@ -185,14 +219,16 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   React.useEffect(() => {
     if (questionDetail && effectiveQuestionId !== null && effectiveQuestion) {
       setDisplayedQuestionId(effectiveQuestionId);
+      setDisplayedStudentId(selectedStudentId);
       setDisplayedQuestion(effectiveQuestion);
       setDisplayedQuestionDetail(questionDetail);
     }
-  }, [effectiveQuestion, effectiveQuestionId, questionDetail]);
+  }, [effectiveQuestion, effectiveQuestionId, questionDetail, selectedStudentId]);
 
   React.useEffect(() => {
     if (filteredQuestions.length === 0) {
       setDisplayedQuestionId(null);
+      setDisplayedStudentId(null);
       setDisplayedQuestion(null);
       setDisplayedQuestionDetail(null);
     }
@@ -214,7 +250,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     detailLoading
     && displayedQuestionId !== null
     && displayedQuestionDetail !== null
-    && displayedQuestionId !== effectiveQuestionId;
+    && (displayedQuestionId !== effectiveQuestionId || displayedStudentId !== selectedStudentId);
   const selectedQuestion = React.useMemo<GradingQuestion | undefined>(() => {
     if (shouldHoldPreviousDetail && displayedQuestion) {
       return displayedQuestion;
@@ -228,11 +264,23 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     if (questionDetail) {
       return questionDetail;
     }
-    if (displayedQuestionId !== null && displayedQuestionId === effectiveQuestionId) {
+    if (
+      displayedQuestionId !== null
+      && displayedQuestionId === effectiveQuestionId
+      && displayedStudentId === selectedStudentId
+    ) {
       return displayedQuestionDetail;
     }
     return null;
-  }, [displayedQuestionDetail, displayedQuestionId, effectiveQuestionId, questionDetail, shouldHoldPreviousDetail]);
+  }, [
+    displayedQuestionDetail,
+    displayedQuestionId,
+    displayedStudentId,
+    effectiveQuestionId,
+    questionDetail,
+    selectedStudentId,
+    shouldHoldPreviousDetail,
+  ]);
 
   const sortedOptions = React.useMemo(() => {
     if (!activeQuestionDetail?.options) return [];
@@ -240,6 +288,39 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   }, [activeQuestionDetail]);
 
   const answeredCount = activeQuestionDetail?.answered_count ?? 0;
+  const selectedStudent = React.useMemo(
+    () => studentExecutions?.find((student) => student.student_id === selectedStudentId) ?? null,
+    [selectedStudentId, studentExecutions],
+  );
+  const studentScopeOptions = React.useMemo(() => {
+    const options = (studentExecutions ?? []).map((student) => ({
+      student_id: student.student_id,
+      student_name: student.student_name,
+      avatar_key: student.avatar_key,
+      employee_id: student.employee_id,
+      department: student.department,
+    }));
+    if (selectedStudentId === null || options.some((student) => student.student_id === selectedStudentId)) {
+      return options;
+    }
+
+    return [
+      {
+        student_id: selectedStudentId,
+        student_name: `学员 #${selectedStudentId}`,
+        avatar_key: '',
+        employee_id: '',
+        department: '',
+      },
+      ...options,
+    ];
+  }, [selectedStudentId, studentExecutions]);
+
+  const handleStudentScopeChange = (value: string) => {
+    const nextStudentId = value === 'all' ? null : Number(value);
+    setSelectedStudentId(nextStudentId);
+    onStudentScopeChange?.(nextStudentId);
+  };
 
   const handleScoreChange = (studentId: number, value: string) => {
     setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
@@ -487,6 +568,25 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                       <span className="text-sm font-medium text-text-muted">
                         分值: {formatScore(selectedQuestion?.max_score)}
                       </span>
+                      <Select
+                        value={selectedStudentId === null ? 'all' : String(selectedStudentId)}
+                        onValueChange={handleStudentScopeChange}
+                      >
+                        <SelectTrigger className="h-8 w-[11rem] rounded-lg border-border/70 bg-background px-2.5 text-[12px] shadow-none">
+                          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                            <UserRound className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                            <SelectValue placeholder="查看范围" />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          <SelectItem value="all">全部</SelectItem>
+                          {studentScopeOptions.map((student) => (
+                            <SelectItem key={student.student_id} value={String(student.student_id)}>
+                              {student.student_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <h2 className="text-lg font-semibold leading-snug text-foreground break-words">
                       {selectedQuestion?.question_text}
@@ -610,7 +710,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                       <div className="relative mx-auto max-w-4xl space-y-4">
                         {activeQuestionDetail?.subjective_answers?.length === 0 && (
                           <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
-                            暂无学员回答
+                            {selectedStudent ? `${selectedStudent.student_name} 暂无该题回答` : '暂无学员回答'}
                           </div>
                         )}
                         {activeQuestionDetail?.subjective_answers?.map((answer) => {
