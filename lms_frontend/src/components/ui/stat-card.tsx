@@ -121,7 +121,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
                 {/* Right Visual Zone */}
                 <div className={cn(
-                    "relative flex h-full shrink-0 items-center justify-center overflow-hidden",
+                    "pointer-events-none relative flex h-full shrink-0 items-center justify-center overflow-visible",
                     isCompact ? "w-20" : "w-32",
                 )}>
                     {/* The Icon: Watermark Style - Tinted Lines */}
