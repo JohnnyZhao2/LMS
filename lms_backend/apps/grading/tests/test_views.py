@@ -84,6 +84,8 @@ def test_objective_distribution_counts_answered_students_once():
     option_map = {option['option_key']: option for option in payload['options']}
 
     assert payload['answered_count'] == 2
+    assert payload['correct_count'] == 1
+    assert payload['incorrect_count'] == 1
     assert option_map['A']['selected_count'] == 1
     assert option_map['B']['selected_count'] == 2
     assert option_map['C']['selected_count'] == 0
@@ -125,6 +127,8 @@ def test_grading_answers_can_filter_single_student():
     option_map = {option['option_key']: option for option in payload['options']}
 
     assert payload['answered_count'] == 1
+    assert payload['correct_count'] == 0
+    assert payload['incorrect_count'] == 1
     assert option_map['A']['selected_count'] == 0
     assert option_map['B']['selected_count'] == 1
     assert option_map['B']['students'][0]['student_id'] == assignment_b.assignee_id
@@ -170,6 +174,8 @@ def test_objective_analysis_includes_in_progress_answers():
     pass_rate = calculate_question_pass_rate(task, quiz_question.id, task_quiz.id, quiz_question.score, True)
 
     assert payload['answered_count'] == 1
+    assert payload['correct_count'] == 1
+    assert payload['incorrect_count'] == 0
     assert option_map['A']['selected_count'] == 1
     assert option_map['B']['selected_count'] == 1
     assert pass_rate == 100.0

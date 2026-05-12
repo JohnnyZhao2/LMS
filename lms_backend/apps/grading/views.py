@@ -5,6 +5,7 @@ from apps.activity_logs.decorators import log_operation
 from apps.grading.selectors import (
     OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
     REVIEWABLE_SUBMISSION_STATUSES,
+    calculate_question_answer_counts,
     calculate_question_pass_rate,
     get_latest_quiz_answers,
     has_answer_content,
@@ -167,7 +168,11 @@ class GradingAnswersView(GradingBaseView):
         if student_id is not None:
             answers_query = answers_query.filter(submission__task_assignment__assignee_id=student_id)
         answers = list(answers_query)
-        answered_count = sum(1 for answer in answers if has_answer_content(answer.user_answer))
+        answer_counts = calculate_question_answer_counts(
+            answers,
+            relation.score,
+            relation.is_objective,
+        )
 
         pass_rate = calculate_question_pass_rate(
             task,
@@ -182,7 +187,7 @@ class GradingAnswersView(GradingBaseView):
                 'question_id': relation.id,
                 'question_type': relation.question_type,
                 'pass_rate': pass_rate,
-                'answered_count': answered_count,
+                **answer_counts,
                 'options': self._build_objective_options(relation, answers),
             }
 
@@ -190,6 +195,7 @@ class GradingAnswersView(GradingBaseView):
             'question_id': relation.id,
             'question_type': relation.question_type,
             'pass_rate': pass_rate,
+            **answer_counts,
             'subjective_answers': self._build_subjective_answers(answers),
         }
 
