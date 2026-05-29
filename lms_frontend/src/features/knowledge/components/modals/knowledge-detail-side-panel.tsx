@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
-import { Calendar, Check, Eye, Edit, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
+import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { TagAssignmentSection } from '@/entities/tag/components/tag-assignment-section';
 import { RelatedLinksEditor } from '../shared/related-links-editor';
@@ -115,7 +115,6 @@ interface KnowledgeDetailSidePanelProps {
   shouldShowSystemTagsSection: boolean;
   showTagInput: boolean;
   showSpaceTags: boolean;
-  editing: boolean;
   hasContentChanges: boolean;
   editingLinks: boolean;
   isSaving: boolean;
@@ -133,7 +132,6 @@ interface KnowledgeDetailSidePanelProps {
   onRemoveRelatedLink: (index: number) => void;
   onToggleSpaceTags: () => void;
   onSpaceTagSelect: (spaceTagId: number) => void | Promise<void>;
-  onStartEditing: () => void;
   onDelete: () => void;
   onCancelEdit: () => void;
   onSave: () => void;
@@ -152,7 +150,6 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   shouldShowSystemTagsSection,
   showTagInput,
   showSpaceTags,
-  editing,
   hasContentChanges,
   editingLinks,
   isSaving,
@@ -170,7 +167,6 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   onRemoveRelatedLink,
   onToggleSpaceTags,
   onSpaceTagSelect,
-  onStartEditing,
   onDelete,
   onCancelEdit,
   onSave,
@@ -280,7 +276,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       )}
 
-      {canUpdateKnowledge && (editing || hasContentChanges) ? (
+      {canUpdateKnowledge && hasContentChanges ? (
         <div className="kd-edit-actions">
           <button
             type="button"
@@ -322,15 +318,6 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="9" />
               </svg>
-            </button>
-          )}
-          {canUpdateKnowledge && (
-            <button
-              onClick={onStartEditing}
-              className="kd-action-btn"
-              title="编辑"
-            >
-              <Edit style={{ width: 15, height: 15 }} />
             </button>
           )}
           {canDeleteKnowledge && (

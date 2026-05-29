@@ -9,17 +9,18 @@ interface ScrollContainerProps extends React.HTMLAttributes<HTMLElement> {
   scrollbar?: 'subtle' | 'hidden' | 'inherit';
 }
 
-export function ScrollContainer({
+export const ScrollContainer = React.forwardRef<HTMLElement, ScrollContainerProps>(function ScrollContainer({
   as = 'div',
   scrollbar = 'subtle',
   className,
   children,
   ...props
-}: ScrollContainerProps) {
+}, ref) {
   const Component = as as React.ElementType;
 
   return (
     <Component
+      ref={ref}
       className={cn(
         scrollbar === 'subtle' && 'scrollbar-subtle',
         scrollbar === 'hidden' && 'scrollbar-hidden',
@@ -30,4 +31,4 @@ export function ScrollContainer({
       {children}
     </Component>
   );
-}
+});

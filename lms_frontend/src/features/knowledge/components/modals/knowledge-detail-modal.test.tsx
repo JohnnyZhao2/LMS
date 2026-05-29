@@ -13,6 +13,7 @@ const useKnowledgeDetailMock = vi.fn();
 const useStudentLearningTaskDetailMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
+const tagFixtures = [{ id: 1, name: '默认空间' }];
 
 vi.mock('@/session/auth/auth-context', () => ({
   useAuth: () => useAuthMock(),
@@ -57,7 +58,7 @@ vi.mock('@/entities/task/api/get-task-detail', () => ({
 
 vi.mock('@/entities/tag/api/tags', () => ({
   useTags: () => ({
-    data: [{ id: 1, name: '默认空间' }],
+    data: tagFixtures,
   }),
 }));
 
@@ -103,7 +104,12 @@ vi.mock('./knowledge-focus-shell', () => ({
 }));
 
 vi.mock('./knowledge-focus-metadata-bar', () => ({
-  KnowledgeFocusMetadataBar: () => <div>focus-metadata</div>,
+  KnowledgeFocusMetadataBar: ({ extraTools }: { extraTools?: React.ReactNode }) => (
+    <div>
+      focus-metadata
+      {extraTools}
+    </div>
+  ),
 }));
 
 vi.mock('../shared/focus-icon', () => ({
@@ -162,7 +168,7 @@ describe('KnowledgeDetailModal', () => {
     createKnowledgeMutateAsyncMock.mockResolvedValue({ id: 1 });
     parseDocumentMutateAsyncMock.mockResolvedValue({
       suggested_title: '',
-      content: '<p>导入内容</p>',
+      content: '<h2>导入章节</h2><p>导入内容</p>',
       file_type: 'pdf',
     });
     completeLearningMutateAsyncMock.mockResolvedValue(undefined);
@@ -203,7 +209,7 @@ describe('KnowledgeDetailModal', () => {
     expect(onUpdated).toHaveBeenCalled();
   });
 
-  it('首次按住正文进入编辑时不阻断原生选区', () => {
+  it('有编辑权限时正文默认可编辑', () => {
     useAuthMock.mockReturnValue({
       currentRole: 'ADMIN',
       hasCapability: vi.fn((permissionCode: string) => permissionCode.startsWith('knowledge.')),
@@ -218,9 +224,8 @@ describe('KnowledgeDetailModal', () => {
 
     const editor = screen.getByLabelText('knowledge-editor') as HTMLTextAreaElement;
 
-    expect(editor.readOnly).toBe(true);
+    expect(editor.readOnly).toBe(false);
     expect(fireEvent.mouseDown(editor, { button: 0 })).toBe(true);
-    expect((screen.getByLabelText('knowledge-editor') as HTMLTextAreaElement).readOnly).toBe(false);
   });
 
   it('学员点击标记已学习时会提交完成请求', async () => {
@@ -258,5 +263,30 @@ describe('KnowledgeDetailModal', () => {
       });
     });
     expect(onUpdated).toHaveBeenCalled();
+  });
+
+  it('创建知识上传解析后会渲染目录', async () => {
+    useAuthMock.mockReturnValue({
+      currentRole: 'ADMIN',
+      hasCapability: vi.fn((permissionCode: string) => permissionCode.startsWith('knowledge.')),
+    });
+
+    render(
+      <KnowledgeDetailModal
+        onClose={vi.fn()}
+      />,
+    );
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File(['demo'], 'demo.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('complementary', { name: '知识目录' })).toBeInTheDocument();
+    });
+    expect(screen.getByText('导入章节')).toHaveClass('kd-outline-title');
   });
 });

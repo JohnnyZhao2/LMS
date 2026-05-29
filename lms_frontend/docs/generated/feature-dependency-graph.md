@@ -34,7 +34,7 @@ flowchart LR
   features -->|80| types
   entities -->|1| features
   entities -->|11| session
-  entities -->|51| components
+  entities -->|52| components
   entities -->|2| hooks
   entities -->|69| lib
   entities -->|5| utils
@@ -74,7 +74,7 @@ flowchart LR
 | `features` | `types` | 80 |
 | `entities` | `features` | 1 |
 | `entities` | `session` | 11 |
-| `entities` | `components` | 51 |
+| `entities` | `components` | 52 |
 | `entities` | `hooks` | 2 |
 | `entities` | `lib` | 69 |
 | `entities` | `utils` | 5 |

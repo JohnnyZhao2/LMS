@@ -19,6 +19,8 @@ interface KnowledgeFocusShellProps {
   zIndex?: number;
   fadeInDuration?: string;
   readOnly?: boolean;
+  editorAreaRef?: React.Ref<HTMLElement>;
+  editorHostRef?: React.Ref<HTMLDivElement>;
 }
 
 type FocusShellStyle = React.CSSProperties & {
@@ -43,6 +45,8 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
   zIndex = 500,
   fadeInDuration = '0.18s',
   readOnly = false,
+  editorAreaRef,
+  editorHostRef,
 }) => {
   const classes = ['kfs-shell', fixed ? 'kfs-shell-fixed' : '', shellClassName].filter(Boolean).join(' ');
   const editorClasses = ['kfs-editor', 'ke-content-detail', 'ke-content-focus', editorClassName].filter(Boolean).join(' ');
@@ -86,8 +90,8 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
         </svg>
       </button>
 
-      <ScrollContainer className="kfs-editor-area">
-        <div className="kfs-editor-inner">
+      <ScrollContainer ref={editorAreaRef} className="kfs-editor-area">
+        <div ref={editorHostRef} className="kfs-editor-inner">
           <KnowledgeTextEditor
             value={content}
             onChange={onContentChange}

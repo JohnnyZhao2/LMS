@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { createPortal, flushSync } from 'react-dom';
+import { createPortal } from 'react-dom';
 import { Upload } from 'lucide-react';
 import {
   CheckCircle,
@@ -23,6 +23,11 @@ import { FocusOrbIcon } from '../shared/focus-icon';
 import { KnowledgeActionButton } from '../shared/knowledge-action-button';
 import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
 import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
+import { KnowledgeDetailOutline } from './knowledge-detail-outline';
+import {
+  getKnowledgeOutlineItems,
+  type KnowledgeOutlineItem,
+} from './knowledge-detail-outline-utils';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
@@ -105,7 +110,6 @@ interface KnowledgeDetailModalProps {
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
-  startEditing = false,
   startInFocus = false,
   closeOnExitFocus = false,
   forceFocus = false,
@@ -186,15 +190,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setShowFocusRelatedLinksPanel(false);
   }, [initialContent, initialSpaceTagId, isCreateMode, spaces]);
 
-  // 编辑状态
-  const [editing, setEditing] = useState(startEditing);
+  // 编辑草稿
   const [editContent, setEditContent] = useState<string | undefined>(undefined);
   const [editTitle, setEditTitle] = useState<string | undefined>(undefined);
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
+  const contentScrollRef = useRef<HTMLElement | null>(null);
+  const contentHostRef = useRef<HTMLDivElement | null>(null);
+  const isOutlineScrollLockedRef = useRef(false);
   const [editingLinks, setEditingLinks] = useState(false);
+  const [activeOutlineId, setActiveOutlineId] = useState<string | undefined>();
 
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
@@ -204,10 +211,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showFocusRelatedLinksPanel, setShowFocusRelatedLinksPanel] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
-  const canEditInFocus = isFocusMode && canUpdateKnowledge;
   const isSaving = updateKnowledge.isPending;
 
   const activeContent = editContent ?? knowledge?.content ?? '';
+  const outlineContent = isCreateMode ? createDraft.content : activeContent;
+  const outlineItems = useMemo(() => getKnowledgeOutlineItems(outlineContent), [outlineContent]);
+  const visibleOutlineId = outlineItems.some((item) => item.id === activeOutlineId)
+    ? activeOutlineId
+    : outlineItems[0]?.id;
 
   // 实际使用的值
   const activeTitle = editTitle ?? knowledge?.title ?? '';
@@ -234,8 +245,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     (editRelatedLinks !== undefined)
   ));
   const hasContentChanges = Boolean(knowledge && editContent !== undefined && editContent !== knowledge.content);
-  const canSubmitFocus = Boolean(hasChanges);
-
   const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
     setLocalKnowledgeSnapshot({
       knowledgeId: knowledgeId!,
@@ -511,9 +520,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       });
       applyKnowledgeSnapshot(updatedKnowledge);
       toast.success('已保存');
-      if (!canEditInFocus) {
-        setEditing(false);
-      }
       setEditContent(undefined);
       setEditTitle(undefined);
       setEditTags(undefined);
@@ -527,7 +533,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       showApiError(error, '保存失败');
       return false;
     }
-  }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
+  }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
 
   const handleExitFocusMode = useCallback(async () => {
     setShowFocusTagPanel(false);
@@ -555,8 +561,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         handleExitFocusMode();
       } else if (showSpaceTags) {
         setShowSpaceTags(false);
-      } else if (editing) {
-        setEditing(false);
       } else {
         onClose();
       }
@@ -581,13 +585,85 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, []);
 
+  useEffect(() => {
+    const host = contentHostRef.current;
+    if (!host) return;
+
+    const headings = Array.from(host.querySelectorAll<HTMLElement>('.sqe-editor :is(h1,h2,h3,h4)'));
+    headings.forEach((heading, index) => {
+      const item = outlineItems[index];
+      if (!item) return;
+
+      heading.id = item.id;
+      heading.dataset.outlineId = item.id;
+    });
+  }, [isFocusMode, outlineContent, outlineItems]);
+
+  useEffect(() => {
+    const container = contentScrollRef.current;
+    const host = contentHostRef.current;
+    if (!container || !host || outlineItems.length === 0) return;
+
+    let frame = 0;
+    const updateActiveHeading = () => {
+      frame = 0;
+      if (isOutlineScrollLockedRef.current) return;
+
+      const containerTop = container.getBoundingClientRect().top;
+      const headings = Array.from(host.querySelectorAll<HTMLElement>('[data-outline-id]'));
+      let nextActiveId = headings[0]?.dataset.outlineId;
+
+      for (const heading of headings) {
+        const top = heading.getBoundingClientRect().top - containerTop;
+        if (top > 96) break;
+        nextActiveId = heading.dataset.outlineId;
+      }
+
+      if (nextActiveId) {
+        setActiveOutlineId(nextActiveId);
+      }
+    };
+
+    const requestUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateActiveHeading);
+    };
+
+    updateActiveHeading();
+    container.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      container.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
+    };
+  }, [isFocusMode, outlineItems]);
+
+  const handleOutlineSelect = useCallback((item: KnowledgeOutlineItem) => {
+    const container = contentScrollRef.current;
+    const host = contentHostRef.current;
+    if (!container || !host) return;
+
+    const target = Array.from(host.querySelectorAll<HTMLElement>('[data-outline-id]'))
+      .find((heading) => heading.dataset.outlineId === item.id);
+    if (!target) return;
+
+    const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24;
+    isOutlineScrollLockedRef.current = true;
+    setActiveOutlineId(item.id);
+    container.addEventListener('scrollend', () => {
+      isOutlineScrollLockedRef.current = false;
+    }, { once: true });
+    container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, []);
+
   const handleContentBlur = useCallback(() => {
     if (hasChanges) {
       void handleSave();
-      return;
     }
-
-    setEditing(false);
   }, [handleSave, hasChanges]);
 
   const handleDelete = () => {
@@ -596,7 +672,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   };
 
   const handleCancelEdit = useCallback(() => {
-    setEditing(false);
     setEditContent(undefined);
     setEditTitle(undefined);
     setEditTags(undefined);
@@ -692,12 +767,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         fixed
         zIndex={500}
         fadeInDuration="0.25s"
+        shellClassName="kd-focus-shell-with-outline"
         editorClassName="akm-editor"
         editorMaxWidth={960}
         editorPadding="72px 40px 120px"
         editorMinHeight={380}
         minimizeIconSize={16}
+        editorAreaRef={contentScrollRef}
+        editorHostRef={contentHostRef}
       >
+        <KnowledgeDetailOutline
+          items={outlineItems}
+          activeId={visibleOutlineId}
+          onSelect={handleOutlineSelect}
+          className="kd-outline-focus"
+        />
         <KnowledgeFocusMetadataBar
           spaces={spaces}
           spaceTagId={createDraft.spaceTagId}
@@ -775,13 +859,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         fixed
         zIndex={500}
         fadeInDuration="0.18s"
+        shellClassName="kd-focus-shell-with-outline"
         editorClassName="kd-immersive-editor"
         editorMaxWidth={1040}
         editorPadding="64px 40px 144px"
         editorMinHeight={380}
         minimizeIconSize={22}
         readOnly={!canUpdateKnowledge}
+        editorAreaRef={contentScrollRef}
+        editorHostRef={contentHostRef}
       >
+        <KnowledgeDetailOutline
+          items={outlineItems}
+          activeId={visibleOutlineId}
+          onSelect={handleOutlineSelect}
+          className="kd-outline-focus"
+        />
         {canUpdateKnowledge ? (
           <KnowledgeFocusMetadataBar
             spaces={spaces}
@@ -801,7 +894,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             showRelatedLinksPanel={showFocusRelatedLinksPanel}
             onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
             onSave={handleSave}
-            saveDisabled={!canSubmitFocus}
+            showSaveAction={hasChanges}
+            saveDisabled={!hasChanges}
             isSaving={isSaving}
             trailingActions={immersiveLearningAction}
           />
@@ -849,12 +943,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         {isLoading ? (
           <>
-            <div className="kd-left">
-              <Skeleton className="h-10 w-3/4 mb-8" />
-              <Skeleton className="h-5 w-full mb-4" />
-              <Skeleton className="h-5 w-5/6 mb-4" />
-              <Skeleton className="h-4 w-2/3 mb-3" />
-              <Skeleton className="h-4 w-1/2" />
+            <div className="kd-left-shell">
+              <div className="kd-left kd-left-static">
+                <Skeleton className="h-10 w-3/4 mb-8" />
+                <Skeleton className="h-5 w-full mb-4" />
+                <Skeleton className="h-5 w-5/6 mb-4" />
+                <Skeleton className="h-4 w-2/3 mb-3" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
             </div>
             <div className="kd-right">
               <div className="kd-right-header">
@@ -868,35 +964,39 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             </div>
           </>
         ) : !knowledge ? (
-          <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
+          <div className="kd-left-shell">
+            <div className="kd-left kd-left-static" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
+            </div>
           </div>
         ) : (
           <>
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
-            <ScrollContainer className="kd-left">
-              <div
-                onMouseDownCapture={(event) => {
-                  if (!editing && canUpdateKnowledge && event.button === 0) {
-                    flushSync(() => {
-                      setEditing(true);
-                    });
-                  }
-                }}
-                style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
-              >
-                <KnowledgeTextEditor
-                  value={activeContent}
-                  onChange={handleContentChange}
-                  onBlur={handleContentBlur}
-                  placeholder="键入 / 调出快捷指令"
-                  className={`kd-content kd-content-shell ke-content-detail${editing ? ' kd-content-editable' : ''}`}
-                  minHeight={300}
-                  autoFocus={false}
-                  readOnly={!editing}
-                />
-              </div>
-            </ScrollContainer>
+            <KnowledgeDetailOutline
+              items={outlineItems}
+              activeId={visibleOutlineId}
+              onSelect={handleOutlineSelect}
+            />
+
+            <div className="kd-left-shell">
+              <ScrollContainer ref={contentScrollRef} className="kd-left">
+                <div
+                  ref={contentHostRef}
+                  style={{ cursor: canUpdateKnowledge ? 'text' : 'default' }}
+                >
+                  <KnowledgeTextEditor
+                    value={activeContent}
+                    onChange={handleContentChange}
+                    onBlur={handleContentBlur}
+                    placeholder="键入 / 调出快捷指令"
+                    className={`kd-content kd-content-shell ke-content-detail${canUpdateKnowledge ? ' kd-content-editable' : ''}`}
+                    minHeight={300}
+                    autoFocus={false}
+                    readOnly={!canUpdateKnowledge}
+                  />
+                </div>
+              </ScrollContainer>
+            </div>
 
             <KnowledgeDetailSidePanel
               knowledge={knowledge}
@@ -911,7 +1011,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               shouldShowSystemTagsSection={shouldShowSystemTagsSection}
               showTagInput={showTagInput}
               showSpaceTags={showSpaceTags}
-              editing={editing}
               hasContentChanges={hasContentChanges}
               editingLinks={editingLinks}
               isSaving={isSaving}
@@ -929,7 +1028,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               onRemoveRelatedLink={handleRemoveRelatedLink}
               onToggleSpaceTags={() => setShowSpaceTags(!showSpaceTags)}
               onSpaceTagSelect={handleSpaceTagSelect}
-              onStartEditing={() => setEditing(true)}
               onDelete={handleDelete}
               onCancelEdit={handleCancelEdit}
               onSave={handleSave}

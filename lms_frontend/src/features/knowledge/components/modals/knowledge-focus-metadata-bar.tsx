@@ -32,6 +32,7 @@ interface KnowledgeFocusMetadataBarProps {
   onSave: () => void;
   saveLabel?: string;
   savingLabel?: string;
+  showSaveAction?: boolean;
   saveDisabled?: boolean;
   isSaving?: boolean;
   extraTools?: React.ReactNode;
@@ -58,6 +59,7 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
   onSave,
   saveLabel = '保存',
   savingLabel = '保存中…',
+  showSaveAction = true,
   saveDisabled = false,
   isSaving = false,
   extraTools,
@@ -207,12 +209,14 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
 
         <div className="akm-bottom-actions">
           {trailingActions}
-          <KnowledgeActionButton
-            onClick={onSave}
-            disabled={saveDisabled || isSaving}
-          >
-            {isSaving ? savingLabel : saveLabel}
-          </KnowledgeActionButton>
+          {showSaveAction ? (
+            <KnowledgeActionButton
+              onClick={onSave}
+              disabled={saveDisabled || isSaving}
+            >
+              {isSaving ? savingLabel : saveLabel}
+            </KnowledgeActionButton>
+          ) : null}
         </div>
       </div>
     </>
