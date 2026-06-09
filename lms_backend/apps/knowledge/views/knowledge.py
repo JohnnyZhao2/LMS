@@ -204,7 +204,13 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
     )
     def get(self, request, task_knowledge_id):
         enforce('knowledge.view', request, error_message='无权查看任务知识详情')
-        task_knowledge = TaskKnowledge.objects.select_related('task', 'knowledge').filter(
+        task_knowledge = TaskKnowledge.objects.select_related(
+            'task',
+            'knowledge',
+            'knowledge__source_knowledge',
+            'knowledge__source_knowledge__created_by',
+            'knowledge__source_knowledge__updated_by',
+        ).filter(
             id=task_knowledge_id
         ).first()
         if not task_knowledge:

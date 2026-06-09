@@ -7,6 +7,12 @@ from apps.tags.serializers import TagSimpleSerializer
 from .models import Knowledge
 
 
+def _get_metadata_source(obj):
+    if hasattr(obj, 'source_knowledge'):
+        return obj.source_knowledge
+    return obj
+
+
 class RelatedLinkSerializer(serializers.Serializer):
     title = serializers.CharField(
         required=False,
@@ -50,7 +56,7 @@ class KnowledgeListSerializer(serializers.Serializer):
     space_tag = serializers.SerializerMethodField()
     content = serializers.CharField(read_only=True)
     related_links = RelatedLinkSerializer(many=True, read_only=True)
-    view_count = serializers.IntegerField(read_only=True, required=False)
+    view_count = serializers.SerializerMethodField()
     content_preview = serializers.CharField(read_only=True)
     created_by_name = serializers.SerializerMethodField()
     updated_by_name = serializers.SerializerMethodField()
@@ -66,12 +72,24 @@ class KnowledgeListSerializer(serializers.Serializer):
         return {'id': None, 'name': space_tag_name, 'tag_type': 'SPACE'}
 
     def get_created_by_name(self, obj):
-        created_by = getattr(obj, 'created_by', None)
+        source = _get_metadata_source(obj)
+        if source is None:
+            return None
+        created_by = getattr(source, 'created_by', None)
         return created_by.username if created_by else None
 
     def get_updated_by_name(self, obj):
-        updated_by = getattr(obj, 'updated_by', None)
+        source = _get_metadata_source(obj)
+        if source is None:
+            return None
+        updated_by = getattr(source, 'updated_by', None)
         return updated_by.username if updated_by else None
+
+    def get_view_count(self, obj):
+        source = _get_metadata_source(obj)
+        if source is None:
+            return None
+        return source.view_count
 
 
 class KnowledgeDetailSerializer(KnowledgeListSerializer):

@@ -3,11 +3,12 @@ from types import SimpleNamespace
 import pytest
 
 from apps.knowledge.models import Knowledge, KnowledgeRevision
+from apps.knowledge.serializers import KnowledgeDetailSerializer
 from apps.knowledge.services import KnowledgeService, ensure_knowledge_revision
 from apps.questions.models import Question
 from apps.quizzes.models import QuizQuestion, QuizRevision
 from apps.quizzes.services import QuizService, ensure_quiz_revision
-from apps.tasks.tests.factories import TaskFactory, TaskKnowledgeFactory, TaskQuizFactory, UserFactory
+from apps.tasks.tests.factories import KnowledgeFactory, TaskFactory, TaskKnowledgeFactory, TaskQuizFactory, UserFactory
 from apps.users.models import Role, UserRole
 
 
@@ -84,6 +85,39 @@ def test_ensure_knowledge_revision_reuses_same_snapshot_until_content_changes():
     assert revision_2.revision_number == 2
     assert revision_1.content == '<p>内容</p>'
     assert revision_2.content == '<p>内容已更新</p>'
+
+
+@pytest.mark.django_db
+def test_knowledge_revision_detail_metadata_uses_source_knowledge_not_snapshot_actor():
+    author = UserFactory(username='知识创建人')
+    editor = UserFactory(username='知识更新人')
+    assigner = UserFactory(username='任务分派人')
+    knowledge = KnowledgeFactory(
+        title='原知识',
+        content='<p>原内容</p>',
+        created_by=author,
+        updated_by=editor,
+        view_count=7,
+    )
+    revision = KnowledgeRevision.objects.create(
+        source_knowledge=knowledge,
+        revision_number=1,
+        title='任务快照',
+        content='<p>冻结内容</p>',
+        related_links=[],
+        space_tag_name='',
+        tags_json=[],
+        content_hash='snapshot-hash',
+        created_by=assigner,
+    )
+
+    data = KnowledgeDetailSerializer(revision).data
+
+    assert data['title'] == '任务快照'
+    assert data['content'] == '<p>冻结内容</p>'
+    assert data['created_by_name'] == '知识创建人'
+    assert data['updated_by_name'] == '知识更新人'
+    assert data['view_count'] == 7
 
 
 @pytest.mark.django_db
