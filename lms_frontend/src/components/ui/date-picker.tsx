@@ -61,7 +61,7 @@ function DatePicker({
             disabled={disabled}
             className={cn(
               DATE_PICKER_SEARCH_TRIGGER_CLASSNAME,
-              !date && "text-text-muted",
+              !date && "text-text-muted/50",
               className
             )}
           >
@@ -77,7 +77,7 @@ function DatePicker({
             disabled={disabled}
             className={cn(
               DATE_PICKER_TRIGGER_CLASSNAME,
-              !date && "text-text-muted",
+              !date && "text-text-muted/50",
               className
             )}
           >
@@ -137,7 +137,7 @@ function DateRangePicker({
             disabled={disabled}
             className={cn(
               DATE_PICKER_SEARCH_TRIGGER_CLASSNAME,
-              !dateRange?.from && "text-text-muted",
+              !dateRange?.from && "text-text-muted/50",
               className
             )}
           >
@@ -153,7 +153,7 @@ function DateRangePicker({
             disabled={disabled}
             className={cn(
               DATE_PICKER_TRIGGER_CLASSNAME,
-              !dateRange?.from && "text-text-muted",
+              !dateRange?.from && "text-text-muted/50",
               className
             )}
           >

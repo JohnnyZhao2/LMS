@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Calendar, FileText, UserPlus } from 'lucide-react';
+import { BookOpen, Calendar, FileText, PencilLine, UserPlus } from 'lucide-react';
 
 import { MicroLabel } from '@/components/common/micro-label';
 import { UserSelectList, type UserSelectPanelItem } from '@/components/common/user-select-list';
@@ -21,7 +21,11 @@ import {
   TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
 } from './task-form.constants';
 
+const TASK_CONFIG_FIELD_TEXT_CLASSNAME = 'text-[12px] font-semibold placeholder:text-text-muted/50';
+
 interface TaskConfigurationPanelProps {
+  title: string;
+  onTitleChange: (value: string) => void;
   deadline: Date | undefined;
   onDeadlineChange: (value: Date | undefined) => void;
   description: string;
@@ -53,6 +57,8 @@ function matchesDepartmentFilter(
 }
 
 export function TaskConfigurationPanel({
+  title,
+  onTitleChange,
   deadline,
   onDeadlineChange,
   description,
@@ -86,6 +92,22 @@ export function TaskConfigurationPanel({
 
           <div className="space-y-3 px-4 py-3">
             <div className="space-y-2">
+              <MicroLabel icon={<PencilLine className="h-3.5 w-3.5" />} asLabel>
+                任务标题
+              </MicroLabel>
+              <Input
+                value={title}
+                onChange={(event) => onTitleChange(event.target.value)}
+                placeholder="输入任务标题..."
+                className={cn(
+                  'h-9 rounded-lg px-3',
+                  TASK_CONFIG_FIELD_TEXT_CLASSNAME,
+                  QUIET_OUTLINE_FIELD_CLASSNAME,
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
               <MicroLabel icon={<Calendar className="h-3.5 w-3.5" />} asLabel>
                 截止时间
               </MicroLabel>
@@ -93,7 +115,7 @@ export function TaskConfigurationPanel({
                 date={deadline}
                 onDateChange={onDeadlineChange}
                 placeholder="选择截止日期"
-                className="h-9 rounded-lg px-3 text-[12px]"
+                className={cn('h-9 rounded-lg px-3', TASK_CONFIG_FIELD_TEXT_CLASSNAME)}
                 hideLeadingIcon
               />
             </div>
@@ -103,7 +125,10 @@ export function TaskConfigurationPanel({
                 任务描述
               </MicroLabel>
               <Textarea
-                className="min-h-[100px] rounded-lg border-border/60 bg-white px-3 py-2.5 text-[13px] leading-5 shadow-none"
+                className={cn(
+                  'min-h-[100px] rounded-lg border-border/60 bg-white px-3 py-2.5 leading-5 shadow-none',
+                  TASK_CONFIG_FIELD_TEXT_CLASSNAME,
+                )}
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(event) => onDescriptionChange(event.target.value)}

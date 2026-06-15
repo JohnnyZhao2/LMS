@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { FileText, Loader2, Send } from 'lucide-react';
+import { FileText, LayoutList, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
-import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
-import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
@@ -72,6 +69,7 @@ export const TaskForm: React.FC = () => {
       user.roles.map((role) => ASSIGNEE_ROLE_LABELS.get(role.code)).find(Boolean),
     ].filter(Boolean).join(' · '),
   }));
+  const hasTaskContent = selectedResources.length > 0;
 
   if (taskError) {
     return (
@@ -111,27 +109,10 @@ export const TaskForm: React.FC = () => {
             onPageChange={setCurrentPage}
           />
 
-          <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="relative flex h-11 shrink-0 items-center justify-end border-b border-border px-4">
-              <div className="absolute left-1/2 top-1/2 w-[clamp(12rem,44%,20rem)] -translate-x-1/2 -translate-y-1/2">
-                <Input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="输入任务标题..."
-                  className={cn(
-                    'h-9 rounded-lg px-4 text-center text-[13px] font-semibold placeholder:text-text-muted/50',
-                    FILLED_PLAIN_FIELD_CLASSNAME,
-                  )}
-                />
-              </div>
-              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-3.5 text-[12px] font-semibold text-background hover:bg-foreground/90"
-              >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {isEdit ? '保存修改' : '发布任务'}
-              </Button>
+          <div className="relative min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[12px] font-semibold text-foreground">
+              <LayoutList className="h-4 w-4 text-text-muted" />
+              <span>任务节点</span>
             </div>
 
             <TaskPipelinePanel
@@ -141,9 +122,22 @@ export const TaskForm: React.FC = () => {
               onRemoveResource={removeResource}
               embedded
             />
+
+            {hasTaskContent ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+                className="absolute bottom-5 right-5 z-30 h-10 shrink-0 rounded-full bg-foreground px-4 text-[12px] font-semibold text-background shadow-[0_14px_34px_rgba(15,23,42,0.22)] hover:bg-foreground/90 hover:shadow-[0_18px_40px_rgba(15,23,42,0.28)]"
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {isEdit ? '保存修改' : '发布任务'}
+              </Button>
+            ) : null}
           </div>
 
           <TaskConfigurationPanel
+            title={title}
+            onTitleChange={setTitle}
             deadline={deadline}
             onDeadlineChange={setDeadline}
             description={description}

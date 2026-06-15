@@ -168,4 +168,30 @@ describe('TaskForm', () => {
 
     expect(screen.queryByText('knowledge-preview-9')).not.toBeInTheDocument();
   });
+
+  it('未添加任务内容时不显示发布按钮', () => {
+    useTaskFormMock.mockReturnValue(buildHookState({ selectedResources: [] }));
+
+    render(<TaskForm />);
+
+    expect(screen.queryByRole('button', { name: '发布任务' })).not.toBeInTheDocument();
+  });
+
+  it('添加任务内容后显示悬浮发布按钮', async () => {
+    const user = userEvent.setup();
+    const handleSubmit = vi.fn();
+
+    useTaskFormMock.mockReturnValue(buildHookState({
+      handleSubmit,
+      selectedResources: [
+        { uid: 1, id: 1, title: '学习资料', resourceType: 'DOCUMENT' },
+      ],
+    }));
+
+    render(<TaskForm />);
+
+    await user.click(screen.getByRole('button', { name: '发布任务' }));
+
+    expect(handleSubmit).toHaveBeenCalledTimes(1);
+  });
 });
