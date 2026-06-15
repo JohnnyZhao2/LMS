@@ -88,7 +88,7 @@ class KnowledgeListCreateView(BaseAPIView):
         parameters=[
             OpenApiParameter(name='space_tag_id', type=int, description='space ID'),
             OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
-            OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
+            OpenApiParameter(name='search', type=str, description='搜索标题、内容、space 或标签，支持空格分词与模糊匹配'),
             OpenApiParameter(name='page', type=int, description='页码（默认1）'),
             OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
         ],

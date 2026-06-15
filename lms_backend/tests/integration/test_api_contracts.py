@@ -1211,6 +1211,52 @@ class TestKnowledgeApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert result_ids == [sample_knowledge.id]
 
+    def test_knowledge_list_supports_multi_keyword_search(self, api_client, mentor_user):
+        matched = Knowledge.objects.create(
+            title='入职安全培训',
+            content='绩效制度与账号流程',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        Knowledge.objects.create(
+            title='入职流程',
+            content='设备领取',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get(
+            '/api/knowledge/',
+            {'search': '入职 绩效', 'page': 1, 'page_size': 10},
+        )
+
+        assert_success(response)
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert result_ids == [matched.id]
+
+    def test_knowledge_list_supports_ordered_fuzzy_search(self, api_client, mentor_user):
+        matched = Knowledge.objects.create(
+            title='新人入职流程说明',
+            content='账号配置',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        Knowledge.objects.create(
+            title='新人设备说明',
+            content='流程清单',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+
+        response = auth(api_client, mentor_user).get(
+            '/api/knowledge/',
+            {'search': '新人流程', 'page': 1, 'page_size': 10},
+        )
+
+        assert_success(response)
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert result_ids == [matched.id]
+
     def test_knowledge_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
         response = auth(api_client, mentor_user).get('/api/knowledge/?space_tag_id=bad')
 

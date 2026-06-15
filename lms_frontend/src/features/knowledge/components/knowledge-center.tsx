@@ -305,7 +305,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder=""
+                    placeholder="搜索知识，空格分词"
                     aria-label="搜索知识"
                     className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-8 text-xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40 sm:pl-12 sm:text-2xl"
                     style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
