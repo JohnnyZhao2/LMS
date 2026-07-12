@@ -1,13 +1,12 @@
 from datetime import datetime, time, timedelta
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from django.conf import settings
-from django.db.models import Avg, Count, QuerySet
+from django.db.models import Avg, QuerySet
 from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
-from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Submission
 
 
@@ -85,112 +84,3 @@ def get_monthly_tasks_count() -> int:
     from apps.tasks.models import Task
 
     return Task.objects.filter(created_at__gte=get_month_start_datetime()).count()
-
-
-def get_pending_grading_count(student_ids: List[int]) -> int:
-    if not student_ids:
-        return 0
-    return Submission.objects.filter(
-        user_id__in=student_ids,
-        status='GRADING',
-    ).count()
-
-
-def get_monthly_spot_check_stats(student_ids: List[int]) -> Dict[str, Any]:
-    if not student_ids:
-        return {'count': 0, 'avg_score': None}
-    result = SpotCheck.objects.filter(
-        student_id__in=student_ids,
-        created_at__gte=get_month_start_datetime(),
-    ).aggregate(
-        count=Count('id', distinct=True),
-        avg_score=Avg('items__score'),
-    )
-    avg_score = float(result['avg_score']) if result['avg_score'] is not None else None
-    return {
-        'count': result['count'],
-        'avg_score': round(avg_score, 1) if avg_score is not None else None,
-    }
-
-
-def get_monthly_spot_check_stats_by_student(student_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-    if not student_ids:
-        return {}
-    stats = SpotCheck.objects.filter(
-        student_id__in=student_ids,
-        created_at__gte=get_month_start_datetime(),
-    ).values('student_id').annotate(
-        count=Count('id', distinct=True),
-        avg_score=Avg('items__score'),
-    )
-    result: Dict[int, Dict[str, Any]] = {}
-    for item in stats:
-        avg_score = float(item['avg_score']) if item['avg_score'] is not None else None
-        result[item['student_id']] = {
-            'count': item['count'],
-            'avg_score': round(avg_score, 1) if avg_score is not None else None,
-        }
-    return result
-
-
-def get_monthly_active_user_ids(user_ids: List[int]) -> Set[int]:
-    if not user_ids:
-        return set()
-    active_user_ids = ActivityLog.objects.filter(
-        category='user',
-        actor_id__in=user_ids,
-        action='login',
-        status='success',
-        created_at__gte=get_month_start_datetime(),
-    ).values_list('actor_id', flat=True).distinct()
-    return set(active_user_ids)
-
-
-def get_score_distribution(student_ids: List[int]) -> Dict[str, int]:
-    if not student_ids:
-        return {
-            'excellent': 0,
-            'good': 0,
-            'pass': 0,
-            'fail': 0,
-            'total': 0,
-        }
-
-    submissions = Submission.objects.filter(
-        user_id__in=student_ids,
-        status='GRADED',
-        quiz__quiz_type='EXAM',
-        obtained_score__isnull=False,
-    ).values_list(
-        'obtained_score',
-        'total_score',
-        'quiz__pass_score',
-    )
-
-    distribution = {
-        'excellent': 0,
-        'good': 0,
-        'pass': 0,
-        'fail': 0,
-        'total': 0,
-    }
-
-    for obtained_score, total_score, pass_score in submissions:
-        score = float(obtained_score) if obtained_score is not None else 0.0
-        total = float(total_score) if total_score is not None else 0.0
-        pass_line = float(pass_score) if pass_score is not None else 60.0
-
-        distribution['total'] += 1
-        if score < pass_line:
-            distribution['fail'] += 1
-            continue
-
-        score_pct = (score / total * 100) if total > 0 else score
-        if score_pct >= 90:
-            distribution['excellent'] += 1
-        elif score_pct >= 80:
-            distribution['good'] += 1
-        else:
-            distribution['pass'] += 1
-
-    return distribution

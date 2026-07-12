@@ -11,7 +11,7 @@ from .base import MentorScopedDashboardView
 @extend_schema_view(
     get=extend_schema(
         summary='获取导师/室经理仪表盘数据',
-        description='获取导师或室经理的仪表盘数据，包括所辖学员的完成率和平均分',
+        description='获取导师或室经理的仪表盘摘要数据（学员数量、任务完成率、平均分等）',
         responses={
             200: OpenApiResponse(description='仪表盘数据'),
             403: OpenApiResponse(description='无权限访问')

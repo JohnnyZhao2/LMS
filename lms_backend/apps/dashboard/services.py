@@ -6,7 +6,7 @@ Dashboard 应用服务
 - 部门/团队分析
 - 知识热度统计
 """
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from django.db.models import Case, IntegerField, QuerySet, Value, When
 
@@ -21,12 +21,7 @@ from .selectors import (
     calculate_task_stats,
     get_assignments_by_students,
     get_latest_knowledge,
-    get_monthly_active_user_ids,
-    get_monthly_spot_check_stats,
-    get_monthly_spot_check_stats_by_student,
     get_monthly_tasks_count,
-    get_pending_grading_count,
-    get_score_distribution,
     get_student_dashboard_metrics,
     get_student_all_tasks,
     get_student_assignments,
@@ -109,9 +104,7 @@ class StudentDashboardService(BaseService):
 class MentorDashboardService(BaseService):
     """
     导师/室经理仪表盘服务
-    处理：
-    - 可访问学员的摘要统计
-    - 单个学员统计
+    处理可访问学员的摘要统计
     """
     def get_dashboard_data(self) -> Dict[str, Any]:
         """
@@ -122,29 +115,9 @@ class MentorDashboardService(BaseService):
             self.request,
             resource_model=User,
         )
-        return self._build_dashboard_data(students)
-
-    def _build_dashboard_data(self, students: QuerySet) -> Dict[str, Any]:
         student_ids = list(students.values_list('id', flat=True))
-        monthly_active_ids = get_monthly_active_user_ids(student_ids)
-        spot_check_map = get_monthly_spot_check_stats_by_student(student_ids)
-        summary = self._calculate_summary(student_ids)
-        student_stats = self._calculate_student_stats(
-            students=students,
-            monthly_active_ids=monthly_active_ids,
-            spot_check_map=spot_check_map
-        )
-        pending_grading_count = get_pending_grading_count(student_ids)
-        spot_check_stats = get_monthly_spot_check_stats(student_ids)
-        score_distribution = get_score_distribution(student_ids)
         return {
-            'summary': summary,
-            'students': student_stats,
-            'pending_grading': {
-                'count': pending_grading_count
-            },
-            'spot_check_stats': spot_check_stats,
-            'score_distribution': score_distribution
+            'summary': self._calculate_summary(student_ids),
         }
 
     def _calculate_summary(
@@ -163,14 +136,10 @@ class MentorDashboardService(BaseService):
                 'overdue_tasks': 0,
                 'overall_completion_rate': 0.0,
                 'overall_avg_score': None,
-                'learning_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0},
-                'practice_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0},
-                'exam_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0, 'avg_score': None}
             }
         assignments = get_assignments_by_students(student_ids=student_ids)
         stats = calculate_task_stats(assignments)
         overall_avg_score = calculate_avg_score(student_ids=student_ids)
-        default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         return {
             'total_students': len(student_ids),
             'monthly_tasks': monthly_tasks,
@@ -180,65 +149,7 @@ class MentorDashboardService(BaseService):
             'overdue_tasks': stats['overdue_tasks'],
             'overall_completion_rate': round(stats['completion_rate'], 1),
             'overall_avg_score': round(overall_avg_score, 2) if overall_avg_score is not None else None,
-            'learning_tasks': default_stats,
-            'practice_tasks': default_stats,
-            'exam_tasks': {**default_stats, 'avg_score': None}
         }
-
-    def _calculate_student_stats(
-        self,
-        students: QuerySet,
-        monthly_active_ids: Set[int],
-        spot_check_map: Dict[int, Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """计算每个学员的统计"""
-        student_ids = list(students.values_list('id', flat=True))
-        student_metrics_map = get_student_dashboard_metrics(student_ids)
-        student_stats = []
-        for student in students.select_related('department'):
-            metrics = student_metrics_map.get(
-                student.id,
-                {
-                    'total_tasks': 0,
-                    'completed_tasks': 0,
-                    'in_progress_tasks': 0,
-                    'overdue_tasks': 0,
-                    'completion_rate': 0.0,
-                    'avg_score': None,
-                }
-            )
-            avg_score = metrics['avg_score']
-            total_tasks = metrics['total_tasks']
-            overdue_rate = (metrics['overdue_tasks'] / total_tasks * 100) if total_tasks > 0 else 0.0
-            spot_check_info = spot_check_map.get(student.id, {'count': 0, 'avg_score': None})
-            monthly_active = student.id in monthly_active_ids
-            student_stats.append({
-                'id': student.id,
-                'employee_id': student.employee_id or '',
-                'username': student.username,
-                'department_name': student.department.name if student.department else None,
-                'total_tasks': metrics['total_tasks'],
-                'completed_tasks': metrics['completed_tasks'],
-                'in_progress_tasks': metrics['in_progress_tasks'],
-                'overdue_tasks': metrics['overdue_tasks'],
-                'completion_rate': metrics['completion_rate'],
-                'overdue_rate': round(overdue_rate, 1),
-                'avg_score': round(avg_score, 2) if avg_score is not None else None,
-                'exam_count': 0,
-                'exam_passed_count': 0,
-                'exam_pass_rate': None,
-                'monthly_active': monthly_active,
-                'spot_check_count_month': spot_check_info['count'],
-                'spot_check_avg_score_month': spot_check_info['avg_score'],
-                'radar_metrics': {
-                    'completion_rate': metrics['completion_rate'],
-                    'overdue_rate': round(overdue_rate, 1),
-                    'avg_score': round(avg_score, 2) if avg_score is not None else 0,
-                    'monthly_active': 100 if monthly_active else 0,
-                    'spot_check_avg_score': spot_check_info['avg_score'] or 0,
-                }
-            })
-        return student_stats
 
 
 class AdminDashboardService(BaseService):
