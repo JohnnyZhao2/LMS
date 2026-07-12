@@ -20,17 +20,10 @@ import { ActionCard } from '@/components/ui/action-card';
 import { Card } from '@/components/ui/card';
 
 import { useMentorDashboard } from '../api/mentor-dashboard';
-import {
-  PendingGradingCard,
-  ScoreDistributionCard,
-  SpotCheckStatsCard,
-  StudentRadarCard,
-} from './mentor-dashboard-widgets';
 
 
 /**
  * 导师/室经理仪表盘组件
- * Sophisticated dashboard for Mentors and Managers.
  */
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
@@ -38,16 +31,6 @@ export const MentorDashboard: React.FC = () => {
   const { availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
-  const pendingGradingCount = data?.pending_grading?.count ?? 0;
-  const spotCheckStats = data?.spot_check_stats ?? { count: 0, avg_score: null };
-  const scoreDistribution = data?.score_distribution ?? {
-    excellent: 0,
-    good: 0,
-    pass: 0,
-    fail: 0,
-    total: 0,
-  };
-  const students = data?.students ?? [];
 
   if (isLoading) {
     return (
@@ -70,7 +53,6 @@ export const MentorDashboard: React.FC = () => {
       />
 
       <div className="space-y-6">
-        {/* 统计卡片 */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             title="学员数量"
@@ -92,7 +74,6 @@ export const MentorDashboard: React.FC = () => {
           />
         </div>
 
-        {/* 主内容区域 */}
         <div>
           <Card className="h-full border border-border p-6">
             <div className="mb-5 flex items-center gap-2">
@@ -132,21 +113,6 @@ export const MentorDashboard: React.FC = () => {
               />
             </div>
           </Card>
-        </div>
-
-        {/* 新增卡片 */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <PendingGradingCard count={pendingGradingCount} />
-          <SpotCheckStatsCard stats={spotCheckStats} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <StudentRadarCard students={students} />
-          </div>
-          <div className="lg:col-span-5">
-            <ScoreDistributionCard distribution={scoreDistribution} />
-          </div>
         </div>
       </div>
     </PageShell>

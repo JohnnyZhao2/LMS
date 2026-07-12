@@ -68,10 +68,6 @@ export interface StudentDashboard {
  */
 export interface MentorDashboard {
   summary: MentorDashboardSummary;
-  students: MentorDashboardStudent[];
-  pending_grading: { count: number };
-  spot_check_stats: MentorDashboardSpotCheckStats;
-  score_distribution: MentorDashboardScoreDistribution;
 }
 
 export interface MentorDashboardSummary {
@@ -83,48 +79,6 @@ export interface MentorDashboardSummary {
   overdue_tasks: number;
   overall_completion_rate: number;
   overall_avg_score: number | null;
-}
-
-export interface MentorDashboardSpotCheckStats {
-  count: number;
-  avg_score: number | null;
-}
-
-export interface MentorDashboardScoreDistribution {
-  excellent: number;
-  good: number;
-  pass: number;
-  fail: number;
-  total: number;
-}
-
-interface MentorDashboardRadarMetrics {
-  completion_rate: number;
-  overdue_rate: number;
-  avg_score: number;
-  monthly_active: number;
-  spot_check_avg_score: number;
-}
-
-export interface MentorDashboardStudent {
-  id: number;
-  employee_id: string;
-  username: string;
-  department_name: string | null;
-  total_tasks: number;
-  completed_tasks: number;
-  in_progress_tasks: number;
-  overdue_tasks: number;
-  completion_rate: number;
-  overdue_rate: number;
-  avg_score: number | null;
-  exam_count: number;
-  exam_passed_count: number;
-  exam_pass_rate: number | null;
-  monthly_active: boolean;
-  spot_check_count_month: number;
-  spot_check_avg_score_month: number | null;
-  radar_metrics: MentorDashboardRadarMetrics;
 }
 
 export interface AdminDashboard {

@@ -344,7 +344,10 @@ class TestMentorDashboardAPI:
 
         assert response.status_code == 200
         assert 'summary' in data
-        assert 'students' in data
+        assert 'students' not in data
+        assert 'pending_grading' not in data
+        assert 'spot_check_stats' not in data
+        assert 'score_distribution' not in data
         assert 'overdue_warning' not in data
 
     def test_get_dashboard_as_admin(self, api_client, admin):
@@ -415,8 +418,8 @@ class TestMentorDashboardAPI:
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
 
-    def test_dashboard_student_stats_query_count_is_bounded(self, api_client, unwrap_response_data, mentor, department, task):
-        """测试导师看板的学员统计查询次数不会随学员数量线性爆炸"""
+    def test_dashboard_summary_query_count_is_bounded(self, api_client, unwrap_response_data, mentor, department, task):
+        """测试导师看板摘要查询次数不会随学员数量线性爆炸"""
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
 
@@ -440,7 +443,7 @@ class TestMentorDashboardAPI:
             data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        assert len(data['students']) >= 8
+        assert data['summary']['total_students'] >= 8
         assert len(context.captured_queries) <= 25, f"查询次数过多: {len(context.captured_queries)}"
 
     def test_dashboard_scope_follows_permission_overrides(self, api_client, unwrap_response_data, mentor, student, student2, department):
@@ -456,20 +459,9 @@ class TestMentorDashboardAPI:
         data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        student_ids = {item['id'] for item in data['students']}
-        assert student.id in student_ids
-        assert student2.id in student_ids
-        assert extra_student.id not in student_ids
+        initial_count = data['summary']['total_students']
+        assert initial_count >= 2
 
-        UserScopeGroupOverride.objects.create(
-            user=mentor,
-            scope_group_key='task_assignment_scope',
-            effect='ALLOW',
-            applies_to_role='MENTOR',
-            scope_type='EXPLICIT_USERS',
-            scope_user_ids=[extra_student.id],
-            granted_by=mentor,
-        )
         UserScopeGroupOverride.objects.create(
             user=mentor,
             scope_group_key='task_assignment_scope',
@@ -484,10 +476,24 @@ class TestMentorDashboardAPI:
         data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        student_ids = {item['id'] for item in data['students']}
-        assert student.id not in student_ids
-        assert student2.id in student_ids
-        assert extra_student.id in student_ids
+        after_deny_count = data['summary']['total_students']
+        assert after_deny_count == initial_count - 1
+
+        UserScopeGroupOverride.objects.create(
+            user=mentor,
+            scope_group_key='task_assignment_scope',
+            effect='ALLOW',
+            applies_to_role='MENTOR',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[extra_student.id],
+            granted_by=mentor,
+        )
+
+        response = api_client.get('/api/dashboard/mentor/')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        assert data['summary']['total_students'] == after_deny_count + 1
 
 
 @pytest.mark.django_db
