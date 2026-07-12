@@ -100,14 +100,12 @@ export const queryKeys = {
       taskId,
       quizId,
       questionId,
-      studentId,
     }: {
       currentRole: QueryRole;
       taskId: number;
       quizId: number | null;
       questionId: number | null;
-      studentId: number | null;
-    }) => ['grading-answers', normalizeRoleKey(currentRole), taskId, quizId, questionId, studentId ?? 'ALL'] as const,
+    }) => ['grading-answers', normalizeRoleKey(currentRole), taskId, quizId, questionId] as const,
   },
   knowledge: {
     listRoot: () => ['knowledge-list'] as const,

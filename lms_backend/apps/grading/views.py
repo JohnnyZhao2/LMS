@@ -5,7 +5,6 @@ from apps.activity_logs.decorators import log_operation
 from apps.grading.selectors import (
     OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
     REVIEWABLE_SUBMISSION_STATUSES,
-    calculate_question_answer_counts,
     calculate_question_pass_rate,
     get_latest_quiz_answers,
     has_answer_content,
@@ -113,7 +112,6 @@ class GradingAnswersView(GradingBaseView):
         description='获取指定题目的作答分布与学员答案',
         parameters=[
             OpenApiParameter(name='question_id', type=int, required=True, description='题目ID'),
-            OpenApiParameter(name='student_id', type=int, required=False, description='按学员ID筛选'),
         ],
         responses={
             200: GradingAnswerResponseSerializer,
@@ -126,14 +124,13 @@ class GradingAnswersView(GradingBaseView):
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
-        student_id = parse_int_query_param(request, name='student_id', minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
 
-        answers = self._get_grading_answers(task, question_id, quiz_id, student_id=student_id)
+        answers = self._get_grading_answers(task, question_id, quiz_id)
         serializer = GradingAnswerResponseSerializer(answers)
         return success_response(serializer.data)
 
-    def _get_grading_answers(self, task, question_id, quiz_id, *, student_id=None):
+    def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
         task_quiz = TaskQuiz.objects.select_related('quiz').filter(
             id=quiz_id,
@@ -157,7 +154,7 @@ class GradingAnswersView(GradingBaseView):
             if relation.is_objective
             else REVIEWABLE_SUBMISSION_STATUSES
         )
-        answers_query = get_latest_quiz_answers(
+        answers = list(get_latest_quiz_answers(
             task,
             quiz_id,
             submission_statuses=answer_statuses,
@@ -165,14 +162,8 @@ class GradingAnswersView(GradingBaseView):
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
-        if student_id is not None:
-            answers_query = answers_query.filter(submission__task_assignment__assignee_id=student_id)
-        answers = list(answers_query)
-        answer_counts = calculate_question_answer_counts(
-            answers,
-            relation.score,
-            relation.is_objective,
         )
+        answered_count = sum(1 for answer in answers if has_answer_content(answer.user_answer))
 
         pass_rate = calculate_question_pass_rate(
             task,
@@ -187,7 +178,7 @@ class GradingAnswersView(GradingBaseView):
                 'question_id': relation.id,
                 'question_type': relation.question_type,
                 'pass_rate': pass_rate,
-                **answer_counts,
+                'answered_count': answered_count,
                 'options': self._build_objective_options(relation, answers),
             }
 
@@ -195,7 +186,6 @@ class GradingAnswersView(GradingBaseView):
             'question_id': relation.id,
             'question_type': relation.question_type,
             'pass_rate': pass_rate,
-            **answer_counts,
             'subjective_answers': self._build_subjective_answers(answers),
         }
 

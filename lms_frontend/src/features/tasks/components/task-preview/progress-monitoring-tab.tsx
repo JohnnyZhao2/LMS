@@ -6,21 +6,15 @@ import {
   AlertTriangle,
   BookOpen,
   FileQuestion,
-  FileText,
   GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Tooltip } from '@/components/ui/tooltip';
-import { LIST_ACTION_ICON_VIEW_CLASS } from '@/components/ui/data-table/action-icon-styles';
 import { cn } from '@/lib/utils';
 import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
-import { ROUTES } from '@/config/routes';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
@@ -34,7 +28,6 @@ import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
 
 interface ProgressMonitoringTabProps {
   taskId?: number;
-  taskTitle?: string;
 }
 
 type AggregatedProgressCategory = {
@@ -71,9 +64,8 @@ const formatMinutes = (value: number | null) => (
   value === null ? '-' : `${value} 分钟`
 );
 
-export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId, taskTitle }) => {
+export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
   const [chartType, setChartType] = React.useState<DistributionChartType>('learning_time');
-  const { roleNavigate } = useRoleNavigate();
 
   const { data: analytics, isLoading: analyticsLoading } = useTaskAnalytics(taskId || 0, {
     enabled: Boolean(taskId),
@@ -112,22 +104,6 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       return { key, label, icon, textClass, bgClass, barClass, nodeCount, completedCount: avgCompleted, totalCount, percentage };
     }).filter(Boolean) as AggregatedProgressCategory[];
   }, [analytics]);
-
-  const openStudentAnswers = React.useCallback((student: StudentExecution) => {
-    if (!taskId) {
-      return;
-    }
-    const searchParams = new URLSearchParams({
-      task: String(taskId),
-      entry: 'task-management',
-      view: 'student',
-      student: String(student.student_id),
-    });
-    if (taskTitle) {
-      searchParams.set('taskTitle', taskTitle);
-    }
-    roleNavigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`);
-  }, [roleNavigate, taskId, taskTitle]);
 
   const columns = React.useMemo<ColumnDef<StudentExecution>[]>(() => [
     {
@@ -227,25 +203,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         </span>
       ),
     },
-    {
-      header: '答题详情',
-      id: 'answer_detail',
-      size: 90,
-      minSize: 86,
-      cell: ({ row }) => (
-        <Tooltip title="查看个人答题详情">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={LIST_ACTION_ICON_VIEW_CLASS}
-            onClick={() => openStudentAnswers(row.original)}
-          >
-            <FileText className="h-4 w-4" />
-          </Button>
-        </Tooltip>
-      ),
-    },
-  ], [openStudentAnswers]);
+  ], []);
 
   if (isLoading || !analytics) {
     return (

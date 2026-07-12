@@ -84,54 +84,9 @@ def test_objective_distribution_counts_answered_students_once():
     option_map = {option['option_key']: option for option in payload['options']}
 
     assert payload['answered_count'] == 2
-    assert payload['correct_count'] == 1
-    assert payload['incorrect_count'] == 1
     assert option_map['A']['selected_count'] == 1
     assert option_map['B']['selected_count'] == 2
     assert option_map['C']['selected_count'] == 0
-
-
-@pytest.mark.django_db
-def test_grading_answers_can_filter_single_student():
-    mentor = UserFactory()
-    task = TaskFactory(created_by=mentor)
-    task_quiz = TaskQuizFactory(task=task)
-
-    question = create_choice_question(
-        created_by=mentor,
-        content='按学员筛选多选题',
-        correct_keys=['A', 'B'],
-    )
-    quiz_question = QuizRevisionQuestionFactory(
-        quiz=task_quiz.quiz,
-        question=question,
-        question_type='MULTIPLE_CHOICE',
-        content='按学员筛选多选题',
-        score=2,
-    )
-
-    assignment_a = TaskAssignmentFactory(task=task)
-    assignment_b = TaskAssignmentFactory(task=task)
-    submission_a = SubmissionFactory(task_assignment=assignment_a, task_quiz=task_quiz, quiz=task_quiz.quiz, status='SUBMITTED')
-    submission_b = SubmissionFactory(task_assignment=assignment_b, task_quiz=task_quiz, quiz=task_quiz.quiz, status='SUBMITTED')
-
-    create_objective_answer(submission=submission_a, question=quiz_question, selected_keys=['A'], is_correct=False)
-    create_objective_answer(submission=submission_b, question=quiz_question, selected_keys=['B'], is_correct=False)
-
-    payload = GradingAnswersView()._get_grading_answers(
-        task,
-        quiz_question.id,
-        task_quiz.id,
-        student_id=assignment_b.assignee_id,
-    )
-    option_map = {option['option_key']: option for option in payload['options']}
-
-    assert payload['answered_count'] == 1
-    assert payload['correct_count'] == 0
-    assert payload['incorrect_count'] == 1
-    assert option_map['A']['selected_count'] == 0
-    assert option_map['B']['selected_count'] == 1
-    assert option_map['B']['students'][0]['student_id'] == assignment_b.assignee_id
 
 
 @pytest.mark.django_db
@@ -174,8 +129,6 @@ def test_objective_analysis_includes_in_progress_answers():
     pass_rate = calculate_question_pass_rate(task, quiz_question.id, task_quiz.id, quiz_question.score, True)
 
     assert payload['answered_count'] == 1
-    assert payload['correct_count'] == 1
-    assert payload['incorrect_count'] == 0
     assert option_map['A']['selected_count'] == 1
     assert option_map['B']['selected_count'] == 1
     assert pass_rate == 100.0

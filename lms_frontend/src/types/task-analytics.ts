@@ -98,9 +98,7 @@ export interface GradingAnswerResponse {
   question_id: number;
   question_type: GradingQuestionType;
   pass_rate: number | null;
-  answered_count: number;
-  correct_count: number;
-  incorrect_count: number;
+  answered_count?: number;
   options?: GradingOption[];
   subjective_answers?: GradingSubjectiveAnswer[];
 }

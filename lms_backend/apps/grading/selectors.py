@@ -54,30 +54,6 @@ def _is_objective_answer_correct(answer):
     return bool(is_correct)
 
 
-def calculate_question_answer_counts(answers, max_score, is_objective):
-    if is_objective:
-        answered_answers = [answer for answer in answers if has_answer_content(answer.user_answer)]
-        correct_count = sum(1 for answer in answered_answers if _is_objective_answer_correct(answer))
-        return {
-            'answered_count': len(answered_answers),
-            'correct_count': correct_count,
-            'incorrect_count': len(answered_answers) - correct_count,
-        }
-
-    score_threshold = float(max_score) * 0.6
-    graded_answers = [answer for answer in answers if answer.graded_by_id is not None]
-    correct_count = sum(
-        1
-        for answer in graded_answers
-        if float(answer.obtained_score) >= score_threshold
-    )
-    return {
-        'answered_count': sum(1 for answer in answers if has_answer_content(answer.text_answer)),
-        'correct_count': correct_count,
-        'incorrect_count': len(graded_answers) - correct_count,
-    }
-
-
 def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objective):
     submission_statuses = (
         OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES
@@ -92,15 +68,18 @@ def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objec
         ).filter(question_id=question_id)
     )
     if is_objective:
-        counts = calculate_question_answer_counts(answers, max_score, is_objective=True)
-        if counts['answered_count'] == 0:
+        answered_answers = [answer for answer in answers if has_answer_content(answer.user_answer)]
+        total_count = len(answered_answers)
+        if total_count == 0:
             return None
-        return round(counts['correct_count'] / counts['answered_count'] * 100, 1)
+        correct_count = sum(1 for answer in answered_answers if _is_objective_answer_correct(answer))
+        return round(correct_count / total_count * 100, 1)
 
     graded_answers = [answer for answer in answers if answer.graded_by_id is not None]
     total_count = len(graded_answers)
     if total_count == 0:
         return None
 
-    counts = calculate_question_answer_counts(graded_answers, max_score, is_objective=False)
-    return round(counts['correct_count'] / total_count * 100, 1)
+    score_threshold = float(max_score) * 0.6
+    correct_count = sum(1 for answer in graded_answers if float(answer.obtained_score) >= score_threshold)
+    return round(correct_count / total_count * 100, 1)

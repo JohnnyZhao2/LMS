@@ -61,25 +61,16 @@ export const useGradingAnswers = (
   taskId: number,
   questionId: number | null,
   quizId: number | null,
-  studentId: number | null = null,
   options: { enabled?: boolean } = {}
 ) => {
   const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: queryKeys.grading.answers({ currentRole, taskId, quizId, questionId, studentId }),
-    queryFn: () => {
-      const searchParams = new URLSearchParams({
-        question_id: String(questionId),
-        quiz_id: String(quizId),
-      });
-      if (studentId !== null) {
-        searchParams.set('student_id', String(studentId));
-      }
-      return apiClient.get<GradingAnswerResponse>(
-        `/grading/tasks/${taskId}/answers/?${searchParams.toString()}`
-      );
-    },
+    queryKey: queryKeys.grading.answers({ currentRole, taskId, quizId, questionId }),
+    queryFn: () =>
+      apiClient.get<GradingAnswerResponse>(
+        `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
+      ),
     enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && currentRole !== null && enabled,
   });
 };

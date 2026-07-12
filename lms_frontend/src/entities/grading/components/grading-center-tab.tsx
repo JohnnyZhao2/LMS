@@ -5,13 +5,8 @@ import {
   ThumbsDown,
   ThumbsUp,
   Check,
-  CheckCircle2,
   BarChart3,
   Filter,
-  Percent,
-  UserRound,
-  Users,
-  XCircle,
 } from 'lucide-react';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Input } from '@/components/ui/input';
@@ -20,7 +15,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatCard } from '@/components/ui/stat-card';
 import { QUESTION_TYPE_CONFIG } from '@/entities/question/constants';
 import { QuestionTypeBadge } from '@/entities/question/components/question-type-badge';
 import { buildQuestionSections } from '@/entities/question/question-sections';
@@ -33,7 +27,6 @@ import type { PendingTask, PendingQuiz } from '@/entities/grading/api/pending-qu
 import {
   useGradingAnswers,
   useGradingQuestions,
-  useStudentExecutions,
   useSubmitGrading,
 } from '@/entities/grading/api/task-analytics';
 
@@ -41,8 +34,6 @@ interface GradingCenterTabProps {
   taskId?: number;
   quizId?: number | null;
   selectorConfig?: GradingCenterSelectorConfig;
-  initialSelectedStudentId?: number | null;
-  onStudentScopeChange?: (studentId: number | null) => void;
 }
 
 type QuestionFilter = QuestionType | null;
@@ -100,14 +91,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   taskId,
   quizId,
   selectorConfig,
-  initialSelectedStudentId = null,
-  onStudentScopeChange,
 }) => {
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
-  const [selectedStudentId, setSelectedStudentId] = React.useState<number | null>(initialSelectedStudentId);
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
   const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
-  const [displayedStudentId, setDisplayedStudentId] = React.useState<number | null>(initialSelectedStudentId);
   const [displayedQuestion, setDisplayedQuestion] = React.useState<GradingQuestion | null>(null);
   const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
@@ -118,31 +105,6 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
     enabled: Boolean(taskId) && Boolean(quizId),
   });
-  const { data: studentExecutions } = useStudentExecutions(taskId || 0, {
-    enabled: Boolean(taskId),
-  });
-
-  React.useEffect(() => {
-    setSelectedStudentId(initialSelectedStudentId ?? null);
-    setQuestionFilter(null);
-    setSelectedQuestionId(null);
-    setDisplayedQuestionId(null);
-    setDisplayedStudentId(initialSelectedStudentId ?? null);
-    setDisplayedQuestion(null);
-    setDisplayedQuestionDetail(null);
-  }, [initialSelectedStudentId, quizId, taskId]);
-
-  React.useEffect(() => {
-    if (selectedStudentId === null || !studentExecutions || studentExecutions.length === 0) {
-      return;
-    }
-
-    const stillExists = studentExecutions.some((student) => student.student_id === selectedStudentId);
-    if (!stillExists) {
-      setSelectedStudentId(null);
-      onStudentScopeChange?.(null);
-    }
-  }, [onStudentScopeChange, selectedStudentId, studentExecutions]);
 
   React.useEffect(() => {
     if (!questions || questions.length === 0) {
@@ -172,10 +134,6 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     () => new Set((questions ?? []).map((question) => question.question_type)),
     [questions],
   );
-  const groupedQuestions = React.useMemo(
-    () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
-    [filteredQuestions],
-  );
   const effectiveQuestionId = React.useMemo(() => {
     if (filteredQuestions.length === 0) {
       return null;
@@ -185,13 +143,16 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
       return selectedQuestionId;
     }
 
-    return groupedQuestions[0]?.entries[0]?.item.question_id ?? null;
-  }, [filteredQuestions, groupedQuestions, selectedQuestionId]);
+    return filteredQuestions[0].question_id;
+  }, [filteredQuestions, selectedQuestionId]);
+  const groupedQuestions = React.useMemo(
+    () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
+    [filteredQuestions],
+  );
   const { data: questionDetail, isLoading: detailLoading } = useGradingAnswers(
     taskId || 0,
     effectiveQuestionId,
     quizId ?? null,
-    selectedStudentId,
     { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
   );
   const submitGrading = useSubmitGrading(taskId || 0, {
@@ -224,16 +185,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   React.useEffect(() => {
     if (questionDetail && effectiveQuestionId !== null && effectiveQuestion) {
       setDisplayedQuestionId(effectiveQuestionId);
-      setDisplayedStudentId(selectedStudentId);
       setDisplayedQuestion(effectiveQuestion);
       setDisplayedQuestionDetail(questionDetail);
     }
-  }, [effectiveQuestion, effectiveQuestionId, questionDetail, selectedStudentId]);
+  }, [effectiveQuestion, effectiveQuestionId, questionDetail]);
 
   React.useEffect(() => {
     if (filteredQuestions.length === 0) {
       setDisplayedQuestionId(null);
-      setDisplayedStudentId(null);
       setDisplayedQuestion(null);
       setDisplayedQuestionDetail(null);
     }
@@ -255,7 +214,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     detailLoading
     && displayedQuestionId !== null
     && displayedQuestionDetail !== null
-    && (displayedQuestionId !== effectiveQuestionId || displayedStudentId !== selectedStudentId);
+    && displayedQuestionId !== effectiveQuestionId;
   const selectedQuestion = React.useMemo<GradingQuestion | undefined>(() => {
     if (shouldHoldPreviousDetail && displayedQuestion) {
       return displayedQuestion;
@@ -269,23 +228,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     if (questionDetail) {
       return questionDetail;
     }
-    if (
-      displayedQuestionId !== null
-      && displayedQuestionId === effectiveQuestionId
-      && displayedStudentId === selectedStudentId
-    ) {
+    if (displayedQuestionId !== null && displayedQuestionId === effectiveQuestionId) {
       return displayedQuestionDetail;
     }
     return null;
-  }, [
-    displayedQuestionDetail,
-    displayedQuestionId,
-    displayedStudentId,
-    effectiveQuestionId,
-    questionDetail,
-    selectedStudentId,
-    shouldHoldPreviousDetail,
-  ]);
+  }, [displayedQuestionDetail, displayedQuestionId, effectiveQuestionId, questionDetail, shouldHoldPreviousDetail]);
 
   const sortedOptions = React.useMemo(() => {
     if (!activeQuestionDetail?.options) return [];
@@ -293,39 +240,6 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   }, [activeQuestionDetail]);
 
   const answeredCount = activeQuestionDetail?.answered_count ?? 0;
-  const selectedStudent = React.useMemo(
-    () => studentExecutions?.find((student) => student.student_id === selectedStudentId) ?? null,
-    [selectedStudentId, studentExecutions],
-  );
-  const studentScopeOptions = React.useMemo(() => {
-    const options = (studentExecutions ?? []).map((student) => ({
-      student_id: student.student_id,
-      student_name: student.student_name,
-      avatar_key: student.avatar_key,
-      employee_id: student.employee_id,
-      department: student.department,
-    }));
-    if (selectedStudentId === null || options.some((student) => student.student_id === selectedStudentId)) {
-      return options;
-    }
-
-    return [
-      {
-        student_id: selectedStudentId,
-        student_name: `学员 #${selectedStudentId}`,
-        avatar_key: '',
-        employee_id: '',
-        department: '',
-      },
-      ...options,
-    ];
-  }, [selectedStudentId, studentExecutions]);
-
-  const handleStudentScopeChange = (value: string) => {
-    const nextStudentId = value === 'all' ? null : Number(value);
-    setSelectedStudentId(nextStudentId);
-    onStudentScopeChange?.(nextStudentId);
-  };
 
   const handleScoreChange = (studentId: number, value: string) => {
     setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
@@ -408,16 +322,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   const selectedQuiz =
     selectedTask?.quizzes.find((quiz) => quiz.quiz_id === selectorConfig?.selectedQuizId) ?? null;
   const activeFilterMeta = questionFilter ? QUESTION_TYPE_CONFIG[questionFilter] : null;
-  const detailPassRate = activeQuestionDetail?.pass_rate ?? selectedQuestion?.pass_rate ?? null;
-  const correctMetricLabel = selectedQuestion?.question_type === 'SHORT_ANSWER' ? '达标人数' : '正确人数';
-  const incorrectMetricLabel = selectedQuestion?.question_type === 'SHORT_ANSWER' ? '未达标人数' : '错误人数';
-  const selectedStudentScope = selectedStudentId === null
-    ? null
-    : studentScopeOptions.find((student) => student.student_id === selectedStudentId);
-  const selectedStudentScopeLabel = selectedStudentId === null ? '全部人员' : selectedStudentScope?.student_name;
-
   return (
-    <div className="grid h-full min-h-0 min-w-[1080px] grid-cols-[minmax(300px,27fr)_minmax(748px,73fr)] gap-4 lg:gap-6">
+    <div className="grid h-full min-h-0 gap-4 lg:gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
       {/* Left Column: Question List */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
         <div className="border-b border-border bg-background p-3 sm:p-4">
@@ -567,32 +473,45 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
       </div>
 
       {/* Right Column: Content */}
-      <div className="flex min-h-0 h-full flex-col gap-4 overflow-hidden">
+      <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
         {selectedQuestion ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
-              <div className="min-h-[124px] rounded-2xl border border-border bg-background px-5 py-5 sm:min-h-[136px] sm:px-6 sm:py-6">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="rounded-full bg-primary-500 px-3 py-1 text-xs font-semibold text-white shadow-sm shadow-primary-500/20">
-                    {selectedQuestion.question_type_display || '题目详情'}
-                  </span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-text-muted">
-                    分值 {formatScore(selectedQuestion.max_score)}
-                  </span>
+          <div className="flex min-h-0 flex-1 flex-col">
+              {/* Detail Header */}
+              <div className="sticky top-0 z-20 border-b border-border bg-background p-4 backdrop-blur sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <div className="min-w-0">
+                    <div className="mb-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
+                      <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
+                        {selectedQuestion?.question_type_display || '题目详情'}
+                      </span>
+                      <span className="text-sm font-medium text-text-muted">
+                        分值: {formatScore(selectedQuestion?.max_score)}
+                      </span>
+                    </div>
+                    <h2 className="text-lg font-semibold leading-snug text-foreground break-words">
+                      {selectedQuestion?.question_text}
+                    </h2>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
+                    <span className="text-xs text-text-muted uppercase font-semibold tracking-wider">该题平均通过率</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-foreground tabular-nums">
+                        {formatPassRate(activeQuestionDetail?.pass_rate ?? selectedQuestion?.pass_rate)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h2 className="mt-4 break-words text-xl font-semibold leading-snug text-foreground">
-                  {selectedQuestion.question_text}
-                </h2>
-                {selectedQuestion.question_analysis ? (
-                  <div className="mt-4 border-t border-border pt-4 text-sm leading-6 text-text-muted">
-                    <span className="font-semibold text-foreground">解析：</span>
+
+                {selectedQuestion?.question_analysis && (
+                  <div className="mt-4 rounded-xl border border-border bg-background p-3 text-sm leading-relaxed text-text-muted sm:p-4">
+                    <span className="font-semibold text-foreground mr-2">解析:</span>
                     {selectedQuestion.question_analysis}
                   </div>
-                ) : null}
+                )}
               </div>
 
-              <div className="grid min-h-0 flex-1 grid-cols-[minmax(520px,77fr)_minmax(212px,23fr)] gap-4">
-              <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-background">
-              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 2xl:p-6">
+              {/* Content Body */}
+              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
                 {!activeQuestionDetail && detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -603,7 +522,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   <>
                     {/* OBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
-                      <div className="relative space-y-3 2xl:space-y-4">
+                      <div className="relative mx-auto max-w-3xl space-y-4">
                         {sortedOptions.length === 0 && (
                           <div className="bg-background rounded-xl border border-dashed">
                             <EmptyState
@@ -624,7 +543,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                             <div
                               key={option.option_key}
                               className={cn(
-                                'group relative rounded-xl px-4 py-4 transition-all 2xl:py-5',
+                                'group relative rounded-xl px-4 py-5 transition-all',
                                 isCorrect
                                   ? 'border border-secondary-300 bg-background ring-1 ring-secondary-100'
                                   : 'border border-transparent bg-transparent',
@@ -649,7 +568,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                 </div>
                               </div>
 
-                              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted 2xl:mt-5">
+                              <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted">
                                 <div
                                   className={cn(
                                     'h-full',
@@ -659,7 +578,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                 />
                               </div>
 
-                              <div className="mt-4 flex items-center justify-between gap-3 2xl:mt-5">
+                              <div className="mt-5 flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 items-center">
                                   {previewStudents.map((student, index) => (
                                     <UserAvatar
@@ -688,10 +607,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
 
                     {/* SUBJECTIVE QUESTIONS */}
                     {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
-                      <div className="relative space-y-4">
+                      <div className="relative mx-auto max-w-4xl space-y-4">
                         {activeQuestionDetail?.subjective_answers?.length === 0 && (
                           <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
-                            {selectedStudent ? `${selectedStudent.student_name} 暂无该题回答` : '暂无学员回答'}
+                            暂无学员回答
                           </div>
                         )}
                         {activeQuestionDetail?.subjective_answers?.map((answer) => {
@@ -786,76 +705,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   </>
                 )}
               </ScrollContainer>
-              </div>
-              <aside className="flex min-h-0 flex-col gap-4 rounded-2xl border border-border bg-background p-4">
-                <div className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2.5">
-                  <Select
-                    value={selectedStudentId === null ? 'all' : String(selectedStudentId)}
-                    onValueChange={handleStudentScopeChange}
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-lg border-transparent bg-transparent px-0 text-[13px] shadow-none hover:border-transparent hover:bg-transparent focus:border-transparent focus:shadow-none data-[state=open]:border-transparent data-[state=open]:bg-transparent data-[state=open]:shadow-none">
-                      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
-                          <UserRound className="h-3.5 w-3.5" strokeWidth={2.2} />
-                        </span>
-                        <span className="block min-w-0 flex-1 truncate text-left text-[13px] font-semibold leading-5 text-foreground">
-                          {selectedStudentScopeLabel ?? '全部人员'}
-                        </span>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      <SelectItem value="all">全部人员</SelectItem>
-                      {studentScopeOptions.map((student) => (
-                        <SelectItem key={student.student_id} value={String(student.student_id)}>
-                          {student.student_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-1 gap-4 border-t border-border pt-5">
-                  <StatCard
-                    icon={Users}
-                    title="作答人数"
-                    value={answeredCount}
-                    accentClassName="bg-primary-500"
-                    iconClassName="text-primary"
-                    size="xs"
-                    className="h-24"
-                  />
-                  <StatCard
-                    icon={CheckCircle2}
-                    title={correctMetricLabel}
-                    value={activeQuestionDetail?.correct_count ?? 0}
-                    accentClassName="bg-secondary-500"
-                    iconClassName="text-secondary"
-                    size="xs"
-                    className="h-24"
-                  />
-                  <StatCard
-                    icon={XCircle}
-                    title={incorrectMetricLabel}
-                    value={activeQuestionDetail?.incorrect_count ?? 0}
-                    accentClassName="bg-destructive-500"
-                    iconClassName="text-destructive"
-                    size="xs"
-                    className="h-24"
-                  />
-                  <StatCard
-                    icon={Percent}
-                    title="通过率"
-                    value={formatPassRate(detailPassRate)}
-                    accentClassName="bg-secondary-500"
-                    iconClassName="text-secondary"
-                    size="xs"
-                    className="h-24"
-                  />
-                </div>
-              </aside>
-              </div>
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl border border-border bg-background text-text-muted">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-text-muted">
             <BarChart3 className="w-16 h-16 mb-4 text-muted" />
             <p>请选择左侧题目进行评阅</p>
           </div>
