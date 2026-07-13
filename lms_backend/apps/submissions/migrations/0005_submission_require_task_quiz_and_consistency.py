@@ -15,7 +15,22 @@ _STATUS_RANK = {
 _TEMP_ATTEMPT_BASE = 1_000_000_000
 
 
+def _rank_key(submission):
+    return (
+        _STATUS_RANK.get(submission.status, 0),
+        submission.obtained_score if submission.obtained_score is not None else -1,
+        submission.submitted_at is not None,
+        submission.submitted_at or submission.created_at,
+        submission.id,
+    )
+
+
+def _pick_best(submissions):
+    return max(submissions, key=_rank_key)
+
+
 def backfill_or_delete_null_task_quiz(apps, schema_editor):
+    """补齐 task_quiz 为空的历史提交；键冲突时按状态优先级保留更完整的一条。"""
     Submission = apps.get_model('submissions', 'Submission')
     TaskAssignment = apps.get_model('tasks', 'TaskAssignment')
     TaskQuiz = apps.get_model('tasks', 'TaskQuiz')
@@ -37,21 +52,57 @@ def backfill_or_delete_null_task_quiz(apps, schema_editor):
             continue
 
         task_quiz = matches[0]
-        conflict = (
+        conflicts = list(
             Submission.objects.filter(
                 task_assignment_id=submission.task_assignment_id,
                 task_quiz_id=task_quiz.id,
                 attempt_number=submission.attempt_number,
-            )
-            .exclude(pk=submission.pk)
-            .exists()
+            ).exclude(pk=submission.pk)
         )
-        if conflict:
-            submission.delete()
-            continue
+        if conflicts:
+            best = _pick_best(conflicts + [submission])
+            if best.pk != submission.pk:
+                submission.delete()
+                continue
+            for other in conflicts:
+                other.delete()
 
         submission.task_quiz_id = task_quiz.id
         submission.save(update_fields=['task_quiz_id'])
+
+
+def fix_or_delete_inconsistent_submissions(apps, schema_editor):
+    """修复或删除与模型 clean() 不一致的历史答卷。"""
+    Submission = apps.get_model('submissions', 'Submission')
+    TaskAssignment = apps.get_model('tasks', 'TaskAssignment')
+    TaskQuiz = apps.get_model('tasks', 'TaskQuiz')
+
+    for submission in Submission.objects.all().iterator():
+        assignment = TaskAssignment.objects.filter(pk=submission.task_assignment_id).first()
+        if assignment is None:
+            submission.delete()
+            continue
+
+        if not submission.task_quiz_id or not submission.quiz_id or not submission.user_id:
+            submission.delete()
+            continue
+
+        task_quiz = TaskQuiz.objects.filter(pk=submission.task_quiz_id).first()
+        if task_quiz is None:
+            submission.delete()
+            continue
+
+        if task_quiz.task_id != assignment.task_id:
+            submission.delete()
+            continue
+
+        if submission.quiz_id != task_quiz.quiz_id:
+            submission.delete()
+            continue
+
+        if submission.user_id != assignment.assignee_id:
+            submission.user_id = assignment.assignee_id
+            submission.save(update_fields=['user_id'])
 
 
 def delete_duplicate_submissions(apps, schema_editor):
@@ -69,18 +120,10 @@ def delete_duplicate_submissions(apps, schema_editor):
     for submissions in groups.values():
         if len(submissions) <= 1:
             continue
-        submissions.sort(
-            key=lambda s: (
-                _STATUS_RANK.get(s.status, 0),
-                s.obtained_score if s.obtained_score is not None else -1,
-                s.submitted_at is not None,
-                s.submitted_at or s.created_at,
-                s.id,
-            ),
-            reverse=True,
-        )
-        for duplicate in submissions[1:]:
-            duplicate.delete()
+        best = _pick_best(submissions)
+        for duplicate in submissions:
+            if duplicate.pk != best.pk:
+                duplicate.delete()
 
 
 def renumber_attempt_numbers(apps, schema_editor):
@@ -134,7 +177,6 @@ def _column_is_nullable(schema_editor, table: str, column: str) -> bool:
 
         if connection.vendor == 'sqlite':
             cursor.execute(f'PRAGMA table_info({table})')
-            # cid, name, type, notnull, dflt_value, pk
             col = next((item for item in cursor.fetchall() if item[1] == column), None)
             return bool(col and not col[3])
 
@@ -142,11 +184,7 @@ def _column_is_nullable(schema_editor, table: str, column: str) -> bool:
 
 
 def ensure_task_quiz_not_null(apps, schema_editor):
-    """按真实库结构强制 task_quiz_id 非空。
-
-    改写后的 0004 会让 Django 状态以为列已非空；若库实际仍跑过旧 0004（仅加唯一约束），
-    普通 AlterField(非空→非空) 不会发 DDL。这里检查真实列可空性后再改库。
-    """
+    """按真实库结构强制 task_quiz_id 非空。"""
     table = 'lms_submission'
     column = 'task_quiz_id'
     if not _column_is_nullable(schema_editor, table, column):
@@ -189,9 +227,9 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(backfill_or_delete_null_task_quiz, migrations.RunPython.noop),
+        migrations.RunPython(fix_or_delete_inconsistent_submissions, migrations.RunPython.noop),
         migrations.RunPython(delete_duplicate_submissions, migrations.RunPython.noop),
         migrations.RunPython(renumber_attempt_numbers, migrations.RunPython.noop),
-        # 状态侧与模型对齐；库侧用 ensure_* 按真实可空性发 DDL（兼容旧 0004）
         migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.AlterField(
