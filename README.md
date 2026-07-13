@@ -78,12 +78,22 @@ mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 
 ### 2. 配置环境变量
 
+`.env*` 含密钥，**不入库**。从 example 复制后本地填写：
+
+```bash
+cp lms_backend/.env.development.example lms_backend/.env.development
+cp lms_frontend/.env.development.example lms_frontend/.env.development
+# 生产部署机：
+# cp lms_backend/.env.production.example lms_backend/.env.production
+# cp lms_frontend/.env.production.example lms_frontend/.env.production
+```
+
 说明：
 
 - 后端开发读取本地 `lms_backend/.env.development`
 - 前端开发读取本地 `lms_frontend/.env.development`
-- 后端生产读取仓库内 `lms_backend/.env.production`
-- 前端生产构建读取仓库内 `lms_frontend/.env.production`
+- 后端生产读取部署机上的 `lms_backend/.env.production`（勿提交）
+- 前端生产构建读取部署机上的 `lms_frontend/.env.production`（勿提交）
 - `manage.py` 默认使用 `config.settings.development`
 - `python manage.py` 会按 settings 自动选择对应环境文件
 - `pytest` 默认走 `config.settings.test`，不需要额外 env 文件
