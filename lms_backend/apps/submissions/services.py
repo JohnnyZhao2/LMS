@@ -3,8 +3,8 @@
 from typing import Any, List, Optional, Tuple
 
 from apps.activity_logs.decorators import log_operation
-from django.db import transaction
-from django.db.models import Prefetch, QuerySet
+from django.db import IntegrityError, transaction
+from django.db.models import Max, Prefetch, QuerySet
 from django.utils import timezone
 
 from apps.tasks.models import TaskAssignment, TaskQuiz
@@ -62,11 +62,16 @@ class SubmissionService(BaseService):
             status__in=['SUBMITTED', 'GRADING', 'GRADED'],
         ).first()
 
-    def _count_attempts(self, task_assignment_id: int, task_quiz_id: int) -> int:
-        return Submission.objects.filter(
+    def _next_attempt_number(self, task_assignment_id: int, task_quiz_id: int) -> int:
+        """下一次 attempt_number = 当前最大编号 + 1。
+
+        不用 count()+1：去重/删记录后可能留下 1、3 空洞，count 仍会算出已占用的编号。
+        """
+        current_max = Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             task_quiz_id=task_quiz_id,
-        ).count()
+        ).aggregate(max_attempt=Max('attempt_number'))['max_attempt']
+        return 1 if current_max is None else current_max + 1
 
     def _get_answer_by_submission_and_question(
         self,
@@ -196,6 +201,15 @@ class SubmissionService(BaseService):
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='您已提交过此考试，无法重新作答')
         return self._get_in_progress(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
 
+    def _lock_assignment(self, assignment_id: int) -> TaskAssignment:
+        """只锁当前 TaskAssignment 行，串行化同一学员的开卷/恢复。
+
+        不加 select_related('task')：FOR UPDATE 联表会顺带锁住 Task，
+        导致同任务下其他学员开卷互相排队。
+        """
+        return TaskAssignment.objects.select_for_update().get(pk=assignment_id)
+
+    @transaction.atomic
     def start_or_resume_quiz(
         self,
         assignment_id: int,
@@ -205,8 +219,11 @@ class SubmissionService(BaseService):
         """开始或恢复答题。
 
         考试只能有一次有效提交；练习允许多次作答，但同一份进行中答卷会复用。
+        通过行锁串行化并发开卷，配合 DB 唯一约束防止重复 attempt。
         """
         assignment, task_quiz, quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
+        # 校验后再加锁，在锁内重新检查，避免 TOCTOU 双开卷
+        assignment = self._lock_assignment(assignment.id)
         is_exam = quiz.quiz_type == 'EXAM'
         if is_exam:
             in_progress = self.check_exam_constraints(assignment, quiz_id)
@@ -214,12 +231,23 @@ class SubmissionService(BaseService):
             in_progress = self.get_in_progress(task_assignment_id=assignment.id, quiz_id=quiz_id)
         if in_progress:
             return in_progress, False
-        submission = self.start_quiz(
-            assignment=assignment,
-            task_quiz=task_quiz,
-            user=user,
-            is_exam=is_exam,
-        )
+        try:
+            # 内层 savepoint：唯一约束冲突时不污染外层事务，可回退为 resume
+            with transaction.atomic():
+                submission = self.start_quiz(
+                    assignment=assignment,
+                    task_quiz=task_quiz,
+                    user=user,
+                    is_exam=is_exam,
+                )
+        except IntegrityError:
+            in_progress = self._get_in_progress(
+                task_assignment_id=assignment.id,
+                task_quiz_id=task_quiz.id,
+            )
+            if in_progress:
+                return in_progress, False
+            raise
         return submission, True
 
     @transaction.atomic
@@ -239,9 +267,11 @@ class SubmissionService(BaseService):
         user: User,
         is_exam: bool = False,
     ) -> Submission:
+        # 直接调用本方法时也加锁，保证 attempt_number 计算与写入原子
+        assignment = self._lock_assignment(assignment.pk)
         quiz = task_quiz.quiz
         total_score = quiz.total_score
-        attempt_number = 1 if is_exam else self._count_attempts(assignment.id, task_quiz.id) + 1
+        attempt_number = 1 if is_exam else self._next_attempt_number(assignment.id, task_quiz.id)
         remaining_seconds = quiz.duration * 60 if is_exam and quiz.duration else None
         questions = quiz.quiz_questions.order_by('order').values_list('id', flat=True)
         # 每道快照题先生成空 Answer，后续保存答案只更新这批固定记录。

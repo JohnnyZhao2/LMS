@@ -6,6 +6,7 @@
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -13,7 +14,13 @@ from core.mixins import TimestampMixin
 
 
 class Submission(TimestampMixin, models.Model):
-    """一次试卷作答记录。"""
+    """一次试卷作答记录。
+
+    关联约束（保存时强制）：
+    - user 必须等于 task_assignment.assignee
+    - task_quiz 必须属于 task_assignment.task
+    - quiz 必须等于 task_quiz.quiz
+    """
 
     STATUS_CHOICES = [
         ('IN_PROGRESS', '答题中'),
@@ -32,8 +39,6 @@ class Submission(TimestampMixin, models.Model):
         'tasks.TaskQuiz',
         on_delete=models.PROTECT,
         related_name='submissions',
-        null=True,
-        blank=True,
         verbose_name='任务试卷',
     )
     quiz = models.ForeignKey(
@@ -81,21 +86,48 @@ class Submission(TimestampMixin, models.Model):
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         ordering = ['-created_at']
+        constraints = [
+            # 同一任务分配 + 任务试卷下 attempt_number 唯一，防止并发开始生成重复答卷
+            models.UniqueConstraint(
+                fields=['task_assignment', 'task_quiz', 'attempt_number'],
+                name='uniq_submission_assignment_task_quiz_attempt',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)'
 
+    def clean(self):
+        super().clean()
+        errors = {}
+        if not self.task_assignment_id:
+            errors['task_assignment'] = '任务分配不能为空'
+        if not self.task_quiz_id:
+            errors['task_quiz'] = '任务试卷不能为空'
+        if not self.quiz_id:
+            errors['quiz'] = '试卷快照不能为空'
+        if not self.user_id:
+            errors['user'] = '答题用户不能为空'
+        if errors:
+            raise ValidationError(errors)
+
+        assignment = self.task_assignment
+        task_quiz = self.task_quiz
+        if self.user_id != assignment.assignee_id:
+            errors['user'] = '答题用户必须与任务被分配人一致'
+        if task_quiz.task_id != assignment.task_id:
+            errors['task_quiz'] = '任务试卷必须属于同一任务'
+        if self.quiz_id != task_quiz.quiz_id:
+            errors['quiz'] = '试卷快照必须与任务试卷绑定的快照一致'
+        if errors:
+            raise ValidationError(errors)
+
     def save(self, *args, **kwargs):
-        """创建时补齐答题用户、试卷总分和任务试卷关联。"""
-        if not self.pk:
-            if not self.user_id:
-                self.user = self.task_assignment.assignee
-            if not self.total_score:
-                self.total_score = self.quiz.total_score
-            if not self.task_quiz_id:
-                self.task_quiz = self.task_assignment.task.task_quizzes.filter(
-                    quiz_id=self.quiz_id
-                ).first()
+        if not self.pk and not self.total_score:
+            if not self.quiz_id:
+                raise ValidationError({'quiz': '试卷快照不能为空'})
+            self.total_score = self.quiz.total_score
+        self.full_clean()
         super().save(*args, **kwargs)
 
     @property
