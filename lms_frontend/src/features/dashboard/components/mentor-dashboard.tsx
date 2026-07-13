@@ -14,12 +14,13 @@ import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/session/auth/auth-context';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageShell } from '@/components/ui/page-shell';
+import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
 import { Card } from '@/components/ui/card';
 
 import { useMentorDashboard } from '../api/mentor-dashboard';
+import { ExamReportPanel } from './exam-report-panel';
 
 
 /**
@@ -34,55 +35,61 @@ export const MentorDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageShell>
+      <PageFillShell>
         <Skeleton className="h-20 w-1/3 rounded-lg" />
-        <div className="grid grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-lg" />
-          ))}
-        </div>
-      </PageShell>
+        <PageWorkbench>
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="min-h-0 flex-1 rounded-lg" />
+        </PageWorkbench>
+      </PageFillShell>
     );
   }
 
   return (
-    <PageShell>
+    <PageFillShell>
       <PageHeader
         title={`${roleName}工作台`}
         icon={<GraduationCap />}
       />
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="学员数量"
-            value={data?.summary?.total_students ?? 0}
-            icon={Users}
-            accentClassName="bg-primary"
-          />
-          <StatCard
-            title="任务完成率"
-            value={`${data?.summary?.overall_completion_rate ?? 0}%`}
-            icon={CheckCircle}
-            accentClassName="bg-secondary"
-          />
-          <StatCard
-            title="平均分"
-            value={data?.summary?.overall_avg_score ?? 0}
-            icon={Trophy}
-            accentClassName="bg-primary-500"
-          />
-        </div>
+      <PageWorkbench className="gap-4">
+        <div className="shrink-0 space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              title="学员数量"
+              value={data?.summary?.total_students ?? 0}
+              icon={Users}
+              accentClassName="bg-primary"
+              size="sm"
+            />
+            <StatCard
+              title="任务完成率"
+              value={`${data?.summary?.overall_completion_rate ?? 0}%`}
+              icon={CheckCircle}
+              accentClassName="bg-secondary"
+              size="sm"
+            />
+            <StatCard
+              title="平均分"
+              value={data?.summary?.overall_avg_score ?? 0}
+              icon={Trophy}
+              accentClassName="bg-primary-500"
+              size="sm"
+            />
+          </div>
 
-        <div>
-          <Card className="h-full border border-border p-6">
-            <div className="mb-5 flex items-center gap-2">
-              <Layout className="w-4 h-4 text-primary-500" />
+          <Card className="border border-border p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Layout className="h-4 w-4 text-primary-500" />
               <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
                 快速开始
               </h3>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <ActionCard
                 title="发起抽查"
                 description="对学员进行知识抽查"
@@ -114,7 +121,11 @@ export const MentorDashboard: React.FC = () => {
             </div>
           </Card>
         </div>
-      </div>
-    </PageShell>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ExamReportPanel />
+        </div>
+      </PageWorkbench>
+    </PageFillShell>
   );
 };

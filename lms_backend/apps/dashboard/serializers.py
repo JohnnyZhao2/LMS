@@ -66,3 +66,28 @@ class StudentDashboardSerializer(serializers.Serializer):
     stats = StudentStatsSerializer(read_only=True)
     tasks = StudentTaskSerializer(many=True, read_only=True)
     latest_knowledge = KnowledgeListSerializer(many=True, read_only=True)
+
+
+class ExamReportFilterSerializer(serializers.Serializer):
+    """列表与导出共用的筛选条件（不含分页）。"""
+
+    view = serializers.ChoiceField(
+        choices=['detail', 'student', 'exam'],
+        required=False,
+        default='detail',
+    )
+    exam_id = serializers.IntegerField(required=False, allow_null=True)
+    student_id = serializers.IntegerField(required=False, allow_null=True)
+    department_id = serializers.IntegerField(required=False, allow_null=True)
+    search = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class ExamReportQuerySerializer(ExamReportFilterSerializer):
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100, default=10)
+
+
+class ExamReportExportQuerySerializer(ExamReportFilterSerializer):
+    template = serializers.ChoiceField(
+        choices=['detail', 'student_summary', 'exam_summary'],
+    )

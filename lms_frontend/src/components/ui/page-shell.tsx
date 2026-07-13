@@ -43,18 +43,6 @@ interface ViewportConstraintOptions {
   fixedHeight?: boolean;
 }
 
-const getViewportTop = (node: HTMLElement) => {
-  let top = 0;
-  let current: HTMLElement | null = node;
-
-  while (current) {
-    top += current.offsetTop;
-    current = current.offsetParent as HTMLElement | null;
-  }
-
-  return top - window.scrollY;
-};
-
 const useViewportConstraint = ({
   bottomGap = 40,
   minHeight = 520,
@@ -75,7 +63,13 @@ const useViewportConstraint = ({
       return;
     }
 
-    const availableHeight = Math.floor(window.innerHeight - getViewportTop(node) - bottomGap);
+    // getBoundingClientRect 相对布局视口；visualViewport 可能有 offsetTop 偏移
+    const top = node.getBoundingClientRect().top;
+    const visualViewport = window.visualViewport;
+    const viewportBottom = visualViewport
+      ? visualViewport.offsetTop + visualViewport.height
+      : window.innerHeight;
+    const availableHeight = Math.floor(viewportBottom - top - bottomGap);
     setHeight(Math.max(minHeight, availableHeight));
   }, [bottomGap, desktopBreakpoint, minHeight]);
 
@@ -99,10 +93,25 @@ const useViewportConstraint = ({
     window.addEventListener('resize', scheduleUpdate);
     window.addEventListener('scroll', scheduleUpdate, { passive: true });
 
+    const visualViewport = window.visualViewport;
+    visualViewport?.addEventListener('resize', scheduleUpdate);
+    visualViewport?.addEventListener('scroll', scheduleUpdate);
+
+    // 只观察父级与根节点，避免监听自身 height 形成反馈环
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    const parent = elementRef.current?.parentElement;
+    if (parent) {
+      resizeObserver.observe(parent);
+    }
+    resizeObserver.observe(document.documentElement);
+
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', scheduleUpdate);
       window.removeEventListener('scroll', scheduleUpdate);
+      visualViewport?.removeEventListener('resize', scheduleUpdate);
+      visualViewport?.removeEventListener('scroll', scheduleUpdate);
+      resizeObserver.disconnect();
     };
   }, [updateHeight]);
 
