@@ -9,6 +9,7 @@ Implements URL routing for:
 from django.urls import path
 
 from .views.admin import AdminDashboardView
+from .views.exam_report import ExamReportExportView, ExamReportView
 from .views.mentor import MentorDashboardView
 from .views.student import StudentDashboardView, TaskParticipantsView
 from .views.team_manager import TeamManagerDashboardView
@@ -24,4 +25,7 @@ urlpatterns = [
     path('admin/', AdminDashboardView.as_view(), name='admin-dashboard'),
     # Team manager dashboard
     path('team-manager/', TeamManagerDashboardView.as_view(), name='team-manager-dashboard'),
+    # Exam report
+    path('exam-report/', ExamReportView.as_view(), name='exam-report'),
+    path('exam-report/export/', ExamReportExportView.as_view(), name='exam-report-export'),
 ]

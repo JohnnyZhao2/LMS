@@ -4,71 +4,74 @@ import {
   Cloud,
   Settings,
   ClipboardCheck,
-  // Activity / Database / FileCheck 在移除“快捷指令”区块后不再使用
 } from 'lucide-react';
 import { useAdminDashboard } from '../api/admin-dashboard';
+import { ExamReportPanel } from './exam-report-panel';
 
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageShell } from '@/components/ui/page-shell';
+import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
 /**
  * ADMIN DASHBOARD - Flat Design 版本
- *
- * 设计规范：
- * - 无阴影
- * - 无渐变 (no gradient)
- * - 实心背景色
- * - hover:scale 交互反馈
  */
 export const AdminDashboard: React.FC = () => {
   const { data, isLoading } = useAdminDashboard();
 
   if (isLoading) {
     return (
-      <PageShell>
+      <PageFillShell>
         <Skeleton className="h-20 w-1/3 rounded-lg" />
-        <div className="grid grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-lg" />
-          ))}
-        </div>
-      </PageShell>
+        <PageWorkbench>
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="min-h-0 flex-1 rounded-lg" />
+        </PageWorkbench>
+      </PageFillShell>
     );
   }
 
   return (
-    <PageShell>
+    <PageFillShell>
       <PageHeader
         title="系统概览"
         icon={<Settings />}
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          title="本月任务"
-          value={data?.summary?.monthly_tasks ?? 0}
-          icon={ClipboardCheck}
-          accentClassName="bg-warning"
-          size="sm"
-        />
-        <StatCard
-          title="周活跃用户"
-          value={data?.summary?.weekly_active_users ?? 0}
-          icon={Users}
-          accentClassName="bg-primary"
-          size="sm"
-        />
-        <StatCard
-          title="运行时间"
-          value="99.9%"
-          icon={Cloud}
-          accentClassName="bg-cyan-500"
-          size="sm"
-        />
-      </div>
-    </PageShell>
+      <PageWorkbench className="gap-4">
+        <div className="grid shrink-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            title="本月任务"
+            value={data?.summary?.monthly_tasks ?? 0}
+            icon={ClipboardCheck}
+            accentClassName="bg-warning"
+            size="sm"
+          />
+          <StatCard
+            title="周活跃用户"
+            value={data?.summary?.weekly_active_users ?? 0}
+            icon={Users}
+            accentClassName="bg-primary"
+            size="sm"
+          />
+          <StatCard
+            title="运行时间"
+            value="99.9%"
+            icon={Cloud}
+            accentClassName="bg-cyan-500"
+            size="sm"
+          />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ExamReportPanel />
+        </div>
+      </PageWorkbench>
+    </PageFillShell>
   );
 };

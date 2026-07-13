@@ -265,6 +265,54 @@ class ApiClient {
   delete<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
+
+  /**
+   * 下载二进制文件（Excel 等）
+   */
+  async download(endpoint: string, options?: ApiRequestOptions): Promise<Blob> {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    const headers: Record<string, string> = {
+      ...(options?.headers as Record<string, string> | undefined),
+    };
+
+    if (!options?.skipAuth) {
+      const accessToken = tokenStorage.getAccessToken();
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+    }
+
+    let response = await fetch(url, {
+      ...options,
+      method: options?.method || 'GET',
+      headers,
+    });
+
+    if (response.status === 401 && !options?.skipAuth) {
+      await this.refreshToken();
+      const accessToken = tokenStorage.getAccessToken();
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      response = await fetch(url, {
+        ...options,
+        method: options?.method || 'GET',
+        headers,
+      });
+    }
+
+    if (!response.ok) {
+      let errorData: unknown;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = undefined;
+      }
+      throw new ApiError(response.status, response.statusText, errorData);
+    }
+
+    return response.blob();
+  }
 }
 
 // 导出单例

@@ -64,6 +64,13 @@ export const queryKeys = {
     }) => ['student-dashboard', normalizeRoleKey(currentRole), taskLimit, knowledgeLimit] as const,
     taskParticipants: (taskId: number | null) => ['task-participants', taskId] as const,
     teamManager: (currentRole: QueryRole) => ['team-manager-dashboard', normalizeRoleKey(currentRole)] as const,
+    examReport: ({
+      currentRole,
+      filters,
+    }: {
+      currentRole: QueryRole;
+      filters: string;
+    }) => ['exam-report', normalizeRoleKey(currentRole), filters] as const,
   },
   grading: {
     pendingRoot: () => ['grading', 'pending'] as const,
