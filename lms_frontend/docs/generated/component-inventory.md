@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：66 个
+- Feature 作用域视觉组件：71 个
 
 ## 共享组件
 
@@ -77,10 +77,11 @@
 - `src/features/activity-logs/components/activity-log-policy-panel.tsx`
 - `src/features/activity-logs/components/activity-logs-panel.tsx`
 
-### auth (2 个)
+### auth (3 个)
 
 #### components
 
+- `src/features/auth/components/change-own-password-dialog.tsx`
 - `src/features/auth/components/login-form.tsx`
 - `src/features/auth/components/role-switch-overlay.tsx`
 
@@ -95,12 +96,13 @@
 
 - `src/features/authorization/pages/authorization-center-page.tsx`
 
-### dashboard (8 个)
+### dashboard (9 个)
 
 #### components
 
 - `src/features/dashboard/components/admin-dashboard.tsx`
-- `src/features/dashboard/components/mentor-dashboard-widgets.tsx`
+- `src/features/dashboard/components/exam-report-export-dialog.tsx`
+- `src/features/dashboard/components/exam-report-panel.tsx`
 - `src/features/dashboard/components/mentor-dashboard.tsx`
 - `src/features/dashboard/components/student-dashboard.tsx`
 - `src/features/dashboard/components/student-dashboard/editorial-card.tsx`
@@ -114,22 +116,24 @@
 
 - `src/features/grading/components/grading-center-page.tsx`
 
-### knowledge (13 个)
+### knowledge (15 个)
 
 #### components
 
 - `src/features/knowledge/components/cards/knowledge-add-card.tsx`
 - `src/features/knowledge/components/cards/knowledge-card.tsx`
 - `src/features/knowledge/components/editor/format-toolbar.tsx`
-- `src/features/knowledge/components/editor/rich-text-editor.tsx`
+- `src/features/knowledge/components/editor/knowledge-text-editor.tsx`
 - `src/features/knowledge/components/editor/slash-menu.tsx`
 - `src/features/knowledge/components/knowledge-center.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-modal.tsx`
+- `src/features/knowledge/components/modals/knowledge-detail-outline.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-side-panel.tsx`
 - `src/features/knowledge/components/modals/knowledge-focus-metadata-bar.tsx`
 - `src/features/knowledge/components/modals/knowledge-focus-shell.tsx`
 - `src/features/knowledge/components/shared/focus-icon.tsx`
 - `src/features/knowledge/components/shared/knowledge-action-button.tsx`
+- `src/features/knowledge/components/shared/knowledge-content-renderer.tsx`
 - `src/features/knowledge/components/shared/related-links-editor.tsx`
 
 ### questions (4 个)
@@ -147,7 +151,7 @@
 
 - `src/features/quiz-center/components/quiz-management-page.tsx`
 
-### spot-checks (5 个)
+### spot-checks (6 个)
 
 #### components
 
@@ -156,6 +160,7 @@
 - `src/features/spot-checks/components/spot-check-list.tsx`
 - `src/features/spot-checks/components/spot-check-record-list.tsx`
 - `src/features/spot-checks/components/spot-check-student-panel.tsx`
+- `src/features/spot-checks/components/student-spot-check-panel.tsx`
 
 ### submissions (7 个)
 

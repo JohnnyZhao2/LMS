@@ -18,6 +18,12 @@ interface UserSelectListProps {
   selectedIds: number[];
   onSelect: (id: number) => void;
   onBeforeSelect?: () => void;
+  /**
+   * 双态选择：点行 = onSelect（查看），点勾 = onToggleCheck（多选）。
+   * 传入后勾选态用 checkedIds，行高亮用 selectedIds。
+   */
+  checkedIds?: number[];
+  onToggleCheck?: (id: number) => void;
   selectionMode?: 'single' | 'multiple';
   appearance?: 'panel' | 'plain';
   layout?: 'list' | 'grid';
@@ -35,11 +41,35 @@ function renderTrailing(
   item: UserSelectPanelItem,
   checked: boolean,
   selectionMode: 'single' | 'multiple',
+  options?: {
+    dualSelect?: boolean;
+    onToggleCheck?: (id: number) => void;
+  },
 ) {
   const disabled = item.disabled ?? false;
   const hasCount = typeof item.count === 'number';
+  const dualSelect = options?.dualSelect === true;
+  const shapeClass = selectionMode === 'single' && !dualSelect ? 'rounded-full' : 'rounded-md';
 
-  if (hasCount) {
+  const checkVisual = (
+    <div
+      className={cn(
+        'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-all duration-150',
+        shapeClass,
+        disabled
+          ? 'opacity-0'
+          : checked
+            ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
+            : dualSelect
+              ? 'border-border/80 bg-background opacity-100'
+              : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
+      )}
+    >
+      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+    </div>
+  );
+
+  if (hasCount && !dualSelect) {
     return (
       <div className="relative flex h-[22px] w-8 shrink-0 items-center justify-end">
         <span
@@ -58,7 +88,7 @@ function renderTrailing(
           aria-hidden="true"
           className={cn(
             'absolute right-0 flex h-[18px] w-[18px] items-center justify-center border transition-all duration-150',
-            selectionMode === 'single' ? 'rounded-full' : 'rounded-md',
+            shapeClass,
             disabled
               ? 'opacity-0'
               : checked
@@ -72,22 +102,25 @@ function renderTrailing(
     );
   }
 
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-all duration-150',
-        selectionMode === 'single' ? 'rounded-full' : 'rounded-md',
-        disabled
-          ? 'opacity-0'
-          : checked
-            ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
-            : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
-      )}
-    >
-      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-    </div>
-  );
+  if (dualSelect && !disabled) {
+    return (
+      <button
+        type="button"
+        aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
+        aria-pressed={checked}
+        className="flex shrink-0 items-center justify-center rounded-md p-1 hover:bg-primary/5"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          options?.onToggleCheck?.(item.id);
+        }}
+      >
+        {checkVisual}
+      </button>
+    );
+  }
+
+  return checkVisual;
 }
 
 export function UserSelectList({
@@ -95,6 +128,8 @@ export function UserSelectList({
   selectedIds,
   onSelect,
   onBeforeSelect,
+  checkedIds,
+  onToggleCheck,
   selectionMode = 'multiple',
   appearance = 'plain',
   layout = 'list',
@@ -107,9 +142,11 @@ export function UserSelectList({
   itemsClassName,
   showGridSelectionIndicator = true,
 }: UserSelectListProps) {
+  const dualSelect = typeof onToggleCheck === 'function';
+
   return (
     <ScrollContainer
-      scrollbar="inherit"
+      scrollbar="subtle"
       className={cn(
         'min-h-0 flex-1 overflow-y-auto overscroll-contain',
         appearance === 'panel'
@@ -159,7 +196,10 @@ export function UserSelectList({
           )}
         >
           {items.map((item) => {
-            const checked = selectedIds.includes(item.id);
+            const active = selectedIds.includes(item.id);
+            const checked = dualSelect
+              ? (checkedIds ?? []).includes(item.id)
+              : selectedIds.includes(item.id);
             const disabled = item.disabled ?? false;
 
             return (
@@ -188,13 +228,13 @@ export function UserSelectList({
                   appearance === 'panel'
                     ? layout === 'grid'
                       ? (
-                        checked
+                        active
                           ? 'border-primary/25 bg-primary-50/35'
                           : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
                       )
-                      : (checked ? 'bg-primary-50/70' : 'hover:bg-muted')
+                      : (active ? 'bg-primary-50/70' : 'hover:bg-muted')
                     : (
-                      checked
+                      active
                         ? 'border-primary/10 bg-primary/[0.06]'
                         : 'border-transparent hover:border-slate-100 hover:bg-white hover:shadow-sm'
                     ),
@@ -229,19 +269,39 @@ export function UserSelectList({
                     </div>
 
                     {showGridSelectionIndicator ? (
-                      <div
-                        aria-hidden="true"
-                        className={cn(
-                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                          disabled
-                            ? 'opacity-0'
-                            : checked
+                      dualSelect && !disabled ? (
+                        <button
+                          type="button"
+                          aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
+                          className={cn(
+                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                            checked
                               ? 'border-primary bg-primary text-white opacity-100'
-                              : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
-                        )}
-                      >
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </div>
+                              : 'border-border bg-background text-transparent opacity-70 hover:border-primary/40 hover:bg-primary-50/80 hover:text-primary',
+                          )}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onToggleCheck?.(item.id);
+                          }}
+                        >
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </button>
+                      ) : (
+                        <div
+                          aria-hidden="true"
+                          className={cn(
+                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                            disabled
+                              ? 'opacity-0'
+                              : checked
+                                ? 'border-primary bg-primary text-white opacity-100'
+                                : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
+                          )}
+                        >
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </div>
+                      )
                     ) : null}
                   </>
                 ) : (
@@ -265,7 +325,7 @@ export function UserSelectList({
                               ? 'text-[12px] text-foreground'
                               : 'text-[13px] text-foreground'
                             : 'text-[12px]',
-                          checked && appearance === 'plain' ? 'text-primary' : '',
+                          active && appearance === 'plain' ? 'text-primary' : '',
                         )}
                       >
                         {item.name}
@@ -284,7 +344,10 @@ export function UserSelectList({
                       </p>
                     </div>
 
-                    {renderTrailing(item, checked, selectionMode)}
+                    {renderTrailing(item, checked, dualSelect ? 'multiple' : selectionMode, {
+                      dualSelect,
+                      onToggleCheck,
+                    })}
                   </>
                 )}
               </button>

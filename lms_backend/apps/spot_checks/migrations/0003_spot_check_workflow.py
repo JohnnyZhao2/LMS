@@ -1,0 +1,118 @@
+import uuid
+
+import django.core.validators
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('spot_checks', '0002_initial'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='spotcheck',
+            name='batch_id',
+            field=models.UUIDField(
+                db_index=True,
+                default=uuid.uuid4,
+                editable=False,
+                help_text='同次批量发起共享同一 batch_id',
+                verbose_name='批次标识',
+            ),
+        ),
+        migrations.AddField(
+            model_name='spotcheck',
+            name='revision',
+            field=models.PositiveIntegerField(default=1, verbose_name='版本号'),
+        ),
+        migrations.AddField(
+            model_name='spotcheck',
+            name='status',
+            field=models.CharField(
+                choices=[
+                    ('PENDING', '待填写'),
+                    ('SUBMITTED', '已提交'),
+                    ('SCORED', '已评分'),
+                ],
+                db_index=True,
+                default='PENDING',
+                max_length=20,
+                verbose_name='状态',
+            ),
+        ),
+        migrations.AddField(
+            model_name='spotcheck',
+            name='submitted_at',
+            field=models.DateTimeField(blank=True, null=True, verbose_name='提交时间'),
+        ),
+        migrations.AddField(
+            model_name='spotcheckitem',
+            name='images',
+            field=models.JSONField(blank=True, default=list, verbose_name='贴图'),
+        ),
+        migrations.AddField(
+            model_name='spotcheckitem',
+            name='instruction',
+            field=models.TextField(blank=True, default='', verbose_name='要求说明'),
+        ),
+        migrations.AlterField(
+            model_name='spotcheckitem',
+            name='content',
+            field=models.TextField(blank=True, default='', verbose_name='学员填写'),
+        ),
+        migrations.AlterField(
+            model_name='spotcheckitem',
+            name='score',
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=4,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(0),
+                    django.core.validators.MaxValueValidator(10),
+                ],
+                verbose_name='评分',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='spotcheck',
+            constraint=models.UniqueConstraint(
+                fields=('batch_id', 'student'),
+                name='uniq_spot_check_batch_student',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='spotcheck',
+            constraint=models.CheckConstraint(
+                check=models.Q(status__in=['PENDING', 'SUBMITTED', 'SCORED']),
+                name='spot_check_status_valid',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='spotcheck',
+            constraint=models.CheckConstraint(
+                check=(
+                    models.Q(status='PENDING', submitted_at__isnull=True)
+                    | models.Q(status__in=['SUBMITTED', 'SCORED'], submitted_at__isnull=False)
+                ),
+                name='spot_check_status_submitted_at',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='spotcheckitem',
+            constraint=models.UniqueConstraint(
+                fields=('spot_check', 'order'),
+                name='uniq_spot_check_item_order',
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name='spotcheckitem',
+            constraint=models.CheckConstraint(
+                check=models.Q(score__isnull=True) | models.Q(score__gte=0, score__lte=10),
+                name='spot_check_item_score_range',
+            ),
+        ),
+    ]
