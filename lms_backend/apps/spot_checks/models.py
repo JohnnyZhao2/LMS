@@ -1,10 +1,8 @@
 """
 SpotCheck models for LMS.
-Implements:
-- SpotCheck: 抽查记录模型
-- SpotCheckItem: 抽查明细模型
-Properties: 35, 36
+抽查：导师批量发起 → 学员填写(可贴图) → 导师评分。
 """
+import uuid
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
@@ -15,11 +13,24 @@ from core.mixins import TimestampMixin
 
 
 class SpotCheck(TimestampMixin, models.Model):
-    """
-    抽查记录模型
-    用于记录一次抽查操作，具体评分拆分到多个抽查明细中。
-    """
+    """一次抽查任务实例（按学员拆分）。"""
 
+    STATUS_PENDING = 'PENDING'
+    STATUS_SUBMITTED = 'SUBMITTED'
+    STATUS_SCORED = 'SCORED'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, '待填写'),
+        (STATUS_SUBMITTED, '已提交'),
+        (STATUS_SCORED, '已评分'),
+    ]
+
+    batch_id = models.UUIDField(
+        default=uuid.uuid4,
+        db_index=True,
+        editable=False,
+        verbose_name='批次标识',
+        help_text='同次批量发起共享同一 batch_id',
+    )
     student = models.ForeignKey(
         'users.User',
         on_delete=models.PROTECT,
@@ -32,12 +43,38 @@ class SpotCheck(TimestampMixin, models.Model):
         related_name='spot_checks_created',
         verbose_name='抽查人',
     )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+        verbose_name='状态',
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='提交时间')
+    revision = models.PositiveIntegerField(default=1, verbose_name='版本号')
 
     class Meta:
         db_table = 'lms_spot_check'
         verbose_name = '抽查记录'
         verbose_name_plural = '抽查记录'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['batch_id', 'student'],
+                name='uniq_spot_check_batch_student',
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['PENDING', 'SUBMITTED', 'SCORED']),
+                name='spot_check_status_valid',
+            ),
+            models.CheckConstraint(
+                check=(
+                    models.Q(status='PENDING', submitted_at__isnull=True)
+                    | models.Q(status__in=['SUBMITTED', 'SCORED'], submitted_at__isnull=False)
+                ),
+                name='spot_check_status_submitted_at',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.student.username} - {self.created_at.strftime('%Y-%m-%d')}"
@@ -89,7 +126,7 @@ class SpotCheck(TimestampMixin, models.Model):
 
 
 class SpotCheckItem(models.Model):
-    """抽查明细，每个主题单独评分和评语。"""
+    """抽查明细。"""
 
     spot_check = models.ForeignKey(
         SpotCheck,
@@ -98,14 +135,18 @@ class SpotCheckItem(models.Model):
         verbose_name='所属抽查记录',
     )
     topic = models.CharField(max_length=120, verbose_name='抽查主题')
-    content = models.TextField(blank=True, default='', verbose_name='抽查内容')
+    instruction = models.TextField(blank=True, default='', verbose_name='要求说明')
+    content = models.TextField(blank=True, default='', verbose_name='学员填写')
     score = models.DecimalField(
-        max_digits=5,
+        max_digits=4,
         decimal_places=2,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
         verbose_name='评分',
     )
     comment = models.TextField(blank=True, default='', verbose_name='评语')
+    images = models.JSONField(default=list, blank=True, verbose_name='贴图')
     order = models.PositiveIntegerField(default=0, verbose_name='排序')
 
     class Meta:
@@ -113,6 +154,16 @@ class SpotCheckItem(models.Model):
         verbose_name = '抽查明细'
         verbose_name_plural = '抽查明细'
         ordering = ['order', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['spot_check', 'order'],
+                name='uniq_spot_check_item_order',
+            ),
+            models.CheckConstraint(
+                check=models.Q(score__isnull=True) | models.Q(score__gte=0, score__lte=10),
+                name='spot_check_item_score_range',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.topic} - {self.score}"

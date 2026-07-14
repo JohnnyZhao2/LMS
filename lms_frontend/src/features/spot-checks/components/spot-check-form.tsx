@@ -1,380 +1,517 @@
-import { useMemo, useState } from 'react';
-import { ChevronDown, ListChecks, Loader2, Plus, UserRound } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ListChecks, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageSplit } from '@/components/ui/page-shell';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { SearchInput } from '@/components/ui/search-input';
-import { UserSelectList } from '@/components/common/user-select-list';
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
+import { ApiError } from '@/lib/api-client';
+import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation';
 import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
-import dayjs from '@/lib/dayjs';
-import type { SpotCheckItem } from '@/types/spot-check';
+import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
-import { useCreateSpotCheck, useUpdateSpotCheck } from '../api/create-spot-check';
-import { useSpotCheckDetail } from '../api/get-spot-checks';
-import { SpotCheckItemEditor } from './spot-check-item-editor';
+import {
+  useCreateSpotCheck,
+  useScoreSpotCheck,
+} from '../api/create-spot-check';
+import { useSpotCheckBatchPeers, useSpotCheckDetail } from '../api/get-spot-checks';
+import { SPOT_CHECK_STATUS_META } from '../lib/spot-check-status';
+import { SpotCheckItemEditor, SpotCheckStarChip } from './spot-check-item-editor';
+
+const isVersionMismatch = (error: unknown) =>
+  error instanceof ApiError && error.code === 'RESOURCE_VERSION_MISMATCH';
 
 const createEmptyItem = (): SpotCheckItem => ({
   topic: '',
-  score: '80',
+  instruction: '',
+  content: '',
+  score: '',
   comment: '',
+  images: [],
 });
 
 const normalizeItems = (items: SpotCheckItem[]) => {
-  if (items.length === 0) {
-    return [createEmptyItem()];
-  }
-
+  if (items.length === 0) return [createEmptyItem()];
   return items.map((item) => ({
+    id: item.id,
     topic: item.topic ?? '',
-    score: item.score ?? '80',
+    instruction: item.instruction ?? '',
+    content: item.content ?? '',
+    score: item.score != null && item.score !== '' ? String(item.score) : '',
     comment: item.comment ?? '',
+    images: item.images ?? [],
   }));
 };
 
-const calculateAverageScore = (items: SpotCheckItem[]) => {
-  const validScores = items
+const averageScoreOf = (items: SpotCheckItem[]) => {
+  const scores = items
     .map((item) => Number(item.score))
-    .filter((score) => !Number.isNaN(score));
-
-  if (validScores.length === 0) {
-    return '--';
-  }
-
-  return (validScores.reduce((sum, score) => sum + score, 0) / validScores.length).toFixed(1);
+    .filter((score, index) => {
+      const raw = items[index].score;
+      return raw !== '' && raw != null && !Number.isNaN(score);
+    });
+  if (scores.length === 0) return null;
+  return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(1);
 };
-
-interface SelectedStudentInfo {
-  id: number;
-  username: string;
-  employee_id?: string | null;
-  avatar_key?: string | null;
-  department?: { name: string };
-}
 
 interface SpotCheckFormProps {
   spotCheckId?: number;
-  initialStudentId?: number | null;
+  studentIds?: number[];
   hidePageHeader?: boolean;
   onCancel?: () => void;
   onSuccess?: () => void;
+  onSwitchRecord?: (record: SpotCheck) => void;
 }
 
-const StudentCard: React.FC<{ student: SelectedStudentInfo }> = ({ student }) => (
+const StudentCard: React.FC<{
+  name: string;
+  employeeId?: string | null;
+  avatarKey?: string | null;
+  sub?: string;
+}> = ({ name, employeeId, avatarKey, sub }) => (
   <div className="rounded-xl bg-white/72 p-4">
     <div className="flex items-center gap-3">
-      <UserAvatar avatarKey={student.avatar_key} name={student.username} size="md" />
+      <UserAvatar avatarKey={avatarKey} name={name} size="md" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-foreground">{student.username}</p>
+        <p className="truncate text-sm font-semibold text-foreground">{name}</p>
         <p className="truncate text-xs text-text-muted">
-          {student.employee_id || '未填写工号'}
-          {student.department?.name ? ` · ${student.department.name}` : ''}
+          {employeeId || '未填写工号'}
+          {sub ? ` · ${sub}` : ''}
         </p>
       </div>
     </div>
   </div>
 );
 
-const StatBlock: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
+/** 同批学员切换：未提交不可点，待评黑字，已评灰字 */
+const PeerSwitcher: React.FC<{
+  currentId: number;
+  peers: SpotCheck[];
+  onSwitch: (record: SpotCheck) => void;
+}> = ({ currentId, peers, onSwitch }) => {
+  const current = peers.find((p) => p.id === currentId) ?? peers[0];
+  if (!current) return null;
+
+  if (peers.length <= 1) {
+    return (
+      <StudentCard
+        name={current.student_name}
+        employeeId={current.student_employee_id}
+        avatarKey={current.student_avatar_key}
+        sub={SPOT_CHECK_STATUS_META[current.status]?.label}
+      />
+    );
+  }
+
+  return (
+    <Select
+      value={String(currentId)}
+      onValueChange={(value) => {
+        const next = peers.find((p) => p.id === Number(value));
+        if (next && next.id !== currentId) onSwitch(next);
+      }}
+    >
+      <SelectTrigger className="h-auto w-full gap-2 rounded-xl border-transparent bg-white/72 p-4 shadow-none hover:bg-white data-[state=open]:border-transparent data-[state=open]:shadow-none">
+        <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <UserAvatar avatarKey={current.student_avatar_key} name={current.student_name} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{current.student_name}</p>
+            <p className="truncate text-xs text-text-muted">
+              {current.student_employee_id || '未填写工号'}
+              {' · '}
+              {SPOT_CHECK_STATUS_META[current.status]?.label ?? current.status}
+            </p>
+          </div>
+        </div>
+      </SelectTrigger>
+      <SelectContent className="max-h-72 w-[var(--radix-select-trigger-width)]">
+        {peers.map((peer) => {
+          const pending = peer.status === 'PENDING';
+          const scored = peer.status === 'SCORED';
+          return (
+            <SelectItem
+              key={peer.id}
+              value={String(peer.id)}
+              textValue={peer.student_name}
+              disabled={pending}
+              className={
+                pending
+                  ? 'cursor-not-allowed text-text-muted/50 data-[disabled]:opacity-50'
+                  : scored
+                    ? 'text-text-muted focus:text-text-muted data-[state=checked]:text-text-muted'
+                    : 'text-foreground focus:text-foreground'
+              }
+            >
+              {peer.student_name}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+};
+
+const StatBlock: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="rounded-xl bg-white/68 px-4 py-3">
     <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">{label}</p>
-    <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</p>
+    <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</div>
   </div>
 );
 
-export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
-  spotCheckId,
-  initialStudentId = null,
+/**
+ * 内层表单：以 recordKey 重建，避免在 Effect 中同步 setState 重置草稿。
+ */
+const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
+  resolvedSpotCheckId: number | null;
+  isEdit: boolean;
+}> = ({
+  resolvedSpotCheckId,
+  isEdit,
+  studentIds = [],
   hidePageHeader = false,
   onCancel,
   onSuccess,
+  onSwitchRecord,
 }) => {
-  const { id: routeId } = useParams<{ id: string }>();
   const { roleNavigate } = useRoleNavigate();
-  const routeSpotCheckId = routeId ? Number(routeId) : Number.NaN;
-  const resolvedSpotCheckId =
-    typeof spotCheckId === 'number' ? spotCheckId : Number.isNaN(routeSpotCheckId) ? null : routeSpotCheckId;
-  const isEdit = resolvedSpotCheckId !== null;
-
+  const queryClient = useQueryClient();
   const createSpotCheck = useCreateSpotCheck();
-  const updateSpotCheck = useUpdateSpotCheck();
+  const scoreSpotCheck = useScoreSpotCheck();
   const { data: spotCheckDetail, isLoading: detailLoading } = useSpotCheckDetail(resolvedSpotCheckId ?? 0);
-  const { data: users, isLoading: usersLoading } = useAssignableUsers();
+  const { data: users } = useAssignableUsers();
 
-  const [studentId, setStudentId] = useState(() => (!isEdit && initialStudentId ? String(initialStudentId) : ''));
-  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
-  const [studentSearch, setStudentSearch] = useState('');
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const latestScoreItemsRef = useRef<SpotCheckItem[] | null>(null);
+  const scoreSaveInFlightRef = useRef(false);
+  const scoreSaveQueuedRef = useRef(false);
+  const modeRef = useRef<'issue' | 'score' | 'view'>('issue');
+  const idRef = useRef<number | null>(resolvedSpotCheckId);
+  const revisionRef = useRef<number | null>(null);
+
+  const canScore = spotCheckDetail?.actions?.score === true;
+
+  // 已创建记录不再编辑主题：已提交/已评分 → 评分；待填写 → 只读（布局同评分）
+  const mode: 'issue' | 'score' | 'view' = !isEdit
+    ? 'issue'
+    : canScore
+      ? 'score'
+      : 'view';
+
+  modeRef.current = mode;
+  idRef.current = resolvedSpotCheckId;
+
+  // 取本地与服务端较大 revision，避免保存成功后缓存未刷新时把版本打回旧值
+  useEffect(() => {
+    if (spotCheckDetail?.revision == null) return;
+    revisionRef.current = Math.max(revisionRef.current ?? 0, spotCheckDetail.revision);
+  }, [spotCheckDetail?.revision]);
+
+  const handleVersionConflict = () => {
+    setDraftItems(null);
+    revisionRef.current = null;
+    invalidateAfterSpotCheckMutation(queryClient);
+  };
+
+  const canSwitchPeers = Boolean(onSwitchRecord) && isEdit && Boolean(spotCheckDetail?.batch_id);
+  const { data: peerList = [] } = useSpotCheckBatchPeers(canSwitchPeers ? spotCheckDetail?.batch_id : null);
 
   const baseItems = isEdit
     ? (spotCheckDetail ? normalizeItems(spotCheckDetail.items) : [])
     : [createEmptyItem()];
-
   const items = draftItems ?? baseItems;
+  const averageScore = averageScoreOf(items);
+  const isSubmitting = createSpotCheck.isPending || scoreSpotCheck.isPending;
 
-  const isSubmitting = createSpotCheck.isPending || updateSpotCheck.isPending;
-  const selectedStudent: SelectedStudentInfo | null = isEdit
-    ? (spotCheckDetail
-      ? {
-          id: spotCheckDetail.student,
-          username: spotCheckDetail.student_name,
-          employee_id: spotCheckDetail.student_employee_id,
-          avatar_key: spotCheckDetail.student_avatar_key,
-          department: spotCheckDetail.student_department
-            ? { name: spotCheckDetail.student_department }
-            : undefined,
-        }
-      : null)
-    : (users || []).find((user) => String(user.id) === studentId) ?? null;
-  const filteredUsers = useMemo(() => {
-    const keyword = studentSearch.trim().toLowerCase();
-    if (!keyword) {
-      return users || [];
-    }
+  const createStudents = useMemo(() => {
+    if (isEdit) return [];
+    return (users || [])
+      .filter((user) => studentIds.includes(user.id))
+      .map((user) => ({
+        id: user.id,
+        name: user.username,
+        employeeId: user.employee_id,
+        avatarKey: user.avatar_key,
+        sub: user.department?.name,
+      }));
+  }, [isEdit, studentIds, users]);
 
-    return (users || []).filter((user) => {
-      const username = user.username.toLowerCase();
-      const employeeId = (user.employee_id || '').toLowerCase();
-      return username.includes(keyword) || employeeId.includes(keyword);
+  const scorePeers = useMemo(() => {
+    if (!spotCheckDetail || !canSwitchPeers) return [];
+    const fromList = peerList.filter((r) => r.batch_id && r.batch_id === spotCheckDetail.batch_id);
+    const peers = fromList.some((r) => r.id === spotCheckDetail.id)
+      ? fromList
+      : [spotCheckDetail, ...fromList];
+    const order = { SUBMITTED: 0, SCORED: 1, PENDING: 2 } as const;
+    return peers.sort((a, b) => {
+      const d = (order[a.status] ?? 9) - (order[b.status] ?? 9);
+      return d !== 0 ? d : a.student_name.localeCompare(b.student_name, 'zh-CN');
     });
-  }, [studentSearch, users]);
-  const studentPanelItems = filteredUsers.map((user) => ({
-    id: user.id,
-    name: user.username,
-    avatarKey: user.avatar_key,
-    meta: user.department?.name
-      ? `${user.employee_id || '未填写工号'} · ${user.department.name}`
-      : (user.employee_id || '未填写工号'),
-  }));
+  }, [canSwitchPeers, peerList, spotCheckDetail]);
 
-  const averageScore = calculateAverageScore(items);
-
-  const updateItems = (updater: (current: SpotCheckItem[]) => SpotCheckItem[]) => {
-    setDraftItems((prev) => updater(prev ?? baseItems));
+  const runScoreSaveLoop = async () => {
+    if (scoreSaveInFlightRef.current) {
+      scoreSaveQueuedRef.current = true;
+      return;
+    }
+    scoreSaveInFlightRef.current = true;
+    try {
+      do {
+        scoreSaveQueuedRef.current = false;
+        const nextItems = latestScoreItemsRef.current;
+        const id = idRef.current;
+        const revision = revisionRef.current;
+        if (!nextItems || !id || revision == null || modeRef.current !== 'score') break;
+        try {
+          const saved = await scoreSpotCheck.mutateAsync({
+            id,
+            data: {
+              revision,
+              items: nextItems.map((item) => ({
+                id: item.id as number,
+                score: item.score === '' || item.score == null ? null : String(item.score),
+                comment: (item.comment ?? '').trim(),
+              })),
+            },
+          });
+          if (saved?.revision != null) revisionRef.current = saved.revision;
+        } catch (error) {
+          showApiError(error, '评分保存失败');
+          if (isVersionMismatch(error)) handleVersionConflict();
+          break;
+        }
+      } while (scoreSaveQueuedRef.current);
+    } finally {
+      scoreSaveInFlightRef.current = false;
+    }
   };
 
-  const handleItemChange = (index: number, field: keyof SpotCheckItem, value: string) => {
-    updateItems((current) =>
-      current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
+  const persistScore = (nextItems: SpotCheckItem[]) => {
+    latestScoreItemsRef.current = nextItems;
+    void runScoreSaveLoop();
+  };
+
+  const handleItemChange = (index: number, field: keyof SpotCheckItem, value: string | string[]) => {
+    const next = (draftItems ?? baseItems).map((item, i) =>
+      (i === index ? { ...item, [field]: value } : item),
     );
+    setDraftItems(next);
+    if (mode === 'score' && field === 'score') persistScore(next);
+  };
+
+  const handleCommentBlur = () => {
+    if (mode === 'score') persistScore(draftItems ?? baseItems);
   };
 
   const handleAddItem = () => {
-    updateItems((current) => [...current, createEmptyItem()]);
+    setDraftItems([...(draftItems ?? baseItems), createEmptyItem()]);
   };
 
   const handleRemoveItem = (index: number) => {
-    updateItems((current) =>
-      current.length === 1 ? current : current.filter((_, itemIndex) => itemIndex !== index),
-    );
+    const current = draftItems ?? baseItems;
+    if (current.length <= 1) return;
+    setDraftItems(current.filter((_, i) => i !== index));
     setErrors({});
   };
 
   const validate = () => {
     const nextErrors: Record<string, string> = {};
-
-    if (!isEdit && !studentId) {
-      nextErrors.student = '请选择学员';
-    }
-
+    if (!isEdit && studentIds.length === 0) nextErrors.student = '请先在左侧选择或勾选学员';
     items.forEach((item, index) => {
-      if (!item.topic.trim()) {
+      if (mode === 'issue' && !item.topic.trim()) {
         nextErrors[`item-${index}-topic`] = '请输入抽查主题';
       }
-
-      const score = Number(item.score);
-      if (item.score === '' || Number.isNaN(score) || score < 0 || score > 100) {
-        nextErrors[`item-${index}-score`] = '请输入 0-100 的评分';
-      }
     });
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
-  const buildPayloadItems = () => items.map((item) => ({
-    topic: item.topic.trim(),
-    score: item.score,
-    comment: item.comment.trim(),
-  }));
-
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-      return;
-    }
-    roleNavigate(ROUTES.SPOT_CHECKS);
+  const leave = () => {
+    if (onCancel) onCancel();
+    else roleNavigate(ROUTES.SPOT_CHECKS);
   };
 
   const handleSubmit = async () => {
     if (!validate()) {
-      toast.error('请先补全每个主题的必填项');
+      toast.error('请先补全必填项');
       return;
     }
-
-    const payload = { items: buildPayloadItems() };
-
     try {
-      if (isEdit) {
-        if (!resolvedSpotCheckId) {
-          return;
-        }
-        await updateSpotCheck.mutateAsync({
-          id: resolvedSpotCheckId,
-          data: payload,
-        });
-        toast.success('抽查记录修改成功');
-      } else {
-        await createSpotCheck.mutateAsync({
-          student: Number(studentId),
-          ...payload,
-        });
-        toast.success('抽查记录创建成功');
-      }
-
-      if (onSuccess) {
-        onSuccess();
-        return;
-      }
-      roleNavigate(ROUTES.SPOT_CHECKS);
+      await createSpotCheck.mutateAsync({
+        students: studentIds,
+        items: items.map((item) => ({
+          topic: item.topic.trim(),
+          instruction: (item.instruction ?? '').trim(),
+        })),
+      });
+      toast.success(`已向 ${studentIds.length} 名学员发起抽查`);
+      if (onSuccess) onSuccess();
+      else roleNavigate(ROUTES.SPOT_CHECKS);
     } catch (error) {
-      showApiError(error, isEdit ? '修改失败' : '创建失败');
+      showApiError(error, '发起失败');
     }
   };
 
+  const showScoreStats = mode === 'score' || spotCheckDetail?.status === 'SCORED';
+  const editorMode = mode === 'issue' ? 'issue' : mode === 'score' ? 'score' : 'view';
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {!hidePageHeader ? (
         <PageHeader
-          title={isEdit ? '编辑抽查' : '新建抽查'}
+          title={isEdit ? (mode === 'score' ? '抽查评分' : '抽查详情') : '发起抽查'}
           icon={<ListChecks className="h-5 w-5" />}
         />
       ) : null}
 
-      <PageSplit className="gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="flex h-full flex-col gap-5 rounded-2xl bg-[#f6f7fb] p-5">
+      <div className="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-8 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="flex h-full min-h-0 flex-col gap-5 rounded-2xl bg-[#f6f7fb] p-5">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">学员</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">
+              {isEdit
+                ? canSwitchPeers && scorePeers.length > 1
+                  ? `学员 · ${scorePeers.length} 人`
+                  : '学员'
+                : `学员 · ${studentIds.length} 人`}
+            </p>
+
             {isEdit ? (
-              detailLoading && !selectedStudent ? (
-                <div className="rounded-xl bg-white/70 px-4 py-3 text-sm text-text-muted">
-                  加载中...
-                </div>
-              ) : selectedStudent ? (
-                <StudentCard student={selectedStudent} />
+              detailLoading && !spotCheckDetail ? (
+                <div className="rounded-xl bg-white/70 px-4 py-3 text-sm text-text-muted">加载中...</div>
+              ) : canSwitchPeers && onSwitchRecord && scorePeers.length > 0 && resolvedSpotCheckId ? (
+                <PeerSwitcher
+                  currentId={resolvedSpotCheckId}
+                  peers={scorePeers}
+                  onSwitch={onSwitchRecord}
+                />
+              ) : spotCheckDetail ? (
+                <StudentCard
+                  name={spotCheckDetail.student_name}
+                  employeeId={spotCheckDetail.student_employee_id}
+                  avatarKey={spotCheckDetail.student_avatar_key}
+                  sub={spotCheckDetail.student_department ?? undefined}
+                />
               ) : null
             ) : (
               <div className="space-y-2">
-                <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex h-10 w-full items-center justify-between rounded-lg border border-border/60 bg-white/74 px-3 text-left shadow-none"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <UserRound className="h-4 w-4 shrink-0 text-text-muted" />
-                        <span className="truncate text-[13px] font-medium text-foreground">
-                          {selectedStudent ? `${selectedStudent.username} · ${selectedStudent.employee_id || '未填写工号'}` : (usersLoading ? '加载学员中...' : '搜索学员')}
-                        </span>
-                      </div>
-                      <ChevronDown className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${studentPickerOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-xl border-transparent bg-background p-0 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
-                  >
-                    <div className="px-3 py-3">
-                      <SearchInput
-                        value={studentSearch}
-                        onChange={setStudentSearch}
-                        placeholder="姓名或工号"
-                        className="w-full"
-                        inputClassName="h-9 rounded-lg"
+                {createStudents.length > 0 ? (
+                  <>
+                    {createStudents.slice(0, 4).map((s) => (
+                      <StudentCard
+                        key={s.id}
+                        name={s.name}
+                        employeeId={s.employeeId}
+                        avatarKey={s.avatarKey}
+                        sub={s.sub}
                       />
-                    </div>
-                    <div className="max-h-72">
-                      <UserSelectList
-                        items={studentPanelItems}
-                        selectedIds={studentId ? [Number(studentId)] : []}
-                        onSelect={(nextId) => {
-                          setStudentId(String(nextId));
-                          setStudentPickerOpen(false);
-                          setStudentSearch('');
-                        }}
-                        selectionMode="single"
-                        appearance="panel"
-                        density="compact"
-                        isLoading={usersLoading}
-                        emptyText="没有匹配的学员"
-                        loadingText="加载学员中..."
-                        className="max-h-72 py-2 pl-2 pr-0"
-                        listClassName="space-y-[6px]"
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    ))}
+                    {createStudents.length > 4 ? (
+                      <p className="text-xs text-text-muted">等 {createStudents.length} 人</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="rounded-xl bg-white/70 px-4 py-3 text-sm text-text-muted">
+                    请先在左侧选择或勾选学员
+                  </div>
+                )}
                 {errors.student ? <p className="text-sm text-destructive-500">{errors.student}</p> : null}
               </div>
             )}
           </div>
 
-          {!isEdit && selectedStudent ? <StudentCard student={selectedStudent} /> : null}
-
-          <div className="grid grid-cols-2 gap-2">
+          <div className={showScoreStats ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1 gap-2'}>
             <StatBlock label="主题" value={items.length} />
-            <StatBlock label="均分" value={averageScore} />
+            {showScoreStats ? (
+              <StatBlock label="均分" value={<SpotCheckStarChip value={averageScore} />} />
+            ) : null}
           </div>
-
-          {isEdit && spotCheckDetail ? (
-            <p className="text-xs text-text-muted">
-              创建于 {dayjs(spotCheckDetail.created_at).format('YYYY-MM-DD HH:mm')}
-            </p>
-          ) : null}
         </aside>
 
-        <section className="h-full space-y-0">
-          <div className="flex items-center justify-between pb-3">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <div className="flex shrink-0 items-center justify-between pb-3 pr-5">
             <h2 className="text-base font-semibold text-foreground">抽查项</h2>
-            <Button variant="outline" onClick={handleAddItem} className="h-9 rounded-lg border-transparent bg-muted/55 px-3 hover:bg-muted">
-              <Plus className="h-4 w-4" />
-              添加
-            </Button>
+            {mode === 'issue' ? (
+              <Button
+                variant="outline"
+                onClick={handleAddItem}
+                className="h-9 rounded-lg border-transparent bg-muted/55 px-3 hover:bg-muted"
+              >
+                <Plus className="h-4 w-4" />
+                添加
+              </Button>
+            ) : null}
           </div>
 
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <SpotCheckItemEditor
-                key={`spot-check-item-${index}`}
-                index={index}
-                item={item}
-                canRemove={items.length > 1}
-                errors={errors}
-                onChange={handleItemChange}
-                onRemove={handleRemoveItem}
-              />
-            ))}
-          </div>
+          <ScrollContainer className="min-h-0 flex-1 overflow-y-auto">
+            <div className="space-y-4 pb-1 pr-5">
+              {items.map((item, index) => (
+                <SpotCheckItemEditor
+                  key={`spot-check-item-${index}`}
+                  index={index}
+                  item={item}
+                  mode={editorMode}
+                  canRemove={items.length > 1}
+                  errors={errors}
+                  onChange={handleItemChange}
+                  onCommentBlur={mode === 'score' ? handleCommentBlur : undefined}
+                  onRemove={handleRemoveItem}
+                />
+              ))}
+              {scoreSpotCheck.isPending && isEdit ? (
+                <p className="text-[12px] text-text-muted">保存中…</p>
+              ) : null}
+            </div>
+          </ScrollContainer>
         </section>
-      </PageSplit>
-
-      <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-border/70 pt-4">
-        <Button variant="outline" onClick={handleCancel}>
-          取消
-        </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting || (isEdit && detailLoading && !spotCheckDetail)}>
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {isEdit ? '保存修改' : '保存'}
-        </Button>
       </div>
+
+      {!isEdit ? (
+        <div className="mt-4 flex shrink-0 flex-wrap justify-end gap-3 border-t border-border/70 pr-5 pt-4">
+          <Button variant="outline" onClick={leave}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            发起抽查
+          </Button>
+        </div>
+      ) : null}
     </div>
+  );
+};
+
+/** 外层：用 key 按记录重建内层，切换学员时草稿自然重置。 */
+export const SpotCheckForm: React.FC<SpotCheckFormProps> = (props) => {
+  const { id: routeId } = useParams<{ id: string }>();
+  const routeSpotCheckId = routeId ? Number(routeId) : Number.NaN;
+  const resolvedSpotCheckId =
+    typeof props.spotCheckId === 'number'
+      ? props.spotCheckId
+      : Number.isNaN(routeSpotCheckId)
+        ? null
+        : routeSpotCheckId;
+  const isEdit = resolvedSpotCheckId !== null;
+  const formKey = isEdit ? `edit-${resolvedSpotCheckId}` : `create-${(props.studentIds ?? []).join(',')}`;
+
+  return (
+    <SpotCheckFormInner
+      key={formKey}
+      {...props}
+      resolvedSpotCheckId={resolvedSpotCheckId}
+      isEdit={isEdit}
+    />
   );
 };
 

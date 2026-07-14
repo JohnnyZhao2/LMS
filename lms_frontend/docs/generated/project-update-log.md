@@ -6,6 +6,17 @@
 
 | Commit | 日期 | 内容 |
 |--------|------|------|
+| `c1651b9e` | 2026-07-13 | fix(submissions): 添加数据迁移清理不一致的提交记录 |
+| `817bda9b` | 2026-07-13 | fix(submissions): 修复提交数据一致性问题并优化测试与迁移逻辑 |
+| `c6a6d182` | 2026-07-13 | fix(submissions): 收紧答卷关联约束并防并发重复开卷 |
+| `1bf1a3ac` | 2026-07-13 | chore(env): 规范环境文件管理并更新文档 |
+| `0e60c7bf` | 2026-07-13 | feat(dashboard): 新增考试报表，支持多视角查看与按视角导出 |
+| `21356b8c` | 2026-07-12 | refactor(grading): 简化题目分析功能，移除单学员筛选逻辑 |
+| `6f9c3528` | 2026-07-12 | refactor(mentor-dashboard): 简化导简化后端导师/室经理仪表盘服务，移除学员列表、待批阅卷等非必要统计逻辑 |
+| `c00ec6d6` | 2026-06-15 | feat(knowledge): 新增知识库多关键词分词与模糊搜索功能 |
+| `e959302e` | 2026-06-15 | feat(task-form): 添加任务标题字段与悬浮发布按钮 |
+| `7b358584` | 2026-06-09 | 修复任务详情中创建人和阅读计数错误的问题 |
+| `634c72fd` | 2026-05-29 | feat(知识模块): 新增知识详情页文档目录侧边栏 |
 | `f1273d75` | 2026-05-12 | refactor(student-dashboard): 重构学生仪表盘并提取公共组件 |
 | `af45ea10` | 2026-05-12 | style(stat-card): 调整右侧视觉区域的溢出与交互样式 |
 | `22d06441` | 2026-05-12 | style(grading-center): 调整评分中心布局与响应式样式，修复横向溢出 |
@@ -25,14 +36,3 @@
 | `1ef70d78` | 2026-05-03 | 调整正文段落间距，优化阅读体验 |
 | `6704a3f9` | 2026-05-03 | 修复试卷分数受引用次数影响bug |
 | `4aad65ad` | 2026-04-28 | refactor(dashboard): 优化学生仪表盘组件的样式和布局 - 调整了 DashboardSectionHeader 和 MiniCalendar 组件的样式，确保更好的响应性和一致性。 - 更新了相关的 CSS 类，简化了布局，提升了用户界面的可用性和视觉效... |
-| `fce0f055` | 2026-04-28 | refactor(authorization): 移除 UserPermissionOverride 和 UserScopeGroupOverride 中的 reason 和 expires_at 字段 - 从 UserPermissionOverride 和 UserSc... |
-| `945fd75a` | 2026-04-28 | feat(authorization)：增强 UserPermissionOverride 模型与序列化器 • 更新了 UserPermissionOverride 模型，为 applies_to_role 添加了默认值，并为 user、permission 和 appli... |
-| `a10b404e` | 2026-04-28 | fix(docs): 更新文档以反映后端模块和前端组件的最新状态 - 在 backend-module-map.md 中，修正了 tasks 模块的引用计数。 - 在 component-inventory.md 中，更新了 Feature 作用域视觉组件的数量。 - 在 ... |
-| `a916c661` | 2026-04-28 | feat(dashboard): 添加管理员仪表盘服务和视图 - 新增 AdminDashboardService，提供管理员仪表盘数据的获取功能。 - 更新 AdminDashboardView，集成 AdminDashboardService 以支持管理员数据展示。 -... |
-| `4b2d080f` | 2026-04-27 | fix(logo): 更新 logo.svg 的尺寸和样式以符合新的设计要求 |
-| `9c365bdf` | 2026-04-27 | feat(tasks): 增强任务执行状态处理与进度追踪 • 更新了 StudentTaskSerializer 和 StudentAssignmentListSerializer，通过 SerializerMethodField 引入了 status 和 status_d... |
-| `c470a4de` | 2026-04-24 | feat(localization): 更新前端语言和品牌标识 - 将 index.html 的语言设置更改为中文（zh-CN），并更新标题为“LMS学习平台”。 - 修改 logo.svg 的尺寸和样式以适应新的设计要求。 - 在 brand-mark.tsx 中更新品牌... |
-| `3296f3c3` | 2026-04-24 | fix(user-list): replace Lock icon with KeyRound in user password change dialogs |
-| `70748e50` | 2026-04-24 | feat(auth): 添加当前用户修改密码功能 - 新增 ChangeMyPasswordRequestSerializer 用于处理当前用户的密码修改请求。 - 实现 change_my_password 方法，验证当前密码并更新为新密码，返回新的登录令牌。 - 添加 ... |
-| `a1ba4fa1` | 2026-04-24 | refactor(authorization): 重命名撤销用户权限和范围组覆盖的视图及服务方法 - 将用户权限覆盖的撤销视图和服务方法重命名为删除操作，增强语义清晰度。 - 更新相关的序列化器和查询逻辑，移除不再使用的字段，简化数据处理。 - 调整权限模板和范围组的逻辑，... |
-| `0266f857` | 2026-04-24 | refactor(knowledge): 移除 agentation 依赖并优化知识详情模态框逻辑 - 从 package.json 和 package-lock.json 中移除了 agentation 依赖。 - 更新知识详情模态框，重构退出焦点模式的逻辑，确保在有更改... |

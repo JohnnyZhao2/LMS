@@ -94,7 +94,7 @@ export const MentorDashboard: React.FC = () => {
                 title="发起抽查"
                 description="对学员进行知识抽查"
                 icon={FileSearch}
-                route={`${ROUTES.SPOT_CHECKS}/create`}
+                route={ROUTES.SPOT_CHECKS}
                 actionColor="rose"
               />
               <ActionCard

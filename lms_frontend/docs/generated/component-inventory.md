@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：69 个
+- Feature 作用域视觉组件：71 个
 
 ## 共享组件
 
@@ -96,12 +96,13 @@
 
 - `src/features/authorization/pages/authorization-center-page.tsx`
 
-### dashboard (8 个)
+### dashboard (9 个)
 
 #### components
 
 - `src/features/dashboard/components/admin-dashboard.tsx`
-- `src/features/dashboard/components/mentor-dashboard-widgets.tsx`
+- `src/features/dashboard/components/exam-report-export-dialog.tsx`
+- `src/features/dashboard/components/exam-report-panel.tsx`
 - `src/features/dashboard/components/mentor-dashboard.tsx`
 - `src/features/dashboard/components/student-dashboard.tsx`
 - `src/features/dashboard/components/student-dashboard/editorial-card.tsx`
@@ -150,7 +151,7 @@
 
 - `src/features/quiz-center/components/quiz-management-page.tsx`
 
-### spot-checks (5 个)
+### spot-checks (6 个)
 
 #### components
 
@@ -159,6 +160,7 @@
 - `src/features/spot-checks/components/spot-check-list.tsx`
 - `src/features/spot-checks/components/spot-check-record-list.tsx`
 - `src/features/spot-checks/components/spot-check-student-panel.tsx`
+- `src/features/spot-checks/components/student-spot-check-panel.tsx`
 
 ### submissions (7 个)
 

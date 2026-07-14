@@ -1,0 +1,33 @@
+import { useState } from 'react';
+
+import { PageShell } from '@/components/ui/page-shell';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { StudentSpotCheckPanel } from '@/features/spot-checks/components/student-spot-check-panel';
+import { StudentTaskList } from '@/features/tasks/components/student-task-list';
+
+const centerTabOptions = [
+  { value: 'tasks', label: '学习任务' },
+  { value: 'spot-checks', label: '抽查' },
+];
+
+/** 学员任务中心：app 层组合 tasks / spot-checks，避免跨 feature 依赖。 */
+export const StudentTaskCenter: React.FC = () => {
+  const [centerTab, setCenterTab] = useState('tasks');
+
+  return (
+    <PageShell className="gap-0 pb-4">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-5">
+          <SegmentedControl
+            value={centerTab}
+            onChange={setCenterTab}
+            options={centerTabOptions}
+            className="w-full sm:w-auto"
+          />
+        </div>
+
+        {centerTab === 'spot-checks' ? <StudentSpotCheckPanel /> : <StudentTaskList />}
+      </div>
+    </PageShell>
+  );
+};

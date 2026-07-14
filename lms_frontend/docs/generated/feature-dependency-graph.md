@@ -16,25 +16,25 @@ flowchart LR
   utils["utils"]
   config["config"]
   types["types"]
-  app -->|28| features
+  app -->|29| features
   app -->|4| entities
   app -->|21| session
-  app -->|12| components
+  app -->|14| components
   app -->|6| lib
   app -->|2| utils
   app -->|10| config
   app -->|8| types
-  features -->|80| entities
-  features -->|45| session
-  features -->|238| components
+  features -->|81| entities
+  features -->|44| session
+  features -->|249| components
   features -->|3| hooks
-  features -->|120| lib
-  features -->|21| utils
-  features -->|12| config
-  features -->|80| types
+  features -->|123| lib
+  features -->|22| utils
+  features -->|10| config
+  features -->|85| types
   entities -->|1| features
   entities -->|11| session
-  entities -->|52| components
+  entities -->|51| components
   entities -->|2| hooks
   entities -->|69| lib
   entities -->|5| utils
@@ -56,25 +56,25 @@ flowchart LR
 
 | From | To | Imports |
 |------|----|---------|
-| `app` | `features` | 28 |
+| `app` | `features` | 29 |
 | `app` | `entities` | 4 |
 | `app` | `session` | 21 |
-| `app` | `components` | 12 |
+| `app` | `components` | 14 |
 | `app` | `lib` | 6 |
 | `app` | `utils` | 2 |
 | `app` | `config` | 10 |
 | `app` | `types` | 8 |
-| `features` | `entities` | 80 |
-| `features` | `session` | 45 |
-| `features` | `components` | 238 |
+| `features` | `entities` | 81 |
+| `features` | `session` | 44 |
+| `features` | `components` | 249 |
 | `features` | `hooks` | 3 |
-| `features` | `lib` | 120 |
-| `features` | `utils` | 21 |
-| `features` | `config` | 12 |
-| `features` | `types` | 80 |
+| `features` | `lib` | 123 |
+| `features` | `utils` | 22 |
+| `features` | `config` | 10 |
+| `features` | `types` | 85 |
 | `entities` | `features` | 1 |
 | `entities` | `session` | 11 |
-| `entities` | `components` | 52 |
+| `entities` | `components` | 51 |
 | `entities` | `hooks` | 2 |
 | `entities` | `lib` | 69 |
 | `entities` | `utils` | 5 |

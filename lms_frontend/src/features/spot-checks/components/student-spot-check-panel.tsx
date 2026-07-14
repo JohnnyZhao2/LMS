@@ -1,0 +1,281 @@
+import { useState } from 'react';
+import { Inbox, ListChecks, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ListTag } from '@/components/ui/list-tag';
+import { Pagination } from '@/components/ui/pagination';
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Skeleton } from '@/components/ui/skeleton';
+import dayjs from '@/lib/dayjs';
+import { cn } from '@/lib/utils';
+import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
+import { showApiError } from '@/utils/error-handler';
+import { useSubmitSpotCheck } from '../api/create-spot-check';
+import { useMySpotChecks, useSpotCheckDetail } from '../api/get-spot-checks';
+import { SPOT_CHECK_STATUS_META } from '../lib/spot-check-status';
+import { SpotCheckItemEditor, SpotCheckStarChip } from './spot-check-item-editor';
+
+const statusFilterOptions = [
+  { value: 'PENDING', label: '待填写' },
+  { value: 'SUBMITTED', label: '已提交' },
+  { value: 'SCORED', label: '已评分' },
+  { value: 'all', label: '全部' },
+];
+
+const PAGE_SIZE = 20;
+
+const SpotCheckStudentCard: React.FC<{
+  record: SpotCheck;
+  onOpen: () => void;
+}> = ({ record, onOpen }) => {
+  const statusMeta = SPOT_CHECK_STATUS_META[record.status];
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'flex h-full min-h-[148px] w-full flex-col rounded-2xl border border-border/60 bg-background p-4 text-left shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-primary/25 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]',
+      )}
+    >
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <ListTag size="xs" className={statusMeta.className}>{statusMeta.label}</ListTag>
+      </div>
+      <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+        {record.topic_summary || '抽查任务'}
+      </h3>
+      <div className="mt-auto space-y-1 pt-4 text-[12px] text-text-muted">
+        <p>发起人 {record.checker_name}</p>
+        <p>发起 {dayjs(record.created_at).format('MM-DD HH:mm')}</p>
+        {record.status === 'SCORED' && record.average_score != null ? (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="font-medium text-text-muted">均分</span>
+            <SpotCheckStarChip value={record.average_score} />
+          </div>
+        ) : null}
+      </div>
+    </button>
+  );
+};
+
+/** 按 spotCheckId 挂载，切换记录时草稿状态自然重建。 */
+const StudentSpotCheckFormBody: React.FC<{
+  spotCheckId: number;
+  onClose: () => void;
+}> = ({ spotCheckId, onClose }) => {
+  const { data, isLoading } = useSpotCheckDetail(spotCheckId);
+  const submitMutation = useSubmitSpotCheck();
+  const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const items = draftItems ?? (data?.items.map((item) => ({
+    id: item.id,
+    topic: item.topic,
+    instruction: item.instruction ?? '',
+    content: item.content ?? '',
+    images: item.images ?? [],
+    score: item.score,
+    comment: item.comment,
+  })) ?? []);
+
+  const mode = data?.status === 'PENDING' ? 'submit' : 'view';
+
+  const handleItemChange = (index: number, field: keyof SpotCheckItem, value: string | string[]) => {
+    setDraftItems((prev) => {
+      const base = prev ?? items;
+      return base.map((item, i) => (i === index ? { ...item, [field]: value } : item));
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!data) return;
+    const nextErrors: Record<string, string> = {};
+    items.forEach((item, index) => {
+      if (item.id == null) {
+        nextErrors[`item-${index}-content`] = '抽查项已过期，请关闭后重新打开';
+        return;
+      }
+      if (!(item.content ?? '').trim() && !(item.images ?? []).length) {
+        nextErrors[`item-${index}-content`] = '请填写内容或贴图';
+      }
+    });
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error('请先补全填写项');
+      return;
+    }
+
+    try {
+      await submitMutation.mutateAsync({
+        id: spotCheckId,
+        data: {
+          revision: data.revision,
+          items: items.map((item) => ({
+            id: item.id as number,
+            content: (item.content ?? '').trim(),
+            images: item.images ?? [],
+          })),
+        },
+      });
+      toast.success('提交成功');
+      onClose();
+    } catch (error) {
+      showApiError(error, '提交失败');
+    }
+  };
+
+  return (
+    <>
+      <DialogHeader className="shrink-0 px-5 py-5">
+        <DialogTitle className="text-lg font-semibold text-foreground">
+          {data?.status === 'PENDING' ? '填写抽查' : '抽查详情'}
+        </DialogTitle>
+      </DialogHeader>
+
+      <ScrollContainer className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-2 pb-5">
+        {isLoading || !data ? (
+          <div className="space-y-3 py-2">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-28 rounded-xl" />
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl bg-muted/50 px-4 py-3 text-[13px] text-text-muted">
+              <p>发起人 {data.checker_name}</p>
+            </div>
+            {data.items.map((raw, index) => {
+              const item = items[index] ?? {
+                topic: raw.topic,
+                instruction: raw.instruction ?? '',
+                content: '',
+                images: [],
+              };
+              return (
+                <SpotCheckItemEditor
+                  key={raw.id ?? index}
+                  index={index}
+                  item={item}
+                  mode={mode}
+                  canRemove={false}
+                  errors={errors}
+                  onChange={handleItemChange}
+                  onRemove={() => undefined}
+                />
+              );
+            })}
+          </>
+        )}
+      </ScrollContainer>
+
+      {mode === 'submit' ? (
+        <div className="flex shrink-0 justify-end gap-3 border-t border-border/60 px-5 py-4">
+          <Button onClick={handleSubmit} disabled={submitMutation.isPending}>
+            {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            提交
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+};
+
+const StudentSpotCheckFormDialog: React.FC<{
+  spotCheckId: number | null;
+  onClose: () => void;
+}> = ({ spotCheckId, onClose }) => (
+  <Dialog open={spotCheckId !== null} onOpenChange={(open) => !open && onClose()}>
+    <DialogContent className="flex max-h-[92vh] w-[95vw] max-w-[860px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+      {spotCheckId !== null ? (
+        <StudentSpotCheckFormBody key={spotCheckId} spotCheckId={spotCheckId} onClose={onClose} />
+      ) : null}
+    </DialogContent>
+  </Dialog>
+);
+
+/** 学员抽查列表：复用任务中心筛选/卡片栅格。 */
+export const StudentSpotCheckPanel: React.FC = () => {
+  const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [page, setPage] = useState(1);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const { data, isLoading } = useMySpotChecks({
+    page,
+    pageSize: PAGE_SIZE,
+    status: statusFilter,
+  });
+  const records = data?.results ?? [];
+  const totalCount = data?.count ?? 0;
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const shouldShowPagination = totalCount > PAGE_SIZE;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-6 flex flex-col gap-4 pb-1 xl:flex-row xl:items-center xl:justify-between">
+        <SegmentedControl
+          value={statusFilter}
+          onChange={handleStatusChange}
+          options={statusFilterOptions}
+          className="w-full xl:w-auto xl:shrink-0"
+        />
+        <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+          当前共 <span className="ml-1 text-base text-primary">{totalCount}</span> 条抽查
+        </span>
+      </div>
+
+      {isLoading && !data ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[148px] rounded-2xl" />
+          ))}
+        </div>
+      ) : records.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {records.map((record) => (
+              <SpotCheckStudentCard
+                key={record.id}
+                record={record}
+                onOpen={() => setActiveId(record.id)}
+              />
+            ))}
+          </div>
+          {shouldShowPagination ? (
+            <div className="mt-6">
+              <Pagination
+                current={page}
+                total={totalCount}
+                pageSize={PAGE_SIZE}
+                defaultPageSize={PAGE_SIZE}
+                onChange={(nextPage) => setPage(nextPage)}
+                showTotal={(count, [start, end]) => `第 ${start}-${end} 条 / 共 ${count} 条`}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-2xl bg-muted py-32">
+          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-md bg-muted">
+            <Inbox className="h-10 w-10 text-text-muted" />
+          </div>
+          <h3 className="mb-2 text-2xl font-bold text-foreground">暂无抽查</h3>
+          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-text-muted">
+            <ListChecks className="h-4 w-4" />
+            有新的抽查会显示在这里
+          </p>
+        </div>
+      )}
+
+      <StudentSpotCheckFormDialog
+        spotCheckId={activeId}
+        onClose={() => setActiveId(null)}
+      />
+    </div>
+  );
+};

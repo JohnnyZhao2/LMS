@@ -65,7 +65,7 @@ const createBreadcrumbs = (
     { pattern: '/:role/tasks/:id', items: [{ title: taskLabel, path: tasksPath }, { title: '任务详情' }] },
     { pattern: '/:role/tasks', items: [{ title: taskLabel }] },
     { pattern: '/:role/spot-checks/create', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '发起抽查' }] },
-    { pattern: '/:role/spot-checks/:id/edit', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '编辑抽查' }] },
+    { pattern: '/:role/spot-checks/:id/edit', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '抽查详情' }] },
     { pattern: '/:role/spot-checks', items: [{ title: '抽查管理' }] },
     { pattern: '/:role/users', items: [{ title: '用户管理' }, { title: '用户列表' }] },
     { pattern: '/:role/authorization', items: [{ title: '用户管理', path: buildWorkspaceRoute(ROUTES.USERS) }, { title: '用户授权' }] },

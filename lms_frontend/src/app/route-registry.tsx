@@ -65,7 +65,7 @@ const MentorDashboard = lazy(() => import('@/features/dashboard/components/mento
 const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
-const StudentTaskList = lazy(() => import('@/features/tasks/components/student-task-list').then(m => ({ default: m.StudentTaskList })));
+const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
 const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
@@ -110,7 +110,7 @@ const TaskRoutePage = () => {
   const { role } = useParams<{ role: string }>();
 
   if (normalizeRoleCode(role) === 'STUDENT') {
-    return <StudentTaskList />;
+    return <StudentTaskCenter />;
   }
 
   return <TaskManagement />;
@@ -129,6 +129,12 @@ const TaskDetailRoutePage = () => {
 
   const rolePrefix = getRolePathPrefix(normalizedRole);
   return <Navigate to={`${rolePrefix}/tasks/${id}/preview?tab=progress&entry=task-management`} replace />;
+};
+
+/** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
+const SpotCheckCreateRedirect = () => {
+  const { role } = useParams<{ role: string }>();
+  return <Navigate to={`${getRolePathPrefix(normalizeRoleCode(role))}/spot-checks`} replace />;
 };
 
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
@@ -298,6 +304,9 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-checks',
     kind: 'business',
     path: 'spot-checks',
+    // 学员只有 spot_check.view（看自己的），入口在任务中心「抽查」Tab；
+    // 管理端菜单/路由禁止 STUDENT，避免和学员待办入口重复。
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
     requiredPermissions: ['spot_check.view'],
     showInMenu: true,
     menu: {
@@ -311,13 +320,16 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-create',
     kind: 'business',
     path: 'spot-checks/create',
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
     requiredPermissions: ['spot_check.create'],
-    component: SpotCheckForm,
+    // 发起统一在列表弹窗完成（左侧选人/勾选）
+    render: () => <SpotCheckCreateRedirect />,
   },
   {
     key: 'spot-check-edit',
     kind: 'business',
     path: 'spot-checks/:id/edit',
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
     requiredPermissions: ['spot_check.view', 'spot_check.update'],
     component: SpotCheckForm,
   },

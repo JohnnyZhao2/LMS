@@ -219,14 +219,41 @@ export const queryKeys = {
     list: ({
       currentRole,
       studentId,
+      batchId,
       page,
       pageSize,
     }: {
       currentRole: QueryRole;
       studentId?: number;
+      batchId?: string;
       page: number;
       pageSize: number;
-    }) => ['spot-checks', normalizeRoleKey(currentRole), studentId ?? 'ALL', page, pageSize] as const,
+    }) => [
+      'spot-checks',
+      normalizeRoleKey(currentRole),
+      studentId ?? 'ALL',
+      batchId ?? 'ALL',
+      page,
+      pageSize,
+    ] as const,
+    batchPeers: ({
+      currentRole,
+      batchId,
+    }: {
+      currentRole: QueryRole;
+      batchId: string;
+    }) => ['spot-checks-batch-peers', normalizeRoleKey(currentRole), batchId] as const,
+    mine: ({
+      currentRole,
+      page,
+      pageSize,
+      status,
+    }: {
+      currentRole: QueryRole;
+      page: number;
+      pageSize: number;
+      status?: string;
+    }) => ['spot-checks-mine', normalizeRoleKey(currentRole), page, pageSize, status ?? 'all'] as const,
     studentsRoot: () => ['spot-check-students'] as const,
     students: ({
       currentRole,

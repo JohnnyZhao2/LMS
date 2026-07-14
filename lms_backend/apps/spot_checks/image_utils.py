@@ -1,0 +1,54 @@
+"""抽查贴图（base64 data URL）校验。"""
+import base64
+import re
+from typing import Any
+
+from core.exceptions import BusinessError, ErrorCodes
+
+MAX_IMAGES = 5
+MAX_IMAGE_BYTES = 1_500_000
+_DATA_URL_RE = re.compile(
+    r'^data:(image/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=\s]+)$',
+    re.IGNORECASE,
+)
+
+
+def normalize_images(images: Any, *, field_label: str = '贴图') -> list[str]:
+    if images in (None, ''):
+        return []
+    if not isinstance(images, list):
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message=f'{field_label}格式无效',
+        )
+    if len(images) > MAX_IMAGES:
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message=f'{field_label}最多 {MAX_IMAGES} 张',
+        )
+
+    normalized: list[str] = []
+    for index, raw in enumerate(images, start=1):
+        text = str(raw or '').strip()
+        match = _DATA_URL_RE.match(text)
+        if not match:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'第 {index} 张{field_label}仅支持 png/jpeg/webp 的 data URL',
+            )
+        mime = match.group(1).lower().replace('image/jpg', 'image/jpeg')
+        payload = re.sub(r'\s+', '', match.group(2))
+        try:
+            binary = base64.b64decode(payload, validate=True)
+        except Exception as exc:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'第 {index} 张{field_label}解码失败',
+            ) from exc
+        if len(binary) > MAX_IMAGE_BYTES:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'第 {index} 张{field_label}不能超过 1.5MB',
+            )
+        normalized.append(f'data:{mime};base64,{payload}')
+    return normalized

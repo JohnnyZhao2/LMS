@@ -29,6 +29,7 @@ const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepar
 
 export const SpotCheckList: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [checkedStudentIds, setCheckedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<SpotCheckDepartmentFilter>('all');
   const [paginationByStudent, setPaginationByStudent] = useState<Record<number, { page: number; pageSize: number }>>(
@@ -48,12 +49,15 @@ export const SpotCheckList: React.FC = () => {
     search: deferredStudentSearch || undefined,
   });
   const filteredStudents = students.filter((student) => matchDepartmentFilter(student, departmentFilter));
+  const filteredStudentIdSet = new Set(filteredStudents.map((student) => student.id));
   const resolvedSelectedStudentId =
     filteredStudents.length === 0
       ? null
       : selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)
         ? selectedStudentId
         : filteredStudents[0].id;
+  // 勾选只保留当前筛选可见的学员
+  const visibleCheckedStudentIds = checkedStudentIds.filter((id) => filteredStudentIdSet.has(id));
 
   const { page, pageSize } = resolvedSelectedStudentId
     ? (paginationByStudent[resolvedSelectedStudentId] ?? { page: 1, pageSize: 20 })
@@ -95,6 +99,25 @@ export const SpotCheckList: React.FC = () => {
     });
   };
 
+  const handleToggleCheckStudent = (studentId: number) => {
+    setCheckedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId],
+    );
+  };
+
+  const handleToggleCheckAll = (selectAll: boolean) => {
+    if (!selectAll) {
+      setCheckedStudentIds([]);
+      return;
+    }
+    setCheckedStudentIds(filteredStudents.map((student) => student.id));
+  };
+
+  /** 发起对象：仅勾选的学员（悬浮 + 有勾选才出现） */
+  const createTargetStudentIds = visibleCheckedStudentIds;
+
   const updatePagination = (next: { page?: number; pageSize?: number }) => {
     if (!resolvedSelectedStudentId) {
       return;
@@ -121,9 +144,14 @@ export const SpotCheckList: React.FC = () => {
             <SpotCheckStudentPanel
               students={filteredStudents}
               selectedStudentId={resolvedSelectedStudentId}
+              checkedStudentIds={visibleCheckedStudentIds}
               searchValue={studentSearch}
               onSearchChange={setStudentSearch}
               onSelectStudent={handleSelectStudent}
+              onToggleCheckStudent={handleToggleCheckStudent}
+              onToggleCheckAll={handleToggleCheckAll}
+              canCreateSpotCheck={canCreateSpotCheck}
+              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
               departmentFilter={departmentFilter}
               onDepartmentFilterChange={(value) => {
                 startTransition(() => {
@@ -140,8 +168,6 @@ export const SpotCheckList: React.FC = () => {
               page={page}
               pageSize={pageSize}
               isLoading={recordsLoading}
-              canCreateSpotCheck={canCreateSpotCheck}
-              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
               onEditRecord={setEditingRecord}
               onDeleteRecord={setDeleteTarget}
               onPageChange={(nextPage) => updatePagination({ page: nextPage })}
@@ -154,17 +180,20 @@ export const SpotCheckList: React.FC = () => {
       </PageFillShell>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-h-[92vh] w-[95vw] max-w-[1060px] overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-          <DialogHeader className="px-5 py-5">
-            <DialogTitle className="text-lg font-semibold text-foreground">新建抽查</DialogTitle>
+        <DialogContent className="flex max-h-[92vh] w-[95vw] max-w-[1060px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <DialogHeader className="shrink-0 px-5 py-5">
+            <DialogTitle className="text-lg font-semibold text-foreground">发起抽查</DialogTitle>
           </DialogHeader>
           {isCreateDialogOpen ? (
-            <div className="max-h-[calc(92vh-69px)] overflow-y-auto px-5 py-4">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
               <SpotCheckForm
-                initialStudentId={resolvedSelectedStudentId}
+                studentIds={createTargetStudentIds}
                 hidePageHeader
                 onCancel={() => setIsCreateDialogOpen(false)}
-                onSuccess={() => setIsCreateDialogOpen(false)}
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false);
+                  setCheckedStudentIds([]);
+                }}
               />
             </div>
           ) : null}
@@ -172,17 +201,21 @@ export const SpotCheckList: React.FC = () => {
       </Dialog>
 
       <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] max-w-[1060px] overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-          <DialogHeader className="px-5 py-5">
-            <DialogTitle className="text-lg font-semibold text-foreground">编辑抽查</DialogTitle>
+        <DialogContent className="flex h-[min(92vh,880px)] max-h-[92vh] w-[95vw] max-w-[1060px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <DialogHeader className="shrink-0 px-5 py-5">
+            <DialogTitle className="text-lg font-semibold text-foreground">
+              {editingRecord?.status === 'SUBMITTED' || editingRecord?.status === 'SCORED' ? '抽查评分' : '抽查详情'}
+            </DialogTitle>
           </DialogHeader>
           {editingRecord ? (
-            <div className="max-h-[calc(92vh-69px)] overflow-y-auto px-5 py-4">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
               <SpotCheckForm
+                key={editingRecord.id}
                 spotCheckId={editingRecord.id}
                 hidePageHeader
                 onCancel={() => setEditingRecord(null)}
                 onSuccess={() => setEditingRecord(null)}
+                onSwitchRecord={setEditingRecord}
               />
             </div>
           ) : null}
