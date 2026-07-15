@@ -1,0 +1,361 @@
+Commit: b4cb0d98d6c910c5074a2da5d58558b5aceeeac8
+Original path: lms_frontend/src/features/spot-checks/components/spot-check-item-editor.tsx
+Exported as text from commit snapshot.
+
+import { useState } from 'react';
+import { Star, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import type { SpotCheckItem } from '@/types/spot-check';
+
+export type SpotCheckItemEditorMode = 'issue' | 'submit' | 'score' | 'view';
+
+interface SpotCheckItemEditorProps {
+  index: number;
+  item: SpotCheckItem;
+  mode: SpotCheckItemEditorMode;
+  canRemove: boolean;
+  errors: Record<string, string>;
+  onChange: (index: number, field: keyof SpotCheckItem, value: string | string[]) => void;
+  /** 评分模式：评语失焦时即时保存 */
+  onCommentBlur?: (index: number) => void;
+  onRemove: (index: number) => void;
+}
+
+/** 五星制：满星 2 分，半星 1 分，满分 10 */
+const STAR_COUNT = 5;
+const POINTS_PER_STAR = 2;
+
+/** 分数 → 星数（支持 0.5） */
+const scoreToStars = (score: string | null | undefined) => {
+  const value = Number(score);
+  if (score === '' || score == null || Number.isNaN(value) || value <= 0) {
+    return 0;
+  }
+  // 1 分 = 半星
+  const stars = Math.round(value) / POINTS_PER_STAR;
+  return Math.min(STAR_COUNT, Math.max(0, stars));
+};
+
+const starsToScore = (stars: number) => String(stars * POINTS_PER_STAR);
+
+interface SpotCheckStarRatingProps {
+  value: string | null | undefined;
+  readOnly?: boolean;
+  size?: 'sm' | 'md';
+  onChange?: (score: string) => void;
+}
+
+const SpotCheckStarRating: React.FC<SpotCheckStarRatingProps> = ({
+  value,
+  readOnly = false,
+  size = 'md',
+  onChange,
+}) => {
+  const filled = scoreToStars(value);
+  const [hover, setHover] = useState(0);
+  const active = hover > 0 ? hover : filled;
+  const iconClass = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
+
+  return (
+    <div
+      className="flex items-center"
+      onMouseLeave={() => {
+        if (!readOnly) setHover(0);
+      }}
+    >
+      {Array.from({ length: STAR_COUNT }, (_, index) => {
+        const starIndex = index + 1;
+        const fullThreshold = starIndex;
+        const halfThreshold = starIndex - 0.5;
+        const isFull = active >= fullThreshold;
+        const isHalf = !isFull && active >= halfThreshold;
+
+        return (
+          <div
+            key={starIndex}
+            className={cn('relative', size === 'sm' ? 'h-3 w-3' : 'h-4 w-4')}
+          >
+            {/* 底星 */}
+            <Star
+              className={cn(iconClass, 'fill-transparent text-border')}
+              strokeWidth={1.75}
+            />
+            {/* 半星 / 满星填充 */}
+            {(isFull || isHalf) ? (
+              <div
+                className={cn(
+                  'pointer-events-none absolute inset-0 overflow-hidden',
+                  isHalf ? 'w-1/2' : 'w-full',
+                )}
+              >
+                <Star
+                  className={cn(iconClass, 'fill-warning text-warning')}
+                  strokeWidth={1.75}
+                />
+              </div>
+            ) : null}
+            {!readOnly ? (
+              <>
+                <button
+                  type="button"
+                  aria-label={`${halfThreshold} 星（${halfThreshold * POINTS_PER_STAR} 分）`}
+                  className="absolute inset-y-0 left-0 z-10 w-1/2 cursor-pointer"
+                  onMouseEnter={() => setHover(halfThreshold)}
+                  onClick={() => {
+                    if (!onChange) return;
+                    if (filled === halfThreshold) {
+                      onChange('');
+                      return;
+                    }
+                    onChange(starsToScore(halfThreshold));
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label={`${fullThreshold} 星（${fullThreshold * POINTS_PER_STAR} 分）`}
+                  className="absolute inset-y-0 right-0 z-10 w-1/2 cursor-pointer"
+                  onMouseEnter={() => setHover(fullThreshold)}
+                  onClick={() => {
+                    if (!onChange) return;
+                    if (filled === fullThreshold) {
+                      onChange('');
+                      return;
+                    }
+                    onChange(starsToScore(fullThreshold));
+                  }}
+                />
+              </>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export { SpotCheckStarRating };
+
+/** 列表/卡片只读星级芯片 */
+export const SpotCheckStarChip: React.FC<{ value: string | null | undefined }> = ({ value }) => (
+  <div className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-white px-1.5 py-1 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
+    <SpotCheckStarRating value={value} readOnly size="sm" />
+  </div>
+);
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
+  index,
+  item,
+  mode,
+  canRemove,
+  errors,
+  onChange,
+  onCommentBlur,
+  onRemove,
+}) => {
+  const images = item.images ?? [];
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+
+  const handlePasteImages = async (event: React.ClipboardEvent) => {
+    if (mode !== 'submit') return;
+    const files = [...event.clipboardData.files].filter((file) => file.type.startsWith('image/'));
+    if (files.length === 0) return;
+    event.preventDefault();
+    const next = [...images];
+    for (const file of files) {
+      if (next.length >= 5) break;
+      next.push(await readFileAsDataUrl(file));
+    }
+    onChange(index, 'images', next);
+  };
+
+  return (
+    <section className="group relative space-y-3 rounded-xl border border-border/55 bg-white/72 p-4">
+      {canRemove && mode === 'issue' ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-0 top-0 z-10 h-[26px] w-[26px] translate-x-[18%] -translate-y-[18%] rounded-full border border-border/70 bg-white text-text-muted opacity-0 shadow-[0_2px_8px_rgba(15,23,42,0.05)] pointer-events-none transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+          onClick={() => onRemove(index)}
+          aria-label={`删除主题 ${index + 1}`}
+        >
+          <X className="h-[12px] w-[12px]" strokeWidth={2} />
+        </Button>
+      ) : null}
+
+      <div
+        className={cn(
+          'grid gap-3',
+          mode === 'score' || mode === 'view'
+            ? 'md:grid-cols-[minmax(0,1fr)_auto] md:items-start'
+            : '',
+        )}
+      >
+        <div className="min-w-0">
+          <Label className="mb-3 block text-xs font-medium text-text-muted">主题 {index + 1}</Label>
+          {mode === 'issue' ? (
+            <Input
+              value={item.topic}
+              onChange={(event) => onChange(index, 'topic', event.target.value)}
+              placeholder="例如：HTTP 缓存"
+              className="h-10 rounded-lg border-transparent bg-muted/40 px-3.5 text-[13px] focus:border-primary/20 focus:bg-background focus:ring-0"
+            />
+          ) : (
+            <p className="rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] font-medium text-foreground">
+              {item.topic || '—'}
+            </p>
+          )}
+          {errors[`item-${index}-topic`] ? (
+            <p className="text-sm text-destructive-500">{errors[`item-${index}-topic`]}</p>
+          ) : null}
+        </div>
+
+        {(mode === 'score' || mode === 'view') ? (
+          <div className="md:pt-0">
+            <Label className="mb-3 block text-xs font-medium text-text-muted">得分</Label>
+            <div className="flex h-10 items-center">
+              <SpotCheckStarRating
+                value={item.score}
+                readOnly={mode === 'view'}
+                onChange={(score) => onChange(index, 'score', score)}
+              />
+            </div>
+            {errors[`item-${index}-score`] ? (
+              <p className="mt-1 text-sm text-destructive-500">{errors[`item-${index}-score`]}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {/* 要求说明：发起可编辑；学员/评分/查看只读展示 */}
+      {mode === 'issue' ? (
+        <div>
+          <Label className="mb-3 block text-xs font-medium text-text-muted">要求说明（可选）</Label>
+          <Textarea
+            autoResize
+            value={item.instruction ?? ''}
+            onChange={(event) => onChange(index, 'instruction', event.target.value)}
+            placeholder="给学员的填写要求"
+            className="min-h-[56px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+          />
+        </div>
+      ) : (item.instruction ?? '').trim() ? (
+        <div>
+          <Label className="mb-3 block text-xs font-medium text-text-muted">要求说明</Label>
+          <p className="whitespace-pre-wrap rounded-lg bg-primary-50/60 px-3.5 py-2.5 text-[13px] leading-5 text-primary-900/90">
+            {(item.instruction ?? '').trim()}
+          </p>
+        </div>
+      ) : null}
+
+      {(mode === 'submit' || mode === 'score' || mode === 'view') ? (
+        <div>
+          <Label className="mb-3 block text-xs font-medium text-text-muted">
+            {mode === 'submit' ? '填写内容（可 Ctrl/Cmd+V 贴图）' : '学员填写'}
+          </Label>
+          {mode === 'submit' ? (
+            <Textarea
+              autoResize
+              value={item.content ?? ''}
+              onChange={(event) => onChange(index, 'content', event.target.value)}
+              onPaste={handlePasteImages}
+              placeholder="填写说明，可直接粘贴截图"
+              className="min-h-[88px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+            />
+          ) : (
+            <p className="min-h-[56px] whitespace-pre-wrap rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 text-foreground/90">
+              {item.content?.trim() || '（未填写）'}
+            </p>
+          )}
+          {errors[`item-${index}-content`] ? (
+            <p className="text-sm text-destructive-500">{errors[`item-${index}-content`]}</p>
+          ) : null}
+
+          {images.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {images.map((src, imageIndex) => (
+                <div key={`${index}-img-${imageIndex}`} className="relative">
+                  <button
+                    type="button"
+                    className="block overflow-hidden rounded-lg border border-border/60 transition hover:border-primary/40 hover:ring-2 hover:ring-primary/15"
+                    onClick={() => setPreviewSrc(src)}
+                    aria-label={`查看贴图 ${imageIndex + 1}`}
+                  >
+                    <img
+                      src={src}
+                      alt={`贴图 ${imageIndex + 1}`}
+                      className="h-20 w-20 object-cover"
+                    />
+                  </button>
+                  {mode === 'submit' ? (
+                    <button
+                      type="button"
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-white"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onChange(
+                          index,
+                          'images',
+                          images.filter((_, i) => i !== imageIndex),
+                        );
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <Dialog open={previewSrc !== null} onOpenChange={(open) => !open && setPreviewSrc(null)}>
+        <DialogContent className="max-h-[92vh] w-[min(92vw,960px)] max-w-[960px] overflow-hidden border-transparent bg-background p-3 shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
+          <DialogTitle className="sr-only">贴图预览</DialogTitle>
+          {previewSrc ? (
+            <img
+              src={previewSrc}
+              alt="贴图预览"
+              className="max-h-[calc(92vh-2rem)] w-full rounded-lg object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {(mode === 'score' || (mode === 'view' && item.comment)) ? (
+        <div>
+          <Label className="mb-3 block text-xs font-medium text-text-muted">评语</Label>
+          {mode === 'score' ? (
+            <Textarea
+              autoResize
+              value={item.comment ?? ''}
+              onChange={(event) => onChange(index, 'comment', event.target.value)}
+              onBlur={() => onCommentBlur?.(index)}
+              placeholder="可选"
+              className="min-h-[56px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+            />
+          ) : (
+            <p className="rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 text-foreground/85">
+              {item.comment}
+            </p>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
+};

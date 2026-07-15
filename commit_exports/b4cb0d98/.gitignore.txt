@@ -1,0 +1,55 @@
+Commit: b4cb0d98d6c910c5074a2da5d58558b5aceeeac8
+Original path: .gitignore
+Exported as text from commit snapshot.
+
+# AI 助手与本地自动化工具
+/.claude/
+/.gemini/
+/.cursor/
+/.aider*
+/.agent/
+/.codex/
+/.shared/
+
+# IDE 与系统文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 仓库根目录杂项
+/.playwright-cli
+/.playwright-mcp/
+/docs/
+/avatars/
+/inspector.json
+/skills-lock.json
+/package-lock.json
+/.agents/
+/plugins/
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.pdf
+/招乎统一认证-API使用文档_副本.md
+
+# 测试文件
+**/tests/
+**/__tests__/
+**/src/test/
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.jsx
+test_*.py
+*_test.py
+conftest.py
+pytest.ini
+**/settings/test.py

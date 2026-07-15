@@ -1,0 +1,37 @@
+Commit changed files exported as .txt
+Commit: b4cb0d98d6c910c5074a2da5d58558b5aceeeac8
+
+- .gitignore -> .gitignore.txt
+- lms_backend/apps/activity_logs/services.py -> lms_backend/apps/activity_logs/services.py.txt
+- lms_backend/apps/spot_checks/authorization.py -> lms_backend/apps/spot_checks/authorization.py.txt
+- lms_backend/apps/spot_checks/image_utils.py -> lms_backend/apps/spot_checks/image_utils.py.txt
+- lms_backend/apps/spot_checks/migrations/0003_spot_check_workflow.py -> lms_backend/apps/spot_checks/migrations/0003_spot_check_workflow.py.txt
+- lms_backend/apps/spot_checks/models.py -> lms_backend/apps/spot_checks/models.py.txt
+- lms_backend/apps/spot_checks/policies.py -> lms_backend/apps/spot_checks/policies.py.txt
+- lms_backend/apps/spot_checks/serializers.py -> lms_backend/apps/spot_checks/serializers.py.txt
+- lms_backend/apps/spot_checks/services.py -> lms_backend/apps/spot_checks/services.py.txt
+- lms_backend/apps/spot_checks/urls.py -> lms_backend/apps/spot_checks/urls.py.txt
+- lms_backend/apps/spot_checks/views.py -> lms_backend/apps/spot_checks/views.py.txt
+- lms_backend/config/settings/base.py -> lms_backend/config/settings/base.py.txt
+- lms_backend/docs/generated/backend-module-map.md -> lms_backend/docs/generated/backend-module-map.md.txt
+- lms_frontend/docs/generated/component-inventory.md -> lms_frontend/docs/generated/component-inventory.md.txt
+- lms_frontend/docs/generated/feature-dependency-graph.md -> lms_frontend/docs/generated/feature-dependency-graph.md.txt
+- lms_frontend/docs/generated/project-update-log.md -> lms_frontend/docs/generated/project-update-log.md.txt
+- lms_frontend/src/app/layouts/global-breadcrumb.tsx -> lms_frontend/src/app/layouts/global-breadcrumb.tsx.txt
+- lms_frontend/src/app/route-registry.tsx -> lms_frontend/src/app/route-registry.tsx.txt
+- lms_frontend/src/app/routes/student-task-center.tsx -> lms_frontend/src/app/routes/student-task-center.tsx.txt
+- lms_frontend/src/components/common/user-select-list.tsx -> lms_frontend/src/components/common/user-select-list.tsx.txt
+- lms_frontend/src/features/dashboard/components/mentor-dashboard.tsx -> lms_frontend/src/features/dashboard/components/mentor-dashboard.tsx.txt
+- lms_frontend/src/features/spot-checks/api/create-spot-check.ts -> lms_frontend/src/features/spot-checks/api/create-spot-check.ts.txt
+- lms_frontend/src/features/spot-checks/api/get-spot-checks.ts -> lms_frontend/src/features/spot-checks/api/get-spot-checks.ts.txt
+- lms_frontend/src/features/spot-checks/components/spot-check-form.tsx -> lms_frontend/src/features/spot-checks/components/spot-check-form.tsx.txt
+- lms_frontend/src/features/spot-checks/components/spot-check-item-editor.tsx -> lms_frontend/src/features/spot-checks/components/spot-check-item-editor.tsx.txt
+- lms_frontend/src/features/spot-checks/components/spot-check-list.tsx -> lms_frontend/src/features/spot-checks/components/spot-check-list.tsx.txt
+- lms_frontend/src/features/spot-checks/components/spot-check-record-list.tsx -> lms_frontend/src/features/spot-checks/components/spot-check-record-list.tsx.txt
+- lms_frontend/src/features/spot-checks/components/spot-check-student-panel.tsx -> lms_frontend/src/features/spot-checks/components/spot-check-student-panel.tsx.txt
+- lms_frontend/src/features/spot-checks/components/student-spot-check-panel.tsx -> lms_frontend/src/features/spot-checks/components/student-spot-check-panel.tsx.txt
+- lms_frontend/src/features/spot-checks/lib/spot-check-status.ts -> lms_frontend/src/features/spot-checks/lib/spot-check-status.ts.txt
+- lms_frontend/src/features/tasks/components/student-task-list.tsx -> lms_frontend/src/features/tasks/components/student-task-list.tsx.txt
+- lms_frontend/src/lib/cache-invalidation.ts -> lms_frontend/src/lib/cache-invalidation.ts.txt
+- lms_frontend/src/lib/query-keys.ts -> lms_frontend/src/lib/query-keys.ts.txt
+- lms_frontend/src/types/spot-check.ts -> lms_frontend/src/types/spot-check.ts.txt
