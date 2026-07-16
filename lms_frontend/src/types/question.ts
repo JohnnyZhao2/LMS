@@ -2,7 +2,7 @@
  * 题目相关类型定义
  */
 
-import type { QuestionType, SimpleTag } from './common';
+import type { QuestionType, SimpleTag } from '@/types/common';
 
 export interface Question {
   id: number;

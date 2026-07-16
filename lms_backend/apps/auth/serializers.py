@@ -33,34 +33,25 @@ class AuthSessionSerializer(serializers.Serializer):
     )
 
 
-class TokenPairSerializer(serializers.Serializer):
+class AccessTokenSerializer(serializers.Serializer):
     access_token = serializers.CharField(help_text='访问令牌')
-    refresh_token = serializers.CharField(help_text='刷新令牌')
 
 
-class LoginResponseSerializer(AuthSessionSerializer, TokenPairSerializer):
+class LoginResponseSerializer(AuthSessionSerializer, AccessTokenSerializer):
     """
     Serializer for login response.
     """
 
 
-class LogoutRequestSerializer(serializers.Serializer):
-    """Serializer for logout request."""
-    refresh_token = serializers.CharField(
-        required=True,
-        help_text='刷新令牌'
-    )
-
-
 class RefreshTokenRequestSerializer(serializers.Serializer):
-    """Serializer for token refresh request."""
+    """Internal validation for the HttpOnly refresh cookie."""
     refresh_token = serializers.CharField(
         required=True,
         help_text='刷新令牌'
     )
 
 
-class RefreshTokenResponseSerializer(TokenPairSerializer):
+class RefreshTokenResponseSerializer(AccessTokenSerializer):
     """Serializer for token refresh response."""
 
 

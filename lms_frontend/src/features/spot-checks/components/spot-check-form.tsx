@@ -4,7 +4,7 @@ import { ListChecks, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -15,19 +15,17 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
 import { ApiError } from '@/lib/api-client';
-import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
-import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
-import { showApiError } from '@/utils/error-handler';
-import {
-  useCreateSpotCheck,
-  useScoreSpotCheck,
-} from '../api/create-spot-check';
-import { useSpotCheckBatchPeers, useSpotCheckDetail } from '../api/get-spot-checks';
-import { SPOT_CHECK_STATUS_META } from '../lib/spot-check-status';
-import { SpotCheckItemEditor, SpotCheckStarChip } from './spot-check-item-editor';
+import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation/spot-checks';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import type { SpotCheck, SpotCheckItem, SpotCheckStudent } from '@/features/spot-checks/types/spot-check';
+import { showApiError } from '@/lib/api-error-handler';
+import { useCreateSpotCheck } from '@/features/spot-checks/api/create-spot-check';
+import { useSpotCheckBatchPeers } from '@/features/spot-checks/api/get-spot-check-batch-peers';
+import { useSpotCheckDetail } from '@/features/spot-checks/api/get-spot-check';
+import { useScoreSpotCheck } from '@/features/spot-checks/api/score-spot-check';
+import { SPOT_CHECK_STATUS_META } from '@/features/spot-checks/constants/spot-check-status';
+import { SpotCheckItemEditor, SpotCheckStarChip } from '@/features/spot-checks/components/spot-check-item-editor';
 
 const isVersionMismatch = (error: unknown) =>
   error instanceof ApiError && error.code === 'RESOURCE_VERSION_MISMATCH';
@@ -67,7 +65,8 @@ const averageScoreOf = (items: SpotCheckItem[]) => {
 
 interface SpotCheckFormProps {
   spotCheckId?: number;
-  studentIds?: number[];
+  /** 发起态：列表页传入已勾选学员摘要，避免再依赖 assignable 列表 */
+  students?: SpotCheckStudent[];
   hidePageHeader?: boolean;
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -178,7 +177,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
 }> = ({
   resolvedSpotCheckId,
   isEdit,
-  studentIds = [],
+  students = [],
   hidePageHeader = false,
   onCancel,
   onSuccess,
@@ -189,7 +188,6 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
   const createSpotCheck = useCreateSpotCheck();
   const scoreSpotCheck = useScoreSpotCheck();
   const { data: spotCheckDetail, isLoading: detailLoading } = useSpotCheckDetail(resolvedSpotCheckId ?? 0);
-  const { data: users } = useAssignableUsers();
 
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -201,6 +199,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
   const idRef = useRef<number | null>(resolvedSpotCheckId);
   const revisionRef = useRef<number | null>(null);
 
+  const studentIds = useMemo(() => students.map((s) => s.id), [students]);
   const canScore = spotCheckDetail?.actions?.score === true;
 
   // 已创建记录不再编辑主题：已提交/已评分 → 评分；待填写 → 只读（布局同评分）
@@ -237,16 +236,14 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
 
   const createStudents = useMemo(() => {
     if (isEdit) return [];
-    return (users || [])
-      .filter((user) => studentIds.includes(user.id))
-      .map((user) => ({
-        id: user.id,
-        name: user.username,
-        employeeId: user.employee_id,
-        avatarKey: user.avatar_key,
-        sub: user.department?.name,
-      }));
-  }, [isEdit, studentIds, users]);
+    return students.map((user) => ({
+      id: user.id,
+      name: user.username,
+      employeeId: user.employee_id,
+      avatarKey: user.avatar_key,
+      sub: user.department_name ?? undefined,
+    }));
+  }, [isEdit, students]);
 
   const scorePeers = useMemo(() => {
     if (!spotCheckDetail || !canSwitchPeers) return [];
@@ -308,7 +305,8 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
       (i === index ? { ...item, [field]: value } : item),
     );
     setDraftItems(next);
-    if (mode === 'score' && field === 'score') persistScore(next);
+    // 星级与评语均走队列即时保存，避免关弹窗丢评语
+    if (mode === 'score' && (field === 'score' || field === 'comment')) persistScore(next);
   };
 
   const handleCommentBlur = () => {
@@ -503,7 +501,9 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = (props) => {
         ? null
         : routeSpotCheckId;
   const isEdit = resolvedSpotCheckId !== null;
-  const formKey = isEdit ? `edit-${resolvedSpotCheckId}` : `create-${(props.studentIds ?? []).join(',')}`;
+  const formKey = isEdit
+    ? `edit-${resolvedSpotCheckId}`
+    : `create-${(props.students ?? []).map((s) => s.id).join(',')}`;
 
   return (
     <SpotCheckFormInner

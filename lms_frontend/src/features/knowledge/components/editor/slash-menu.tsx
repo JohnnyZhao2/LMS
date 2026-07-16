@@ -7,7 +7,7 @@ import {
 
 import { cn } from '@/lib/utils';
 
-import type { SlashShortcut, SlashShortcutId } from '../../utils/slash-shortcuts';
+import type { SlashShortcut, SlashShortcutId } from '@/features/knowledge/utils/slash-shortcuts';
 
 const SLASH_SHORTCUT_META = {
   heading: { icon: Heading1, label: '标题' },

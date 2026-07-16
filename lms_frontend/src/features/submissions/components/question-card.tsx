@@ -2,11 +2,11 @@ import React from 'react';
 import { Bookmark, CheckCircle, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { QuestionDocumentReadMode } from '@/entities/question/components/question-document-read-mode';
+import { QuestionDocumentReadMode } from '@/components/questions/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
-import type { Answer } from '@/types/submission';
+import type { Answer } from '@/features/submissions/types/submission';
 
 const hasValueProp = (data: unknown): data is { value?: unknown } =>
   typeof data === 'object' && data !== null && 'value' in data;

@@ -1,10 +1,10 @@
 import { AppLayout } from '@/app/layouts/app-layout';
-import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
+import { useAuth } from '@/lib/auth-context';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';
-import { getWorkspaceConfig } from './workspace-config';
+import { getWorkspaceConfig } from '@/app/workspace-config';
 
 /**
  * 应用内容组件（在 Provider 内部）

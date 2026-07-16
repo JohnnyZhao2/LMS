@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import type { AdminDashboard } from '@/types/dashboard';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import type { AdminDashboard } from '@/features/dashboard/types/dashboard';
+
+export const getAdminDashboard = () =>
+  apiClient.get<AdminDashboard>('/dashboard/admin/');
 
 /**
  * 获取管理员仪表盘数据
@@ -12,7 +15,7 @@ export const useAdminDashboard = () => {
 
   return useQuery({
     queryKey: queryKeys.dashboards.admin(currentRole),
-    queryFn: () => apiClient.get<AdminDashboard>('/dashboard/admin/'),
+    queryFn: getAdminDashboard,
     enabled: currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN',
     staleTime: 0,
     refetchOnMount: 'always',

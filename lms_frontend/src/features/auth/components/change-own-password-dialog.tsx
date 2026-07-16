@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/session/auth/auth-context'
+import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { getApiErrorContent } from '@/utils/error-handler'
+import { getApiErrorContent } from '@/lib/api-error-handler'
 
 interface ChangeOwnPasswordDialogProps {
   open: boolean

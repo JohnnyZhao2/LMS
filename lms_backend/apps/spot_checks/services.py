@@ -102,8 +102,9 @@ class SpotCheckService(BaseService):
         seen_student_ids: set[int] = set()
         for student in students:
             if isinstance(student, int):
-                student = User.objects.filter(pk=student).first()
-                self.validate_not_none(student, f'学员 {student} 不存在')
+                student_id = student
+                student = User.objects.filter(pk=student_id).first()
+                self.validate_not_none(student, f'学员 {student_id} 不存在')
             if not isinstance(student, User):
                 raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='无效的学员数据')
             if student.pk in seen_student_ids:

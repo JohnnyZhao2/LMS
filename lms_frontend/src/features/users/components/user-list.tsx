@@ -12,13 +12,19 @@ import {
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
-import { useUsers, useDepartments, useMentors } from '@/entities/user/api/get-users'
-import { useActivateUser, useChangePassword, useDeactivateUser, useDeleteUser, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
-import { UserForm } from "./user-form"
-import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
+import { useDepartments } from '@/hooks/api/use-departments'
+import { useMentors } from '@/hooks/api/use-mentors'
+import { useUsers } from '@/hooks/api/use-users'
+import { useActivateUser } from '@/hooks/api/use-activate-user'
+import { useChangePassword } from '@/hooks/api/use-change-user-password'
+import { useDeactivateUser } from '@/hooks/api/use-deactivate-user'
+import { useDeleteUser } from '@/hooks/api/use-delete-user'
+import { useUpdateUserAvatar } from '@/hooks/api/use-update-user-avatar'
+import { UserForm } from "@/features/users/components/user-form"
+import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"
-import { getRoleColor } from "@/lib/role-config"
-import { useAuth } from "@/session/auth/auth-context"
+import { getRoleColor } from "@/config/role-config"
+import { useAuth } from "@/lib/auth-context"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
@@ -37,11 +43,11 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
-import { showApiError } from "@/utils/error-handler"
+import { showApiError } from "@/lib/api-error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from '@/types/common';
-import { UserDirectoryFilters } from "./user-directory-filters"
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { UserDirectoryFilters } from "@/features/users/components/user-directory-filters"
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization-access';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()

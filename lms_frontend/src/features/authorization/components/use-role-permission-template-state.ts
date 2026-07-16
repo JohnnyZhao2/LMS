@@ -1,27 +1,28 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
-import { useAssignRoles } from '@/entities/user/api/manage-users';
-import { useAuth } from '@/session/auth/auth-context';
-import {
-  useRevokeUserPermissionOverride,
-  useRevokeUserScopeGroupOverride,
-  useUserPermissionOverrides,
-  useUserScopeGroupOverrides,
-} from '@/entities/authorization/api/authorization';
-import { showApiError } from '@/utils/error-handler';
-import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
+import { isAllowedDepartmentCode, useDepartments } from '@/hooks/api/use-departments';
+import { useRoles } from '@/hooks/api/use-roles';
+import { useUserDetail } from '@/hooks/api/use-user-detail';
+import { useUsers } from '@/hooks/api/use-users';
+import { useAssignRoles } from '@/hooks/api/use-assign-roles';
+import { useAuth } from '@/lib/auth-context';
+import { useUserPermissionOverrides } from '@/features/authorization/api/get-user-permission-overrides';
+import { useUserScopeGroupOverrides } from '@/features/authorization/api/get-user-scope-group-overrides';
+import { useRevokeUserPermissionOverride } from '@/features/authorization/api/revoke-user-permission-override';
+import { useRevokeUserScopeGroupOverride } from '@/features/authorization/api/revoke-user-scope-group-override';
+import { showApiError } from '@/lib/api-error-handler';
+import { buildPermissionModuleSections } from '@/features/authorization/utils/permission-sections';
 import {
   getNextUserPermissionEditorRoleCode,
   getNextAssignableRoleCodes,
   getManagedRoleCodes,
   isAssignableRoleCode,
-} from '@/entities/authorization/utils/user-role-assignment';
+} from '@/utils/authorization/user-role-assignment';
 import {
   USER_PERMISSION_ACCESS_PERMISSIONS,
   USER_ROLE_ASSIGN_PERMISSION,
-} from '@/entities/authorization/constants/access';
+} from '@/config/authorization-access';
 
 interface UseRolePermissionTemplateStateParams {
   roleCodes: RoleCode[];

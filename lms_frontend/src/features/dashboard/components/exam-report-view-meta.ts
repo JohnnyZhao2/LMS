@@ -1,4 +1,4 @@
-import type { ExamReportExportTemplate, ExamReportView } from '@/types/dashboard';
+import type { ExamReportExportTemplate, ExamReportView } from '@/features/dashboard/types/dashboard';
 
 export const VIEW_META: Record<
   ExamReportView,

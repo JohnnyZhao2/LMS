@@ -1,10 +1,10 @@
-import { QuestionTypeBadge } from '@/entities/question/components/question-type-badge';
-import type { QuestionSection, QuestionSectionEntry } from '@/entities/question/question-sections';
+import { QuestionTypeBadge } from '@/components/questions/question-type-badge';
+import type { QuestionSection, QuestionSectionEntry } from '@/components/questions/question-sections';
 import type { MutableRefObject } from 'react';
 
-import type { SubmissionDetail } from '@/types/submission';
+import type { SubmissionDetail } from '@/features/submissions/types/submission';
 
-import { QuestionCard } from './question-card';
+import { QuestionCard } from '@/features/submissions/components/question-card';
 
 interface QuizPlayerMainPanelProps {
   submission: SubmissionDetail;

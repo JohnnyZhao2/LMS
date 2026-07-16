@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { Activity, BookOpenText, ShieldCheck, UserRound, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/session/auth/auth-context';
-import { showApiError } from '@/utils/error-handler';
-import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
-import type { ActivityLogPolicy, ActivityLogType } from '../types';
-import { ActivityLogPolicyCategorySection } from './activity-log-policy-category-section';
+import { useAuth } from '@/lib/auth-context';
+import { showApiError } from '@/lib/api-error-handler';
+import { useActivityLogPolicies } from '@/features/activity-logs/api/get-activity-log-policies';
+import { useUpdateActivityLogPolicy } from '@/features/activity-logs/api/update-activity-log-policy';
+import type { ActivityLogPolicy, ActivityLogType } from '@/features/activity-logs/types';
+import { ActivityLogPolicyCategorySection } from '@/features/activity-logs/components/activity-log-policy-category-section';
 
 const CATEGORY_LABELS: Record<ActivityLogType, string> = {
   user: '用户日志',

@@ -1,5 +1,5 @@
 import { RouterProvider } from 'react-router-dom';
-import { appRouter } from './router';
+import { appRouter } from '@/app/router';
 
 /**
  * 应用根组件

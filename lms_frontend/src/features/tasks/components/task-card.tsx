@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
@@ -7,7 +7,7 @@ import type { StudentTaskCenterItem } from '@/types/task';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { ListTag } from '@/components/ui/list-tag';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/constants/task-status';
 
 interface TaskCardProps {
   task: StudentTaskCenterItem;

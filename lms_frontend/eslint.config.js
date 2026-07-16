@@ -14,18 +14,30 @@ const featureNames = fs.readdirSync(featureRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
 
+const sourceImportPatterns = [
+  {
+    group: ['./**', '../**'],
+    message: 'src 内部统一使用 @/ 绝对路径导入。',
+  },
+  {
+    group: ['@/entities', '@/entities/*', '@/session', '@/session/*'],
+    message: 'entities/session 已移除，请使用 feature 或规范共享层。',
+  },
+]
+
 const featureBoundaryConfigs = featureNames.map((featureName) => ({
   files: [`src/features/${featureName}/**/*.{ts,tsx}`],
   rules: {
     'no-restricted-imports': ['error', {
       patterns: [
+        ...sourceImportPatterns,
         {
           group: [
             '@/features/*',
             `!@/features/${featureName}`,
             `!@/features/${featureName}/*`,
           ],
-          message: '禁止跨 feature 直接依赖，请下沉到 entities/session 或在 app 层组合。',
+          message: '禁止跨 feature 直接依赖，请提升为共享能力或在 app 层组合。',
         },
         {
           group: ['@/app', '@/app/*'],
@@ -52,6 +64,12 @@ export default defineConfig([
     },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: sourceImportPatterns }],
+    },
+  },
+  {
     files: [
       'src/components/**/*.{ts,tsx}',
       'src/hooks/**/*.{ts,tsx}',
@@ -63,6 +81,7 @@ export default defineConfig([
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
+          ...sourceImportPatterns,
           {
             group: ['@/features/*'],
             message: '共享层不应依赖 feature。',
@@ -70,23 +89,6 @@ export default defineConfig([
           {
             group: ['@/app', '@/app/*'],
             message: '共享层不应依赖 app。',
-          },
-        ],
-      }],
-    },
-  },
-  {
-    files: ['src/session/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@/features/*'],
-            message: 'session 层不应依赖 feature。',
-          },
-          {
-            group: ['@/app', '@/app/*'],
-            message: 'session 层不应依赖 app。',
           },
         ],
       }],

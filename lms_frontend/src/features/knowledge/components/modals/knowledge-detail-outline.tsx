@@ -1,5 +1,5 @@
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import type { KnowledgeOutlineItem } from './knowledge-detail-outline-utils';
+import type { KnowledgeOutlineItem } from '@/features/knowledge/components/modals/knowledge-detail-outline-utils';
 
 interface KnowledgeDetailOutlineProps {
   items: KnowledgeOutlineItem[];

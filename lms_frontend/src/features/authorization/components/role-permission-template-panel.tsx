@@ -4,12 +4,12 @@ import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { UserPermissionWorkbench } from '@/entities/authorization/components/user-permission-workbench';
-import { applyPermissionSelectionChange } from '@/entities/authorization/utils/permission-dependencies';
-import { PermissionModuleSections } from '@/entities/authorization/components/permission-module-sections';
-import { PermissionToggleCard } from '@/entities/authorization/components/permission-toggle-card';
-import { RoleTemplateMemberPanel } from './role-template-member-panel';
-import { useRolePermissionTemplateState } from './use-role-permission-template-state';
+import { UserPermissionWorkbench } from '@/features/authorization/components/user-permission-workbench';
+import { applyPermissionSelectionChange } from '@/features/authorization/utils/permission-dependencies';
+import { PermissionModuleSections } from '@/features/authorization/components/permission-module-sections';
+import { PermissionToggleCard } from '@/features/authorization/components/permission-toggle-card';
+import { RoleTemplateMemberPanel } from '@/features/authorization/components/role-template-member-panel';
+import { useRolePermissionTemplateState } from '@/features/authorization/components/use-role-permission-template-state';
 
 interface RolePermissionTemplatePanelProps {
   canViewRoleTemplate: boolean;

@@ -13,17 +13,15 @@ import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { showApiError } from '@/utils/error-handler';
+import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
-import {
-  useActivityLogs,
-  useBulkDeleteActivityLogs,
-} from '../api/use-activity-logs';
-import { ActivityLogFeed } from './activity-log-feed';
-import { ActivityLogMemberList } from './activity-log-member-list';
-import type { ActivityLogItem, ActivityLogMember, ActivityLogType } from '../types';
+import { useBulkDeleteActivityLogs } from '@/features/activity-logs/api/bulk-delete-activity-logs';
+import { useActivityLogs } from '@/features/activity-logs/api/get-activity-logs';
+import { ActivityLogFeed } from '@/features/activity-logs/components/activity-log-feed';
+import { ActivityLogMemberList } from '@/features/activity-logs/components/activity-log-member-list';
+import type { ActivityLogItem, ActivityLogMember, ActivityLogType } from '@/features/activity-logs/types';
 import type { DateRange } from 'react-day-picker';
 
 const LOG_TYPE_META = {

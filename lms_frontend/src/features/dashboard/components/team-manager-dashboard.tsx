@@ -18,9 +18,9 @@ import type {
   TeamManagerDepartmentComparison,
   TeamManagerDepartmentMetrics,
   TeamManagerDepartmentStudentViewItem,
-} from '@/types/dashboard';
+} from '@/features/dashboard/types/dashboard';
 
-import { useTeamManagerDashboard } from '../api/team-manager-dashboard';
+import { useTeamManagerDashboard } from '@/features/dashboard/api/team-manager-dashboard';
 
 const cardTitleClass =
   'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';

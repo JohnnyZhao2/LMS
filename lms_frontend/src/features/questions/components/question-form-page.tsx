@@ -2,12 +2,14 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useTags } from '@/entities/tag/api/tags';
-import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/entities/question/api/create-question';
-import { useQuestionDetail } from '@/entities/question/api/get-questions';
+import { useTags } from '@/hooks/api/use-tags';
+import { useCreateQuestion } from '@/hooks/api/use-create-question';
+import { useDeleteQuestion } from '@/hooks/api/use-delete-question';
+import { useUpdateQuestion } from '@/hooks/api/use-update-question';
+import { useQuestionDetail } from '@/hooks/api/use-question-detail';
 import { QuestionBatchEditor } from '@/features/questions/components/question-batch-editor';
-import { createBlankEditableQuestion, questionToEditableItem } from '@/entities/question/components/question-editor-helpers';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { createBlankEditableQuestion, questionToEditableItem } from '@/components/questions/question-editor-helpers';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 
 export const QuestionFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

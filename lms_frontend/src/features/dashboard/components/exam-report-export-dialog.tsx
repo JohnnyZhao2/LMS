@@ -12,10 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { ExamReportFiltersState, ExamReportView } from '@/types/dashboard';
+import type { ExamReportFiltersState, ExamReportView } from '@/features/dashboard/types/dashboard';
 
-import { downloadExamReport } from '../api/exam-report';
-import { VIEW_META } from './exam-report-view-meta';
+import { downloadExamReport } from '@/features/dashboard/api/download-exam-report';
+import { VIEW_META } from '@/features/dashboard/components/exam-report-view-meta';
 
 interface ExamReportExportDialogProps<TData> {
   open: boolean;

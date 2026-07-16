@@ -1,8 +1,8 @@
 import React from 'react';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { cn } from '@/lib/utils';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { getWorkspaceHome } from '@/session/workspace/role-paths';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { getWorkspaceHome } from '@/config/role-paths';
 
 export interface PageHeaderProps {
   /** 页面标题 */

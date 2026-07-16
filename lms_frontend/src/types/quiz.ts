@@ -2,8 +2,8 @@
  * 试卷相关类型定义
  */
 
-import type { SimpleTag } from './common';
-import type { QuestionType } from './common';
+import type { SimpleTag } from '@/types/common';
+import type { QuestionType } from '@/types/common';
 
 export type QuizType = 'PRACTICE' | 'EXAM';
 

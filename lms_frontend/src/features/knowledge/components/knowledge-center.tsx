@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { SelectionIndicator } from '@/components/common/selection-indicator';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
@@ -11,23 +11,26 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/common';
 
-import { useInfiniteKnowledgeList } from '../api/knowledge';
-import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
-import { useIncrementViewCount } from '../api/increment-view-count';
-import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
-import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
-import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
-import { useCreateTag, useDeleteTag, useTags } from '@/entities/tag/api/tags';
-import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
-import { showApiError } from '@/utils/error-handler';
+import { useInfiniteKnowledgeList } from '@/features/knowledge/api/get-knowledge-list';
+import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
+import { useDeleteKnowledge } from '@/features/knowledge/api/delete-knowledge';
+import { useIncrementViewCount } from '@/features/knowledge/api/increment-view-count';
+import { useKnowledgeFilters } from '@/features/knowledge/hooks/use-knowledge-filters';
+import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
+import { hasMeaningfulKnowledgeHtml } from '@/features/knowledge/utils/slash-shortcuts';
+import { useCreateTag } from '@/hooks/api/use-create-tag';
+import { useDeleteTag } from '@/hooks/api/use-delete-tag';
+import { useTags } from '@/hooks/api/use-tags';
+import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
+import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
-import { KnowledgeCardMymind } from './cards/knowledge-card';
-import { AddKnowledgeCard } from './cards/knowledge-add-card';
-import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
+import { KnowledgeCardMymind } from '@/features/knowledge/components/cards/knowledge-card';
+import { AddKnowledgeCard } from '@/features/knowledge/components/cards/knowledge-add-card';
+import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 
 type KnowledgeModalState =
     | { kind: 'create'; initialContent: string; initialSpaceTagId?: number }

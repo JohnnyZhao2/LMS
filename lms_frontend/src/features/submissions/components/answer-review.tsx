@@ -2,8 +2,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatScore } from '@/lib/score';
-import { usePracticeResult, useExamResult } from '../api/get-result';
-import { QuestionCard } from './question-card';
+import { usePracticeResult, useExamResult } from '@/features/submissions/api/get-result';
+import { QuestionCard } from '@/features/submissions/components/question-card';
 
 interface AnswerReviewProps {
   type: 'practice' | 'exam';

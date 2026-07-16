@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { StudentDashboardTask } from '@/types/dashboard';
+import type { StudentDashboardTask } from '@/features/dashboard/types/dashboard';
 
 interface MiniCalendarProps {
   className?: string;

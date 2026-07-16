@@ -6,13 +6,14 @@ import { Route, Navigate, createBrowserRouter, createRoutesFromElements } from '
 import { Suspense } from 'react';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/app/guards/route-guard';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { LoginPage } from '@/app/routes/auth/login';
-import { roleRoutes } from './routes/role-routes';
-import { AppContent } from './app-content';
-import { AppProvider } from './provider';
+import { roleRoutes } from '@/app/routes/role-routes';
+import { AppContent } from '@/app/app-content';
+import { AppProvider } from '@/app/provider';
 import { ROUTES } from '@/config/routes';
-import { getAccessibleWorkspaceHome } from './workspace-config';
+import { getAccessibleWorkspaceHome } from '@/app/workspace-config';
+import { RouteErrorPage } from '@/app/routes/route-error-page';
 
 /**
  * 默认重定向组件
@@ -48,7 +49,7 @@ const AppRoot: React.FC = () => {
  */
 export const appRouter = createBrowserRouter(
   createRoutesFromElements(
-    <Route element={<AppRoot />}>
+    <Route element={<AppRoot />} errorElement={<RouteErrorPage />}>
       {/* 认证路由（不需要角色前缀） */}
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 

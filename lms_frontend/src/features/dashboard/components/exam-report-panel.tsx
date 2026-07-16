@@ -20,18 +20,18 @@ import {
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type {
   ExamReportDetailRow,
   ExamReportStudentRow,
   ExamReportView,
-} from '@/types/dashboard';
+} from '@/features/dashboard/types/dashboard';
 
-import { useExamReport } from '../api/exam-report';
-import { ExamReportExportDialog } from './exam-report-export-dialog';
-import { VIEW_OPTIONS } from './exam-report-view-meta';
+import { useExamReport } from '@/features/dashboard/api/exam-report';
+import { ExamReportExportDialog } from '@/features/dashboard/components/exam-report-export-dialog';
+import { VIEW_OPTIONS } from '@/features/dashboard/components/exam-report-view-meta';
 
 const DEFAULT_PAGE_SIZE = 10;
 

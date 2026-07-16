@@ -1,9 +1,9 @@
 import type { ReactNode, RefObject } from 'react';
 import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { TagAssignmentSection } from '@/entities/tag/components/tag-assignment-section';
-import { RelatedLinksEditor } from '../shared/related-links-editor';
-import { getRelatedLinkDisplayText } from '../../utils/related-links';
+import { TagAssignmentSection } from '@/components/tags/tag-assignment-section';
+import { RelatedLinksEditor } from '@/features/knowledge/components/shared/related-links-editor';
+import { getRelatedLinkDisplayText } from '@/features/knowledge/utils/related-links';
 import type { KnowledgeDetail as KnowledgeDetailType, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import dayjs from '@/lib/dayjs';

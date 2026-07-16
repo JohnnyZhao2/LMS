@@ -8,17 +8,18 @@ import {
   CheckCircle2,
   GraduationCap,
 } from 'lucide-react';
-import { useStudentDashboard, useTaskParticipants } from '../api/student-dashboard';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useTaskParticipants } from '@/features/dashboard/api/get-task-participants';
+import { useStudentDashboard } from '@/features/dashboard/api/student-dashboard';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import type { StudentDashboardTask, TaskParticipant } from '@/types/dashboard';
+import type { StudentDashboardTask, TaskParticipant } from '@/features/dashboard/types/dashboard';
 import { cn } from '@/lib/utils';
 
-import { MiniCalendar } from './student-dashboard/mini-calendar';
-import { EditorialCard } from './student-dashboard/editorial-card';
-import { KnowledgeItem, TaskItem } from './student-dashboard/items';
+import { MiniCalendar } from '@/features/dashboard/components/student-dashboard/mini-calendar';
+import { EditorialCard } from '@/features/dashboard/components/student-dashboard/editorial-card';
+import { KnowledgeItem, TaskItem } from '@/features/dashboard/components/student-dashboard/items';
 
 interface DashboardSectionHeaderProps {
   title: string;

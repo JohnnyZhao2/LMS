@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import type { ActivityLogPolicy } from '../types';
+import type { ActivityLogPolicy } from '@/features/activity-logs/types';
 
 const PolicyToggle: React.FC<{
   policy: ActivityLogPolicy;

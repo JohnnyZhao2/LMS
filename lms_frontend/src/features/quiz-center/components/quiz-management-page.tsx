@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Layout } from 'lucide-react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
-import { QuizTab } from '../quizzes/components/quiz-tab';
+import { QuizTab } from '@/features/quiz-center/components/quiz-tab';
 
 export const QuizManagementPage: React.FC = () => {
   const { roleNavigate } = useRoleNavigate();

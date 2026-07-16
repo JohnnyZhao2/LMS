@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Inbox } from 'lucide-react';
-import { useStudentTasks } from '../api/get-tasks';
-import { TaskCard } from './task-card';
+import { useStudentTasks } from '@/features/tasks/api/get-student-tasks';
+import { TaskCard } from '@/features/tasks/components/task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
-import { STUDENT_TASK_STATUS_OPTIONS } from '@/lib/task-status';
+import { STUDENT_TASK_STATUS_OPTIONS } from '@/features/tasks/constants/task-status';
 import type { TaskStatus } from '@/types/common';
 
 const statusOptions = [

@@ -5,8 +5,8 @@ import { BookOpen, ClipboardList, GripVertical, Trash2, Trophy } from 'lucide-re
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getTaskResourceGroup } from './use-task-form.helpers';
-import type { SelectedResource } from './task-form.types';
+import { getTaskResourceGroup } from '@/features/tasks/components/task-form/use-task-form.helpers';
+import type { SelectedResource } from '@/features/tasks/components/task-form/task-form.types';
 
 interface SortableResourceItemProps {
   item: SelectedResource;

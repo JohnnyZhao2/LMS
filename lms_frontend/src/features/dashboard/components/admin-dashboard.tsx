@@ -5,8 +5,8 @@ import {
   Settings,
   ClipboardCheck,
 } from 'lucide-react';
-import { useAdminDashboard } from '../api/admin-dashboard';
-import { ExamReportPanel } from './exam-report-panel';
+import { useAdminDashboard } from '@/features/dashboard/api/admin-dashboard';
+import { ExamReportPanel } from '@/features/dashboard/components/exam-report-panel';
 
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';

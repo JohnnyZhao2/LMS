@@ -2,7 +2,7 @@
  * 任务分析相关类型定义
  */
 
-import type { TaskExecutionStatus } from './common';
+import type { TaskExecutionStatus } from '@/types/common';
 
 export interface TaskAnalytics {
   completion: {

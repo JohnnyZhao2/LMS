@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation';
+import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation/tasks';
 import type { TaskDetail } from '@/types/task';
 
 /**
@@ -15,6 +15,9 @@ export interface TaskCreateRequest {
   assignee_ids: number[];
 }
 
+export const createTask = (data: TaskCreateRequest) =>
+  apiClient.post<TaskDetail>('/tasks/create/', data);
+
 /**
  * 创建任务（统一API）
  */
@@ -22,9 +25,7 @@ export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: TaskCreateRequest) => {
-      return apiClient.post<TaskDetail>('/tasks/create/', data);
-    },
+    mutationFn: createTask,
     onSuccess: () => invalidateAfterTaskMutation(queryClient),
   });
 };

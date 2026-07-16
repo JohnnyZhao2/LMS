@@ -2,8 +2,8 @@
  * 任务相关类型定义
  */
 
-import type { PaginatedResponse, TaskStatus } from './common';
-import type { QuizType } from './quiz';
+import type { PaginatedResponse, TaskStatus } from '@/types/common';
+import type { QuizType } from '@/types/quiz';
 
 interface TaskActions {
   view: boolean;

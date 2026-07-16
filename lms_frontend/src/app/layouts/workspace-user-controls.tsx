@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ROLE_INDICATOR_CLASSES } from '@/config/role-constants'
+import { ROLE_INDICATOR_CLASSES } from '@/config/role-config'
 import { cn } from '@/lib/utils'
 import type { RoleCode } from '@/types/common';
 

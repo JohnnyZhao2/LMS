@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Star, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -7,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { SpotCheckItem } from '@/types/spot-check';
+import type { SpotCheckItem } from '@/features/spot-checks/types/spot-check';
+import { appendPasteImages } from '@/features/spot-checks/utils/spot-check-images';
 
 export type SpotCheckItemEditorMode = 'issue' | 'submit' | 'score' | 'view';
 
@@ -137,20 +139,22 @@ const SpotCheckStarRating: React.FC<SpotCheckStarRatingProps> = ({
 
 export { SpotCheckStarRating };
 
-/** 列表/卡片只读星级芯片 */
-export const SpotCheckStarChip: React.FC<{ value: string | null | undefined }> = ({ value }) => (
-  <div className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-white px-1.5 py-1 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
-    <SpotCheckStarRating value={value} readOnly size="sm" />
-  </div>
-);
-
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+/** 列表/卡片只读星级芯片；无分时显示「未评分」避免空星像 0 分 */
+export const SpotCheckStarChip: React.FC<{ value: string | null | undefined }> = ({ value }) => {
+  const empty = value === '' || value == null || Number.isNaN(Number(value));
+  if (empty) {
+    return (
+      <span className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-muted/40 px-2 py-1 text-[12px] text-text-muted">
+        未评分
+      </span>
+    );
+  }
+  return (
+    <div className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-white px-1.5 py-1 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
+      <SpotCheckStarRating value={value} readOnly size="sm" />
+    </div>
+  );
+};
 
 export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
   index,
@@ -170,12 +174,9 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
     const files = [...event.clipboardData.files].filter((file) => file.type.startsWith('image/'));
     if (files.length === 0) return;
     event.preventDefault();
-    const next = [...images];
-    for (const file of files) {
-      if (next.length >= 5) break;
-      next.push(await readFileAsDataUrl(file));
-    }
-    onChange(index, 'images', next);
+    const { urls, error } = await appendPasteImages(files, images);
+    if (error) toast.error(error);
+    if (urls.length !== images.length) onChange(index, 'images', urls);
   };
 
   return (

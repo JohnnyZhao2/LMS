@@ -172,7 +172,7 @@ AUTHORIZATION_SPECS = (
                     'spot_check.create': SPOT_CHECK_SCOPE_SUMMARY,
                     'spot_check.update': '仅自己创建且可见',
                     'spot_check.delete': '仅自己创建且可见',
-                    'spot_check.submit': '仅本人待填写记录',
+                    'spot_check.submit': '仅本人记录',
                 },
             ),
         ),

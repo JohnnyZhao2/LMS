@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
-import '../shared/knowledge-editor-shared.css';
+import { KnowledgeTextEditor } from '@/features/knowledge/components/editor/knowledge-text-editor';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 interface KnowledgeFocusShellProps {
   content: string;

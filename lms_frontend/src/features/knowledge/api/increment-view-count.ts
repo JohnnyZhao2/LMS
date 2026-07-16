@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { invalidateAfterKnowledgeViewMutation } from '@/lib/cache-invalidation';
+import { invalidateAfterKnowledgeViewMutation } from '@/lib/cache-invalidation/knowledge';
 import { queryKeys } from '@/lib/query-keys';
 import type { KnowledgeDetail } from '@/types/knowledge';
 

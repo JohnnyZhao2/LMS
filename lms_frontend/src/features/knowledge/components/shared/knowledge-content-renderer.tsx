@@ -1,8 +1,9 @@
 import * as React from 'react';
+import DOMPurify from 'dompurify';
 
 import { cn } from '@/lib/utils';
 
-import './knowledge-editor-shared.css';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 type KnowledgeContentVariant = 'detail' | 'focus' | 'card';
 
@@ -28,19 +29,26 @@ export const KnowledgeContentRenderer: React.FC<KnowledgeContentRendererProps> =
   className,
   contentClassName,
   contentStyle,
-}) => (
-  <div
-    className={cn(
-      'ke-content-base',
-      variantClass[variant],
-      compact && 'ke-content-card-preview-short',
-      className,
-    )}
-  >
+}) => {
+  const sanitizedHtml = React.useMemo(
+    () => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } }),
+    [html],
+  );
+
+  return (
     <div
-      className={cn('sqe-content', contentClassName)}
-      style={contentStyle}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  </div>
-);
+      className={cn(
+        'ke-content-base',
+        variantClass[variant],
+        compact && 'ke-content-card-preview-short',
+        className,
+      )}
+    >
+      <div
+        className={cn('sqe-content', contentClassName)}
+        style={contentStyle}
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      />
+    </div>
+  );
+};

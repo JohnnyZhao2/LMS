@@ -71,12 +71,6 @@ python manage.py sync_authorization --settings=config.settings.development
 python manage.py sync_authorization --settings=config.settings.development --overwrite-existing-role-templates
 ```
 
-当前没有 `check_authorization` 命令。静态一致性检查在测试里：
-
-```bash
-python -m pytest tests/test_authorization_consistency.py
-```
-
 ## 常见场景
 
 ### 新增一个权限点
@@ -87,7 +81,6 @@ python -m pytest tests/test_authorization_consistency.py
 4. 需要资源级限制时补 `resource_authorization_handlers`
 5. 前端补说明和守卫
 6. 执行 `sync_authorization`
-7. 跑 `tests/test_authorization_consistency.py`
 
 ### 只调整默认角色模板
 
@@ -103,7 +96,6 @@ python manage.py sync_authorization --settings=config.settings.development
 2. 再删对应模块 `authorization.py` 里的定义
 3. 删前端说明、菜单和路由引用
 4. 执行 `sync_authorization`
-5. 跑一致性测试
 
 ## 不要这样做
 

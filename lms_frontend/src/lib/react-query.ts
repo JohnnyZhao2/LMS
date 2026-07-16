@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { showApiError } from '@/utils/error-handler';
+import { showApiError } from '@/lib/api-error-handler';
 
 /**
  * React Query 客户端配置

@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { richTextToPlainText } from '@/lib/rich-text';
-import type { StudentDashboardTask } from '@/types/dashboard';
+import type { StudentDashboardTask } from '@/features/dashboard/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 
 interface KnowledgeItemProps {

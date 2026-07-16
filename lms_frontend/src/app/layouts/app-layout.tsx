@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Menu } from 'lucide-react'
-import { Sidebar } from './sidebar'
-import { GlobalBreadcrumb } from './global-breadcrumb'
+import { Sidebar } from '@/app/layouts/sidebar'
+import { GlobalBreadcrumb } from '@/app/layouts/global-breadcrumb'
 
 interface AppLayoutProps {
   children: React.ReactNode

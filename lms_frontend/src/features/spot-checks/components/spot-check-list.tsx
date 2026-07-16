@@ -6,15 +6,16 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
-import { showApiError } from '@/utils/error-handler';
-import { useDeleteSpotCheck } from '../api/create-spot-check';
-import { useSpotChecks, useSpotCheckStudents } from '../api/get-spot-checks';
-import { SpotCheckForm } from './spot-check-form';
-import { SpotCheckRecordList } from './spot-check-record-list';
-import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from './spot-check-student-panel';
+import { useAuth } from '@/lib/auth-context';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types/spot-check';
+import { showApiError } from '@/lib/api-error-handler';
+import { useDeleteSpotCheck } from '@/features/spot-checks/api/delete-spot-check';
+import { useSpotCheckStudents } from '@/features/spot-checks/api/get-spot-check-students';
+import { useSpotChecks } from '@/features/spot-checks/api/get-spot-checks';
+import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
+import { SpotCheckRecordList } from '@/features/spot-checks/components/spot-check-record-list';
+import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from '@/features/spot-checks/components/spot-check-student-panel';
 
 const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepartmentFilter) => {
   if (filter === 'all') {
@@ -109,14 +110,22 @@ export const SpotCheckList: React.FC = () => {
 
   const handleToggleCheckAll = (selectAll: boolean) => {
     if (!selectAll) {
-      setCheckedStudentIds([]);
+      // 仅清空当前可见勾选，保留筛选外已选
+      setCheckedStudentIds((prev) => prev.filter((id) => !filteredStudentIdSet.has(id)));
       return;
     }
-    setCheckedStudentIds(filteredStudents.map((student) => student.id));
+    // 合并：当前不可见已选 ∪ 当前可见全部
+    setCheckedStudentIds((prev) => {
+      const next = new Set(prev);
+      filteredStudents.forEach((student) => next.add(student.id));
+      return [...next];
+    });
   };
 
-  /** 发起对象：仅勾选的学员（悬浮 + 有勾选才出现） */
-  const createTargetStudentIds = visibleCheckedStudentIds;
+  /** 发起对象：当前筛选可见且已勾选的学员 */
+  const createTargetStudents = filteredStudents.filter((student) =>
+    visibleCheckedStudentIds.includes(student.id),
+  );
 
   const updatePagination = (next: { page?: number; pageSize?: number }) => {
     if (!resolvedSelectedStudentId) {
@@ -187,7 +196,7 @@ export const SpotCheckList: React.FC = () => {
           {isCreateDialogOpen ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
               <SpotCheckForm
-                studentIds={createTargetStudentIds}
+                students={createTargetStudents}
                 hidePageHeader
                 onCancel={() => setIsCreateDialogOpen(false)}
                 onSuccess={() => {

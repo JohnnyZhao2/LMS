@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
-import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';
-import { useSaveAnswer } from '../api/save-answer';
+import { useStartQuiz } from '@/features/submissions/api/start-quiz';
+import { useSubmitQuiz } from '@/features/submissions/api/submit-quiz';
+import { useSaveAnswer } from '@/features/submissions/api/save-answer';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Spinner } from '@/components/ui/spinner';
-import { buildQuestionSections } from '@/entities/question/question-sections';
-import { showApiError } from '@/utils/error-handler';
-import type { SubmissionDetail } from '@/types/submission';
+import { buildQuestionSections } from '@/components/questions/question-sections';
+import { showApiError } from '@/lib/api-error-handler';
+import type { SubmissionDetail } from '@/features/submissions/types/submission';
 
-import { QuizAbandonDialog, QuizSubmitDialog } from './quiz-player-dialogs';
-import { QuizPlayerMainPanel } from './quiz-player-main-panel';
-import { QuizInfoPanel, QuizProgressPanel } from './quiz-player-panels';
-import { isAnswerEmpty } from './quiz-player-utils';
+import { QuizAbandonDialog, QuizSubmitDialog } from '@/features/submissions/components/quiz-player-dialogs';
+import { QuizPlayerMainPanel } from '@/features/submissions/components/quiz-player-main-panel';
+import { QuizInfoPanel, QuizProgressPanel } from '@/features/submissions/components/quiz-player-panels';
+import { isAnswerEmpty } from '@/features/submissions/components/quiz-player-utils';
 
 const QUESTION_SCROLL_OFFSET = 16;
 

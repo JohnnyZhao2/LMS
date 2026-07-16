@@ -3,19 +3,19 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
-import { showApiError } from '@/utils/error-handler';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { showApiError } from '@/lib/api-error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
-import { useQuizDetail } from '@/entities/quiz/api/get-quizzes';
-import { useTaskDetail } from '@/entities/task/api/get-task-detail';
+import { useQuizDetail } from '@/hooks/api/use-quiz-detail';
+import { useTaskDetail } from '@/hooks/api/use-task-detail';
 
-import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
-import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
-import { useTaskResourceOptions } from '../../api/get-task-resources';
-import { useUpdateTask } from '../../api/update-task';
-import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
-import { mapTaskResourceOptionToResource } from './task-form.types';
+import { useCreateTask, type TaskCreateRequest } from '@/features/tasks/api/create-task';
+import { useAssignableUsers } from '@/hooks/api/use-assignable-users';
+import { useTaskResourceOptions } from '@/features/tasks/api/get-task-resources';
+import { useUpdateTask } from '@/features/tasks/api/update-task';
+import type { ResourceItem, SelectedResource, ResourceType } from '@/features/tasks/components/task-form/task-form.types';
+import { mapTaskResourceOptionToResource } from '@/features/tasks/components/task-form/task-form.types';
 import {
   buildStableUid,
   buildTaskFormInitialSelectedResources,
@@ -23,7 +23,7 @@ import {
   hasMissingTaskResourceSources,
   insertSelectedResourceByGroup,
   reorderSelectedResourcesWithinGroup,
-} from './use-task-form.helpers';
+} from '@/features/tasks/components/task-form/use-task-form.helpers';
 
 const PAGE_SIZE = 9;
 

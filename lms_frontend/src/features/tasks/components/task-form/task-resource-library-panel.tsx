@@ -24,8 +24,8 @@ import {
   TASK_FORM_SEGMENTED_CONTROL_CLASSNAME,
   TASK_FORM_WARNING_ALERT_CLASSNAME,
   TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
-} from './task-form.constants';
-import type { ResourceItem, ResourceType } from './task-form.types';
+} from '@/features/tasks/components/task-form/task-form.constants';
+import type { ResourceItem, ResourceType } from '@/features/tasks/components/task-form/task-form.types';
 
 interface TaskResourceLibraryPanelProps {
   availableResources: ResourceItem[];

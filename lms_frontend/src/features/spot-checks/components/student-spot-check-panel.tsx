@@ -11,12 +11,13 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
-import { showApiError } from '@/utils/error-handler';
-import { useSubmitSpotCheck } from '../api/create-spot-check';
-import { useMySpotChecks, useSpotCheckDetail } from '../api/get-spot-checks';
-import { SPOT_CHECK_STATUS_META } from '../lib/spot-check-status';
-import { SpotCheckItemEditor, SpotCheckStarChip } from './spot-check-item-editor';
+import type { SpotCheck, SpotCheckItem } from '@/features/spot-checks/types/spot-check';
+import { showApiError } from '@/lib/api-error-handler';
+import { useMySpotChecks } from '@/features/spot-checks/api/get-my-spot-checks';
+import { useSpotCheckDetail } from '@/features/spot-checks/api/get-spot-check';
+import { useSubmitSpotCheck } from '@/features/spot-checks/api/submit-spot-check';
+import { SPOT_CHECK_STATUS_META } from '@/features/spot-checks/constants/spot-check-status';
+import { SpotCheckItemEditor, SpotCheckStarChip } from '@/features/spot-checks/components/spot-check-item-editor';
 
 const statusFilterOptions = [
   { value: 'PENDING', label: '待填写' },

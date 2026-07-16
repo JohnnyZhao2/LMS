@@ -4,7 +4,7 @@ import { Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RelatedLink } from '@/types/knowledge';
 
-import './knowledge-editor-shared.css';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 interface RelatedLinksEditorProps {
   variant: 'detail' | 'focus';

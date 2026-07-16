@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 import { toast } from 'sonner';
 import {
   User,
@@ -23,19 +26,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
-import { ROLE_COLORS } from '@/lib/role-config';
-import { useAuth } from '@/session/auth/auth-context';
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { ROLE_COLORS } from '@/config/role-config';
+import { useAuth } from '@/lib/auth-context';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization-access';
 import {
   getNextAssignableRoleCodes,
   isAssignableRoleCode,
-} from '@/entities/authorization/utils/user-role-assignment';
+} from '@/utils/authorization/user-role-assignment';
 
-import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
-import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';
-import { showApiError } from '@/utils/error-handler';
+import { useAssignMentor } from '@/hooks/api/use-assign-mentor';
+import { useAssignRoles } from '@/hooks/api/use-assign-roles';
+import { useCreateUser } from '@/hooks/api/use-create-user';
+import { useUpdateUser } from '@/hooks/api/use-update-user';
+import { useDepartments } from '@/hooks/api/use-departments';
+import { useMentors } from '@/hooks/api/use-mentors';
+import { useRoles } from '@/hooks/api/use-roles';
+import { useUserDetail } from '@/hooks/api/use-user-detail';
+import { showApiError } from '@/lib/api-error-handler';
 import type { RoleCode } from '@/types/common';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
 
@@ -48,21 +57,43 @@ interface UserFormProps {
   onSuccess?: () => void;
 }
 
-interface FormData {
-  username: string;
-  employee_id: string;
-  password: string;
-  department_id: number | undefined;
-  role_codes: RoleCode[];
-  mentor_id: number | null;
-}
+const roleCodeSchema = z.enum([
+  'STUDENT',
+  'MENTOR',
+  'DEPT_MANAGER',
+  'ADMIN',
+  'TEAM_MANAGER',
+  'SUPER_ADMIN',
+]);
 
-interface FormErrors {
-  username?: string;
-  employee_id?: string;
-  password?: string;
-  department_id?: string;
-}
+const createUserFormSchema = (isEdit: boolean) =>
+  z
+    .object({
+      username: z.string().trim().min(1, '此项必填'),
+      employee_id: z.string().trim().min(1, '此项必填'),
+      password: z.string(),
+      department_id: z.number({ error: '请选择部门' }).optional(),
+      role_codes: z.array(roleCodeSchema),
+      mentor_id: z.number().nullable(),
+    })
+    .superRefine((values, context) => {
+      if (!isEdit && !values.password.trim()) {
+        context.addIssue({
+          code: 'custom',
+          path: ['password'],
+          message: '设置初始密码',
+        });
+      }
+      if (!values.department_id) {
+        context.addIssue({
+          code: 'custom',
+          path: ['department_id'],
+          message: '请选择部门',
+        });
+      }
+    });
+
+type FormData = z.infer<ReturnType<typeof createUserFormSchema>>;
 
 /**
  * 用户表单组件 — 外层壳，负责数据获取与 Dialog 控制
@@ -172,59 +203,45 @@ const UserFormContent: React.FC<{
       isEdit && userDetail ? (userDetail.mentor?.id || null) : null,
     );
 
-    const [formData, setFormData] = useState<FormData>(() => {
-      if (isEdit && userDetail) {
-        return {
-          username: userDetail.username,
-          employee_id: userDetail.employee_id,
-          password: '',
-          department_id: userDetail.department?.id,
-          role_codes: initialRoleCodes,
-          mentor_id: initialAssignedMentorId,
-        };
-      }
-      return {
-        username: '',
-        employee_id: '',
-        password: '',
-        department_id: initialDepartmentId,
-        role_codes: [],
-        mentor_id: initialMentorId ?? null,
-      };
+    const form = useForm<FormData>({
+      resolver: zodResolver(createUserFormSchema(isEdit)),
+      defaultValues: isEdit && userDetail
+        ? {
+            username: userDetail.username,
+            employee_id: userDetail.employee_id,
+            password: '',
+            department_id: userDetail.department?.id,
+            role_codes: initialRoleCodes,
+            mentor_id: initialAssignedMentorId,
+          }
+        : {
+            username: '',
+            employee_id: '',
+            password: '',
+            department_id: initialDepartmentId,
+            role_codes: [],
+            mentor_id: initialMentorId ?? null,
+          },
     });
-
+    const formData = useWatch({ control: form.control });
     const [mentorTouched, setMentorTouched] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errors, setErrors] = useState<FormErrors>({});
     const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
+    const canEditBaseInfo = isEdit ? canUpdateUser : canCreateUser;
 
-    const validate = (): boolean => {
-      const newErrors: FormErrors = {};
-      if (!formData.username.trim()) newErrors.username = '此项必填';
-      if (!formData.employee_id.trim()) newErrors.employee_id = '此项必填';
-      if (!isEdit && !formData.password.trim()) newErrors.password = '设置初始密码';
-      if (!formData.department_id) newErrors.department_id = '请选择部门';
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async () => {
-      if (isSubmitting) return;
-      if (!validate()) return;
-      setIsSubmitting(true);
+    const handleSubmit = async (values: FormData) => {
       try {
         if (isEdit) {
-          const roleSet = new Set(formData.role_codes);
+          const roleSet = new Set(values.role_codes);
           const initialRoleSet = new Set(initialRoleCodes);
           const rolesChanged =
             roleSet.size !== initialRoleSet.size ||
             [...roleSet].some((code) => !initialRoleSet.has(code));
           const baseInfoChanged = (
-            formData.username !== (userDetail?.username ?? '')
-            || formData.employee_id !== (userDetail?.employee_id ?? '')
-            || (formData.department_id ?? null) !== (userDetail?.department?.id ?? null)
+            values.username !== (userDetail?.username ?? '')
+            || values.employee_id !== (userDetail?.employee_id ?? '')
+            || (values.department_id ?? null) !== (userDetail?.department?.id ?? null)
           );
-          const mentorChanged = mentorTouched && formData.mentor_id !== initialAssignedMentorId;
+          const mentorChanged = mentorTouched && values.mentor_id !== initialAssignedMentorId;
 
           if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
@@ -239,17 +256,17 @@ const UserFormContent: React.FC<{
             await updateUser.mutateAsync({
               id: userId!,
               data: {
-                username: formData.username,
-                employee_id: formData.employee_id,
-                department_id: formData.department_id,
+                username: values.username,
+                employee_id: values.employee_id,
+                department_id: values.department_id,
               },
             });
           }
           if (mentorChanged) {
-            await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
+            await assignMentor.mutateAsync({ id: userId!, mentorId: values.mentor_id });
           }
           if (rolesChanged) {
-            await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
+            await assignRoles.mutateAsync({ id: userId!, roles: values.role_codes });
           }
           toast.success("账号信息已更新");
         } else {
@@ -262,12 +279,12 @@ const UserFormContent: React.FC<{
             return;
           }
           await createUser.mutateAsync({
-            username: formData.username,
-            employee_id: formData.employee_id,
-            password: formData.password,
-            department_id: formData.department_id!,
-            mentor_id: formData.mentor_id,
-            role_codes: formData.role_codes,
+            username: values.username,
+            employee_id: values.employee_id,
+            password: values.password,
+            department_id: values.department_id!,
+            mentor_id: values.mentor_id,
+            role_codes: values.role_codes,
           });
           toast.success("新账号已创建");
         }
@@ -275,25 +292,22 @@ const UserFormContent: React.FC<{
         onSuccess?.();
       } catch (error) {
         showApiError(error);
-      } finally {
-        setIsSubmitting(false);
       }
     };
 
     const toggleRole = (code: RoleCode) => {
-      setFormData((prev) => {
-        return {
-          ...prev,
-          role_codes: isSuperuserAccount ? [] : getNextAssignableRoleCodes(prev.role_codes, code),
-        };
-      });
+      form.setValue(
+        'role_codes',
+        isSuperuserAccount ? [] : getNextAssignableRoleCodes(form.getValues('role_codes'), code),
+        { shouldDirty: true },
+      );
     };
 
     const isRoleToggleDisabled = (): boolean => {
       return isSuperuserAccount;
     };
 
-    const isLoading = isSubmitting
+    const isLoading = form.formState.isSubmitting
       || createUser.isPending
       || updateUser.isPending
       || assignRoles.isPending
@@ -336,15 +350,18 @@ const UserFormContent: React.FC<{
                       <label className="text-sm font-bold text-slate-500 block">真实姓名</label>
                       <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
                         <Input
-                          value={formData.username}
-                          onChange={e => setFormData({ ...formData, username: e.target.value })}
+                          {...form.register('username')}
                           placeholder="输入姓名"
-                          disabled={!canUpdateUser}
+                          disabled={!canEditBaseInfo}
                           interactionStyle="minimal"
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                         />
                       </div>
-                      {errors.username && <p className="text-xs font-bold text-destructive mt-1">{errors.username}</p>}
+                      {form.formState.errors.username && (
+                        <p className="text-xs font-bold text-destructive mt-1">
+                          {form.formState.errors.username.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* 2. Employee ID */}
@@ -352,15 +369,18 @@ const UserFormContent: React.FC<{
                       <label className="text-sm font-bold text-slate-500 block">员工工号</label>
                       <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
                         <Input
-                          value={formData.employee_id}
-                          onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                          disabled={!canUpdateUser}
+                          {...form.register('employee_id')}
+                          disabled={!canEditBaseInfo}
                           interactionStyle="minimal"
                           className="h-10 font-mono bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="例如：EMP001"
                         />
                       </div>
-                      {errors.employee_id && <p className="text-xs font-bold text-destructive mt-1">{errors.employee_id}</p>}
+                      {form.formState.errors.employee_id && (
+                        <p className="text-xs font-bold text-destructive mt-1">
+                          {form.formState.errors.employee_id.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -371,15 +391,18 @@ const UserFormContent: React.FC<{
                       <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
                         <Input
                           type="password"
-                          value={formData.password}
-                          onChange={e => setFormData({ ...formData, password: e.target.value })}
-                          disabled={!canUpdateUser}
+                          {...form.register('password')}
+                          disabled={!canEditBaseInfo}
                           interactionStyle="minimal"
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="设置 6 位以上密码"
                         />
                       </div>
-                      {errors.password && <p className="text-xs font-bold text-destructive mt-1">{errors.password}</p>}
+                      {form.formState.errors.password && (
+                        <p className="text-xs font-bold text-destructive mt-1">
+                          {form.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -395,11 +418,11 @@ const UserFormContent: React.FC<{
                     <div className="relative">
                       <Select
                         value={formData.mentor_id?.toString() || ''}
-                        disabled={!canUpdateUser}
+                        disabled={!canEditBaseInfo}
                         onValueChange={(v) => {
-                          if (!canUpdateUser) return;
+                          if (!canEditBaseInfo) return;
                           setMentorTouched(true);
-                          setFormData({ ...formData, mentor_id: v ? Number(v) : null });
+                          form.setValue('mentor_id', v ? Number(v) : null, { shouldDirty: true });
                         }}
                       >
                         <SelectTrigger>
@@ -424,14 +447,14 @@ const UserFormContent: React.FC<{
                           )}
                         </SelectContent>
                       </Select>
-                      {formData.mentor_id && canUpdateUser && (
+                      {formData.mentor_id && canEditBaseInfo && (
                         <button
                           type="button"
                           className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-destructive transition-colors z-[20]"
                           onClick={() => {
-                            if (!canUpdateUser) return;
+                            if (!canEditBaseInfo) return;
                             setMentorTouched(true);
-                            setFormData({ ...formData, mentor_id: null });
+                            form.setValue('mentor_id', null, { shouldDirty: true });
                           }}
                         >
                           <Plus className="w-4 h-4 rotate-45" />
@@ -454,12 +477,15 @@ const UserFormContent: React.FC<{
                           <div
                             key={dept.id}
                             onClick={() => {
-                              if (!canUpdateUser) return;
-                              setFormData({ ...formData, department_id: dept.id });
+                              if (!canEditBaseInfo) return;
+                              form.setValue('department_id', dept.id, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
                             }}
                             className={cn(
                               "px-6 py-2 rounded-full border transition-all duration-300 ease-in-out",
-                              canUpdateUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+                              canEditBaseInfo ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                               active
                                 ? "border-primary text-primary bg-white shadow-sm"
                                 : "border-border/70 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50/30 hover:text-slate-700"
@@ -470,6 +496,11 @@ const UserFormContent: React.FC<{
                         );
                       })}
                     </div>
+                    {form.formState.errors.department_id && (
+                      <p className="text-xs font-bold text-destructive">
+                        {form.formState.errors.department_id.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -486,7 +517,7 @@ const UserFormContent: React.FC<{
               <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
                 {roles.filter((role) => isAssignableRoleCode(role.code)).map(role => {
                   const roleCode = role.code as RoleCode;
-                  const active = formData.role_codes.includes(roleCode);
+                  const active = (formData.role_codes ?? []).includes(roleCode);
                   const disabled = !canAssignUserRole || isRoleToggleDisabled();
                   const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
@@ -549,7 +580,7 @@ const UserFormContent: React.FC<{
                 取消
               </button>
               <Button
-                onClick={handleSubmit}
+                onClick={form.handleSubmit(handleSubmit)}
                 disabled={isLoading || !canSubmitForm}
                 className="h-10 px-9 rounded-full bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
               >

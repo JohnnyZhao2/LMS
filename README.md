@@ -27,8 +27,7 @@ LMS/
 │   ├── docs/         # 后端维护/设计文档
 │   ├── apps/         # 业务模块
 │   ├── config/       # Django 配置、路由、settings
-│   ├── core/         # 共享基类、异常、响应、分页
-│   └── tests/        # 集成测试
+│   └── core/         # 共享基类、异常、响应、分页
 ├── lms_frontend/
 │   ├── docs/         # 前端规范/ADR/生成文档
 │   ├── src/app/      # 应用壳、路由
@@ -47,7 +46,6 @@ LMS/
 - Django REST Framework
 - MySQL 8.0
 - drf-spectacular
-- pytest / pytest-django / hypothesis / factory-boy
 
 ### 前端
 
@@ -96,7 +94,6 @@ cp lms_frontend/.env.development.example lms_frontend/.env.development
 - 前端生产构建读取部署机上的 `lms_frontend/.env.production`（勿提交）
 - `manage.py` 默认使用 `config.settings.development`
 - `python manage.py` 会按 settings 自动选择对应环境文件
-- `pytest` 默认走 `config.settings.test`，不需要额外 env 文件
 - 前端默认请求 `http://127.0.0.1:8000/api`
 
 ### 3. 启动后端
@@ -139,28 +136,6 @@ npm run docs:generate
 npm run docs:check
 npm run preview
 ```
-
-## 测试
-
-后端测试位于 `lms_backend/tests/`，默认使用开发配置并自动创建测试库 `test_<DB_NAME>`。
-
-```bash
-cd lms_backend
-python -m pytest
-```
-
-常见单测入口：
-
-```bash
-python -m pytest tests/integration/test_auth_refresh.py -q -x
-python -m pytest tests/integration/test_api_contracts.py -q -x
-python -m pytest tests/integration/test_dashboard.py -q -x
-```
-
-说明：
-
-- 运行 Django 测试和迁移前，需要本机 MySQL 可连接
-- 前端当前没有成体系测试基建，只有少量零散测试文件
 
 ## 开发约定
 

@@ -1,8 +1,8 @@
 import { LayoutGrid } from 'lucide-react';
 import type { RoleCode } from '@/types/common';
-import { getRolePathPrefix } from '@/session/workspace/role-paths';
-import { BUSINESS_ROUTE_META, type BusinessRouteMeta, type MenuItem, type MenuLabelResolver, type OrderedMenuItem } from './route-registry';
-import { getWorkspaceConfig, type WorkspaceConfig } from './workspace-config';
+import { getRolePathPrefix } from '@/config/role-paths';
+import { BUSINESS_ROUTE_META, type BusinessRouteMeta, type MenuItem, type MenuLabelResolver, type OrderedMenuItem } from '@/app/route-registry';
+import { getWorkspaceConfig, type WorkspaceConfig } from '@/app/workspace-config';
 
 const resolveMenuLabel = (
   label: MenuLabelResolver,

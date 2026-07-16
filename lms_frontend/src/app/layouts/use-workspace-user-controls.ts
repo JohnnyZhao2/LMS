@@ -2,13 +2,13 @@ import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { useUpdateMyAvatar } from '@/entities/user/api/manage-users';
-import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { getWorkspacePath, stripWorkspacePathPrefix } from '@/session/workspace/role-paths';
+import { useUpdateMyAvatar } from '@/hooks/api/use-update-my-avatar';
+import { useAuth } from '@/lib/auth-context';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { getWorkspacePath, stripWorkspacePathPrefix } from '@/config/role-paths';
 import { ROLE_FULL_LABELS, ROLE_ORDER } from '@/config/role-constants';
 import type { RoleCode } from '@/types/common';
-import { showApiError } from '@/utils/error-handler';
+import { showApiError } from '@/lib/api-error-handler';
 
 export const useWorkspaceUserControls = () => {
   const { user, availableRoles, switchRole, refreshUser } = useAuth();

@@ -1,15 +1,17 @@
 import { CalendarDays, ListChecks, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
 
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ListTag } from '@/components/ui/list-tag';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import dayjs from '@/lib/dayjs';
-import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
-import { SpotCheckStarChip } from './spot-check-item-editor';
+import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types/spot-check';
+import { SPOT_CHECK_STATUS_META } from '@/features/spot-checks/constants/spot-check-status';
+import { SpotCheckStarChip } from '@/features/spot-checks/components/spot-check-item-editor';
 
 interface SpotCheckRecordListProps {
   selectedStudent: SpotCheckStudent | null;
@@ -93,6 +95,9 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                   >
                     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-text-muted">
+                        <ListTag size="xs" className={SPOT_CHECK_STATUS_META[record.status].className}>
+                          {SPOT_CHECK_STATUS_META[record.status].label}
+                        </ListTag>
                         <div className="flex items-center gap-2">
                           <CalendarDays className="h-3.5 w-3.5" />
                           <span className="font-medium">{dayjs(record.created_at).format('YYYY-MM-DD')}</span>
@@ -107,7 +112,13 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                         className="flex min-h-8 items-center"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <SpotCheckStarChip value={record.average_score} />
+                        {record.status === 'SCORED' || record.average_score != null ? (
+                          <SpotCheckStarChip value={record.average_score} />
+                        ) : (
+                          <span className="text-[12px] text-text-muted">
+                            {record.status === 'PENDING' ? '待学员填写' : '待评分'}
+                          </span>
+                        )}
                         {record.actions.delete ? (
                           <>
                             <div className="mx-3 h-6 w-px bg-border/80" />
@@ -135,9 +146,11 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                           <h3 className="line-clamp-2 pr-16 text-[16px] font-semibold leading-[1.35] text-foreground">
                             {item.topic}
                           </h3>
-                          <div className="absolute bottom-3 right-3">
-                            <SpotCheckStarChip value={item.score} />
-                          </div>
+                          {item.score != null && item.score !== '' ? (
+                            <div className="absolute bottom-3 right-3">
+                              <SpotCheckStarChip value={item.score} />
+                            </div>
+                          ) : null}
                         </section>
                       ))}
                     </div>
@@ -165,7 +178,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
         ) : (
           <EmptyState
             icon={ListChecks}
-            description="该学员还没有抽查记录，完成一次抽查后会在这里展示。"
+            description="该学员还没有抽查记录，发起抽查后会出现在这里。"
           />
         )}
       </Spinner>

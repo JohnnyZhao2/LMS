@@ -3,9 +3,9 @@ import {
   Link as LinkGlyph,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/knowledge';
-import { plain, isLong } from '../../utils/content-utils';
-import { KnowledgeContentRenderer } from '../shared/knowledge-content-renderer';
-import { FocusOrbIcon } from '../shared/focus-icon';
+import { plain, isLong } from '@/features/knowledge/utils/content-utils';
+import { KnowledgeContentRenderer } from '@/features/knowledge/components/shared/knowledge-content-renderer';
+import { FocusOrbIcon } from '@/features/knowledge/components/shared/focus-icon';
 
 interface KnowledgeCardMymindProps {
   item: KnowledgeListItem;

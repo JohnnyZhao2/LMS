@@ -1,46 +1,44 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Upload } from 'lucide-react';
-import {
-  CheckCircle,
-} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { useTags } from '@/entities/tag/api/tags';
-import { useKnowledgeDetail } from '../../api/knowledge';
-import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowledge';
-import { useParseDocument } from '../../api/parse-document';
-import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
-import { useCompleteLearning } from '@/entities/task/api/complete-learning';
-import { useStudentLearningTaskDetail } from '@/entities/task/api/get-task-detail';
-import { useAuth } from '@/session/auth/auth-context';
+import { useTags } from '@/hooks/api/use-tags';
+import { useKnowledgeDetail } from '@/features/knowledge/api/use-knowledge-detail';
+import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
+import { useUpdateKnowledge } from '@/features/knowledge/api/update-knowledge';
+import { useParseDocument } from '@/features/knowledge/api/parse-document';
+import { useKnowledgeModalInteractions } from '@/features/knowledge/hooks/use-knowledge-modal-interactions';
+import { useCompleteLearning } from '@/hooks/api/use-complete-learning';
+import { useStudentLearningTaskDetail } from '@/hooks/api/use-student-learning-task-detail';
+import { useAuth } from '@/lib/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
-import { FocusOrbIcon } from '../shared/focus-icon';
-import { KnowledgeActionButton } from '../shared/knowledge-action-button';
-import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
-import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
-import { KnowledgeDetailOutline } from './knowledge-detail-outline';
+import { FocusOrbIcon } from '@/features/knowledge/components/shared/focus-icon';
+import { KnowledgeTextEditor } from '@/features/knowledge/components/editor/knowledge-text-editor';
+import { KnowledgeDetailSidePanel } from '@/features/knowledge/components/modals/knowledge-detail-side-panel';
+import { KnowledgeDetailOutline } from '@/features/knowledge/components/modals/knowledge-detail-outline';
 import {
   getKnowledgeOutlineItems,
   type KnowledgeOutlineItem,
-} from './knowledge-detail-outline-utils';
-import { KnowledgeFocusShell } from './knowledge-focus-shell';
-import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
-import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
-import { showApiError } from '@/utils/error-handler';
+} from '@/features/knowledge/components/modals/knowledge-detail-outline-utils';
+import { KnowledgeFocusShell } from '@/features/knowledge/components/modals/knowledge-focus-shell';
+import { KnowledgeFocusMetadataBar } from '@/features/knowledge/components/modals/knowledge-focus-metadata-bar';
+import { KnowledgeLearningAction } from '@/features/knowledge/components/modals/knowledge-learning-action';
+import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
+import { showApiError } from '@/lib/api-error-handler';
 import {
   createEmptyRelatedLink,
   sanitizeRelatedLinks,
-} from '../../utils/related-links';
+} from '@/features/knowledge/utils/related-links';
 import {
   hasMeaningfulKnowledgeHtml,
   textToKnowledgeHtml,
-} from '../../utils/slash-shortcuts';
-import './knowledge-detail-modal.css';
+} from '@/features/knowledge/utils/slash-shortcuts';
+import '@/features/knowledge/components/modals/knowledge-detail-modal.css';
 
 function relTime(dateStr: string): string {
   const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
@@ -716,47 +714,25 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
 
-  const renderLearningAction = ({ immersive = false, docked = false }: { immersive?: boolean; docked?: boolean } = {}) => {
-    if (!isStudent || !taskId || !taskKnowledgeId) {
-      return null;
-    }
-
-    if (isCompleted) {
-      return immersive ? (
-        <div className="kab-chip kd-immersive-learning-state">
-          <CheckCircle style={{ width: 14, height: 14 }} />
-          已学习
-        </div>
-      ) : (
-        <div className={`kd-complete-done${docked ? ' kd-complete-done-docked' : ''}`}>
-          <CheckCircle style={{ width: 14, height: 14 }} />
-          已学习
-        </div>
-      );
-    }
-
-    return immersive ? (
-      <KnowledgeActionButton
-        onClick={handleComplete}
-        disabled={completeLearning.isPending}
-        className="kd-immersive-save-btn"
-      >
-        {completeLearning.isPending ? '处理中…' : '标记已学习'}
-      </KnowledgeActionButton>
-    ) : (
-      <KnowledgeActionButton
-        variant="solid"
-        onClick={handleComplete}
-        disabled={completeLearning.isPending}
-        className={docked ? 'kd-complete-btn-docked' : undefined}
-      >
-        {completeLearning.isPending ? '处理中…' : '标记已学习'}
-      </KnowledgeActionButton>
-    );
-  };
-
-  const learningAction = renderLearningAction({ docked: true });
-  const immersiveLearningAction = renderLearningAction({ immersive: true });
+  const showLearningAction = isStudent && Boolean(taskId) && Boolean(taskKnowledgeId);
+  const learningAction = showLearningAction ? (
+    <KnowledgeLearningAction
+      visible
+      completed={Boolean(isCompleted)}
+      pending={completeLearning.isPending}
+      onComplete={handleComplete}
+      docked
+    />
+  ) : null;
+  const immersiveLearningAction = showLearningAction ? (
+    <KnowledgeLearningAction
+      visible
+      completed={Boolean(isCompleted)}
+      pending={completeLearning.isPending}
+      onComplete={handleComplete}
+      immersive
+    />
+  ) : null;
 
   if (isCreateMode) {
     return createPortal(

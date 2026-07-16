@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { SpotCheckStudent } from '@/types/spot-check';
+import type { SpotCheckStudent } from '@/features/spot-checks/types/spot-check';
 
 export type SpotCheckDepartmentFilter = 'all' | 'room1' | 'room2';
 

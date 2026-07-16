@@ -17,7 +17,7 @@ const checkMode = process.argv.includes('--check')
 
 const sourceExtensions = ['.ts', '.tsx']
 const sharedLayers = new Set(['components', 'hooks', 'lib', 'utils', 'config', 'types'])
-const layerOrder = ['app', 'features', 'entities', 'session', 'components', 'hooks', 'lib', 'utils', 'config', 'types']
+const layerOrder = ['app', 'features', 'components', 'hooks', 'lib', 'utils', 'config', 'testing', 'types']
 
 function findProjectRoot(startDir) {
   let currentDir = startDir
@@ -512,20 +512,12 @@ function renderDependencyGraph() {
   const sharedToApp = layerRows
     .filter((row) => sharedLayers.has(row.from) && row.to === 'app')
     .reduce((sum, row) => sum + row.count, 0)
-  const sessionToFeature = layerRows
-    .filter((row) => row.from === 'session' && row.to === 'features')
-    .reduce((sum, row) => sum + row.count, 0)
-  const sessionToApp = layerRows
-    .filter((row) => row.from === 'session' && row.to === 'app')
-    .reduce((sum, row) => sum + row.count, 0)
   const crossFeatureTotal = crossFeatureRows.reduce((sum, row) => sum + row.count, 0)
 
   lines.push(`- \`feature -> app\`：${layerRows.filter((row) => row.from === 'features' && row.to === 'app').reduce((sum, row) => sum + row.count, 0)}`)
   lines.push(`- \`cross-feature\`：${crossFeatureTotal}`)
   lines.push(`- \`shared -> feature\`：${sharedToFeature}`)
   lines.push(`- \`shared -> app\`：${sharedToApp}`)
-  lines.push(`- \`session -> feature\`：${sessionToFeature}`)
-  lines.push(`- \`session -> app\`：${sessionToApp}`)
   lines.push('')
 
   return `${lines.join('\n').trim()}\n`

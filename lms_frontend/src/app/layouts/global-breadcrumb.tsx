@@ -2,8 +2,8 @@ import React from 'react';
 import { matchPath, useLocation } from 'react-router-dom';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { ROUTES } from '@/config/routes';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { getWorkspaceHome, getWorkspacePath } from '@/session/workspace/role-paths';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { getWorkspaceHome, getWorkspacePath } from '@/config/role-paths';
 import type { RoleCode } from '@/types/common';
 import { getWorkspaceConfig } from '@/app/workspace-config';
 

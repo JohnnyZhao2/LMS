@@ -20,10 +20,10 @@ import { BookOpen, ClipboardList, LayoutList, Trophy } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { cn } from '@/lib/utils';
 
-import { getTaskResourceGroup } from './use-task-form.helpers';
-import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
-import { SortableResourceItem } from './sortable-resource-item';
-import type { ResourceGroup, SelectedResource } from './task-form.types';
+import { getTaskResourceGroup } from '@/features/tasks/components/task-form/use-task-form.helpers';
+import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from '@/features/tasks/components/task-form/task-form.constants';
+import { SortableResourceItem } from '@/features/tasks/components/task-form/sortable-resource-item';
+import type { ResourceGroup, SelectedResource } from '@/features/tasks/components/task-form/task-form.types';
 
 interface TaskPipelinePanelProps {
   selectedResources: SelectedResource[];

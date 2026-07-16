@@ -3,14 +3,14 @@ import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 
 import { Spinner } from '@/components/ui/spinner';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import {
   getAccessibleWorkspaceHome,
   getWorkspaceHome,
   normalizeRoleCode,
-} from '@/session/workspace/role-paths';
+} from '@/config/role-paths';
 import type { RoleCode } from '@/types/common';
-import { showApiError } from '@/utils/error-handler';
+import { showApiError } from '@/lib/api-error-handler';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

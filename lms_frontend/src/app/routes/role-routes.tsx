@@ -2,17 +2,18 @@
 import { Navigate, Route, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '@/app/guards/route-guard';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import {
   BUSINESS_ROUTE_META,
   getBusinessRouteElement,
   getWorkspaceDashboardElement,
-} from '../route-registry';
+} from '@/app/route-registry';
 import {
   getAccessibleWorkspaceHome,
   getWorkspaceConfig,
   normalizeRoleCode,
-} from '../workspace-config';
+} from '@/app/workspace-config';
 
 const Dashboard = () => {
   const { role } = useParams<{ role: string }>();
@@ -53,7 +54,7 @@ export const roleRoutes = [
           requiredPermissions={route.requiredPermissions}
           permissionMode={route.permissionMode}
         >
-          {getBusinessRouteElement(route)}
+          <ErrorBoundary>{getBusinessRouteElement(route)}</ErrorBoundary>
         </ProtectedRoute>
       )}
     />

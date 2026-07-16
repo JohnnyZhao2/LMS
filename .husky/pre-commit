@@ -1,0 +1,1 @@
+npm --prefix lms_frontend run check

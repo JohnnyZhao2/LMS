@@ -1,4 +1,4 @@
-import type { RoleCode } from './common';
+import type { RoleCode } from '@/types/common';
 
 export interface PermissionCatalogItem {
   code: string;

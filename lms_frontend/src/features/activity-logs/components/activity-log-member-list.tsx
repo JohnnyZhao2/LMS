@@ -4,7 +4,7 @@ import { Users } from 'lucide-react';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
-import type { ActivityLogActor, ActivityLogMember, ActivityLogType } from '../types';
+import type { ActivityLogActor, ActivityLogMember, ActivityLogType } from '@/features/activity-logs/types';
 
 interface ActivityLogMemberListProps {
   members: ActivityLogMember[];

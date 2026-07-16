@@ -25,23 +25,21 @@ import { Input } from '@/components/ui/input';
 import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/common';
-import { showApiError } from '@/utils/error-handler';
+import { showApiError } from '@/lib/api-error-handler';
 
-import {
-  useCreateTag,
-  useDeleteTag,
-  useMergeTag,
-  useReorderSpaceTags,
-  useTags,
-  useUpdateTag,
-} from '@/entities/tag/api/tags';
-import { SortableSpaceTagItem } from './sortable-space-tag-item';
-import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
-import { TagFormDialog } from './tag-form-dialog';
+import { useCreateTag } from '@/hooks/api/use-create-tag';
+import { useDeleteTag } from '@/hooks/api/use-delete-tag';
+import { useMergeTag } from '@/hooks/api/use-merge-tags';
+import { useReorderSpaceTags } from '@/hooks/api/use-reorder-space-tags';
+import { useTags } from '@/hooks/api/use-tags';
+import { useUpdateTag } from '@/hooks/api/use-update-tag';
+import { SortableSpaceTagItem } from '@/features/tags/components/sortable-space-tag-item';
+import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
+import { TagFormDialog } from '@/features/tags/components/tag-form-dialog';
 
 
 const typeLabel: Record<TagType, string> = {

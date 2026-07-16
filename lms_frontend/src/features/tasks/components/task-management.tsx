@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useRoleNavigate } from "@/session/hooks/use-role-navigate"
+import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     Trash2,
     Clock,
@@ -8,9 +8,9 @@ import {
     BarChart3,
     FileCheck,
 } from "lucide-react"
-import { useTaskList } from "../api/get-tasks"
-import { useDeleteTask } from "../api/delete-task"
-import { useAuth } from "@/session/auth/auth-context"
+import { useTaskList } from "@/features/tasks/api/get-tasks"
+import { useDeleteTask } from "@/features/tasks/api/delete-task"
+import { useAuth } from "@/lib/auth-context"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
@@ -29,7 +29,7 @@ import {
 import { CellMutedTimestamp, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { ListTag } from '@/components/ui/list-tag';
 import { toast } from "sonner"
-import { showApiError } from "@/utils/error-handler"
+import { showApiError } from "@/lib/api-error-handler"
 import dayjs from "@/lib/dayjs"
 import { getLastEditedByName } from '@/lib/last-edited';
 import { type ColumnDef } from "@tanstack/react-table"

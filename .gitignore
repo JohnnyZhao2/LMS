@@ -6,6 +6,7 @@
 /.agent/
 /.codex/
 /.shared/
+/.grok/
 
 # IDE 与系统文件
 .vscode/
@@ -32,20 +33,14 @@
 /*.pdf
 /招乎统一认证-API使用文档_副本.md
 
-# 测试文件
-**/tests/
-**/__tests__/
-**/src/test/
-*.test.ts
-*.test.tsx
-*.test.js
-*.test.jsx
-*.spec.ts
-*.spec.tsx
-*.spec.js
-*.spec.jsx
-test_*.py
-*_test.py
-conftest.py
-pytest.ini
-**/settings/test.py
+# 本机 E2E 环境与运行产物不入库；单元/集成测试属于源码，应随仓库维护。
+/LOCAL_TESTING.md
+/lms_backend/.e2e/
+/lms_backend/requirements.test.local.txt
+/lms_backend/apps/users/management/commands/prepare_e2e_db.py
+/lms_backend/apps/users/management/commands/seed_e2e.py
+/lms_frontend/e2e/
+/lms_frontend/playwright.config.ts
+/lms_frontend/scripts/run-acceptance.mjs
+/lms_frontend/output/playwright/
+/lms_frontend/playwright-report/

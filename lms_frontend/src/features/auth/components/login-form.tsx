@@ -16,11 +16,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
-import { getWorkspaceHome } from '@/session/workspace/role-paths';
-import { showApiError } from '@/utils/error-handler';
+import { useAuth } from '@/lib/auth-context';
+import { getWorkspaceHome } from '@/config/role-paths';
+import { showApiError } from '@/lib/api-error-handler';
 import { ApiError } from '@/lib/api-client';
-import { beginOneAccountLogin } from '../utils/one-account';
+import { beginOneAccountLogin } from '@/features/auth/api/get-one-account-authorize-url';
 
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
@@ -109,8 +109,7 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="w-full">
-      <style dangerouslySetInnerHTML={{
-        __html: `
+      <style>{`
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus {
@@ -118,7 +117,7 @@ export const LoginForm: React.FC = () => {
           -webkit-box-shadow: 0 0 0px 1000px transparent inset;
           transition: background-color 5000s ease-in-out 0s;
         }
-      ` }} />
+      `}</style>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleSubmit)}

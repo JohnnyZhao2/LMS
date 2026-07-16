@@ -2,22 +2,57 @@
 
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
-- 共享组件：49 个
-- Feature 作用域视觉组件：71 个
+- 共享组件：72 个
+- Feature 作用域视觉组件：83 个
 
 ## 共享组件
 
-### common (5 个)
+### common (6 个)
 
 - `src/components/common/icon-box.tsx`
 - `src/components/common/micro-label.tsx`
 - `src/components/common/selection-indicator.tsx`
 - `src/components/common/space-color-ring-picker.tsx`
+- `src/components/common/user-avatar.tsx`
 - `src/components/common/user-select-list.tsx`
+
+### grading (1 个)
+
+- `src/components/grading/grading-center-tab.tsx`
 
 ### layouts (1 个)
 
 - `src/components/layouts/auth-layout.tsx`
+
+### questions (14 个)
+
+- `src/components/questions/question-add-menu.tsx`
+- `src/components/questions/question-bank-panel.tsx`
+- `src/components/questions/question-detail-dialog.tsx`
+- `src/components/questions/question-detail-preview.tsx`
+- `src/components/questions/question-document-answer-panels.tsx`
+- `src/components/questions/question-document-edit-mode.tsx`
+- `src/components/questions/question-document-list.tsx`
+- `src/components/questions/question-document-read-mode.tsx`
+- `src/components/questions/question-document-shared.tsx`
+- `src/components/questions/question-edit-card.tsx`
+- `src/components/questions/question-form-inputs.tsx`
+- `src/components/questions/question-meta-toolbar.tsx`
+- `src/components/questions/question-type-badge.tsx`
+- `src/components/questions/sortable-option-item.tsx`
+
+### quiz (4 个)
+
+- `src/components/quiz/quiz-outline-panel.tsx`
+- `src/components/quiz/quiz-preview-dialog.tsx`
+- `src/components/quiz/quiz-preview-workbench.tsx`
+- `src/components/quiz/sortable-outline-item.tsx`
+
+### tags (3 个)
+
+- `src/components/tags/space-tag-quick-create-dialog.tsx`
+- `src/components/tags/tag-assignment-section.tsx`
+- `src/components/tags/tag-input.tsx`
 
 ### ui (43 个)
 
@@ -85,12 +120,19 @@
 - `src/features/auth/components/login-form.tsx`
 - `src/features/auth/components/role-switch-overlay.tsx`
 
-### authorization (3 个)
+### authorization (10 个)
 
 #### components
 
+- `src/features/authorization/components/permission-module-sections.tsx`
+- `src/features/authorization/components/permission-toggle-card.tsx`
 - `src/features/authorization/components/role-permission-template-panel.tsx`
 - `src/features/authorization/components/role-template-member-panel.tsx`
+- `src/features/authorization/components/user-permission-module-list.tsx`
+- `src/features/authorization/components/user-permission-scope-popover.tsx`
+- `src/features/authorization/components/user-permission-section.tsx`
+- `src/features/authorization/components/user-permission-workbench.tsx`
+- `src/features/authorization/components/user-role-assignment-chips.tsx`
 
 #### pages
 
@@ -116,7 +158,7 @@
 
 - `src/features/grading/components/grading-center-page.tsx`
 
-### knowledge (15 个)
+### knowledge (16 个)
 
 #### components
 
@@ -131,6 +173,7 @@
 - `src/features/knowledge/components/modals/knowledge-detail-side-panel.tsx`
 - `src/features/knowledge/components/modals/knowledge-focus-metadata-bar.tsx`
 - `src/features/knowledge/components/modals/knowledge-focus-shell.tsx`
+- `src/features/knowledge/components/modals/knowledge-learning-action.tsx`
 - `src/features/knowledge/components/shared/focus-icon.tsx`
 - `src/features/knowledge/components/shared/knowledge-action-button.tsx`
 - `src/features/knowledge/components/shared/knowledge-content-renderer.tsx`
@@ -145,11 +188,14 @@
 - `src/features/questions/components/question-management-page.tsx`
 - `src/features/questions/components/question-tab.tsx`
 
-### quiz-center (1 个)
+### quiz-center (4 个)
 
 #### components
 
+- `src/features/quiz-center/components/quiz-document-editor.tsx`
+- `src/features/quiz-center/components/quiz-form.tsx`
 - `src/features/quiz-center/components/quiz-management-page.tsx`
+- `src/features/quiz-center/components/quiz-tab.tsx`
 
 ### spot-checks (6 个)
 
@@ -198,10 +244,11 @@
 - `src/features/tasks/components/task-preview/progress-monitoring-tab.tsx`
 - `src/features/tasks/components/task-preview/task-preview-page.tsx`
 
-### users (3 个)
+### users (4 个)
 
 #### components
 
+- `src/features/users/components/avatar-picker-popover.tsx`
 - `src/features/users/components/user-directory-filters.tsx`
 - `src/features/users/components/user-form.tsx`
 - `src/features/users/components/user-list.tsx`

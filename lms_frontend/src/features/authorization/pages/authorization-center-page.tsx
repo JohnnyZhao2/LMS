@@ -1,21 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
-import { showApiError } from '@/utils/error-handler';
+import { useAuth } from '@/lib/auth-context';
+import { showApiError } from '@/lib/api-error-handler';
 import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
-import {
-  useReplaceRolePermissionTemplate,
-  useRolePermissionTemplates,
-  usePermissionCatalog,
-} from '@/entities/authorization/api/authorization';
+import { usePermissionCatalog } from '@/features/authorization/api/get-permission-catalog';
+import { useRolePermissionTemplates } from '@/features/authorization/api/get-role-permission-templates';
+import { useReplaceRolePermissionTemplate } from '@/features/authorization/api/replace-role-permission-template';
 import {
   AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
   ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
   ROLE_PERMISSION_TEMPLATE_UPDATE_PERMISSION,
-} from '@/entities/authorization/constants/access';
-import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
+} from '@/config/authorization-access';
+import { RolePermissionTemplatePanel } from '@/features/authorization/components/role-permission-template-panel';
 
 const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');
 

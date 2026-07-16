@@ -8,90 +8,69 @@
 flowchart LR
   app["app"]
   features["features"]
-  entities["entities"]
-  session["session"]
   components["components"]
   hooks["hooks"]
   lib["lib"]
   utils["utils"]
   config["config"]
+  testing["testing"]
   types["types"]
-  app -->|29| features
-  app -->|4| entities
-  app -->|21| session
-  app -->|14| components
-  app -->|6| lib
-  app -->|2| utils
-  app -->|10| config
+  app -->|32| features
+  app -->|16| components
+  app -->|4| hooks
+  app -->|19| lib
+  app -->|18| config
   app -->|8| types
-  features -->|81| entities
-  features -->|44| session
-  features -->|249| components
-  features -->|3| hooks
-  features -->|123| lib
-  features -->|22| utils
-  features -->|10| config
-  features -->|85| types
-  entities -->|1| features
-  entities -->|11| session
-  entities -->|51| components
-  entities -->|2| hooks
-  entities -->|69| lib
-  entities -->|5| utils
-  entities -->|66| types
-  session -->|2| lib
-  session -->|1| config
-  session -->|4| types
-  components -->|2| entities
-  components -->|3| session
-  components -->|46| lib
-  components -->|1| config
-  lib -->|1| utils
-  lib -->|2| config
-  lib -->|3| types
-  utils -->|1| lib
-  config -->|1| lib
-  config -->|1| types
+  features -->|301| components
+  features -->|97| hooks
+  features -->|222| lib
+  features -->|3| utils
+  features -->|19| config
+  features -->|111| types
+  components -->|14| hooks
+  components -->|78| lib
+  components -->|2| config
+  components -->|22| types
+  hooks -->|84| lib
+  hooks -->|2| config
+  hooks -->|43| types
+  lib -->|1| config
+  lib -->|4| types
+  utils -->|1| config
+  utils -->|1| types
+  config -->|3| types
+  testing -->|1| features
+  testing -->|1| lib
 ```
 
 | From | To | Imports |
 |------|----|---------|
-| `app` | `features` | 29 |
-| `app` | `entities` | 4 |
-| `app` | `session` | 21 |
-| `app` | `components` | 14 |
-| `app` | `lib` | 6 |
-| `app` | `utils` | 2 |
-| `app` | `config` | 10 |
+| `app` | `features` | 32 |
+| `app` | `components` | 16 |
+| `app` | `hooks` | 4 |
+| `app` | `lib` | 19 |
+| `app` | `config` | 18 |
 | `app` | `types` | 8 |
-| `features` | `entities` | 81 |
-| `features` | `session` | 44 |
-| `features` | `components` | 249 |
-| `features` | `hooks` | 3 |
-| `features` | `lib` | 123 |
-| `features` | `utils` | 22 |
-| `features` | `config` | 10 |
-| `features` | `types` | 85 |
-| `entities` | `features` | 1 |
-| `entities` | `session` | 11 |
-| `entities` | `components` | 51 |
-| `entities` | `hooks` | 2 |
-| `entities` | `lib` | 69 |
-| `entities` | `utils` | 5 |
-| `entities` | `types` | 66 |
-| `session` | `lib` | 2 |
-| `session` | `config` | 1 |
-| `session` | `types` | 4 |
-| `components` | `entities` | 2 |
-| `components` | `session` | 3 |
-| `components` | `lib` | 46 |
-| `components` | `config` | 1 |
-| `lib` | `utils` | 1 |
-| `lib` | `config` | 2 |
-| `lib` | `types` | 3 |
-| `utils` | `lib` | 1 |
-| `config` | `lib` | 1 |
-| `config` | `types` | 1 |
+| `features` | `components` | 301 |
+| `features` | `hooks` | 97 |
+| `features` | `lib` | 222 |
+| `features` | `utils` | 3 |
+| `features` | `config` | 19 |
+| `features` | `types` | 111 |
+| `components` | `hooks` | 14 |
+| `components` | `lib` | 78 |
+| `components` | `config` | 2 |
+| `components` | `types` | 22 |
+| `hooks` | `lib` | 84 |
+| `hooks` | `config` | 2 |
+| `hooks` | `types` | 43 |
+| `lib` | `config` | 1 |
+| `lib` | `types` | 4 |
+| `utils` | `config` | 1 |
+| `utils` | `types` | 1 |
+| `config` | `types` | 3 |
+| `testing` | `features` | 1 |
+| `testing` | `lib` | 1 |
 
 ## Cross-feature 直接依赖
 
@@ -103,5 +82,3 @@ flowchart LR
 - `cross-feature`：0
 - `shared -> feature`：0
 - `shared -> app`：0
-- `session -> feature`：0
-- `session -> app`：0

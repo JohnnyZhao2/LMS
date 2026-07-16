@@ -2,8 +2,8 @@
  * 认证相关类型定义
  */
 
-import type { RoleCode, UserInfo, Role } from './common';
-import type { CapabilityMap } from './authorization';
+import type { RoleCode, UserInfo, Role } from '@/types/common';
+import type { CapabilityMap } from '@/types/authorization';
 
 /**
  * 登录请求
@@ -31,15 +31,14 @@ export interface AuthSessionPayload {
 /**
  * 令牌对
  */
-export interface TokenPair {
+export interface AccessTokenPayload {
   access_token: string;
-  refresh_token: string;
 }
 
 /**
  * 切换角色响应
  */
-export interface LoginResponse extends AuthSessionPayload, TokenPair {}
+export interface LoginResponse extends AuthSessionPayload, AccessTokenPayload {}
 
 /**
  * 切换角色响应

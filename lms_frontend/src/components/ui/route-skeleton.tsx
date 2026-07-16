@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { Skeleton } from "./skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export const RouteSkeleton: React.FC = () => {
   return (

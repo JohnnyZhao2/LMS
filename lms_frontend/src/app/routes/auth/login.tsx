@@ -1,8 +1,8 @@
 import { LoginForm } from '@/features/auth/components/login-form';
 import { AuthLayout } from '@/components/layouts/auth-layout';
 import { Spinner } from '@/components/ui/spinner';
-import { useAuth } from '@/session/auth/auth-context';
-import { getAccessibleWorkspaceHome } from '@/session/workspace/role-paths';
+import { useAuth } from '@/lib/auth-context';
+import { getAccessibleWorkspaceHome } from '@/config/role-paths';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
 /**

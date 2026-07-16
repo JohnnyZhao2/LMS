@@ -1,4 +1,7 @@
 import * as React from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,6 +43,19 @@ interface TagFormDialogProps {
   isSubmitting?: boolean;
 }
 
+const tagFormSchema = z.object({
+  name: z.string().trim().min(1, '请输入名称'),
+  tag_type: z.enum(['SPACE', 'TAG']),
+  color: z.string().min(1),
+  allow_knowledge: z.boolean(),
+  allow_question: z.boolean(),
+}).refine(
+  (values) => values.tag_type === 'SPACE' || values.allow_knowledge || values.allow_question,
+  { message: '至少选择一个适用模块', path: ['allow_knowledge'] },
+);
+
+type TagFormValues = z.infer<typeof tagFormSchema>;
+
 export const TagFormDialog: React.FC<TagFormDialogProps> = ({
   open,
   onOpenChange,
@@ -49,28 +65,37 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
   onSubmit,
   isSubmitting = false,
 }) => {
-  const [name, setName] = React.useState('');
-  const [tagType, setTagType] = React.useState<TagType>(initialTagType);
-  const [color, setColor] = React.useState<string>(SPACE_THEME_COLORS[0]);
-  const [allowKnowledge, setAllowKnowledge] = React.useState(true);
-  const [allowQuestion, setAllowQuestion] = React.useState(false);
+  const form = useForm<TagFormValues>({
+    resolver: zodResolver(tagFormSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      tag_type: initialTagType,
+      color: SPACE_THEME_COLORS[0],
+      allow_knowledge: true,
+      allow_question: false,
+    },
+  });
+  const tagType = useWatch({ control: form.control, name: 'tag_type' });
 
   React.useEffect(() => {
     if (!open) return;
-    setTagType(tag?.tag_type ?? initialTagType);
-    setName(tag?.name ?? '');
-    setColor(tag?.color ?? SPACE_THEME_COLORS[0]);
-    setAllowKnowledge(tag?.allow_knowledge ?? true);
-    setAllowQuestion(tag?.allow_question ?? false);
-  }, [open, tag, initialTagType]);
+    form.reset({
+      tag_type: tag?.tag_type ?? initialTagType,
+      name: tag?.name ?? '',
+      color: tag?.color ?? SPACE_THEME_COLORS[0],
+      allow_knowledge: tag?.allow_knowledge ?? true,
+      allow_question: tag?.allow_question ?? false,
+    });
+  }, [form, open, tag, initialTagType]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values: TagFormValues) => {
     await onSubmit({
-      name: name.trim(),
-      tag_type: tagType,
-      color: tagType === 'SPACE' ? color : undefined,
-      allow_knowledge: tagType === 'SPACE' ? true : allowKnowledge,
-      allow_question: tagType === 'SPACE' ? true : allowQuestion,
+      name: values.name,
+      tag_type: values.tag_type,
+      color: values.tag_type === 'SPACE' ? values.color : undefined,
+      allow_knowledge: values.tag_type === 'SPACE' ? true : values.allow_knowledge,
+      allow_question: values.tag_type === 'SPACE' ? true : values.allow_question,
     });
   };
 
@@ -107,15 +132,21 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     <Label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                       标签类型
                     </Label>
-                    <Select value={tagType} onValueChange={(value) => setTagType(value as TagType)}>
-                      <SelectTrigger className="h-12 rounded-lg border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80 [&>span]:text-left">
-                        <SelectValue placeholder="选择标签类型" className="text-left" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="SPACE">空间</SelectItem>
-                        <SelectItem value="TAG">普通标签</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={form.control}
+                      name="tag_type"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="h-12 rounded-lg border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80 [&>span]:text-left">
+                            <SelectValue placeholder="选择标签类型" className="text-left" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SPACE">空间</SelectItem>
+                            <SelectItem value="TAG">普通标签</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -124,8 +155,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     </Label>
                     <Input
                       id="tag-name"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
+                      {...form.register('name')}
                       placeholder="例如：风控空间"
                       className="h-12 rounded-lg border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
                     />
@@ -137,10 +167,12 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     颜色
                   </Label>
                   <div className="flex justify-center rounded-[22px] border border-border/60 bg-white/70 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)]">
-                    <SpaceColorRingPicker
-                      value={color}
-                      onChange={setColor}
-                      size="sm"
+                    <Controller
+                      control={form.control}
+                      name="color"
+                      render={({ field }) => (
+                        <SpaceColorRingPicker value={field.value} onChange={field.onChange} size="sm" />
+                      )}
                     />
                   </div>
                 </div>
@@ -152,7 +184,8 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     <Label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                       标签类型
                     </Label>
-                    <Select value={tagType} onValueChange={(value) => setTagType(value as TagType)}>
+                    <Controller control={form.control} name="tag_type" render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="h-12 rounded-lg border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80">
                         <SelectValue placeholder="选择标签类型" />
                       </SelectTrigger>
@@ -161,6 +194,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                         <SelectItem value="TAG">普通标签</SelectItem>
                       </SelectContent>
                     </Select>
+                    )} />
                   </div>
 
                   <div className="space-y-2">
@@ -169,8 +203,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     </Label>
                     <Input
                       id="tag-name"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
+                      {...form.register('name')}
                       placeholder="例如：高频考点"
                       className="h-12 rounded-lg border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
                     />
@@ -178,22 +211,18 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                 </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className={cn("flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
-                  <Checkbox
-                    id="tag-knowledge"
-                    checked={allowKnowledge}
-                    onCheckedChange={(checked) => setAllowKnowledge(Boolean(checked))}
-                  />
+                  <Controller control={form.control} name="allow_knowledge" render={({ field }) => (
+                    <Checkbox id="tag-knowledge" checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
+                  )} />
                   <div>
                     <p className="text-sm font-semibold text-foreground">知识</p>
                   </div>
                 </label>
 
                 <label className={cn("flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
-                  <Checkbox
-                    id="tag-question"
-                    checked={allowQuestion}
-                    onCheckedChange={(checked) => setAllowQuestion(Boolean(checked))}
-                  />
+                  <Controller control={form.control} name="allow_question" render={({ field }) => (
+                    <Checkbox id="tag-question" checked={field.value} onCheckedChange={(checked) => field.onChange(Boolean(checked))} />
+                  )} />
                   <div>
                     <p className="text-sm font-semibold text-foreground">题目</p>
                   </div>
@@ -213,8 +242,8 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
             </Button>
             <Button
               className="h-10 min-w-[112px] rounded-full px-6 text-[15px] font-semibold"
-              onClick={() => void handleSubmit()}
-              disabled={isSubmitting || !name.trim() || (tagType === 'TAG' && !allowKnowledge && !allowQuestion)}
+              onClick={form.handleSubmit(handleSubmit)}
+              disabled={isSubmitting || !form.formState.isValid}
             >
               {isSubmitting ? '处理中...' : mode === 'create' ? '创建' : '保存'}
             </Button>

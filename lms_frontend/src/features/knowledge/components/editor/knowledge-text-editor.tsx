@@ -1,4 +1,4 @@
-import '../shared/knowledge-editor-shared.css';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 import {
   forwardRef,
@@ -13,14 +13,14 @@ import {
 
 import { cn } from '@/lib/utils';
 
-import { FloatingFormatToolbar } from './format-toolbar';
-import { SlashCommandMenu } from './slash-menu';
+import { FloatingFormatToolbar } from '@/features/knowledge/components/editor/format-toolbar';
+import { SlashCommandMenu } from '@/features/knowledge/components/editor/slash-menu';
 import {
   detectSlashTrigger,
   filterSlashShortcuts,
   type SlashShortcutId,
   type SlashTrigger,
-} from '../../utils/slash-shortcuts';
+} from '@/features/knowledge/utils/slash-shortcuts';
 
 type MenuPosition = {
   top: number;

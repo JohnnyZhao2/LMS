@@ -1,9 +1,9 @@
 import * as React from 'react';
 
-import { hasMeaningfulKnowledgeHtml } from '../../utils/slash-shortcuts';
-import { FocusOrbIcon } from '../shared/focus-icon';
-import { KnowledgeTextEditor } from '../editor/knowledge-text-editor';
-import { KnowledgeActionButton } from '../shared/knowledge-action-button';
+import { hasMeaningfulKnowledgeHtml } from '@/features/knowledge/utils/slash-shortcuts';
+import { FocusOrbIcon } from '@/features/knowledge/components/shared/focus-icon';
+import { KnowledgeTextEditor } from '@/features/knowledge/components/editor/knowledge-text-editor';
+import { KnowledgeActionButton } from '@/features/knowledge/components/shared/knowledge-action-button';
 
 interface AddKnowledgeCardProps {
   onSave: (content: string) => Promise<void> | void;

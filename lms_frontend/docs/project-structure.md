@@ -26,24 +26,34 @@ npm run docs:check
 ```sh
 src
 ├── app          # 路由、布局、页面装配
-├── session      # 登录态、工作区、角色路径等会话能力
-├── entities     # 跨 feature 共享的领域模型与纯业务原语
 ├── features     # 用例导向的功能模块
 ├── components   # 共享 UI 组件
 ├── hooks        # 共享 hooks
 ├── lib          # 通用库封装
 ├── utils        # 通用工具
 ├── config       # 前端配置
-└── types        # 共享类型
+├── testing      # Vitest、Testing Library、MSW 测试基础设施
+└── types        # 确实跨多个 feature 的共享契约
 ```
+
+每个业务能力由 `features/<feature>` 自己拥有，按实际需要建立 `api`、`components`、
+`hooks`、`types`、`utils`。不创建空目录。API 文件使用 endpoint/动作命名，查询由独立
+fetcher 和 React Query hook 组成，不允许组件直接调用 `apiClient`。
+
+跨多个 feature 重用的 API 能力位于 `hooks/api`，题目展示、标签输入、试卷预览等纯
+复用视图位于 `components`。Feature 没有私有 endpoint 时不创建 `api` 目录，更不能用
+转发导出文件伪造 API 层。涉及多个完整 feature 的交互由 `app` 注入组合，不能通过新增
+`entities` 形成第二套业务层。
 
 ## 约束
 
 - `feature` 不直接依赖其他 `feature`
 - `feature` 不依赖 `app`
 - `components/hooks/lib/utils/config/types` 不依赖 `feature` 和 `app`
-- `session` 不依赖 `feature` 和 `app`
 - 禁止 barrel / forwarding re-export，统一显式文件路径导入
+- `src` 内统一使用 `@/` 绝对导入
+- `entities`、`session` 为禁止目录
+- Feature 私有类型留在 Feature 内；只有多 Feature 消费的契约进入 `types`
 - 事实清单不手写，避免文档与代码双轨漂移
 
 ## 机器约束

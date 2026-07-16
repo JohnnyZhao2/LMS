@@ -1,15 +1,15 @@
 import { config } from '@/config/app-config';
-import { tokenStorage } from './token-storage';
-import { ROUTES } from '@/config/routes';
+import { tokenStorage } from '@/lib/token-storage';
+import { z, type ZodType } from 'zod';
 
 /**
  * 统一 API 响应格式
  */
-interface ApiResponse<T> {
-  code: string;
-  message: string;
-  data: T;
-}
+const apiResponseSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  data: z.unknown(),
+});
 
 /**
  * API 错误类
@@ -45,8 +45,9 @@ export class ApiError extends Error {
 /**
  * API 请求选项
  */
-interface ApiRequestOptions extends RequestInit {
+interface ApiRequestOptions<T = unknown> extends RequestInit {
   skipAuth?: boolean;
+  schema?: ZodType<T>;
 }
 
 /**
@@ -72,29 +73,22 @@ class ApiClient {
       return this.refreshPromise;
     }
 
-    const refreshToken = tokenStorage.getRefreshToken();
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
     this.refreshPromise = (async () => {
       const response = await fetch(`${this.baseURL}/auth/refresh/`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to refresh token');
       }
 
-      const responseData = (await response.json()) as ApiResponse<{
-        access_token: string;
-        refresh_token: string;
-      }>;
-      tokenStorage.setTokenPair(responseData.data);
+      const responseData = apiResponseSchema.parse(await response.json());
+      const accessTokenPayload = z.object({ access_token: z.string().min(1) }).parse(responseData.data);
+      tokenStorage.setAccessTokenPayload(accessTokenPayload);
     })();
 
     try {
@@ -120,9 +114,9 @@ class ApiClient {
    */
   async request<T>(
     endpoint: string,
-    options: ApiRequestOptions = {},
+    options: ApiRequestOptions<T> = {},
   ): Promise<T> {
-    const { skipAuth = false, ...fetchOptions } = options;
+    const { skipAuth = false, schema, ...fetchOptions } = options;
     const url = `${this.baseURL}${endpoint}`;
 
     const isFormData =
@@ -155,10 +149,11 @@ class ApiClient {
     // 发送请求
     let response = await fetch(url, {
       ...fetchOptions,
+      credentials: 'include',
       headers,
     });
 
-    // access token 过期时刷新后重放原请求；刷新失败则清理会话并回登录页。
+    // access token 过期时刷新后重放原请求；刷新失败只清理令牌，路由由认证上下文处理。
     if (response.status === 401 && !skipAuth) {
       try {
         await this.refreshToken();
@@ -169,12 +164,11 @@ class ApiClient {
         }
         response = await fetch(url, {
           ...fetchOptions,
+          credentials: 'include',
           headers,
         });
       } catch (error) {
-        // 刷新失败，跳转到登录页
         tokenStorage.clearTokens();
-        window.location.href = ROUTES.LOGIN;
         throw error;
       }
     }
@@ -198,35 +192,24 @@ class ApiClient {
     // 处理空响应
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      return null as T;
+      return schema ? schema.parse(null) : null as T;
     }
 
-    const json = await response.json();
-
-    if (
-      json &&
-      typeof json === 'object' &&
-      'code' in json &&
-      'message' in json &&
-      'data' in json
-    ) {
-      return (json as ApiResponse<T>).data;
-    }
-
-    return json as T;
+    const envelope = apiResponseSchema.parse(await response.json());
+    return schema ? schema.parse(envelope.data) : envelope.data as T;
   }
 
   /**
    * GET 请求
    */
-  get<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+  get<T>(endpoint: string, options?: ApiRequestOptions<T>): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
   /**
    * POST 请求
    */
-  post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+  post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
     const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
@@ -238,7 +221,7 @@ class ApiClient {
   /**
    * PUT 请求
    */
-  put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+  put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
     const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
@@ -250,7 +233,7 @@ class ApiClient {
   /**
    * PATCH 请求
    */
-  patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+  patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
     const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
@@ -262,7 +245,7 @@ class ApiClient {
   /**
    * DELETE 请求
    */
-  delete<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+  delete<T>(endpoint: string, options?: ApiRequestOptions<T>): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 
@@ -285,6 +268,7 @@ class ApiClient {
     let response = await fetch(url, {
       ...options,
       method: options?.method || 'GET',
+      credentials: 'include',
       headers,
     });
 
@@ -297,6 +281,7 @@ class ApiClient {
       response = await fetch(url, {
         ...options,
         method: options?.method || 'GET',
+        credentials: 'include',
         headers,
       });
     }

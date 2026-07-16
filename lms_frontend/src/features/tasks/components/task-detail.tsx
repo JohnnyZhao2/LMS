@@ -22,19 +22,20 @@ import { MicroLabel } from '@/components/common/micro-label';
 import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useAuth } from '@/lib/auth-context';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/constants/task-status';
 import { cn } from '@/lib/utils';
 import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
-import { useStudentLearningTaskDetail, useTaskDetail } from '@/entities/task/api/get-task-detail';
+import { useStudentLearningTaskDetail } from '@/hooks/api/use-student-learning-task-detail';
+import { useTaskDetail } from '@/hooks/api/use-task-detail';
 
 interface KnowledgeListViewItem {
   id: number;

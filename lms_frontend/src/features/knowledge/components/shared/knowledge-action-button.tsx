@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-import './knowledge-editor-shared.css';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 interface KnowledgeActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'floating' | 'solid';

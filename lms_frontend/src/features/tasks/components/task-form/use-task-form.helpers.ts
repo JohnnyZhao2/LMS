@@ -2,7 +2,7 @@ import type { QuizDetail } from '@/types/quiz';
 import type { TaskCreateRequest } from '@/features/tasks/api/create-task';
 import type { TaskDetail } from '@/types/task';
 
-import type { ResourceGroup, ResourceType, SelectedResource } from './task-form.types';
+import type { ResourceGroup, ResourceType, SelectedResource } from '@/features/tasks/components/task-form/task-form.types';
 
 export const buildStableUid = (seed: string, fallback: number): number => {
   let hash = 0;

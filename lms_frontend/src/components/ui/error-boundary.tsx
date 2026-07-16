@@ -45,10 +45,10 @@ export class ErrorBoundary extends Component<Props, State> {
                         <AlertCircle className="w-6 h-6" />
                     </div>
                     <h3 className="text-lg font-semibold text-destructive-900 mb-2">
-                        Something went wrong
+                        页面加载失败
                     </h3>
                     <p className="text-sm text-destructive-600 mb-6 max-w-[250px]">
-                        {this.state.error?.message || "An unexpected error occurred while rendering this component."}
+                        {this.state.error?.message || "组件渲染时发生异常，请重试。"}
                     </p>
                     <Button
                         onClick={this.handleReset}
@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
                         className="border-destructive-200 text-destructive-700 hover:bg-destructive-100 hover:text-destructive-900"
                     >
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Try Again
+                        重新加载
                     </Button>
                 </Card>
             );

@@ -1,23 +1,32 @@
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { FileText, LayoutList, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 
-import { useTaskForm } from './use-task-form';
-import { TaskConfigurationPanel } from './task-configuration-panel';
+import { useTaskForm } from '@/features/tasks/components/task-form/use-task-form';
+import { TaskConfigurationPanel } from '@/features/tasks/components/task-form/task-configuration-panel';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
-import { TaskPipelinePanel } from './task-pipeline-panel';
-import { TaskResourceLibraryPanel } from './task-resource-library-panel';
-import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
-import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
+import { TaskPipelinePanel } from '@/features/tasks/components/task-form/task-pipeline-panel';
+import { TaskResourceLibraryPanel } from '@/features/tasks/components/task-form/task-resource-library-panel';
+import { QuizPreviewDialog } from '@/components/quiz/quiz-preview-dialog';
+
+export interface TaskKnowledgePreviewProps {
+  knowledgeId: number;
+  previewOnly: boolean;
+  onClose: () => void;
+}
+
+interface TaskFormProps {
+  KnowledgePreview: ComponentType<TaskKnowledgePreviewProps>;
+}
 
 const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT_MANAGER', '室经理'],
 ]);
 
-export const TaskForm: React.FC = () => {
+export const TaskForm: React.FC<TaskFormProps> = ({ KnowledgePreview }) => {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
@@ -172,7 +181,7 @@ export const TaskForm: React.FC = () => {
       />
 
       {previewDocumentId !== null ? (
-        <KnowledgeDetailModal
+        <KnowledgePreview
           knowledgeId={previewDocumentId}
           previewOnly
           onClose={() => setPreviewDocumentId(null)}

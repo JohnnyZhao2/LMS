@@ -3,12 +3,12 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { QuizOutlinePanel } from '@/entities/quiz/components/quiz-outline-panel';
-import { showApiError } from '@/utils/error-handler';
+import { QuizOutlinePanel } from '@/components/quiz/quiz-outline-panel';
+import { showApiError } from '@/lib/api-error-handler';
 import type { QuestionType, Tag } from '@/types/common';
 import type { Question, QuestionCreateRequest } from '@/types/question';
 
-import { QuestionDocumentList } from '@/entities/question/components/question-document-list';
+import { QuestionDocumentList } from '@/components/questions/question-document-list';
 import {
   buildQuestionCreatePayload,
   buildQuestionPatchPayload,
@@ -16,7 +16,7 @@ import {
   hasQuestionAnswer,
   syncEditableQuestionItem,
   type EditableQuestionItem,
-} from '@/entities/question/components/question-editor-helpers';
+} from '@/components/questions/question-editor-helpers';
 
 interface QuestionBatchEditorProps {
   initialItems: EditableQuestionItem[];

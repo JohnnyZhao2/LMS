@@ -4,7 +4,7 @@ import {
   getAccessibleWorkspaceHome,
   getWorkspaceHome,
   normalizeRoleCode,
-} from '@/session/workspace/role-paths';
+} from '@/config/role-paths';
 import type { RoleCode } from '@/types/common';
 
 export type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';

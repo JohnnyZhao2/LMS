@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import type { PracticeResult } from '@/types/submission';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import type { PracticeResult } from '@/features/submissions/types/submission';
 
 type SubmissionResultKind = 'practice' | 'exam';
+
+export const getSubmissionResult = (submissionId: number) =>
+  apiClient.get<PracticeResult>(`/submissions/${submissionId}/result/`);
 
 const useSubmissionResult = (
   kind: SubmissionResultKind,
@@ -18,7 +21,7 @@ const useSubmissionResult = (
     queryKey: isPractice
       ? queryKeys.submissions.practiceResult({ currentRole, submissionId })
       : queryKeys.submissions.examResult({ currentRole, submissionId }),
-    queryFn: () => apiClient.get<PracticeResult>(`/submissions/${submissionId!}/result/`),
+    queryFn: () => getSubmissionResult(submissionId!),
     enabled: Boolean(submissionId) && currentRole !== null && enabled,
   });
 };

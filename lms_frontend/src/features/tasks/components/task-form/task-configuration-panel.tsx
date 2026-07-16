@@ -19,7 +19,7 @@ import {
   TASK_FORM_SEGMENTED_CONTROL_CLASSNAME,
   TASK_FORM_WARNING_ALERT_CLASSNAME,
   TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
-} from './task-form.constants';
+} from '@/features/tasks/components/task-form/task-form.constants';
 
 const TASK_CONFIG_FIELD_TEXT_CLASSNAME = 'text-[12px] font-semibold placeholder:text-text-muted/50';
 

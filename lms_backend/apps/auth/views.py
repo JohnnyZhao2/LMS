@@ -7,6 +7,7 @@ Implements:
 - Password change
 - Current user info
 """
+from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -19,7 +20,6 @@ from apps.auth.serializers import (
     ChangePasswordRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
-    LogoutRequestSerializer,
     OneAccountAuthorizeUrlResponseSerializer,
     OneAccountCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
@@ -27,6 +27,30 @@ from apps.auth.serializers import (
     SwitchRoleRequestSerializer,
 )
 from apps.auth.services import AuthenticationService
+
+
+def _refresh_cookie_token(request):
+    serializer = RefreshTokenRequestSerializer(data={
+        'refresh_token': request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME),
+    })
+    serializer.is_valid(raise_exception=True)
+    return serializer.validated_data['refresh_token']
+
+
+def _session_response(result, *, message=None):
+    payload = dict(result)
+    refresh_token = payload.pop('refresh_token')
+    response = success_response(payload) if message is None else success_response(payload, message=message)
+    response.set_cookie(
+        key=settings.AUTH_REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=settings.AUTH_REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=settings.AUTH_REFRESH_COOKIE_SECURE,
+        samesite=settings.AUTH_REFRESH_COOKIE_SAMESITE,
+        path=settings.AUTH_REFRESH_COOKIE_PATH,
+    )
+    return response
 
 
 class LoginView(BaseAPIView):
@@ -55,7 +79,7 @@ class LoginView(BaseAPIView):
             employee_id=serializer.validated_data['employee_id'],
             password=serializer.validated_data['password']
         )
-        return success_response(result)
+        return _session_response(result)
 
 
 class LogoutView(BaseAPIView):
@@ -69,19 +93,21 @@ class LogoutView(BaseAPIView):
     @extend_schema(
         summary='用户登出',
         description='登出当前用户，使刷新令牌失效',
-        request=LogoutRequestSerializer,
+        request=None,
         responses={
             200: OpenApiResponse(description='登出成功'),
         },
         tags=['认证']
     )
     def post(self, request):
-        serializer = LogoutRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        refresh_token = serializer.validated_data['refresh_token']
-        self.service.logout(request.user, refresh_token)
-        return success_response(message='登出成功')
+        self.service.logout(request.user, _refresh_cookie_token(request))
+        response = success_response(message='登出成功')
+        response.delete_cookie(
+            settings.AUTH_REFRESH_COOKIE_NAME,
+            path=settings.AUTH_REFRESH_COOKIE_PATH,
+            samesite=settings.AUTH_REFRESH_COOKIE_SAMESITE,
+        )
+        return response
 
 
 class RefreshTokenView(BaseAPIView):
@@ -96,7 +122,7 @@ class RefreshTokenView(BaseAPIView):
     @extend_schema(
         summary='刷新令牌',
         description='使用刷新令牌获取新的访问令牌',
-        request=RefreshTokenRequestSerializer,
+        request=None,
         responses={
             200: RefreshTokenResponseSerializer,
             400: OpenApiResponse(description='刷新令牌无效'),
@@ -104,13 +130,10 @@ class RefreshTokenView(BaseAPIView):
         tags=['认证']
     )
     def post(self, request):
-        serializer = RefreshTokenRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         result = self.service.refresh_token(
-            refresh_token=serializer.validated_data['refresh_token']
+            refresh_token=_refresh_cookie_token(request),
         )
-        return success_response(result)
+        return _session_response(result)
 
 
 class SwitchRoleView(BaseAPIView):
@@ -138,7 +161,7 @@ class SwitchRoleView(BaseAPIView):
             user=request.user,
             role_code=serializer.validated_data['role_code']
         )
-        return success_response(result)
+        return _session_response(result)
 
 
 class MeView(BaseAPIView):
@@ -225,7 +248,7 @@ class ChangeMyPasswordView(BaseAPIView):
             password=serializer.validated_data['password'],
         )
 
-        return success_response(result, message='密码已修改')
+        return _session_response(result, message='密码已修改')
 
 
 class OneAccountAuthorizeUrlView(BaseAPIView):
@@ -266,4 +289,4 @@ class OneAccountCodeLoginView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
 
         result = self.service.login_by_one_account_code(code=serializer.validated_data['code'])
-        return success_response(result)
+        return _session_response(result)

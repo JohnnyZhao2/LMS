@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -25,14 +24,37 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_PROXY_TARGET ?? 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },
   },
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    css: true,
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('/react-router')) return 'vendor-router'
+          if (id.includes('/@tanstack/')) return 'vendor-data'
+          if (id.includes('/@dnd-kit/')) return 'vendor-dnd'
+          if (id.includes('/react-hook-form/') || id.includes('/@hookform/') || id.includes('/zod/')) {
+            return 'vendor-forms'
+          }
+          if (
+            id.includes('/@radix-ui/') ||
+            id.includes('/lucide-react/') ||
+            id.includes('/react-day-picker/') ||
+            id.includes('/sonner/')
+          ) {
+            return 'vendor-ui'
+          }
+          if (id.includes('/dayjs/') || id.includes('/date-fns/')) return 'vendor-dates'
+          return undefined
+        },
+      },
+    },
   },
 })

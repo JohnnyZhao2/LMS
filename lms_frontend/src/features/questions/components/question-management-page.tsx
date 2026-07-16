@@ -6,11 +6,11 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/sea
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTags } from '@/entities/tag/api/tags';
-import { QUESTION_TYPE_CONFIG } from '@/entities/question/constants';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useTags } from '@/hooks/api/use-tags';
+import { QUESTION_TYPE_CONFIG } from '@/components/questions/question-config';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { QuestionType } from '@/types/common';
-import { QuestionTab } from './question-tab';
+import { QuestionTab } from '@/features/questions/components/question-tab';
 
 const QUESTION_TYPE_FILTER_OPTIONS: Array<{ value: QuestionType | 'all'; label: string }> = [
   { value: 'all', label: '全部' },

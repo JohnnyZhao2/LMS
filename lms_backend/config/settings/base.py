@@ -115,6 +115,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# 抽查贴图：最多 5×1.5MB 二进制，经 base64 data URL 进 JSON body（约 ×4/3）
+# 默认 2.5MB 会导致 2 张及以上 RequestDataTooBig
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15MB
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
@@ -173,6 +177,13 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
+
+# Refresh token 仅通过 HttpOnly Cookie 传输；access token 只保存在前端内存中。
+AUTH_REFRESH_COOKIE_NAME = 'lms_refresh_token'
+AUTH_REFRESH_COOKIE_PATH = '/api/auth/'
+AUTH_REFRESH_COOKIE_SECURE = APP_ENV == 'production'
+AUTH_REFRESH_COOKIE_SAMESITE = 'Lax'
+AUTH_REFRESH_COOKIE_MAX_AGE = int(timedelta(days=7).total_seconds())
 # drf-spectacular settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'LMS API',

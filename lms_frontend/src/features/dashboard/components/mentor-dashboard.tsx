@@ -11,7 +11,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
@@ -19,8 +19,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
 import { Card } from '@/components/ui/card';
 
-import { useMentorDashboard } from '../api/mentor-dashboard';
-import { ExamReportPanel } from './exam-report-panel';
+import { useMentorDashboard } from '@/features/dashboard/api/mentor-dashboard';
+import { ExamReportPanel } from '@/features/dashboard/components/exam-report-panel';
 
 
 /**

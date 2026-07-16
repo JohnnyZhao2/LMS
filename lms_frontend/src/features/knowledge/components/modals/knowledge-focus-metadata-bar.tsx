@@ -5,12 +5,12 @@ import type { RelatedLink } from '@/types/knowledge';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { TagInput } from '@/entities/tag/components/tag-input';
+import { TagInput } from '@/components/tags/tag-input';
 import { cn } from '@/lib/utils';
-import { KnowledgeActionButton } from '../shared/knowledge-action-button';
-import { RelatedLinksEditor } from '../shared/related-links-editor';
-import { sanitizeRelatedLinks } from '../../utils/related-links';
-import '../shared/knowledge-editor-shared.css';
+import { KnowledgeActionButton } from '@/features/knowledge/components/shared/knowledge-action-button';
+import { RelatedLinksEditor } from '@/features/knowledge/components/shared/related-links-editor';
+import { sanitizeRelatedLinks } from '@/features/knowledge/utils/related-links';
+import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
 interface KnowledgeFocusMetadataBarProps {
   spaces: SimpleTag[];

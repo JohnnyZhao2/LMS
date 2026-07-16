@@ -11,11 +11,11 @@ import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareT
 import { Navigate, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
-import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
+import { useAuth } from '@/lib/auth-context';
+import { getRolePathPrefix, normalizeRoleCode } from '@/config/role-paths';
 import type { RoleCode } from '@/types/common';
-import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
-import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
+import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/authorization-access';
+import type { DashboardVariant, WorkspaceConfig } from '@/app/workspace-config';
 
 export type PermissionMode = 'all' | 'any';
 export type MenuLabelResolver = string | ((workspace: WorkspaceConfig, role: RoleCode) => string);
@@ -69,13 +69,14 @@ const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
 const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
+const KnowledgeDetailModal = lazy(() => import('@/features/knowledge/components/modals/knowledge-detail-modal').then(m => ({ default: m.KnowledgeDetailModal })));
 const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview/task-preview-page').then(m => ({ default: m.TaskPreviewPage })));
 
 const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
 const TagManagementPage = lazy(() => import('@/features/tags/components/tag-management-page').then(m => ({ default: m.TagManagementPage })));
 
 const QuizManagementPage = lazy(() => import('@/features/quiz-center/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
-const QuizForm = lazy(() => import('@/features/quiz-center/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
+const QuizForm = lazy(() => import('@/features/quiz-center/components/quiz-form').then(m => ({ default: m.QuizForm })));
 const QuestionManagementPage = lazy(() => import('@/features/questions/components/question-management-page').then(m => ({ default: m.QuestionManagementPage })));
 const QuestionFormPage = lazy(() => import('@/features/questions/components/question-form-page').then(m => ({ default: m.QuestionFormPage })));
 
@@ -131,6 +132,8 @@ const TaskDetailRoutePage = () => {
   return <Navigate to={`${rolePrefix}/tasks/${id}/preview?tab=progress&entry=task-management`} replace />;
 };
 
+const TaskFormRoutePage = () => <TaskForm KnowledgePreview={KnowledgeDetailModal} />;
+
 /** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
 const SpotCheckCreateRedirect = () => {
   const { role } = useParams<{ role: string }>();
@@ -156,14 +159,14 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     kind: 'business',
     path: 'tasks/create',
     requiredPermissions: ['task.create'],
-    component: TaskForm,
+    render: () => <TaskFormRoutePage />,
   },
   {
     key: 'task-edit',
     kind: 'business',
     path: 'tasks/:id/edit',
     requiredPermissions: ['task.update'],
-    component: TaskForm,
+    render: () => <TaskFormRoutePage />,
   },
   {
     key: 'task-preview',
@@ -330,7 +333,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     kind: 'business',
     path: 'spot-checks/:id/edit',
     allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.view', 'spot_check.update'],
+    requiredPermissions: ['spot_check.view'],
     component: SpotCheckForm,
   },
   {
