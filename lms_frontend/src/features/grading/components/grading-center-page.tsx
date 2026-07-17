@@ -5,8 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/hooks/api/use-pending-grading';
-import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/components/grading/grading-center-tab';
+import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/features/grading/api/get-pending-grading';
+import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/grading/components/grading-center-tab';
 import { useTaskDetail } from '@/hooks/api/use-task-detail';
 
 export const GradingCenterPage: React.FC = () => {

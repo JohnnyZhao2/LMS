@@ -23,10 +23,10 @@ import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
 import type { GradingAnswerResponse, GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
-import type { PendingTask, PendingQuiz } from '@/hooks/api/use-pending-grading';
-import { useGradingAnswers } from '@/hooks/api/use-grading-answers';
-import { useGradingQuestions } from '@/hooks/api/use-grading-questions';
-import { useSubmitGrading } from '@/hooks/api/use-submit-grading';
+import type { PendingTask, PendingQuiz } from '@/features/grading/api/get-pending-grading';
+import { useGradingAnswers } from '@/features/grading/api/get-grading-answers';
+import { useGradingQuestions } from '@/features/grading/api/get-grading-questions';
+import { useSubmitGrading } from '@/features/grading/api/submit-grading';
 
 interface GradingCenterTabProps {
   taskId?: number;

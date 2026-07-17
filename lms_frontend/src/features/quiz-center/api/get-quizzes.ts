@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
-import { queryKeys } from '@/lib/query-keys';
+
 import { useCurrentRole } from '@/hooks/use-current-role';
+import { apiClient } from '@/lib/api-client';
+import { buildPaginationParams, buildQueryString } from '@/lib/api-utils';
+import { queryKeys } from '@/lib/query-keys';
 import type { PaginatedResponse } from '@/types/common';
 import type { QuizListItem } from '@/types/quiz';
 
-export interface UseQuizzesParams {
+interface GetQuizzesParams {
   page?: number;
   pageSize?: number;
   search?: string;
@@ -18,7 +19,7 @@ export const getQuizzes = ({
   pageSize = 20,
   search,
   quizType,
-}: UseQuizzesParams = {}) => {
+}: GetQuizzesParams = {}) => {
   const queryParams = {
     ...buildPaginationParams(page, pageSize),
     ...(search && { search }),
@@ -27,10 +28,7 @@ export const getQuizzes = ({
   return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/${buildQueryString(queryParams)}`);
 };
 
-/**
- * 获取试卷列表
- */
-export const useQuizzes = (params: UseQuizzesParams = {}) => {
+export const useQuizzes = (params: GetQuizzesParams = {}) => {
   const currentRole = useCurrentRole();
   const { page = 1, pageSize = 20, search, quizType } = params;
 

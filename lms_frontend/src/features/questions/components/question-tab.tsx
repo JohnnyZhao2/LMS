@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
 import { useQuestions } from '@/hooks/api/use-questions';
-import { useDeleteQuestion } from '@/hooks/api/use-delete-question';
+import { useDeleteQuestion } from '@/features/questions/api/delete-question';
 import { QuestionDetailDialog } from '@/components/questions/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';

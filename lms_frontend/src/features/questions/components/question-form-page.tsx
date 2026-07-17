@@ -3,10 +3,10 @@ import { useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { useTags } from '@/hooks/api/use-tags';
-import { useCreateQuestion } from '@/hooks/api/use-create-question';
-import { useDeleteQuestion } from '@/hooks/api/use-delete-question';
-import { useUpdateQuestion } from '@/hooks/api/use-update-question';
 import { useQuestionDetail } from '@/hooks/api/use-question-detail';
+import { useCreateQuestion } from '@/features/questions/api/create-question';
+import { useDeleteQuestion } from '@/features/questions/api/delete-question';
+import { useUpdateQuestion } from '@/features/questions/api/update-question';
 import { QuestionBatchEditor } from '@/features/questions/components/question-batch-editor';
 import { createBlankEditableQuestion, questionToEditableItem } from '@/components/questions/question-editor-helpers';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';

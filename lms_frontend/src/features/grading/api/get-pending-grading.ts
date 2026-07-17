@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/hooks/use-current-role';
 
 export interface PendingQuiz {
   quiz_id: number;

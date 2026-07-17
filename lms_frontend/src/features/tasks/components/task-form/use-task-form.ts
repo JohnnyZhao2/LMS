@@ -11,7 +11,7 @@ import { useQuizDetail } from '@/hooks/api/use-quiz-detail';
 import { useTaskDetail } from '@/hooks/api/use-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '@/features/tasks/api/create-task';
-import { useAssignableUsers } from '@/hooks/api/use-assignable-users';
+import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useTaskResourceOptions } from '@/features/tasks/api/get-task-resources';
 import { useUpdateTask } from '@/features/tasks/api/update-task';
 import type { ResourceItem, SelectedResource, ResourceType } from '@/features/tasks/components/task-form/task-form.types';

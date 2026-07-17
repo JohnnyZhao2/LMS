@@ -20,7 +20,7 @@ import { useTaskDetail } from '@/hooks/api/use-task-detail';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { ProgressMonitoringTab } from '@/features/tasks/components/task-preview/progress-monitoring-tab';
-import { GradingCenterTab } from '@/components/grading/grading-center-tab';
+import { GradingCenterTab } from '@/features/grading/components/grading-center-tab';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/lib/auth-context';
 

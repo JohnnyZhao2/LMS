@@ -6,7 +6,7 @@ import { SelectionIndicator } from '@/components/common/selection-indicator';
 import { useTags } from '@/hooks/api/use-tags';
 import { useQuestionDetail } from '@/hooks/api/use-question-detail';
 import { TagAssignmentSection } from '@/components/tags/tag-assignment-section';
-import { useUpdateQuestion } from '@/hooks/api/use-update-question';
+import { useUpdateQuestion } from '@/features/questions/api/update-question';
 import { QuestionDetailPreview } from '@/components/questions/question-detail-preview';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';

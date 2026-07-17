@@ -12,7 +12,7 @@ import { useUpdateKnowledge } from '@/features/knowledge/api/update-knowledge';
 import { useParseDocument } from '@/features/knowledge/api/parse-document';
 import { useKnowledgeModalInteractions } from '@/features/knowledge/hooks/use-knowledge-modal-interactions';
 import { useCompleteLearning } from '@/hooks/api/use-complete-learning';
-import { useStudentLearningTaskDetail } from '@/hooks/api/use-student-learning-task-detail';
+import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
 import { useAuth } from '@/lib/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';

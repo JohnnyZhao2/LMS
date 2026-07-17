@@ -36,12 +36,12 @@ import {
   isAssignableRoleCode,
 } from '@/utils/authorization/user-role-assignment';
 
-import { useAssignMentor } from '@/hooks/api/use-assign-mentor';
+import { useAssignMentor } from '@/features/users/api/assign-mentor';
+import { useCreateUser } from '@/features/users/api/create-user';
+import { useMentors } from '@/features/users/api/get-mentors';
+import { useUpdateUser } from '@/features/users/api/update-user';
 import { useAssignRoles } from '@/hooks/api/use-assign-roles';
-import { useCreateUser } from '@/hooks/api/use-create-user';
-import { useUpdateUser } from '@/hooks/api/use-update-user';
 import { useDepartments } from '@/hooks/api/use-departments';
-import { useMentors } from '@/hooks/api/use-mentors';
 import { useRoles } from '@/hooks/api/use-roles';
 import { useUserDetail } from '@/hooks/api/use-user-detail';
 import { showApiError } from '@/lib/api-error-handler';

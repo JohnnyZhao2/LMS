@@ -33,10 +33,10 @@ import { showApiError } from '@/lib/api-error-handler';
 
 import { useCreateTag } from '@/hooks/api/use-create-tag';
 import { useDeleteTag } from '@/hooks/api/use-delete-tag';
-import { useMergeTag } from '@/hooks/api/use-merge-tags';
-import { useReorderSpaceTags } from '@/hooks/api/use-reorder-space-tags';
 import { useTags } from '@/hooks/api/use-tags';
-import { useUpdateTag } from '@/hooks/api/use-update-tag';
+import { useMergeTag } from '@/features/tags/api/merge-tags';
+import { useReorderSpaceTags } from '@/features/tags/api/reorder-space-tags';
+import { useUpdateTag } from '@/features/tags/api/update-tag';
 import { SortableSpaceTagItem } from '@/features/tags/components/sortable-space-tag-item';
 import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
 import { TagFormDialog } from '@/features/tags/components/tag-form-dialog';
