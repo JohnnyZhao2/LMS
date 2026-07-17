@@ -13,6 +13,9 @@ dist/
 .next/
 out/
 
+# Playwright / E2E artifacts
+output/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
