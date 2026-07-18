@@ -22,9 +22,9 @@ import { useIncrementViewCount } from '@/features/knowledge/api/increment-view-c
 import { useKnowledgeFilters } from '@/features/knowledge/hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '@/features/knowledge/utils/slash-shortcuts';
-import { useCreateTag } from '@/hooks/api/use-create-tag';
-import { useDeleteTag } from '@/hooks/api/use-delete-tag';
-import { useTags } from '@/hooks/api/use-tags';
+import { useCreateTag } from '@/api/tags/create-tag';
+import { useDeleteTag } from '@/api/tags/delete-tag';
+import { useTags } from '@/api/tags/get-tags';
 import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
 import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';

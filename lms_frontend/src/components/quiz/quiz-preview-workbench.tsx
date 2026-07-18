@@ -14,7 +14,7 @@ import { buildQuestionSections } from '@/components/questions/question-sections'
 import { formatListDateTime } from '@/lib/date-time';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
-import { useQuizDetail } from '@/hooks/api/use-quiz-detail';
+import { useQuizDetail } from '@/api/quizzes/get-quiz-detail';
 import type { InlineQuestionItem, QuizDraftState } from '@/components/quiz/quiz-editor-types';
 
 import { QuizOutlinePanel } from '@/components/quiz/quiz-outline-panel';

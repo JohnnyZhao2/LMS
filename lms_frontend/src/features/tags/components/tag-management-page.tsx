@@ -31,9 +31,9 @@ import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/common';
 import { showApiError } from '@/lib/api-error-handler';
 
-import { useCreateTag } from '@/hooks/api/use-create-tag';
-import { useDeleteTag } from '@/hooks/api/use-delete-tag';
-import { useTags } from '@/hooks/api/use-tags';
+import { useCreateTag } from '@/api/tags/create-tag';
+import { useDeleteTag } from '@/api/tags/delete-tag';
+import { useTags } from '@/api/tags/get-tags';
 import { useMergeTag } from '@/features/tags/api/merge-tags';
 import { useReorderSpaceTags } from '@/features/tags/api/reorder-space-tags';
 import { useUpdateTag } from '@/features/tags/api/update-tag';

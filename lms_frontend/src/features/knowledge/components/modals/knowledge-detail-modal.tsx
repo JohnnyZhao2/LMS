@@ -5,13 +5,13 @@ import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { useTags } from '@/hooks/api/use-tags';
+import { useTags } from '@/api/tags/get-tags';
 import { useKnowledgeDetail } from '@/features/knowledge/api/use-knowledge-detail';
 import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
 import { useUpdateKnowledge } from '@/features/knowledge/api/update-knowledge';
 import { useParseDocument } from '@/features/knowledge/api/parse-document';
 import { useKnowledgeModalInteractions } from '@/features/knowledge/hooks/use-knowledge-modal-interactions';
-import { useCompleteLearning } from '@/hooks/api/use-complete-learning';
+import { useCompleteLearning } from '@/features/knowledge/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
 import { useAuth } from '@/lib/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';

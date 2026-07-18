@@ -7,8 +7,8 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/lib/api-error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
-import { useQuizDetail } from '@/hooks/api/use-quiz-detail';
-import { useTaskDetail } from '@/hooks/api/use-task-detail';
+import { useQuizDetail } from '@/api/quizzes/get-quiz-detail';
+import { useTaskDetail } from '@/api/tasks/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '@/features/tasks/api/create-task';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';

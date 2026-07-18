@@ -18,8 +18,8 @@ import { useDeactivateUser } from '@/features/users/api/deactivate-user'
 import { useDeleteUser } from '@/features/users/api/delete-user'
 import { useMentors } from '@/features/users/api/get-mentors'
 import { useUpdateUserAvatar } from '@/features/users/api/update-user-avatar'
-import { useDepartments } from '@/hooks/api/use-departments'
-import { useUsers } from '@/hooks/api/use-users'
+import { useDepartments } from '@/api/users/get-departments'
+import { useUsers } from '@/api/users/get-users'
 import { UserForm } from "@/features/users/components/user-form"
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"

@@ -2,8 +2,8 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useTags } from '@/hooks/api/use-tags';
-import { useQuestionDetail } from '@/hooks/api/use-question-detail';
+import { useTags } from '@/api/tags/get-tags';
+import { useQuestionDetail } from '@/api/questions/get-question-detail';
 import { useCreateQuestion } from '@/features/questions/api/create-question';
 import { useDeleteQuestion } from '@/features/questions/api/delete-question';
 import { useUpdateQuestion } from '@/features/questions/api/update-question';

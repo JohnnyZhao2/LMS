@@ -1,11 +1,11 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useDepartments } from '@/hooks/api/use-departments';
-import { useRoles } from '@/hooks/api/use-roles';
-import { useUserDetail } from '@/hooks/api/use-user-detail';
-import { useUsers } from '@/hooks/api/use-users';
-import { useAssignRoles } from '@/hooks/api/use-assign-roles';
+import { isAllowedDepartmentCode, useDepartments } from '@/api/users/get-departments';
+import { useRoles } from '@/api/users/get-roles';
+import { useUserDetail } from '@/api/users/get-user-detail';
+import { useUsers } from '@/api/users/get-users';
+import { useAssignRoles } from '@/api/users/assign-roles';
 import { useAuth } from '@/lib/auth-context';
 import { useUserPermissionOverrides } from '@/features/authorization/api/get-user-permission-overrides';
 import { useUserScopeGroupOverrides } from '@/features/authorization/api/get-user-scope-group-overrides';

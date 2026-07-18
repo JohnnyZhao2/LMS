@@ -12,9 +12,9 @@ import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useTags } from '@/hooks/api/use-tags';
-import { getQuestion } from '@/hooks/api/use-question-detail';
-import { useQuestions } from '@/hooks/api/use-questions';
+import { useTags } from '@/api/tags/get-tags';
+import { getQuestion } from '@/api/questions/get-question-detail';
+import { useQuestions } from '@/api/questions/get-questions';
 import { QuestionBankPanel } from '@/components/questions/question-bank-panel';
 import { QuestionDetailDialog } from '@/components/questions/question-detail-dialog';
 import {
@@ -32,7 +32,7 @@ import { showApiError } from '@/lib/api-error-handler';
 
 import { useCreateQuiz } from '@/features/quiz-center/api/create-quiz';
 import { useUpdateQuiz } from '@/features/quiz-center/api/update-quiz';
-import { useQuizDetail } from '@/hooks/api/use-quiz-detail';
+import { useQuizDetail } from '@/api/quizzes/get-quiz-detail';
 import type { InlineQuestionItem, QuizDraftState } from '@/components/quiz/quiz-editor-types';
 
 import { QuizDocumentEditor } from '@/features/quiz-center/components/quiz-document-editor';

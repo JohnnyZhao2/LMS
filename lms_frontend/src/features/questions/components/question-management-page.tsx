@@ -6,7 +6,7 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/sea
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTags } from '@/hooks/api/use-tags';
+import { useTags } from '@/api/tags/get-tags';
 import { QUESTION_TYPE_CONFIG } from '@/components/questions/question-config';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { QuestionType } from '@/types/common';

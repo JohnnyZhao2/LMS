@@ -35,7 +35,7 @@ import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
-import { useTaskDetail } from '@/hooks/api/use-task-detail';
+import { useTaskDetail } from '@/api/tasks/get-task-detail';
 
 interface KnowledgeListViewItem {
   id: number;

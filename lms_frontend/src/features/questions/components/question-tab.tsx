@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
-import { useQuestions } from '@/hooks/api/use-questions';
+import { useQuestions } from '@/api/questions/get-questions';
 import { useDeleteQuestion } from '@/features/questions/api/delete-question';
 import { QuestionDetailDialog } from '@/components/questions/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';

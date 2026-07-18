@@ -22,7 +22,7 @@ import {
   buildScopeGroupPermissionCodeMap,
 } from '@/features/authorization/utils/permission-sections';
 
-import { useUsers } from '@/hooks/api/use-users';
+import { useUsers } from '@/api/users/get-users';
 import { DEFAULT_ROLE_SCOPE_TYPES, normalizeScopeTypes } from '@/features/authorization/components/user-form.utils';
 import { UserPermissionModuleList } from '@/features/authorization/components/user-permission-module-list';
 import {

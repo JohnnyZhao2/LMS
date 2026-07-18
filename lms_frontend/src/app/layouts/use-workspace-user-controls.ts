@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { useUpdateMyAvatar } from '@/hooks/api/use-update-my-avatar';
+import { useUpdateMyAvatar } from '@/api/users/update-my-avatar';
 import { useAuth } from '@/lib/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { getWorkspacePath, stripWorkspacePathPrefix } from '@/config/role-paths';

@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/features/grading/api/get-pending-grading';
 import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/grading/components/grading-center-tab';
-import { useTaskDetail } from '@/hooks/api/use-task-detail';
+import { useTaskDetail } from '@/api/tasks/get-task-detail';
 
 export const GradingCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();

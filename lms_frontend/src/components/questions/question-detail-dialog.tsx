@@ -3,8 +3,8 @@ import { Calendar, Circle, PencilLine, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { SelectionIndicator } from '@/components/common/selection-indicator';
-import { useTags } from '@/hooks/api/use-tags';
-import { useQuestionDetail } from '@/hooks/api/use-question-detail';
+import { useTags } from '@/api/tags/get-tags';
+import { useQuestionDetail } from '@/api/questions/get-question-detail';
 import { TagAssignmentSection } from '@/components/tags/tag-assignment-section';
 import { useUpdateQuestion } from '@/features/questions/api/update-question';
 import { QuestionDetailPreview } from '@/components/questions/question-detail-preview';
