@@ -1,14 +1,14 @@
 import React from 'react';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { cn } from '@/lib/utils';
-import { useCurrentRole } from '@/hooks/use-current-role';
-import { getWorkspaceHome } from '@/config/role-paths';
 
 export interface PageHeaderProps {
   /** 页面标题 */
   title: string;
   /** 面包屑导航 */
   breadcrumbs?: BreadcrumbItem[];
+  /** 面包屑首页路径（有 breadcrumbs 时由调用方传入） */
+  homePath?: string;
   /** 右侧操作区 */
   extra?: React.ReactNode;
   /** 标题前的图标 */
@@ -22,11 +22,10 @@ export interface PageHeaderProps {
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   breadcrumbs,
+  homePath,
   extra,
   className = '',
 }) => {
-  const currentRole = useCurrentRole();
-  const dashboardPath = getWorkspaceHome(currentRole) ?? '/dashboard';
   const hasBreadcrumbs = Boolean(breadcrumbs?.length);
 
   if (!hasBreadcrumbs && !extra) {
@@ -40,10 +39,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         className,
       )}
     >
-      {hasBreadcrumbs ? (
+      {hasBreadcrumbs && homePath ? (
         <BreadcrumbNav
           items={breadcrumbs ?? []}
-          homePath={dashboardPath}
+          homePath={homePath}
           className="min-w-0"
         />
       ) : (

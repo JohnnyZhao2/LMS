@@ -5,12 +5,12 @@ import type { RelatedLink } from '@/types/knowledge';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { TagInput } from '@/components/tags/tag-input';
 import { cn } from '@/lib/utils';
 import { KnowledgeActionButton } from '@/features/knowledge/components/shared/knowledge-action-button';
 import { RelatedLinksEditor } from '@/features/knowledge/components/shared/related-links-editor';
 import { sanitizeRelatedLinks } from '@/features/knowledge/utils/related-links';
 import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
+import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
 interface KnowledgeFocusMetadataBarProps {
   spaces: SimpleTag[];
@@ -19,6 +19,7 @@ interface KnowledgeFocusMetadataBarProps {
   selectedTags: { id: number; name?: string }[];
   onAddTag: (tag: { id: number; name: string }) => void;
   onRemoveTag: (tagId: number) => void;
+  TagInput: KnowledgeTagDeps['TagInput'];
   title: string;
   onTitleChange: (value: string) => void;
   relatedLinks: RelatedLink[];
@@ -46,6 +47,7 @@ export const KnowledgeFocusMetadataBar: React.FC<KnowledgeFocusMetadataBarProps>
   selectedTags,
   onAddTag,
   onRemoveTag,
+  TagInput,
   title,
   onTitleChange,
   relatedLinks,

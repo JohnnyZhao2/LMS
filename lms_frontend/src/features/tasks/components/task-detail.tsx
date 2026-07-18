@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Activity,
@@ -15,6 +15,7 @@ import {
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { IconBox } from '@/components/common/icon-box';
@@ -29,19 +30,26 @@ import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
+import { showApiError } from '@/lib/api-error-handler';
 import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/constants/task-status';
 import { cn } from '@/lib/utils';
 import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
+import { useCompleteKnowledge } from '@/features/tasks/api/complete-knowledge';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
-import { useTaskDetail } from '@/api/tasks/get-task-detail';
+import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import type { TaskKnowledgePreviewProps } from '@/features/tasks/components/task-form/task-form';
 
 interface KnowledgeListViewItem {
   id: number;
   knowledgeId?: number | null;
   title: string;
   isCompleted?: boolean;
+}
+
+interface TaskDetailProps {
+  KnowledgeDetail: ComponentType<TaskKnowledgePreviewProps>;
 }
 
 type TaskQuizViewItem = LearningTaskQuizItem | TaskQuiz;
@@ -180,13 +188,15 @@ const TaskNodeCard: React.FC<{
   return content;
 };
 
-export const TaskDetail: React.FC = () => {
+export const TaskDetail: React.FC<TaskDetailProps> = ({ KnowledgeDetail }) => {
   const { id } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { roleNavigate, getRolePath } = useRoleNavigate();
   const currentRole = useCurrentRole();
   const { user, isLoading: authLoading } = useAuth();
+  const completeKnowledge = useCompleteKnowledge();
+  const [activeKnowledge, setActiveKnowledge] = useState<KnowledgeListViewItem | null>(null);
 
   const searchParams = new URLSearchParams(location.search);
   const fromDashboard = searchParams.get('from') === 'dashboard';
@@ -319,6 +329,30 @@ export const TaskDetail: React.FC = () => {
     navigate(getRolePath(`quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`));
   };
 
+  const handleOpenKnowledge = (item: KnowledgeListViewItem) => {
+    setActiveKnowledge(item);
+  };
+
+  const handleCompleteLearning = async () => {
+    if (!activeKnowledge) return;
+    try {
+      await completeKnowledge.mutateAsync({
+        taskId,
+        taskKnowledgeId: activeKnowledge.id,
+      });
+      toast.success('已标记为完成');
+    } catch (error) {
+      showApiError(error, '操作失败，请稍后重试');
+    }
+  };
+
+  const activeLearningItem = learningDetail?.knowledge_items.find(
+    (item) => item.id === activeKnowledge?.id,
+  );
+  const activeKnowledgeCompleted = Boolean(
+    activeLearningItem?.is_completed ?? activeKnowledge?.isCompleted,
+  );
+
   const getQuizMetaText = (item: TaskQuizViewItem) =>
     [
       `${item.question_count} 题`,
@@ -395,7 +429,7 @@ export const TaskDetail: React.FC = () => {
                             ) : null
                           }
                           tone={item.isCompleted ? 'success' : 'default'}
-                          onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId ?? item.id}?taskKnowledgeId=${item.id}&task=${taskId}`))}
+                          onClick={() => handleOpenKnowledge(item)}
                         />
                       ))}
                     </div>
@@ -613,6 +647,20 @@ export const TaskDetail: React.FC = () => {
           </aside>
         </PageSplit>
       </div>
+
+      {activeKnowledge && (
+        <KnowledgeDetail
+          knowledgeId={activeKnowledge.knowledgeId ?? undefined}
+          taskKnowledgeId={isStudent ? activeKnowledge.id : undefined}
+          previewOnly={isStudent}
+          learningState={isStudent ? {
+            completed: activeKnowledgeCompleted,
+            pending: completeKnowledge.isPending,
+          } : undefined}
+          onCompleteLearning={isStudent ? handleCompleteLearning : undefined}
+          onClose={() => setActiveKnowledge(null)}
+        />
+      )}
     </PageFillShell>
   );
 };

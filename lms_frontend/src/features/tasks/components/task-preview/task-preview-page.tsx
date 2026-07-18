@@ -16,15 +16,23 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useTaskDetail } from '@/api/tasks/get-task-detail';
+import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { ProgressMonitoringTab } from '@/features/tasks/components/task-preview/progress-monitoring-tab';
-import { GradingCenterTab } from '@/features/grading/components/grading-center-tab';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/lib/auth-context';
 
-export const TaskPreviewPage: React.FC = () => {
+export interface TaskPreviewGradingPanelProps {
+  taskId: number;
+  quizId: number | null;
+}
+
+interface TaskPreviewPageProps {
+  GradingPanel: React.ComponentType<TaskPreviewGradingPanelProps>;
+}
+
+export const TaskPreviewPage: React.FC<TaskPreviewPageProps> = ({ GradingPanel }) => {
   const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -293,7 +301,7 @@ export const TaskPreviewPage: React.FC = () => {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col">
-            <GradingCenterTab taskId={taskId} quizId={activeQuizId} />
+            <GradingPanel taskId={taskId} quizId={activeQuizId} />
           </div>
         </PageWorkbench>
       )}

@@ -92,9 +92,9 @@ To forbid cross-feature imports, you can use ESLint:
                 except: ['./teams'],
             },
             {
-                target: './src/features/users',
+                target: './src/features/user-management',
                 from: './src/features',
-                except: ['./users'],
+                except: ['./user-management'],
             },
 
             // More restrictions...

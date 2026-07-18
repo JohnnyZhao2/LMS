@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
+import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/features/tags/components/space-color-ring-picker';
 import { SUBTLE_SURFACE_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

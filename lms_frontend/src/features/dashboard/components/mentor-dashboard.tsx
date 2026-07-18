@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/lib/auth-context';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
@@ -28,7 +29,7 @@ import { ExamReportPanel } from '@/features/dashboard/components/exam-report-pan
  */
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
-
+  const { roleNavigate } = useRoleNavigate();
   const { availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
@@ -94,28 +95,28 @@ export const MentorDashboard: React.FC = () => {
                 title="发起抽查"
                 description="对学员进行知识抽查"
                 icon={FileSearch}
-                route={ROUTES.SPOT_CHECKS}
+                onClick={() => roleNavigate(ROUTES.SPOT_CHECKS)}
                 actionColor="rose"
               />
               <ActionCard
                 title="发布任务"
                 description="创建学习/测验/考试任务"
                 icon={Send}
-                route={`${ROUTES.TASKS}/create`}
+                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                 actionColor="indigo"
               />
               <ActionCard
                 title="新建试卷"
                 description="创建新的考试或测验试卷"
                 icon={Plus}
-                route={`${ROUTES.QUIZZES}/create`}
+                onClick={() => roleNavigate(`${ROUTES.QUIZZES}/create`)}
                 actionColor="emerald"
               />
               <ActionCard
                 title="阅卷中心"
                 description="批阅学员试卷答案"
                 icon={FileCheck}
-                route={ROUTES.GRADING_CENTER}
+                onClick={() => roleNavigate(ROUTES.GRADING_CENTER)}
                 actionColor="amber"
               />
             </div>

@@ -10,23 +10,42 @@ import { TaskConfigurationPanel } from '@/features/tasks/components/task-form/ta
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { TaskPipelinePanel } from '@/features/tasks/components/task-form/task-pipeline-panel';
 import { TaskResourceLibraryPanel } from '@/features/tasks/components/task-form/task-resource-library-panel';
-import { QuizPreviewDialog } from '@/components/quiz/quiz-preview-dialog';
+import type { QuizDetail } from '@/types/quiz';
 
 export interface TaskKnowledgePreviewProps {
-  knowledgeId: number;
-  previewOnly: boolean;
+  knowledgeId?: number;
+  taskKnowledgeId?: number;
+  previewOnly?: boolean;
+  learningState?: {
+    completed: boolean;
+    pending?: boolean;
+  };
+  onCompleteLearning?: () => void | Promise<void>;
   onClose: () => void;
+}
+
+export interface TaskQuizPreviewProps {
+  open: boolean;
+  quizId: number | null;
+  onOpenChange: (open: boolean) => void;
+  onPrimaryAction?: (quizId: number) => void;
 }
 
 interface TaskFormProps {
   KnowledgePreview: ComponentType<TaskKnowledgePreviewProps>;
+  QuizPreview: ComponentType<TaskQuizPreviewProps>;
+  initialQuizDetail?: QuizDetail;
 }
 
 const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT_MANAGER', '室经理'],
 ]);
 
-export const TaskForm: React.FC<TaskFormProps> = ({ KnowledgePreview }) => {
+export const TaskForm: React.FC<TaskFormProps> = ({
+  KnowledgePreview,
+  QuizPreview,
+  initialQuizDetail,
+}) => {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
@@ -66,7 +85,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ KnowledgePreview }) => {
     handleDragEnd,
     handleSubmit,
     roleNavigate,
-  } = useTaskForm();
+  } = useTaskForm({ initialQuizDetail });
 
   const userPanelItems: UserSelectPanelItem[] = filteredUsers.map((user) => ({
     id: user.id,
@@ -163,7 +182,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ KnowledgePreview }) => {
         </div>
       </PageWorkbench>
 
-      <QuizPreviewDialog
+      <QuizPreview
         open={previewQuizId !== null}
         quizId={previewQuizId}
         onOpenChange={(open) => {

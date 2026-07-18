@@ -1,5 +1,5 @@
 import { LoginForm } from '@/features/auth/components/login-form';
-import { AuthLayout } from '@/components/layouts/auth-layout';
+import { AuthLayout } from '@/app/layouts/auth-layout';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth-context';
 import { getAccessibleWorkspaceHome } from '@/config/role-paths';

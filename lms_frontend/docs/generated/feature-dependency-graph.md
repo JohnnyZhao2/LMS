@@ -15,25 +15,21 @@ flowchart LR
   config["config"]
   testing["testing"]
   types["types"]
-  app -->|32| features
-  app -->|16| components
-  app -->|4| hooks
-  app -->|19| lib
-  app -->|18| config
+  app -->|47| features
+  app -->|15| components
+  app -->|3| hooks
+  app -->|20| lib
+  app -->|20| config
   app -->|8| types
-  features -->|301| components
-  features -->|97| hooks
-  features -->|222| lib
+  features -->|309| components
+  features -->|61| hooks
+  features -->|337| lib
   features -->|3| utils
   features -->|19| config
-  features -->|111| types
-  components -->|14| hooks
-  components -->|78| lib
-  components -->|2| config
-  components -->|22| types
-  hooks -->|84| lib
+  features -->|181| types
+  components -->|46| lib
+  hooks -->|2| lib
   hooks -->|2| config
-  hooks -->|43| types
   lib -->|1| config
   lib -->|4| types
   utils -->|1| config
@@ -45,25 +41,21 @@ flowchart LR
 
 | From | To | Imports |
 |------|----|---------|
-| `app` | `features` | 32 |
-| `app` | `components` | 16 |
-| `app` | `hooks` | 4 |
-| `app` | `lib` | 19 |
-| `app` | `config` | 18 |
+| `app` | `features` | 47 |
+| `app` | `components` | 15 |
+| `app` | `hooks` | 3 |
+| `app` | `lib` | 20 |
+| `app` | `config` | 20 |
 | `app` | `types` | 8 |
-| `features` | `components` | 301 |
-| `features` | `hooks` | 97 |
-| `features` | `lib` | 222 |
+| `features` | `components` | 309 |
+| `features` | `hooks` | 61 |
+| `features` | `lib` | 337 |
 | `features` | `utils` | 3 |
 | `features` | `config` | 19 |
-| `features` | `types` | 111 |
-| `components` | `hooks` | 14 |
-| `components` | `lib` | 78 |
-| `components` | `config` | 2 |
-| `components` | `types` | 22 |
-| `hooks` | `lib` | 84 |
+| `features` | `types` | 181 |
+| `components` | `lib` | 46 |
+| `hooks` | `lib` | 2 |
 | `hooks` | `config` | 2 |
-| `hooks` | `types` | 43 |
 | `lib` | `config` | 1 |
 | `lib` | `types` | 4 |
 | `utils` | `config` | 1 |

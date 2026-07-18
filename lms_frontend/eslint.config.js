@@ -71,7 +71,6 @@ export default defineConfig([
   },
   {
     files: [
-      'src/api/**/*.{ts,tsx}',
       'src/components/**/*.{ts,tsx}',
       'src/hooks/**/*.{ts,tsx}',
       'src/lib/**/*.{ts,tsx}',

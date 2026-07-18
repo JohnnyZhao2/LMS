@@ -7,8 +7,8 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/lib/api-error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
-import { useQuizDetail } from '@/api/quizzes/get-quiz-detail';
-import { useTaskDetail } from '@/api/tasks/get-task-detail';
+import type { QuizDetail } from '@/types/quiz';
+import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '@/features/tasks/api/create-task';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
@@ -27,6 +27,10 @@ import {
 
 const PAGE_SIZE = 9;
 
+interface UseTaskFormOptions {
+  initialQuizDetail?: QuizDetail;
+}
+
 const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -42,7 +46,8 @@ const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
   return updater;
 };
 
-export const useTaskForm = () => {
+export const useTaskForm = (options: UseTaskFormOptions = {}) => {
+  const { initialQuizDetail } = options;
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const { roleNavigate } = useRoleNavigate();
@@ -66,7 +71,7 @@ export const useTaskForm = () => {
   const { data: task, isLoading: taskLoading, isError: taskError } = useTaskDetail(taskId, {
     enabled: isEdit && Number.isFinite(taskId) && taskId > 0,
   });
-  const { data: quizDetail } = useQuizDetail(paramQuizId);
+  const quizDetail = initialQuizDetail;
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   const hasProgress = task?.has_progress || false;

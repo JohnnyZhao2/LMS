@@ -1,12 +1,12 @@
 import type { ReactNode, RefObject } from 'react';
 import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { TagAssignmentSection } from '@/components/tags/tag-assignment-section';
 import { RelatedLinksEditor } from '@/features/knowledge/components/shared/related-links-editor';
 import { getRelatedLinkDisplayText } from '@/features/knowledge/utils/related-links';
 import type { KnowledgeDetail as KnowledgeDetailType, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import dayjs from '@/lib/dayjs';
+import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
 type KnowledgeRelatedLinksSectionProps = {
   activeRelatedLinks: RelatedLink[];
@@ -120,6 +120,7 @@ interface KnowledgeDetailSidePanelProps {
   isSaving: boolean;
   learningAction: ReactNode;
   relatedLinksSectionRef: RefObject<HTMLDivElement | null>;
+  TagAssignmentSection: KnowledgeTagDeps['TagAssignmentSection'];
   onTitleChange: (value: string) => void;
   onTitleBlur: () => void;
   onShowTagInputChange: (open: boolean) => void;
@@ -155,6 +156,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   isSaving,
   learningAction,
   relatedLinksSectionRef,
+  TagAssignmentSection,
   onTitleChange,
   onTitleBlur,
   onShowTagInputChange,
@@ -171,6 +173,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   onCancelEdit,
   onSave,
 }) => (
+
   <div className="kd-right">
     <div className="kd-right-header">
       {canUpdateKnowledge ? (

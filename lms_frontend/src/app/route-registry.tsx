@@ -4,6 +4,9 @@
  *
  * 路径、权限、菜单元数据集中声明在这里；角色前缀和实际可访问性由
  * `role-routes` 与 route guard 根据这些 meta 生成，避免菜单和路由各维护一份。
+ *
+ * 跨 feature 组合只允许发生在 app 层（routes/*）；本文件只做注册与 lazy，
+ * 避免把组合依赖打进入口包。
  */
 import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -11,7 +14,6 @@ import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareT
 import { Navigate, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/lib/auth-context';
 import { getRolePathPrefix, normalizeRoleCode } from '@/config/role-paths';
 import type { RoleCode } from '@/types/common';
 import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/authorization-access';
@@ -67,32 +69,31 @@ const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
-const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
-const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
-const KnowledgeDetailModal = lazy(() => import('@/features/knowledge/components/modals/knowledge-detail-modal').then(m => ({ default: m.KnowledgeDetailModal })));
-const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview/task-preview-page').then(m => ({ default: m.TaskPreviewPage })));
+const TaskFormRoutePage = lazy(() => import('@/app/routes/task-form').then(m => ({ default: m.TaskFormRoutePage })));
+const TaskDetailRoutePage = lazy(() => import('@/app/routes/task-detail').then(m => ({ default: m.TaskDetailRoutePage })));
+const TaskPreviewRoutePage = lazy(() => import('@/app/routes/task-preview').then(m => ({ default: m.TaskPreviewRoutePage })));
 
-const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
+const KnowledgeCenterRoutePage = lazy(() => import('@/app/routes/knowledge-center').then(m => ({ default: m.KnowledgeCenterRoutePage })));
 const TagManagementPage = lazy(() => import('@/features/tags/components/tag-management-page').then(m => ({ default: m.TagManagementPage })));
 
-const QuizManagementPage = lazy(() => import('@/features/quiz-center/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
-const QuizForm = lazy(() => import('@/features/quiz-center/components/quiz-form').then(m => ({ default: m.QuizForm })));
-const QuestionManagementPage = lazy(() => import('@/features/questions/components/question-management-page').then(m => ({ default: m.QuestionManagementPage })));
-const QuestionFormPage = lazy(() => import('@/features/questions/components/question-form-page').then(m => ({ default: m.QuestionFormPage })));
+const QuizManagementPage = lazy(() => import('@/features/assessment/components/quizzes/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
+const QuizFormRoutePage = lazy(() => import('@/app/routes/quiz-form').then(m => ({ default: m.QuizFormRoutePage })));
+const QuestionManagementRoutePage = lazy(() => import('@/app/routes/question-management').then(m => ({ default: m.QuestionManagementRoutePage })));
+const QuestionFormRoutePage = lazy(() => import('@/app/routes/question-form').then(m => ({ default: m.QuestionFormRoutePage })));
 
 const SpotCheckList = lazy(() => import('@/features/spot-checks/components/spot-check-list').then(m => ({ default: m.SpotCheckList })));
 const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-check-form').then(m => ({ default: m.SpotCheckForm })));
 
-const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
+const UserList = lazy(() => import('@/features/user-management/components/users/user-list').then(m => ({ default: m.UserList })));
 
-const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
+const AuthorizationCenterPage = lazy(() => import('@/features/user-management/components/authorization/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 const ActivityLogsPanel = lazy(() => import('@/features/activity-logs/components/activity-logs-panel').then(m => ({ default: m.ActivityLogsPanel })));
 const ActivityLogPolicyPanel = lazy(() => import('@/features/activity-logs/components/activity-log-policy-panel').then(m => ({ default: m.ActivityLogPolicyPanel })));
 
-const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
-const AnswerReview = lazy(() => import('@/features/submissions/components/answer-review').then(m => ({ default: m.AnswerReview })));
+const QuizPlayer = lazy(() => import('@/features/assessment/components/submissions/quiz-player').then(m => ({ default: m.QuizPlayer })));
+const AnswerReview = lazy(() => import('@/features/assessment/components/submissions/answer-review').then(m => ({ default: m.AnswerReview })));
 
-const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
+const GradingCenterRoutePage = lazy(() => import('@/app/routes/grading-center').then(m => ({ default: m.GradingCenterRoutePage })));
 
 export const getWorkspaceDashboardElement = (variant: DashboardVariant): ReactElement => {
   if (variant === 'student') {
@@ -116,23 +117,6 @@ const TaskRoutePage = () => {
 
   return <TaskManagement />;
 };
-
-const TaskDetailRoutePage = () => {
-  const { id, role } = useParams<{ id: string; role: string }>();
-  const { hasCapability } = useAuth();
-  const normalizedRole = normalizeRoleCode(role);
-
-  const canOpenTaskPreview = hasCapability('task.update') || hasCapability('task.analytics.view') || hasCapability('grading.view');
-
-  if (normalizedRole === 'STUDENT' || !canOpenTaskPreview) {
-    return <TaskDetail />;
-  }
-
-  const rolePrefix = getRolePathPrefix(normalizedRole);
-  return <Navigate to={`${rolePrefix}/tasks/${id}/preview?tab=progress&entry=task-management`} replace />;
-};
-
-const TaskFormRoutePage = () => <TaskForm KnowledgePreview={KnowledgeDetailModal} />;
 
 /** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
 const SpotCheckCreateRedirect = () => {
@@ -159,14 +143,14 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     kind: 'business',
     path: 'tasks/create',
     requiredPermissions: ['task.create'],
-    render: () => <TaskFormRoutePage />,
+    component: TaskFormRoutePage,
   },
   {
     key: 'task-edit',
     kind: 'business',
     path: 'tasks/:id/edit',
     requiredPermissions: ['task.update'],
-    render: () => <TaskFormRoutePage />,
+    component: TaskFormRoutePage,
   },
   {
     key: 'task-preview',
@@ -174,14 +158,14 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     path: 'tasks/:id/preview',
     requiredPermissions: ['task.update', 'task.analytics.view', 'grading.view'],
     permissionMode: 'any',
-    component: TaskPreviewPage,
+    component: TaskPreviewRoutePage,
   },
   {
     key: 'task-detail',
     kind: 'business',
     path: 'tasks/:id',
     requiredPermissions: ['task.view'],
-    render: () => <TaskDetailRoutePage />,
+    component: TaskDetailRoutePage,
   },
   {
     key: 'tags',
@@ -207,28 +191,28 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       icon: BookOpen,
       order: 10,
     },
-    component: KnowledgeCenter,
+    component: KnowledgeCenterRoutePage,
   },
   {
     key: 'knowledge-create',
     kind: 'business',
     path: 'knowledge/create',
     requiredPermissions: ['knowledge.create'],
-    component: KnowledgeCenter,
+    component: KnowledgeCenterRoutePage,
   },
   {
     key: 'knowledge-edit',
     kind: 'business',
     path: 'knowledge/:id/edit',
     requiredPermissions: ['knowledge.update'],
-    component: KnowledgeCenter,
+    component: KnowledgeCenterRoutePage,
   },
   {
     key: 'knowledge-detail',
     kind: 'business',
     path: 'knowledge/:id',
     requiredPermissions: ['knowledge.view'],
-    component: KnowledgeCenter,
+    component: KnowledgeCenterRoutePage,
   },
   {
     key: 'quizzes',
@@ -254,21 +238,21 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     kind: 'business',
     path: 'quizzes/create',
     requiredPermissions: ['quiz.create'],
-    component: QuizForm,
+    component: QuizFormRoutePage,
   },
   {
     key: 'quiz-preview',
     kind: 'business',
     path: 'quizzes/:id/preview',
     requiredPermissions: ['quiz.view', 'question.view'],
-    component: QuizForm,
+    component: QuizFormRoutePage,
   },
   {
     key: 'quiz-edit',
     kind: 'business',
     path: 'quizzes/:id/edit',
     requiredPermissions: ['quiz.update'],
-    component: QuizForm,
+    component: QuizFormRoutePage,
   },
   {
     key: 'questions',
@@ -287,21 +271,21 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       },
       order: 20,
     },
-    component: QuestionManagementPage,
+    component: QuestionManagementRoutePage,
   },
   {
     key: 'question-create',
     kind: 'business',
     path: 'questions/create',
     requiredPermissions: ['question.create'],
-    component: QuestionFormPage,
+    component: QuestionFormRoutePage,
   },
   {
     key: 'question-edit',
     kind: 'business',
     path: 'questions/:id/edit',
     requiredPermissions: ['question.update'],
-    component: QuestionFormPage,
+    component: QuestionFormRoutePage,
   },
   {
     key: 'spot-checks',
@@ -456,7 +440,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       },
       order: 30,
     },
-    component: GradingCenterPage,
+    component: GradingCenterRoutePage,
   },
 ];
 

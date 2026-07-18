@@ -31,14 +31,14 @@ import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/common';
 import { showApiError } from '@/lib/api-error-handler';
 
-import { useCreateTag } from '@/api/tags/create-tag';
-import { useDeleteTag } from '@/api/tags/delete-tag';
-import { useTags } from '@/api/tags/get-tags';
+import { useCreateTag } from '@/features/tags/api/create-tag';
+import { useDeleteTag } from '@/features/tags/api/delete-tag';
+import { useTags } from '@/features/tags/api/get-tags';
 import { useMergeTag } from '@/features/tags/api/merge-tags';
 import { useReorderSpaceTags } from '@/features/tags/api/reorder-space-tags';
 import { useUpdateTag } from '@/features/tags/api/update-tag';
 import { SortableSpaceTagItem } from '@/features/tags/components/sortable-space-tag-item';
-import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
+import { SpaceTagQuickCreateDialog } from '@/features/tags/components/space-tag-quick-create-dialog';
 import { TagFormDialog } from '@/features/tags/components/tag-form-dialog';
 
 

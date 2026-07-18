@@ -22,15 +22,12 @@ import { useIncrementViewCount } from '@/features/knowledge/api/increment-view-c
 import { useKnowledgeFilters } from '@/features/knowledge/hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '@/features/knowledge/utils/slash-shortcuts';
-import { useCreateTag } from '@/api/tags/create-tag';
-import { useDeleteTag } from '@/api/tags/delete-tag';
-import { useTags } from '@/api/tags/get-tags';
-import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
 import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from '@/features/knowledge/components/cards/knowledge-card';
 import { AddKnowledgeCard } from '@/features/knowledge/components/cards/knowledge-add-card';
 import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
+import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
 type KnowledgeModalState =
     | { kind: 'create'; initialContent: string; initialSpaceTagId?: number }
@@ -39,15 +36,20 @@ type KnowledgeModalState =
 
 interface KnowledgeCenterProps {
     isAdmin?: boolean;
+    tagDeps: KnowledgeTagDeps;
 }
 
-export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
+export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
+    isAdmin = false,
+    tagDeps,
+}) => {
     const { roleNavigate } = useRoleNavigate();
     const navigate = useNavigate();
     const location = useLocation();
     const { id: routeKnowledgeId } = useParams<{ id?: string }>();
     const incrementViewCount = useIncrementViewCount();
     const { hasCapability } = useAuth();
+    const { useTags, useCreateTag, useDeleteTag, SpaceTagQuickCreateDialog } = tagDeps;
     const canCreateKnowledge = hasCapability('knowledge.create');
     const canUpdateKnowledge = hasCapability('knowledge.update');
     const canDeleteKnowledge = hasCapability('knowledge.delete');
@@ -72,8 +74,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         const parsed = Number(rawHash);
         return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
     }, [location.hash]);
-    const taskId = Number(searchParams.get('task') || 0);
-    const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
     const fromDashboard = searchParams.get('from') === 'dashboard';
     const isCreateRoute = location.pathname.endsWith('/knowledge/create');
     const isEditRoute = location.pathname.endsWith('/edit');
@@ -178,12 +178,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             roleNavigate('dashboard');
             return;
         }
-        if (taskId > 0) {
-            roleNavigate(`tasks/${taskId}`);
-            return;
-        }
         roleNavigate('knowledge');
-    }, [fromDashboard, taskId, roleNavigate]);
+    }, [fromDashboard, roleNavigate]);
 
     const handleView = (id: number) => {
         if (!isManagementView) {
@@ -497,8 +493,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     startInFocus={detailModalState.presentation === 'focus'}
                     forceFocus={detailModalState.presentation === 'focus'}
                     closeOnExitFocus={detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'close'}
-                    taskId={taskId || undefined}
-                    taskKnowledgeId={taskKnowledgeId || undefined}
+                    tagDeps={tagDeps}
                     onFocusOpen={(id) => openFocusedDetail(id, 'detail')}
                     onClose={() => {
                         if (detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'detail') {
@@ -516,6 +511,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 <KnowledgeDetailModal
                     initialContent={modalState.initialContent}
                     initialSpaceTagId={modalState.initialSpaceTagId}
+                    tagDeps={tagDeps}
                     onClose={() => {
                         setModalState(null);
                         if (isCreateRoute) {

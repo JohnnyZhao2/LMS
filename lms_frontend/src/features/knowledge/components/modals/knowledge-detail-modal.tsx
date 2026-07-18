@@ -5,14 +5,11 @@ import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { useTags } from '@/api/tags/get-tags';
 import { useKnowledgeDetail } from '@/features/knowledge/api/use-knowledge-detail';
 import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
 import { useUpdateKnowledge } from '@/features/knowledge/api/update-knowledge';
 import { useParseDocument } from '@/features/knowledge/api/parse-document';
 import { useKnowledgeModalInteractions } from '@/features/knowledge/hooks/use-knowledge-modal-interactions';
-import { useCompleteLearning } from '@/features/knowledge/api/complete-learning';
-import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
 import { useAuth } from '@/lib/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
@@ -39,6 +36,7 @@ import {
   textToKnowledgeHtml,
 } from '@/features/knowledge/utils/slash-shortcuts';
 import '@/features/knowledge/components/modals/knowledge-detail-modal.css';
+import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
 function relTime(dateStr: string): string {
   const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
@@ -88,6 +86,11 @@ function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
   return null;
 }
 
+export interface KnowledgeLearningState {
+  completed: boolean;
+  pending?: boolean;
+}
+
 interface KnowledgeDetailModalProps {
   knowledgeId?: number;
   startEditing?: boolean;
@@ -97,8 +100,12 @@ interface KnowledgeDetailModalProps {
   previewOnly?: boolean;
   initialContent?: string;
   initialSpaceTagId?: number;
-  taskId?: number;
+  /** 学生任务场景：通过 task-knowledge 节点加载内容 */
   taskKnowledgeId?: number;
+  /** 由 Tasks/app 注入的学习状态，存在时展示完成操作 */
+  learningState?: KnowledgeLearningState;
+  onCompleteLearning?: () => void | Promise<void>;
+  tagDeps: KnowledgeTagDeps;
   onClose: () => void;
   onCreated?: (id: number) => void;
   onFocusOpen?: (id: number) => void;
@@ -114,16 +121,19 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   previewOnly = false,
   initialContent = '',
   initialSpaceTagId,
-  taskId,
   taskKnowledgeId,
+  learningState,
+  onCompleteLearning,
+  tagDeps,
   onClose,
   onCreated,
   onFocusOpen,
   onDelete,
   onUpdated,
 }) => {
-  const isCreateMode = typeof knowledgeId !== 'number';
+  const isCreateMode = typeof knowledgeId !== 'number' && !taskKnowledgeId;
   const { currentRole, hasCapability } = useAuth();
+  const { useTags, TagInput, TagAssignmentSection } = tagDeps;
   const isStudent = currentRole === 'STUDENT';
   const canUpdateKnowledge = !previewOnly && hasCapability('knowledge.update');
   const canDeleteKnowledge = !previewOnly && hasCapability('knowledge.delete');
@@ -135,7 +145,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const parseDocument = useParseDocument();
-  const completeLearning = useCompleteLearning();
   const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [localKnowledgeSnapshot, setLocalKnowledgeSnapshot] = useState<{
@@ -154,9 +163,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     tags: [],
     spaceTagId: undefined,
     relatedLinks: [],
-  });
-  const { data: learningDetail } = useStudentLearningTaskDetail(taskId || 0, {
-    enabled: isStudent && !!taskId,
   });
   const hasLocalSnapshot = Boolean(localKnowledgeSnapshot && localKnowledgeSnapshot.knowledgeId === knowledgeId);
   const fetchedKnowledge = hasLocalSnapshot
@@ -226,13 +232,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     ? knowledge?.space_tag?.id ?? null
     : editSpaceTagId;
   const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
-  const taskKnowledgeItem = useMemo(() => {
-    if (!learningDetail) return undefined;
-    return learningDetail.knowledge_items.find((item) => (
-      taskKnowledgeId ? item.id === taskKnowledgeId : item.knowledge_id === knowledgeId
-    ));
-  }, [learningDetail, taskKnowledgeId, knowledgeId]);
-  const isCompleted = taskKnowledgeItem?.is_completed;
 
   // 判断是否有改动
   const hasChanges = Boolean(knowledge && (
@@ -703,33 +702,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [activeSpaceTagId, applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
 
-  const handleComplete = useCallback(async () => {
-    if (!taskId || !taskKnowledgeId) return;
-    try {
-      await completeLearning.mutateAsync({ taskId, taskKnowledgeId });
-      toast.success('已标记为完成');
-      onUpdated?.();
-    } catch (error) {
-      showApiError(error, '操作失败，请稍后重试');
-    }
-  }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
-
-  const showLearningAction = isStudent && Boolean(taskId) && Boolean(taskKnowledgeId);
+  const showLearningAction = Boolean(learningState && onCompleteLearning);
   const learningAction = showLearningAction ? (
     <KnowledgeLearningAction
       visible
-      completed={Boolean(isCompleted)}
-      pending={completeLearning.isPending}
-      onComplete={handleComplete}
+      completed={Boolean(learningState?.completed)}
+      pending={Boolean(learningState?.pending)}
+      onComplete={() => { void onCompleteLearning?.(); }}
       docked
     />
   ) : null;
   const immersiveLearningAction = showLearningAction ? (
     <KnowledgeLearningAction
       visible
-      completed={Boolean(isCompleted)}
-      pending={completeLearning.isPending}
-      onComplete={handleComplete}
+      completed={Boolean(learningState?.completed)}
+      pending={Boolean(learningState?.pending)}
+      onComplete={() => { void onCompleteLearning?.(); }}
       immersive
     />
   ) : null;
@@ -775,6 +763,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             ...current,
             tags: current.tags.filter((tag) => tag.id !== tagId),
           }))}
+          TagInput={TagInput}
           title={createDraft.title}
           onTitleChange={(title) => setCreateDraft((current) => ({ ...current, title }))}
           relatedLinks={createDraft.relatedLinks}
@@ -859,6 +848,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             selectedTags={activeTags}
             onAddTag={addTag}
             onRemoveTag={removeTag}
+            TagInput={TagInput}
             title={activeTitle}
             onTitleChange={(value) => setEditTitle(value)}
             relatedLinks={activeRelatedLinks}
@@ -992,6 +982,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               isSaving={isSaving}
               learningAction={learningAction}
               relatedLinksSectionRef={relatedLinksSectionRef}
+              TagAssignmentSection={TagAssignmentSection}
               onTitleChange={setEditTitle}
               onTitleBlur={handleTitleBlur}
               onShowTagInputChange={setShowTagInput}
