@@ -50,14 +50,12 @@ def _normalize_knowledge_payload(attrs, *, normalize_missing_title: bool = False
     return attrs
 
 
-class KnowledgeListSerializer(serializers.Serializer):
+class KnowledgeMetadataSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     title = serializers.CharField(read_only=True)
     space_tag = serializers.SerializerMethodField()
-    content = serializers.CharField(read_only=True)
     related_links = RelatedLinkSerializer(many=True, read_only=True)
     view_count = serializers.SerializerMethodField()
-    content_preview = serializers.CharField(read_only=True)
     created_by_name = serializers.SerializerMethodField()
     updated_by_name = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
@@ -92,24 +90,13 @@ class KnowledgeListSerializer(serializers.Serializer):
         return source.view_count
 
 
-class KnowledgeDetailSerializer(KnowledgeListSerializer):
-    tags = serializers.SerializerMethodField()
+class KnowledgeListSerializer(KnowledgeMetadataSerializer):
+    content_preview_html = serializers.CharField(read_only=True)
 
-    class Meta:
-        fields = [
-            'id',
-            'title',
-            'space_tag',
-            'tags',
-            'content',
-            'related_links',
-            'view_count',
-            'content_preview',
-            'created_by_name',
-            'created_at',
-            'updated_by_name',
-            'updated_at',
-        ]
+
+class KnowledgeDetailSerializer(KnowledgeMetadataSerializer):
+    content = serializers.CharField(read_only=True)
+    tags = serializers.SerializerMethodField()
 
     def get_tags(self, obj):
         if hasattr(obj, 'tags'):

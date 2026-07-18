@@ -73,7 +73,7 @@ class KnowledgeListCreateView(BaseAPIView):
         knowledge_queryset = get_knowledge_queryset(
             filters=filters,
             search=search
-        )
+        ).defer('content')
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(knowledge_queryset, request)

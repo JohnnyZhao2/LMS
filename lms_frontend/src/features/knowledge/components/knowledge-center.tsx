@@ -47,7 +47,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
     const navigate = useNavigate();
     const location = useLocation();
     const { id: routeKnowledgeId } = useParams<{ id?: string }>();
-    const incrementViewCount = useIncrementViewCount();
+    const { mutate: incrementViewCount } = useIncrementViewCount();
     const { hasCapability } = useAuth();
     const { useTags, useCreateTag, useDeleteTag, SpaceTagQuickCreateDialog } = tagDeps;
     const canCreateKnowledge = hasCapability('knowledge.create');
@@ -181,9 +181,9 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         roleNavigate('knowledge');
     }, [fromDashboard, roleNavigate]);
 
-    const handleView = (id: number) => {
+    const handleView = React.useCallback((id: number) => {
         if (!isManagementView) {
-            incrementViewCount.mutate(id, {
+            incrementViewCount(id, {
                 onSuccess: () => {
                     refetch();
                 },
@@ -191,18 +191,18 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         }
         openDetailModal(id);
         syncDetailHash(id);
-    };
+    }, [incrementViewCount, isManagementView, openDetailModal, refetch, syncDetailHash]);
 
-    const handleFocusView = (id: number) => {
+    const handleFocusView = React.useCallback((id: number) => {
         if (!isManagementView) {
-            incrementViewCount.mutate(id, {
+            incrementViewCount(id, {
                 onSuccess: () => {
                     refetch();
                 },
             });
         }
         openFocusedDetail(id, 'close');
-    };
+    }, [incrementViewCount, isManagementView, openFocusedDetail, refetch]);
 
     const closeDetailModal = React.useCallback(() => {
         setModalState(null);

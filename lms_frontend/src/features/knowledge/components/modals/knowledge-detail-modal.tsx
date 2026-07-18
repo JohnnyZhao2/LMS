@@ -135,8 +135,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const { currentRole, hasCapability } = useAuth();
   const { useTags, TagInput, TagAssignmentSection } = tagDeps;
   const isStudent = currentRole === 'STUDENT';
-  const canUpdateKnowledge = !previewOnly && hasCapability('knowledge.update');
-  const canDeleteKnowledge = !previewOnly && hasCapability('knowledge.delete');
+  // 任务知识快照（KnowledgeRevision）只读，禁止写回源知识
+  const isPreviewOnly = previewOnly || Boolean(taskKnowledgeId);
+  const canUpdateKnowledge = !isPreviewOnly && hasCapability('knowledge.update');
+  const canDeleteKnowledge = !isPreviewOnly && hasCapability('knowledge.delete');
 
   const { data, isLoading } = useKnowledgeDetail({
     knowledgeId,

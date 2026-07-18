@@ -12,7 +12,7 @@ interface KnowledgeItemProps {
 }
 
 export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigate }) => {
-  const previewText = richTextToPlainText(knowledge.content);
+  const previewText = richTextToPlainText(knowledge.content_preview_html);
 
   return (
     <div

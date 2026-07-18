@@ -6,6 +6,8 @@ from django.utils.html import strip_tags
 from apps.tags.models import Tag
 from core.mixins import CreatorMixin, TimestampMixin
 
+from .previews import build_content_preview_html
+
 
 def build_content_preview(content: str, max_length: int = 150) -> str:
     preview_text = strip_tags((content or '').strip())
@@ -36,6 +38,12 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
         limit_choices_to={'tag_type': 'TAG'},
     )
     content = models.TextField(blank=True, default='', verbose_name='正文内容')
+    content_preview_html = models.TextField(
+        blank=True,
+        default='',
+        editable=False,
+        verbose_name='卡片预览',
+    )
     updated_by = models.ForeignKey(
         'users.User',
         on_delete=models.SET_NULL,
@@ -60,6 +68,19 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        should_refresh_preview = (
+            self._state.adding
+            or update_fields is None
+            or 'content' in update_fields
+        )
+        if should_refresh_preview:
+            self.content_preview_html = build_content_preview_html(self.content)
+            if update_fields is not None:
+                kwargs['update_fields'] = [*update_fields, 'content_preview_html']
+        super().save(*args, **kwargs)
 
     def increment_view_count(self):
         from django.db.models import F

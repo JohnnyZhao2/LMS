@@ -651,8 +651,8 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({ KnowledgeDetail }) => {
       {activeKnowledge && (
         <KnowledgeDetail
           knowledgeId={activeKnowledge.knowledgeId ?? undefined}
-          taskKnowledgeId={isStudent ? activeKnowledge.id : undefined}
-          previewOnly={isStudent}
+          taskKnowledgeId={activeKnowledge.id}
+          previewOnly
           learningState={isStudent ? {
             completed: activeKnowledgeCompleted,
             pending: completeKnowledge.isPending,

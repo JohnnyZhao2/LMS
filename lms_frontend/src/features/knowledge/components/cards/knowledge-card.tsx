@@ -14,14 +14,14 @@ interface KnowledgeCardMymindProps {
   index: number;
 }
 
-export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
+const KnowledgeCardMymindComponent: React.FC<KnowledgeCardMymindProps> = ({
   item,
   onClick,
   onFocusOpen,
   index,
 }) => {
-  const long = isLong(item.content);
-  const text = plain(item.content);
+  const long = isLong(item.content_preview_html);
+  const text = plain(item.content_preview_html);
   const short = !long && text.length < 80;
 
   const getSourceHost = React.useCallback((url?: string) => {
@@ -75,7 +75,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
 
         {/* 内容显示 */}
         <KnowledgeContentRenderer
-          html={item.content}
+          html={item.content_preview_html}
           variant="card"
           compact={short}
           contentStyle={{
@@ -119,3 +119,5 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
     </div>
   );
 };
+
+export const KnowledgeCardMymind = React.memo(KnowledgeCardMymindComponent);
