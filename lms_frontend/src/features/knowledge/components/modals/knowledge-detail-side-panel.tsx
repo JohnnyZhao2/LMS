@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
-import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
+import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, Upload, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { RelatedLinksEditor } from '@/features/knowledge/components/shared/related-links-editor';
 import { getRelatedLinkDisplayText } from '@/features/knowledge/utils/related-links';
@@ -103,7 +103,8 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
 };
 
 interface KnowledgeDetailSidePanelProps {
-  knowledge: KnowledgeDetailType;
+  knowledge?: KnowledgeDetailType;
+  isCreateMode?: boolean;
   activeTitle: string;
   activeTags: SimpleTag[];
   activeRelatedLinks: RelatedLink[];
@@ -118,11 +119,13 @@ interface KnowledgeDetailSidePanelProps {
   hasContentChanges: boolean;
   editingLinks: boolean;
   isSaving: boolean;
+  canSave?: boolean;
+  isUploading?: boolean;
   learningAction: ReactNode;
   relatedLinksSectionRef: RefObject<HTMLDivElement | null>;
   TagAssignmentSection: KnowledgeTagDeps['TagAssignmentSection'];
   onTitleChange: (value: string) => void;
-  onTitleBlur: () => void;
+  onTitleBlur?: () => void;
   onShowTagInputChange: (open: boolean) => void;
   onAddTag: (tag: { id: number; name: string }) => void;
   onRemoveTag: (tagId: number) => void;
@@ -133,13 +136,15 @@ interface KnowledgeDetailSidePanelProps {
   onRemoveRelatedLink: (index: number) => void;
   onToggleSpaceTags: () => void;
   onSpaceTagSelect: (spaceTagId: number) => void | Promise<void>;
-  onDelete: () => void;
-  onCancelEdit: () => void;
+  onDelete?: () => void;
+  onCancelEdit?: () => void;
   onSave: () => void;
+  onUpload?: () => void;
 }
 
 export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> = ({
   knowledge,
+  isCreateMode = false,
   activeTitle,
   activeTags,
   activeRelatedLinks,
@@ -154,6 +159,8 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   hasContentChanges,
   editingLinks,
   isSaving,
+  canSave = true,
+  isUploading = false,
   learningAction,
   relatedLinksSectionRef,
   TagAssignmentSection,
@@ -172,6 +179,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   onDelete,
   onCancelEdit,
   onSave,
+  onUpload,
 }) => (
 
   <div className="kd-right">
@@ -217,25 +225,27 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       )}
 
-      <div className="kd-section">
-        <p className="kd-label">详细信息</p>
-        <div className="kd-meta-list">
-          {(knowledge.updated_by_name || knowledge.created_by_name) && (
+      {knowledge && (
+        <div className="kd-section">
+          <p className="kd-label">详细信息</p>
+          <div className="kd-meta-list">
+            {(knowledge.updated_by_name || knowledge.created_by_name) && (
+              <div className="kd-meta-item">
+                <User className="kd-meta-icon" />
+                <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
+              </div>
+            )}
             <div className="kd-meta-item">
-              <User className="kd-meta-icon" />
-              <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
+              <Calendar className="kd-meta-icon" />
+              <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
             </div>
-          )}
-          <div className="kd-meta-item">
-            <Calendar className="kd-meta-icon" />
-            <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
-          </div>
-          <div className="kd-meta-item">
-            <Eye className="kd-meta-icon" />
-            <span>{knowledge.view_count ?? 0} 次阅读</span>
+            <div className="kd-meta-item">
+              <Eye className="kd-meta-icon" />
+              <span>{knowledge.view_count ?? 0} 次阅读</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <KnowledgeRelatedLinksSection
         activeRelatedLinks={activeRelatedLinks}
@@ -279,7 +289,42 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       )}
 
-      {canUpdateKnowledge && hasContentChanges ? (
+      {isCreateMode ? (
+        <div className="kd-action-group">
+          <button
+            type="button"
+            onClick={onToggleSpaceTags}
+            className="kd-action-btn"
+            title="选择 space"
+            aria-label="选择 space"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onUpload}
+            disabled={isUploading}
+            className="kd-action-btn"
+            title={isUploading ? '上传中…' : '导入文档'}
+            aria-label={isUploading ? '上传中' : '导入文档'}
+          >
+            <Upload style={{ width: 15, height: 15 }} />
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave || isSaving || isUploading}
+            className="kd-action-btn"
+            title={isSaving ? '保存中…' : '保存'}
+            aria-label={isSaving ? '保存中' : '保存'}
+            style={{ opacity: !canSave || isSaving || isUploading ? 0.5 : 1 }}
+          >
+            <Check style={{ width: 15, height: 15 }} strokeWidth={1.9} />
+          </button>
+        </div>
+      ) : canUpdateKnowledge && hasContentChanges ? (
         <div className="kd-edit-actions">
           <button
             type="button"

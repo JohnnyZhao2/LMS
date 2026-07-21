@@ -136,6 +136,7 @@ class SpotCheckItem(models.Model):
     )
     topic = models.CharField(max_length=120, verbose_name='抽查主题')
     instruction = models.TextField(blank=True, default='', verbose_name='要求说明')
+    instruction_images = models.JSONField(default=list, blank=True, verbose_name='要求说明贴图')
     content = models.TextField(blank=True, default='', verbose_name='学员填写')
     score = models.DecimalField(
         max_digits=4,

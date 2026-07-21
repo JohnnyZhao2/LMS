@@ -10,10 +10,16 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { cn } from '@/lib/utils';
 
-import { FloatingFormatToolbar } from '@/features/knowledge/components/editor/format-toolbar';
+import {
+  FloatingFormatToolbar,
+  type BlockStyle,
+  type TextAlign,
+  type ToolbarFormatState,
+} from '@/features/knowledge/components/editor/format-toolbar';
 import { SlashCommandMenu } from '@/features/knowledge/components/editor/slash-menu';
 import {
   detectSlashTrigger,
@@ -27,12 +33,19 @@ type MenuPosition = {
   left: number;
 };
 
-type ToolbarFormatState = {
-  background: string | null;
-  bold: boolean;
-  checklist: boolean;
-  link: string | null;
-  header: number | false;
+const DEFAULT_TOOLBAR_FORMATS: ToolbarFormatState = {
+  background: null,
+  block: 'p',
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  link: null,
+  align: 'left',
+  orderedList: false,
+  unorderedList: false,
+  blockquote: false,
+  code: false,
 };
 
 type DocumentWithCaretRange = Document & {
@@ -43,7 +56,7 @@ const EMPTY_HTML = '<p><br></p>';
 const MENU_LEFT = 16;
 const ORDERED_LIST_TRIGGER_TEXT = '1.';
 const TEXT_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,blockquote,li,div';
-const SELECTION_TOOLBAR_HEIGHT = 44;
+const SLASH_MENU_HEIGHT = 40;
 const FLOATING_UI_GAP = 10;
 const VIEWPORT_SAFE_GAP = 8;
 
@@ -121,13 +134,13 @@ function getSelectionRangeInside(root: HTMLElement) {
 function getRangePosition(range: Range, shell: HTMLElement): MenuPosition {
   const rangeRect = range.getBoundingClientRect();
   const shellRect = shell.getBoundingClientRect();
-  const topAboveSelection = rangeRect.top - shellRect.top - SELECTION_TOOLBAR_HEIGHT - FLOATING_UI_GAP;
+  const topAboveSelection = rangeRect.top - shellRect.top - SLASH_MENU_HEIGHT - FLOATING_UI_GAP;
   const topBelowSelection = rangeRect.bottom - shellRect.top + FLOATING_UI_GAP;
-  const hasRoomAboveSelection = rangeRect.top >= SELECTION_TOOLBAR_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
-  const hasRoomBelowSelection = window.innerHeight - rangeRect.bottom >= SELECTION_TOOLBAR_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
+  const hasRoomAboveSelection = rangeRect.top >= SLASH_MENU_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
+  const hasRoomBelowSelection = window.innerHeight - rangeRect.bottom >= SLASH_MENU_HEIGHT + FLOATING_UI_GAP + VIEWPORT_SAFE_GAP;
   const preferredTop = hasRoomAboveSelection || !hasRoomBelowSelection ? topAboveSelection : topBelowSelection;
   const minViewportTop = VIEWPORT_SAFE_GAP - shellRect.top;
-  const maxViewportTop = window.innerHeight - shellRect.top - SELECTION_TOOLBAR_HEIGHT - VIEWPORT_SAFE_GAP;
+  const maxViewportTop = window.innerHeight - shellRect.top - SLASH_MENU_HEIGHT - VIEWPORT_SAFE_GAP;
   const constrainedTop = maxViewportTop > minViewportTop
     ? Math.min(Math.max(preferredTop, minViewportTop), maxViewportTop)
     : preferredTop;
@@ -146,19 +159,102 @@ function getLinkFromSelection(range: Range | null) {
   return link?.href ?? null;
 }
 
+function resolveBlockStyle(formatBlock: string): BlockStyle {
+  if (formatBlock === 'h1') return 'h1';
+  if (formatBlock === 'h2') return 'h2';
+  if (formatBlock === 'h3') return 'h3';
+  if (formatBlock === 'h4') return 'h4';
+  return 'p';
+}
+
+function resolveTextAlign(range: Range | null): TextAlign {
+  if (!range) return 'left';
+  const element = getElementFromNode(range.commonAncestorContainer);
+  const block = element?.closest(TEXT_BLOCK_SELECTOR) as HTMLElement | null;
+  const align = (block?.style.textAlign || window.getComputedStyle(block ?? document.body).textAlign || 'left').toLowerCase();
+  if (align === 'center') return 'center';
+  if (align === 'right' || align === 'end') return 'right';
+  return 'left';
+}
+
 function getToolbarFormats(range: Range | null): ToolbarFormatState {
   const formatBlock = String(document.queryCommandValue('formatBlock')).toLowerCase();
   const background = String(
     document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor') || '',
   );
+  const isBlockquote = formatBlock === 'blockquote'
+    || Boolean(range && getElementFromNode(range.commonAncestorContainer)?.closest('blockquote'));
+  const isCode = Boolean(range && getElementFromNode(range.commonAncestorContainer)?.closest('code,pre'));
 
   return {
-    background: background && background !== 'transparent' ? background : null,
+    background: background && background !== 'transparent' && background !== 'rgba(0, 0, 0, 0)'
+      ? background
+      : null,
+    block: isBlockquote ? 'p' : resolveBlockStyle(formatBlock),
     bold: document.queryCommandState('bold'),
-    checklist: false,
+    italic: document.queryCommandState('italic'),
+    underline: document.queryCommandState('underline'),
+    strike: document.queryCommandState('strikeThrough'),
     link: getLinkFromSelection(range),
-    header: formatBlock === 'h2' ? 2 : formatBlock === 'h3' ? 3 : false,
+    align: resolveTextAlign(range),
+    orderedList: document.queryCommandState('insertOrderedList'),
+    unorderedList: document.queryCommandState('insertUnorderedList'),
+    blockquote: isBlockquote,
+    code: isCode,
   };
+}
+
+function toggleInlineCode() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const codeParent = getElementFromNode(range.commonAncestorContainer)?.closest('code');
+  if (codeParent && codeParent.tagName.toLowerCase() === 'code' && !codeParent.closest('pre')) {
+    const text = document.createTextNode(codeParent.textContent ?? '');
+    codeParent.replaceWith(text);
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(text);
+    restoreRange(nextRange);
+    return;
+  }
+
+  if (range.collapsed) {
+    insertHtmlAtSelection('<code>\u200b</code>');
+    return;
+  }
+
+  const content = range.extractContents();
+  const code = document.createElement('code');
+  code.appendChild(content);
+  range.insertNode(code);
+  const nextRange = document.createRange();
+  nextRange.selectNodeContents(code);
+  restoreRange(nextRange);
+}
+
+function applyBlockStyle(block: BlockStyle) {
+  execFormat('formatBlock', block === 'p' ? 'p' : block);
+}
+
+function applyTextAlign(align: TextAlign) {
+  if (align === 'center') {
+    execFormat('justifyCenter');
+    return;
+  }
+  if (align === 'right') {
+    execFormat('justifyRight');
+    return;
+  }
+  execFormat('justifyLeft');
+}
+
+function toggleBlockquote(active: boolean) {
+  if (active) {
+    execFormat('formatBlock', 'p');
+    return;
+  }
+  execFormat('formatBlock', 'blockquote');
 }
 
 function execFormat(command: string, value?: string) {
@@ -273,7 +369,9 @@ interface KnowledgeTextEditorProps {
   onBlur?: () => void;
   readOnly?: boolean;
   enableSlashMenu?: boolean;
-  enableSelectionToolbar?: boolean;
+  enableFormatToolbar?: boolean;
+  /** 将格式工具栏渲染到外部容器（如弹窗顶部），不占用正文流 */
+  toolbarPortalTarget?: HTMLElement | null;
 }
 
 export interface KnowledgeTextEditorHandle {
@@ -294,7 +392,8 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
   onBlur,
   readOnly = false,
   enableSlashMenu = true,
-  enableSelectionToolbar = true,
+  enableFormatToolbar = true,
+  toolbarPortalTarget = null,
 }, ref) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -308,15 +407,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
   const [slashTrigger, setSlashTrigger] = useState<SlashTrigger | null>(null);
   const [slashMenuPosition, setSlashMenuPosition] = useState<MenuPosition>({ top: 48, left: MENU_LEFT });
   const [activeSlashIndex, setActiveSlashIndex] = useState(0);
-  const [toolbarVisible, setToolbarVisible] = useState(false);
-  const [toolbarPosition, setToolbarPosition] = useState<MenuPosition>({ top: 0, left: 0 });
-  const [toolbarFormats, setToolbarFormats] = useState<ToolbarFormatState>({
-    background: null,
-    bold: false,
-    checklist: false,
-    link: null,
-    header: false,
-  });
+  const [toolbarFormats, setToolbarFormats] = useState<ToolbarFormatState>(DEFAULT_TOOLBAR_FORMATS);
 
   const filteredSlashShortcuts = useMemo(() => (
     slashTrigger ? filterSlashShortcuts(slashTrigger.query) : []
@@ -332,13 +423,35 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     onChange(nextHtml);
   }, [onChange]);
 
+  const ensureEditorSelection = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return false;
+
+    if (restoreRange(savedRangeRef.current) && getSelectionRangeInside(editor)) {
+      return true;
+    }
+
+    editor.focus({ preventScroll: true });
+    const current = getSelectionRangeInside(editor);
+    if (current) {
+      savedRangeRef.current = current.cloneRange();
+      return true;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    if (!restoreRange(range)) return false;
+    savedRangeRef.current = range.cloneRange();
+    return true;
+  }, []);
+
   const updateFloatingUi = useCallback(() => {
     const editor = editorRef.current;
     const shell = shellRef.current;
     if (!editor || !shell || readOnly) {
       savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
-      setToolbarVisible(false);
       return;
     }
 
@@ -346,23 +459,16 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     if (!range) {
       savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
-      setToolbarVisible(false);
       return;
     }
 
     savedRangeRef.current = range.cloneRange();
 
-    if (!range.collapsed && enableSelectionToolbar) {
-      savedSlashTriggerRangeRef.current = null;
-      setSlashTrigger(null);
+    if (enableFormatToolbar) {
       setToolbarFormats(getToolbarFormats(range));
-      setToolbarPosition(getRangePosition(range, shell));
-      setToolbarVisible(true);
-      return;
     }
 
-    setToolbarVisible(false);
-    if (!enableSlashMenu) {
+    if (!range.collapsed || !enableSlashMenu) {
       savedSlashTriggerRangeRef.current = null;
       setSlashTrigger(null);
       return;
@@ -383,7 +489,7 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
       top: position.top + 56,
       left: Math.max(20, position.left),
     });
-  }, [enableSelectionToolbar, enableSlashMenu, readOnly]);
+  }, [enableFormatToolbar, enableSlashMenu, readOnly]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -446,10 +552,10 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
 
   const runCommand = (command: () => void) => {
     const editor = editorRef.current;
-    if (!editor || !restoreRange(savedRangeRef.current)) return;
+    if (!editor || !ensureEditorSelection()) return;
 
     command();
-    editor.focus();
+    editor.focus({ preventScroll: true });
     emitChange();
     updateFloatingUi();
   };
@@ -529,12 +635,49 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
     }
   };
 
+  const showFormatToolbar = enableFormatToolbar && !readOnly;
+  const usePortalToolbar = Boolean(showFormatToolbar && toolbarPortalTarget);
+
+  const formatToolbar = showFormatToolbar ? (
+    <div className={cn('sqe-toolbar-dock', usePortalToolbar && 'sqe-toolbar-dock-overlay')}>
+      <FloatingFormatToolbar
+        activeFormats={toolbarFormats}
+        onApplyBackground={(nextBackground) => runCommand(() => execFormat('hiliteColor', nextBackground ?? 'transparent'))}
+        onApplyLink={(nextLink) => runCommand(() => {
+          if (nextLink) {
+            execFormat('createLink', nextLink);
+          } else {
+            execFormat('unlink');
+          }
+        })}
+        onToggleBold={() => runCommand(() => execFormat('bold'))}
+        onToggleItalic={() => runCommand(() => execFormat('italic'))}
+        onToggleUnderline={() => runCommand(() => execFormat('underline'))}
+        onToggleStrike={() => runCommand(() => execFormat('strikeThrough'))}
+        onApplyBlock={(block) => runCommand(() => applyBlockStyle(block))}
+        onApplyAlign={(align) => runCommand(() => applyTextAlign(align))}
+        onToggleOrderedList={() => runCommand(() => execFormat('insertOrderedList'))}
+        onToggleUnorderedList={() => runCommand(() => execFormat('insertUnorderedList'))}
+        onToggleBlockquote={() => runCommand(() => toggleBlockquote(toolbarFormats.blockquote))}
+        onToggleCode={() => runCommand(() => toggleInlineCode())}
+      />
+    </div>
+  ) : null;
+
   return (
     <div
       ref={shellRef}
-      className={cn('sqe-shell', 'ke-content-base', className)}
+      className={cn(
+        'sqe-shell',
+        'ke-content-base',
+        showFormatToolbar && !usePortalToolbar && 'sqe-shell-with-toolbar',
+        className,
+      )}
       style={{ ['--sqe-min-height' as string]: `${minHeight}px` }}
     >
+      {showFormatToolbar && !usePortalToolbar && formatToolbar}
+      {usePortalToolbar && toolbarPortalTarget && createPortal(formatToolbar, toolbarPortalTarget)}
+
       <div
         ref={editorRef}
         className={cn('sqe-editor', isEmpty && 'sqe-editor-empty')}
@@ -561,10 +704,10 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
         onBlur={() => {
           blurTimerRef.current = window.setTimeout(() => {
             if (shellRef.current?.contains(document.activeElement)) return;
+            if (toolbarPortalTarget?.contains(document.activeElement)) return;
             hasFocusWithinRef.current = false;
             savedSlashTriggerRangeRef.current = null;
             setSlashTrigger(null);
-            setToolbarVisible(false);
             onBlur?.();
           }, 0);
         }}
@@ -582,23 +725,6 @@ export const KnowledgeTextEditor = forwardRef<KnowledgeTextEditorHandle, Knowled
           items={filteredSlashShortcuts}
           position={slashMenuPosition}
           onSelect={handleApplyShortcut}
-        />
-      )}
-
-      {enableSelectionToolbar && !readOnly && toolbarVisible && (
-        <FloatingFormatToolbar
-          activeFormats={toolbarFormats}
-          position={toolbarPosition}
-          onApplyBackground={(nextBackground) => runCommand(() => execFormat('hiliteColor', nextBackground ?? 'transparent'))}
-          onApplyLink={(nextLink) => runCommand(() => {
-            if (nextLink) {
-              execFormat('createLink', nextLink);
-            } else {
-              execFormat('unlink');
-            }
-          })}
-          onToggleBold={() => runCommand(() => execFormat('bold'))}
-          onApplyHeader={(level) => runCommand(() => execFormat('formatBlock', level ? `h${level}` : 'p'))}
         />
       )}
     </div>

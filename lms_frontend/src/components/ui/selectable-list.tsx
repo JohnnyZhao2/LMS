@@ -1,350 +1,244 @@
-import { Check, Loader2, Users } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { cn } from '@/lib/utils';
+
+export interface SelectableListIndicator {
+  value: number;
+  label: string;
+  tone: 'neutral' | 'primary' | 'destructive';
+}
 
 export interface SelectableListItem {
   id: number;
   name: string;
   meta?: string | null;
-  count?: number;
+  indicators?: SelectableListIndicator[];
   disabled?: boolean;
-  /** 透传给 renderLeading 的任意附加数据 */
-  leadingKey?: string | null;
 }
 
-interface SelectableListProps {
+interface SelectableListBaseProps {
   items: SelectableListItem[];
-  selectedIds: number[];
-  onSelect: (id: number) => void;
-  onBeforeSelect?: () => void;
-  /**
-   * 双态选择：点行 = onSelect（查看），点勾 = onToggleCheck（多选）。
-   * 传入后勾选态用 checkedIds，行高亮用 selectedIds。
-   */
-  checkedIds?: number[];
-  onToggleCheck?: (id: number) => void;
-  selectionMode?: 'single' | 'multiple';
-  appearance?: 'panel' | 'plain';
   layout?: 'list' | 'grid';
-  density?: 'regular' | 'compact';
-  emptyText?: string;
-  isLoading?: boolean;
-  loadingText?: string;
   className?: string;
   listClassName?: string;
   itemsClassName?: string;
-  showGridSelectionIndicator?: boolean;
-  renderLeading?: (item: SelectableListItem, options: {
-    appearance: 'panel' | 'plain';
-    density: 'regular' | 'compact';
-    layout: 'list' | 'grid';
-  }) => ReactNode;
+  emptyText?: string;
+  isLoading?: boolean;
+  loadingText?: string;
+  renderLeading?: (
+    item: SelectableListItem,
+    options: { layout: 'list' | 'grid' },
+  ) => ReactNode;
   emptyMetaText?: string;
 }
 
-function renderTrailing(
-  item: SelectableListItem,
-  checked: boolean,
-  selectionMode: 'single' | 'multiple',
-  options?: {
-    dualSelect?: boolean;
-    onToggleCheck?: (id: number) => void;
-  },
-) {
-  const disabled = item.disabled ?? false;
-  const hasCount = typeof item.count === 'number';
-  const dualSelect = options?.dualSelect === true;
-  const shapeClass = selectionMode === 'single' && !dualSelect ? 'rounded-full' : 'rounded-md';
-
-  const checkVisual = (
-    <div
-      className={cn(
-        'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-all duration-150',
-        shapeClass,
-        disabled
-          ? 'opacity-0'
-          : checked
-            ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
-            : dualSelect
-              ? 'border-border/80 bg-background opacity-100'
-              : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
-      )}
-    >
-      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-    </div>
+type SelectableListProps = SelectableListBaseProps &
+  (
+    | {
+        mode: 'inspect';
+        activeId: number | null;
+        checkedIds: number[];
+        onActivate: (id: number | null) => void;
+        onToggleCheck: (id: number) => void;
+      }
+    | {
+        mode: 'select';
+        selectedIds: number[];
+        onToggle: (id: number) => void;
+      }
   );
 
-  if (hasCount && !dualSelect) {
-    return (
-      <div className="relative flex h-[22px] w-8 shrink-0 items-center justify-end">
-        <span
-          className={cn(
-            'absolute right-0 text-[14px] font-semibold tabular-nums text-text-muted transition-all duration-150',
-            disabled
-              ? 'opacity-100'
-              : checked
-                ? '-translate-x-1 opacity-0'
-                : 'translate-x-0 opacity-100 group-hover:-translate-x-1 group-hover:opacity-0 group-focus-visible:-translate-x-1 group-focus-visible:opacity-0',
-          )}
-        >
-          {item.count}
-        </span>
-        <div
-          aria-hidden="true"
-          className={cn(
-            'absolute right-0 flex h-[18px] w-[18px] items-center justify-center border transition-all duration-150',
-            shapeClass,
-            disabled
-              ? 'opacity-0'
-              : checked
-                ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
-                : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
-          )}
-        >
-          {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-        </div>
-      </div>
-    );
+function Indicator({ value, label, tone }: SelectableListIndicator) {
+  if (value <= 0) {
+    return null;
   }
 
-  if (dualSelect && !disabled) {
-    return (
-      <button
-        type="button"
-        aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
-        aria-pressed={checked}
-        className="flex shrink-0 items-center justify-center rounded-md p-1 hover:bg-primary/5"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          options?.onToggleCheck?.(item.id);
-        }}
-      >
-        {checkVisual}
-      </button>
-    );
-  }
-
-  return checkVisual;
+  return (
+    <span
+      className={cn(
+        'inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold tabular-nums',
+        tone === 'primary' && 'bg-primary-100/70 text-primary-700',
+        tone === 'destructive' && 'bg-destructive-500 text-white',
+        tone === 'neutral' && 'bg-muted text-text-muted',
+      )}
+      aria-label={`${value} 项${label}`}
+    >
+      {value > 99 ? '99+' : value}
+    </span>
+  );
 }
 
-export function SelectableList({
-  items,
-  selectedIds,
-  onSelect,
-  onBeforeSelect,
-  checkedIds,
+function SelectionControl({
+  item,
+  checked,
+  disabled,
   onToggleCheck,
-  selectionMode = 'multiple',
-  appearance = 'plain',
-  layout = 'list',
-  density = 'regular',
-  emptyText = '暂无数据',
-  isLoading = false,
-  loadingText = '加载中...',
-  className,
-  listClassName,
-  itemsClassName,
-  showGridSelectionIndicator = true,
-  renderLeading,
-  emptyMetaText = '',
-}: SelectableListProps) {
-  const dualSelect = typeof onToggleCheck === 'function';
+}: {
+  item: SelectableListItem;
+  checked: boolean;
+  disabled: boolean;
+  onToggleCheck: (id: number) => void;
+}) {
+  const indicators =
+    item.indicators?.filter((indicator) => indicator.value > 0) ?? [];
+
+  return (
+    <div className="group/control relative flex h-5 min-w-5 shrink-0 items-center justify-end">
+      <div
+        className={cn(
+          'flex items-center gap-1 transition-all duration-150',
+          checked
+            ? 'translate-x-1 opacity-0'
+            : 'translate-x-0 opacity-100 group-focus-within/control:translate-x-1 group-focus-within/control:opacity-0 group-hover/control:translate-x-1 group-hover/control:opacity-0',
+        )}
+      >
+        {indicators.map((indicator) => (
+          <Indicator
+            key={`${indicator.label}:${indicator.tone}`}
+            {...indicator}
+          />
+        ))}
+      </div>
+
+      <Checkbox
+        checked={checked}
+        disabled={disabled}
+        aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
+        onCheckedChange={() => onToggleCheck(item.id)}
+        className={cn(
+          'absolute right-0 transition-all duration-150',
+          checked
+            ? 'translate-x-0 opacity-100'
+            : 'pointer-events-none -translate-x-1 opacity-0 group-focus-within/control:pointer-events-auto group-focus-within/control:translate-x-0 group-focus-within/control:opacity-100 group-hover/control:pointer-events-auto group-hover/control:translate-x-0 group-hover/control:opacity-100',
+        )}
+      />
+    </div>
+  );
+}
+
+export function SelectableList(props: SelectableListProps) {
+  const {
+    items,
+    layout = 'list',
+    emptyText = '暂无数据',
+    isLoading = false,
+    loadingText = '加载中...',
+    renderLeading,
+    emptyMetaText = '',
+    className,
+    listClassName,
+    itemsClassName,
+  } = props;
 
   return (
     <ScrollContainer
       scrollbar="subtle"
       className={cn(
         'min-h-0 flex-1 overflow-y-auto overscroll-contain',
-        appearance === 'panel'
-          ? layout === 'grid'
-            ? 'px-0 py-0'
-            : density === 'compact'
-              ? 'p-1.5'
-              : 'p-2'
-          : 'overscroll-contain px-2.5 py-2',
+        layout === 'grid' ? 'px-0 py-0' : 'p-2',
         className,
       )}
       onWheel={(event) => event.stopPropagation()}
     >
       {isLoading ? (
-        appearance === 'panel' ? (
-          <div className="flex items-center justify-center gap-2 py-9 text-[12px] text-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{loadingText}</span>
-          </div>
-        ) : (
-          <div className="py-6 text-center">
-            <Loader2 className="mx-auto mb-1.5 h-4 w-4 animate-spin text-slate-300" />
-            <span className="text-[11px] text-slate-400">{loadingText}</span>
-          </div>
-        )
+        <div className="text-text-muted flex items-center justify-center gap-2 py-9 text-[12px]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{loadingText}</span>
+        </div>
       ) : items.length === 0 ? (
-        appearance === 'panel' ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[12px] text-text-muted">
-            {emptyText}
-          </div>
-        ) : (
-          <div className="py-6 text-center text-[11px] text-slate-400">
-            <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <Users className="h-4 w-4 text-slate-300" />
-            </div>
-            {emptyText}
-          </div>
-        )
+        <div className="border-border text-text-muted rounded-xl border border-dashed px-4 py-10 text-center text-[12px]">
+          <Users className="mx-auto mb-2 h-4 w-4 opacity-40" />
+          {emptyText}
+        </div>
       ) : (
         <div
+          data-layout={layout}
           className={cn(
-            layout === 'grid'
-              ? 'grid grid-cols-2 gap-2'
-              : 'space-y-0.5',
+            layout === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-1',
             itemsClassName,
             listClassName,
           )}
         >
           {items.map((item) => {
-            const active = selectedIds.includes(item.id);
-            const checked = dualSelect
-              ? (checkedIds ?? []).includes(item.id)
-              : selectedIds.includes(item.id);
+            const active =
+              props.mode === 'inspect'
+                ? props.activeId === item.id
+                : props.selectedIds.includes(item.id);
             const disabled = item.disabled ?? false;
-            const leading = renderLeading?.(item, { appearance, density, layout });
 
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
-                disabled={disabled}
-                onClick={() => {
-                  if (disabled) {
-                    return;
-                  }
-                  onBeforeSelect?.();
-                  onSelect(item.id);
-                }}
                 className={cn(
-                  'group relative flex w-full items-center text-left transition-all duration-150',
+                  'group flex w-full items-center text-left transition-all duration-150',
                   layout === 'grid'
-                    ? density === 'compact'
-                      ? 'min-h-[56px] rounded-lg border border-border/70 px-2.5 py-2'
-                      : 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
-                    : appearance === 'panel'
-                      ? density === 'compact'
-                        ? 'gap-2.5 rounded-md px-2.5 py-1.5'
-                        : 'gap-3 rounded-lg px-3 py-2.5'
-                      : 'rounded-lg border px-2.5 py-2',
-                  appearance === 'panel'
+                    ? 'border-border/70 bg-background min-h-[56px] rounded-lg border px-2.5 py-2'
+                    : 'min-h-[56px] gap-3 rounded-lg px-3 py-2.5',
+                  active
                     ? layout === 'grid'
-                      ? (
-                        active
-                          ? 'border-primary/25 bg-primary-50/35'
-                          : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
-                      )
-                      : (active ? 'bg-primary-50/70' : 'hover:bg-muted')
-                    : (
-                      active
-                        ? 'border-primary/10 bg-primary/[0.06]'
-                        : 'border-transparent hover:border-slate-100 hover:bg-white hover:shadow-sm'
-                    ),
-                  disabled ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : '',
+                      ? 'border-primary/25 bg-primary-50/35'
+                      : 'bg-primary-50/70'
+                    : layout === 'grid'
+                      ? 'hover:border-primary/20 hover:bg-muted/20 hover:-translate-y-0.5'
+                      : 'hover:bg-muted',
+                  disabled &&
+                    'cursor-not-allowed opacity-45 hover:bg-transparent',
                 )}
               >
-                {layout === 'grid' ? (
-                  <>
-                    {leading}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-pressed={active}
+                  onClick={() => {
+                    if (props.mode === 'inspect') {
+                      props.onActivate(active ? null : item.id);
+                      return;
+                    }
+                    props.onToggle(item.id);
+                  }}
+                  className={cn(
+                    'focus-visible:ring-primary/30 flex min-w-0 flex-1 items-center self-stretch rounded-[inherit] text-left focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed',
+                    layout === 'grid' ? 'gap-[5px]' : 'gap-3',
+                  )}
+                >
+                  {renderLeading?.(item, { layout })}
 
-                    <div className="min-w-0 flex-1">
-                      <p className={cn(
-                        'truncate font-semibold leading-tight text-foreground',
-                        density === 'compact' ? 'text-[12px]' : 'text-[12px]',
-                      )}>
-                        {item.name}
-                      </p>
-                      <p className={cn(
-                        'mt-0.5 truncate leading-tight text-text-muted',
-                        density === 'compact' ? 'text-[10px]' : 'text-[10px]',
-                      )}>
-                        {item.meta ?? emptyMetaText}
-                      </p>
-                    </div>
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        'text-foreground block truncate leading-tight',
+                        layout === 'grid'
+                          ? 'text-[12px] font-semibold'
+                          : 'text-[13px] font-medium',
+                      )}
+                    >
+                      {item.name}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-text-muted block truncate leading-tight',
+                        layout === 'grid'
+                          ? 'mt-px text-[10px]'
+                          : 'mt-0.5 text-[11px]',
+                      )}
+                    >
+                      {item.meta ?? emptyMetaText}
+                    </span>
+                  </span>
+                </button>
 
-                    {showGridSelectionIndicator ? (
-                      dualSelect && !disabled ? (
-                        <button
-                          type="button"
-                          aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
-                          className={cn(
-                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                            checked
-                              ? 'border-primary bg-primary text-white opacity-100'
-                              : 'border-border bg-background text-transparent opacity-70 hover:border-primary/40 hover:bg-primary-50/80 hover:text-primary',
-                          )}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onToggleCheck?.(item.id);
-                          }}
-                        >
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        </button>
-                      ) : (
-                        <div
-                          aria-hidden="true"
-                          className={cn(
-                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                            disabled
-                              ? 'opacity-0'
-                              : checked
-                                ? 'border-primary bg-primary text-white opacity-100'
-                                : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
-                          )}
-                        >
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        </div>
-                      )
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    {leading}
-
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          'truncate font-medium leading-tight',
-                          appearance === 'panel'
-                            ? density === 'compact'
-                              ? 'text-[12px] text-foreground'
-                              : 'text-[13px] text-foreground'
-                            : 'text-[12px]',
-                          active && appearance === 'plain' ? 'text-primary' : '',
-                        )}
-                      >
-                        {item.name}
-                      </p>
-                      <p
-                        className={cn(
-                          'truncate leading-tight',
-                          appearance === 'panel'
-                            ? density === 'compact'
-                              ? 'text-[10px] text-text-muted'
-                              : 'text-[11px] text-text-muted'
-                            : 'text-[10px] text-slate-400',
-                        )}
-                      >
-                        {item.meta ?? emptyMetaText}
-                      </p>
-                    </div>
-
-                    {renderTrailing(item, checked, dualSelect ? 'multiple' : selectionMode, {
-                      dualSelect,
-                      onToggleCheck,
-                    })}
-                  </>
-                )}
-              </button>
+                {props.mode === 'inspect' ? (
+                  <SelectionControl
+                    item={item}
+                    checked={props.checkedIds.includes(item.id)}
+                    disabled={disabled}
+                    onToggleCheck={props.onToggleCheck}
+                  />
+                ) : null}
+              </div>
             );
           })}
         </div>

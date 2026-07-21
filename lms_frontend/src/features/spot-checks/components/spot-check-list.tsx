@@ -3,21 +3,47 @@ import { ListChecks, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CircleButton } from '@/components/ui/circle-button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
+import {
+  PageFillShell,
+  PageSplit,
+  PageWorkbench,
+} from '@/components/ui/page-shell';
+import {
+  DESKTOP_SEARCH_INPUT_CLASSNAME,
+  SearchInput,
+} from '@/components/ui/search-input';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/lib/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types/spot-check';
+import type {
+  SpotCheck,
+  SpotCheckRecordFilter,
+  SpotCheckStudent,
+} from '@/features/spot-checks/types/spot-check';
 import { showApiError } from '@/lib/api-error-handler';
 import { useDeleteSpotCheck } from '@/features/spot-checks/api/delete-spot-check';
 import { useSpotCheckStudents } from '@/features/spot-checks/api/get-spot-check-students';
 import { useSpotChecks } from '@/features/spot-checks/api/get-spot-checks';
 import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
+import { SPOT_CHECK_FORM_DIALOG_CLASSNAME } from '@/features/spot-checks/constants/spot-check-dialog';
 import { SpotCheckRecordList } from '@/features/spot-checks/components/spot-check-record-list';
-import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from '@/features/spot-checks/components/spot-check-student-panel';
+import {
+  SpotCheckStudentPanel,
+  type SpotCheckDepartmentFilter,
+} from '@/features/spot-checks/components/spot-check-student-panel';
 
-const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepartmentFilter) => {
+const matchDepartmentFilter = (
+  student: SpotCheckStudent,
+  filter: SpotCheckDepartmentFilter,
+) => {
   if (filter === 'all') {
     return true;
   }
@@ -29,51 +55,70 @@ const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepar
 };
 
 export const SpotCheckList: React.FC = () => {
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(
+    null,
+  );
   const [checkedStudentIds, setCheckedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<SpotCheckDepartmentFilter>('all');
-  const [paginationByStudent, setPaginationByStudent] = useState<Record<number, { page: number; pageSize: number }>>(
-    {},
-  );
+  const [topicSearch, setTopicSearch] = useState('');
+  const [recordFilter, setRecordFilter] =
+    useState<SpotCheckRecordFilter>('all');
+  const [departmentFilter, setDepartmentFilter] =
+    useState<SpotCheckDepartmentFilter>('all');
+  const [recordPage, setRecordPage] = useState(1);
+  const [recordPageSize, setRecordPageSize] = useState(20);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SpotCheck | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SpotCheck | null>(null);
 
   const currentRole = useCurrentRole();
   const deferredStudentSearch = useDeferredValue(studentSearch.trim());
+  const deferredTopicSearch = useDeferredValue(topicSearch.trim());
   const { hasCapability } = useAuth();
   const deleteSpotCheck = useDeleteSpotCheck();
 
-  const { data: students = [], isLoading: studentsLoading } = useSpotCheckStudents({
-    role: currentRole,
-    search: deferredStudentSearch || undefined,
-  });
-  const filteredStudents = students.filter((student) => matchDepartmentFilter(student, departmentFilter));
-  const filteredStudentIdSet = new Set(filteredStudents.map((student) => student.id));
+  const { data: students = [], isLoading: studentsLoading } =
+    useSpotCheckStudents({
+      role: currentRole,
+      search: deferredStudentSearch || undefined,
+    });
+  const filteredStudents = students.filter((student) =>
+    matchDepartmentFilter(student, departmentFilter),
+  );
+  const filteredStudentIdSet = new Set(
+    filteredStudents.map((student) => student.id),
+  );
   const resolvedSelectedStudentId =
-    filteredStudents.length === 0
-      ? null
-      : selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)
-        ? selectedStudentId
-        : filteredStudents[0].id;
+    selectedStudentId !== null &&
+    filteredStudents.some((student) => student.id === selectedStudentId)
+      ? selectedStudentId
+      : null;
   // 勾选只保留当前筛选可见的学员
-  const visibleCheckedStudentIds = checkedStudentIds.filter((id) => filteredStudentIdSet.has(id));
+  const visibleCheckedStudentIds = checkedStudentIds.filter((id) =>
+    filteredStudentIdSet.has(id),
+  );
 
-  const { page, pageSize } = resolvedSelectedStudentId
-    ? (paginationByStudent[resolvedSelectedStudentId] ?? { page: 1, pageSize: 20 })
-    : { page: 1, pageSize: 20 };
+  const status =
+    recordFilter === 'pending-score'
+      ? 'SUBMITTED'
+      : recordFilter === 'pending-fill'
+        ? 'PENDING'
+        : undefined;
 
   const { data: recordsData, isLoading: recordsLoading } = useSpotChecks({
-    page,
-    pageSize,
+    page: recordPage,
+    pageSize: recordPageSize,
     role: currentRole,
     studentId: resolvedSelectedStudentId ?? undefined,
-    enabled: resolvedSelectedStudentId !== null,
+    status,
+    topic: deferredTopicSearch || undefined,
   });
 
-  const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
   const records = recordsData?.results ?? [];
+  const selectedStudent =
+    filteredStudents.find(
+      (student) => student.id === resolvedSelectedStudentId,
+    ) ?? null;
 
   const canCreateSpotCheck = hasCapability('spot_check.create');
 
@@ -91,16 +136,21 @@ export const SpotCheckList: React.FC = () => {
     }
   };
 
-  const handleSelectStudent = (studentId: number) => {
-    if (studentId === resolvedSelectedStudentId) {
-      return;
-    }
+  const handleSelectStudent = (studentId: number | null) => {
+    setCheckedStudentIds([]);
+    setRecordPage(1);
     startTransition(() => {
       setSelectedStudentId(studentId);
     });
   };
 
+  const handleStudentSearchChange = (value: string) => {
+    setStudentSearch(value);
+    setRecordPage(1);
+  };
+
   const handleToggleCheckStudent = (studentId: number) => {
+    setSelectedStudentId(null);
     setCheckedStudentIds((prev) =>
       prev.includes(studentId)
         ? prev.filter((id) => id !== studentId)
@@ -111,7 +161,9 @@ export const SpotCheckList: React.FC = () => {
   const handleToggleCheckAll = (selectAll: boolean) => {
     if (!selectAll) {
       // 仅清空当前可见勾选，保留筛选外已选
-      setCheckedStudentIds((prev) => prev.filter((id) => !filteredStudentIdSet.has(id)));
+      setCheckedStudentIds((prev) =>
+        prev.filter((id) => !filteredStudentIdSet.has(id)),
+      );
       return;
     }
     // 合并：当前不可见已选 ∪ 当前可见全部
@@ -122,79 +174,116 @@ export const SpotCheckList: React.FC = () => {
     });
   };
 
-  /** 发起对象：当前筛选可见且已勾选的学员 */
+  const createTargetStudentIds =
+    visibleCheckedStudentIds.length > 0
+      ? visibleCheckedStudentIds
+      : resolvedSelectedStudentId === null
+        ? []
+        : [resolvedSelectedStudentId];
+
+  /** 发起对象：已勾选的多选学员，或当前单选学员 */
   const createTargetStudents = filteredStudents.filter((student) =>
-    visibleCheckedStudentIds.includes(student.id),
+    createTargetStudentIds.includes(student.id),
   );
 
-  const updatePagination = (next: { page?: number; pageSize?: number }) => {
-    if (!resolvedSelectedStudentId) {
-      return;
-    }
-    setPaginationByStudent((prev) => ({
-      ...prev,
-      [resolvedSelectedStudentId]: {
-        page: next.page ?? page,
-        pageSize: next.pageSize ?? pageSize,
-      },
-    }));
+  const handleRecordFilterChange = (value: SpotCheckRecordFilter) => {
+    setRecordFilter(value);
+    setRecordPage(1);
+  };
+
+  const handleTopicSearchChange = (value: string) => {
+    setTopicSearch(value);
+    setRecordPage(1);
   };
 
   return (
     <>
       <PageFillShell>
         <PageHeader
-          title="抽查管理"
+          title="抽查任务"
           icon={<ListChecks className="h-5 w-5" />}
         />
 
-        <PageWorkbench>
-          <PageSplit className="min-h-0 flex-1 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
-            <SpotCheckStudentPanel
-              students={filteredStudents}
-              selectedStudentId={resolvedSelectedStudentId}
-              checkedStudentIds={visibleCheckedStudentIds}
-              searchValue={studentSearch}
-              onSearchChange={setStudentSearch}
-              onSelectStudent={handleSelectStudent}
-              onToggleCheckStudent={handleToggleCheckStudent}
-              onToggleCheckAll={handleToggleCheckAll}
-              canCreateSpotCheck={canCreateSpotCheck}
-              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
-              departmentFilter={departmentFilter}
-              onDepartmentFilterChange={(value) => {
-                startTransition(() => {
-                  setDepartmentFilter(value);
-                });
-              }}
-              isLoading={studentsLoading}
-            />
+        <PageWorkbench className="gap-4">
+          <PageSplit className="min-h-0 flex-1 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)] xl:grid-rows-[auto_minmax(0,1fr)]">
+            <div className="min-h-0 xl:row-span-2">
+              <SpotCheckStudentPanel
+                students={filteredStudents}
+                selectedStudentId={resolvedSelectedStudentId}
+                checkedStudentIds={visibleCheckedStudentIds}
+                searchValue={studentSearch}
+                onSearchChange={handleStudentSearchChange}
+                onSelectStudent={handleSelectStudent}
+                onToggleCheckStudent={handleToggleCheckStudent}
+                onToggleCheckAll={handleToggleCheckAll}
+                departmentFilter={departmentFilter}
+                onDepartmentFilterChange={(value) => {
+                  setRecordPage(1);
+                  startTransition(() => {
+                    setDepartmentFilter(value);
+                  });
+                }}
+                isLoading={studentsLoading}
+              />
+            </div>
 
-            <SpotCheckRecordList
-              selectedStudent={selectedStudent}
-              records={records}
-              totalCount={recordsData?.count ?? 0}
-              page={page}
-              pageSize={pageSize}
-              isLoading={recordsLoading}
-              onEditRecord={setEditingRecord}
-              onDeleteRecord={setDeleteTarget}
-              onPageChange={(nextPage) => updatePagination({ page: nextPage })}
-              onPageSizeChange={(nextPageSize) => {
-                updatePagination({ page: 1, pageSize: nextPageSize });
-              }}
-            />
+            <div className="flex min-w-0 items-center gap-2.5 xl:col-start-2 xl:row-start-1">
+              <SegmentedControl
+                options={[
+                  { label: '待评分', value: 'pending-score' },
+                  { label: '待填写', value: 'pending-fill' },
+                  { label: '全部', value: 'all' },
+                ]}
+                value={recordFilter}
+                onChange={(value) =>
+                  handleRecordFilterChange(value as SpotCheckRecordFilter)
+                }
+              />
+              <SearchInput
+                className={`${DESKTOP_SEARCH_INPUT_CLASSNAME} ml-auto`}
+                value={topicSearch}
+                onChange={handleTopicSearchChange}
+                placeholder="搜索主题"
+              />
+              {canCreateSpotCheck ? (
+                <CircleButton
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  disabled={createTargetStudents.length === 0}
+                  label="发起抽查"
+                />
+              ) : null}
+            </div>
+
+            <div className="min-h-0 xl:col-start-2 xl:row-start-2">
+              <SpotCheckRecordList
+                selectedStudent={selectedStudent}
+                records={records}
+                totalCount={recordsData?.count ?? 0}
+                page={recordPage}
+                pageSize={recordPageSize}
+                isLoading={recordsLoading}
+                onEditRecord={setEditingRecord}
+                onDeleteRecord={setDeleteTarget}
+                onPageChange={setRecordPage}
+                onPageSizeChange={(nextPageSize) => {
+                  setRecordPageSize(nextPageSize);
+                  setRecordPage(1);
+                }}
+              />
+            </div>
           </PageSplit>
         </PageWorkbench>
       </PageFillShell>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="flex max-h-[92vh] w-[95vw] max-w-[1060px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <DialogContent className={SPOT_CHECK_FORM_DIALOG_CLASSNAME}>
           <DialogHeader className="shrink-0 px-5 py-5">
-            <DialogTitle className="text-lg font-semibold text-foreground">发起抽查</DialogTitle>
+            <DialogTitle className="text-foreground text-lg font-semibold">
+              发起抽查
+            </DialogTitle>
           </DialogHeader>
           {isCreateDialogOpen ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-0 pb-5 pl-5">
               <SpotCheckForm
                 students={createTargetStudents}
                 hidePageHeader
@@ -209,15 +298,21 @@ export const SpotCheckList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
-        <DialogContent className="flex h-[min(92vh,880px)] max-h-[92vh] w-[95vw] max-w-[1060px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+      <Dialog
+        open={!!editingRecord}
+        onOpenChange={(open) => !open && setEditingRecord(null)}
+      >
+        <DialogContent className={SPOT_CHECK_FORM_DIALOG_CLASSNAME}>
           <DialogHeader className="shrink-0 px-5 py-5">
-            <DialogTitle className="text-lg font-semibold text-foreground">
-              {editingRecord?.status === 'SUBMITTED' || editingRecord?.status === 'SCORED' ? '抽查评分' : '抽查详情'}
+            <DialogTitle className="text-foreground text-lg font-semibold">
+              {editingRecord?.status === 'SUBMITTED' ||
+              editingRecord?.status === 'SCORED'
+                ? '抽查评分'
+                : '抽查详情'}
             </DialogTitle>
           </DialogHeader>
           {editingRecord ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-0 pb-5 pl-5">
               <SpotCheckForm
                 key={editingRecord.id}
                 spotCheckId={editingRecord.id}

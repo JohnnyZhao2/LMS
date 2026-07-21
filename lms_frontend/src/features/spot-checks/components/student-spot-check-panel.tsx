@@ -3,7 +3,12 @@ import { Inbox, ListChecks, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ListTag } from '@/components/ui/list-tag';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -11,13 +16,21 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { SpotCheck, SpotCheckItem } from '@/features/spot-checks/types/spot-check';
+import type {
+  SpotCheck,
+  SpotCheckItem,
+} from '@/features/spot-checks/types/spot-check';
 import { showApiError } from '@/lib/api-error-handler';
 import { useMySpotChecks } from '@/features/spot-checks/api/get-my-spot-checks';
 import { useSpotCheckDetail } from '@/features/spot-checks/api/get-spot-check';
 import { useSubmitSpotCheck } from '@/features/spot-checks/api/submit-spot-check';
 import { SPOT_CHECK_STATUS_META } from '@/features/spot-checks/constants/spot-check-status';
-import { SpotCheckItemEditor, SpotCheckStarChip } from '@/features/spot-checks/components/spot-check-item-editor';
+import { SPOT_CHECK_FORM_DIALOG_CLASSNAME } from '@/features/spot-checks/constants/spot-check-dialog';
+import {
+  SpotCheckItemEditor,
+  SpotCheckStarChip,
+} from '@/features/spot-checks/components/spot-check-item-editor';
+import { TopicNavigator } from '@/features/spot-checks/components/spot-check-form';
 
 const statusFilterOptions = [
   { value: 'PENDING', label: '待填写' },
@@ -39,21 +52,23 @@ const SpotCheckStudentCard: React.FC<{
       type="button"
       onClick={onOpen}
       className={cn(
-        'flex h-full min-h-[148px] w-full flex-col rounded-2xl border border-border/60 bg-background p-4 text-left shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-primary/25 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]',
+        'border-border/60 bg-background hover:border-primary/25 flex h-full min-h-[148px] w-full flex-col rounded-2xl border p-4 text-left shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]',
       )}
     >
       <div className="mb-3 flex items-start justify-between gap-2">
-        <ListTag size="xs" className={statusMeta.className}>{statusMeta.label}</ListTag>
+        <ListTag size="xs" className={statusMeta.className}>
+          {statusMeta.label}
+        </ListTag>
       </div>
-      <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+      <h3 className="text-foreground line-clamp-2 text-[15px] leading-snug font-semibold">
         {record.topic_summary || '抽查任务'}
       </h3>
-      <div className="mt-auto space-y-1 pt-4 text-[12px] text-text-muted">
+      <div className="text-text-muted mt-auto space-y-1 pt-4 text-[12px]">
         <p>发起人 {record.checker_name}</p>
         <p>发起 {dayjs(record.created_at).format('MM-DD HH:mm')}</p>
         {record.status === 'SCORED' && record.average_score != null ? (
           <div className="flex items-center gap-1.5 pt-0.5">
-            <span className="font-medium text-text-muted">均分</span>
+            <span className="text-text-muted font-medium">均分</span>
             <SpotCheckStarChip value={record.average_score} />
           </div>
         ) : null}
@@ -71,23 +86,35 @@ const StudentSpotCheckFormBody: React.FC<{
   const submitMutation = useSubmitSpotCheck();
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activeItemIndex, setActiveItemIndex] = useState(0);
 
-  const items = draftItems ?? (data?.items.map((item) => ({
-    id: item.id,
-    topic: item.topic,
-    instruction: item.instruction ?? '',
-    content: item.content ?? '',
-    images: item.images ?? [],
-    score: item.score,
-    comment: item.comment,
-  })) ?? []);
+  const items =
+    draftItems ??
+    data?.items.map((item) => ({
+      id: item.id,
+      topic: item.topic,
+      instruction: item.instruction ?? '',
+      instruction_images: item.instruction_images ?? [],
+      content: item.content ?? '',
+      images: item.images ?? [],
+      score: item.score,
+      comment: item.comment,
+    })) ??
+    [];
 
   const mode = data?.status === 'PENDING' ? 'submit' : 'view';
+  const activeItem = items[activeItemIndex];
 
-  const handleItemChange = (index: number, field: keyof SpotCheckItem, value: string | string[]) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof SpotCheckItem,
+    value: string | string[],
+  ) => {
     setDraftItems((prev) => {
       const base = prev ?? items;
-      return base.map((item, i) => (i === index ? { ...item, [field]: value } : item));
+      return base.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item,
+      );
     });
   };
 
@@ -131,50 +158,64 @@ const StudentSpotCheckFormBody: React.FC<{
   return (
     <>
       <DialogHeader className="shrink-0 px-5 py-5">
-        <DialogTitle className="text-lg font-semibold text-foreground">
+        <DialogTitle className="text-foreground text-lg font-semibold">
           {data?.status === 'PENDING' ? '填写抽查' : '抽查详情'}
         </DialogTitle>
       </DialogHeader>
 
-      <ScrollContainer className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-2 pb-5">
-        {isLoading || !data ? (
-          <div className="space-y-3 py-2">
-            <Skeleton className="h-20 rounded-xl" />
-            <Skeleton className="h-28 rounded-xl" />
-          </div>
-        ) : (
-          <>
-            <div className="rounded-xl bg-muted/50 px-4 py-3 text-[13px] text-text-muted">
-              <p>发起人 {data.checker_name}</p>
+      {isLoading || !data ? (
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-2 pb-5">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+        </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-5 overflow-hidden px-5 pb-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
+          <aside className="mb-px flex min-h-0 flex-col gap-5 rounded-xl bg-[#f6f7fb] p-5">
+            <div className="space-y-2">
+              <p className="text-text-muted text-xs font-semibold tracking-[0.12em] uppercase">
+                发起人
+              </p>
+              <div className="text-foreground rounded-xl bg-white/72 px-4 py-3 text-sm font-medium">
+                {data.checker_name}
+              </div>
             </div>
-            {data.items.map((raw, index) => {
-              const item = items[index] ?? {
-                topic: raw.topic,
-                instruction: raw.instruction ?? '',
-                content: '',
-                images: [],
-              };
-              return (
-                <SpotCheckItemEditor
-                  key={raw.id ?? index}
-                  index={index}
-                  item={item}
-                  mode={mode}
-                  canRemove={false}
-                  errors={errors}
-                  onChange={handleItemChange}
-                  onRemove={() => undefined}
-                />
-              );
-            })}
-          </>
-        )}
-      </ScrollContainer>
+            <TopicNavigator
+              items={items}
+              activeIndex={activeItemIndex}
+              canAdd={false}
+              onSelect={setActiveItemIndex}
+              onAdd={() => undefined}
+            />
+          </aside>
+
+          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <ScrollContainer className="min-h-0 flex-1 scroll-pb-5 overflow-y-auto pb-px">
+              <div className="flex min-h-full pr-1 lg:pr-5">
+                {activeItem ? (
+                  <SpotCheckItemEditor
+                    key={activeItem.id ?? activeItemIndex}
+                    index={activeItemIndex}
+                    item={activeItem}
+                    mode={mode}
+                    canRemove={false}
+                    errors={errors}
+                    className="min-h-full flex-1"
+                    onChange={handleItemChange}
+                    onRemove={() => undefined}
+                  />
+                ) : null}
+              </div>
+            </ScrollContainer>
+          </section>
+        </div>
+      )}
 
       {mode === 'submit' ? (
-        <div className="flex shrink-0 justify-end gap-3 border-t border-border/60 px-5 py-4">
+        <div className="border-border/60 flex shrink-0 justify-end gap-3 border-t px-5 py-4">
           <Button onClick={handleSubmit} disabled={submitMutation.isPending}>
-            {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {submitMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
             提交
           </Button>
         </div>
@@ -187,10 +228,17 @@ const StudentSpotCheckFormDialog: React.FC<{
   spotCheckId: number | null;
   onClose: () => void;
 }> = ({ spotCheckId, onClose }) => (
-  <Dialog open={spotCheckId !== null} onOpenChange={(open) => !open && onClose()}>
-    <DialogContent className="flex max-h-[92vh] w-[95vw] max-w-[860px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+  <Dialog
+    open={spotCheckId !== null}
+    onOpenChange={(open) => !open && onClose()}
+  >
+    <DialogContent className={SPOT_CHECK_FORM_DIALOG_CLASSNAME}>
       {spotCheckId !== null ? (
-        <StudentSpotCheckFormBody key={spotCheckId} spotCheckId={spotCheckId} onClose={onClose} />
+        <StudentSpotCheckFormBody
+          key={spotCheckId}
+          spotCheckId={spotCheckId}
+          onClose={onClose}
+        />
       ) : null}
     </DialogContent>
   </Dialog>
@@ -225,8 +273,10 @@ export const StudentSpotCheckPanel: React.FC = () => {
           options={statusFilterOptions}
           className="w-full xl:w-auto xl:shrink-0"
         />
-        <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
-          当前共 <span className="ml-1 text-base text-primary">{totalCount}</span> 条抽查
+        <span className="text-text-muted text-xs font-bold tracking-widest uppercase">
+          当前共{' '}
+          <span className="text-primary ml-1 text-base">{totalCount}</span>{' '}
+          条抽查
         </span>
       </div>
 
@@ -255,18 +305,20 @@ export const StudentSpotCheckPanel: React.FC = () => {
                 pageSize={PAGE_SIZE}
                 defaultPageSize={PAGE_SIZE}
                 onChange={(nextPage) => setPage(nextPage)}
-                showTotal={(count, [start, end]) => `第 ${start}-${end} 条 / 共 ${count} 条`}
+                showTotal={(count, [start, end]) =>
+                  `第 ${start}-${end} 条 / 共 ${count} 条`
+                }
               />
             </div>
           ) : null}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-2xl bg-muted py-32">
-          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-md bg-muted">
-            <Inbox className="h-10 w-10 text-text-muted" />
+        <div className="bg-muted flex flex-col items-center justify-center rounded-2xl py-32">
+          <div className="bg-muted mb-6 flex h-24 w-24 items-center justify-center rounded-md">
+            <Inbox className="text-text-muted h-10 w-10" />
           </div>
-          <h3 className="mb-2 text-2xl font-bold text-foreground">暂无抽查</h3>
-          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-text-muted">
+          <h3 className="text-foreground mb-2 text-2xl font-bold">暂无抽查</h3>
+          <p className="text-text-muted flex items-center gap-2 text-sm font-semibold tracking-widest uppercase">
             <ListChecks className="h-4 w-4" />
             有新的抽查会显示在这里
           </p>

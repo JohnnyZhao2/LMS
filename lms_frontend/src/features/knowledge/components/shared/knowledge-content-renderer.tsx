@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
-type KnowledgeContentVariant = 'detail' | 'focus' | 'card';
+type KnowledgeContentVariant = 'detail' | 'card';
 
 interface KnowledgeContentRendererProps {
   html: string;
@@ -18,7 +18,6 @@ interface KnowledgeContentRendererProps {
 
 const variantClass: Record<KnowledgeContentVariant, string> = {
   detail: 'ke-content-detail',
-  focus: 'ke-content-detail ke-content-focus',
   card: 'ke-content-card-preview',
 };
 

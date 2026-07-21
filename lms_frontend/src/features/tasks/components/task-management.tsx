@@ -391,7 +391,7 @@ export const TaskManagement: React.FC = () => {
     return (
         <PageFillShell>
             <PageHeader
-                title="任务管理"
+                title="综合任务"
                 icon={<ListTodo />}
             />
 

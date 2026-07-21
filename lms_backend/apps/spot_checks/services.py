@@ -66,9 +66,17 @@ class SpotCheckService(BaseService):
         self,
         student_id: Optional[int] = None,
         batch_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+        topic: str = '',
         ordering: str = '-created_at',
     ) -> QuerySet:
-        return self._get_queryset_for_user(student_id, batch_id, ordering)
+        return self._get_queryset_for_user(
+            student_id=student_id,
+            batch_id=batch_id,
+            status=status,
+            topic=topic,
+            ordering=ordering,
+        )
 
     def get_mine(
         self,
@@ -258,6 +266,8 @@ class SpotCheckService(BaseService):
         self,
         student_id: Optional[int] = None,
         batch_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+        topic: str = '',
         ordering: str = '-created_at',
     ) -> QuerySet:
         qs = self._base_queryset()
@@ -266,6 +276,10 @@ class SpotCheckService(BaseService):
             qs = qs.filter(student_id=student_id)
         if batch_id:
             qs = qs.filter(batch_id=batch_id)
+        if status:
+            qs = qs.filter(status=status)
+        if topic:
+            qs = qs.filter(items__topic__icontains=topic).distinct()
         if ordering:
             qs = qs.order_by(ordering)
         return qs
@@ -284,6 +298,7 @@ class SpotCheckService(BaseService):
                 spot_check=spot_check,
                 topic=item['topic'],
                 instruction=item.get('instruction', ''),
+                instruction_images=item.get('instruction_images') or [],
                 content=item.get('content', ''),
                 score=item.get('score') if keep_score else None,
                 comment=item.get('comment', '') if keep_score else '',
@@ -321,6 +336,10 @@ class SpotCheckService(BaseService):
         for index, item in enumerate(items_data, start=1):
             topic = str(item.get('topic') or '').strip()
             instruction = str(item.get('instruction') or '').strip()
+            instruction_images = normalize_images(
+                item.get('instruction_images'),
+                field_label=f'第 {index} 项要求贴图',
+            )
             if not topic:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,
@@ -329,6 +348,7 @@ class SpotCheckService(BaseService):
             normalized_items.append({
                 'topic': topic,
                 'instruction': instruction,
+                'instruction_images': instruction_images,
                 'content': '',
                 'images': [],
             })

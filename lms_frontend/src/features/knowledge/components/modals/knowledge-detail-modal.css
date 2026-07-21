@@ -1,6 +1,7 @@
 .kd-overlay{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:rgba(0,0,0,.6);animation:kdFadeIn .18s ease}
 .kd-container{position:relative;display:flex;width:min(1680px,calc(100vw - 64px));height:min(840px,calc(100dvh - 64px));max-width:100%;max-height:100%;gap:8px;overflow:hidden;border-radius:12px;padding:8px;background:#f1f3f6;box-shadow:0 40px 100px rgba(0,0,0,.35);animation:kdPopIn .22s cubic-bezier(.4,0,.2,1);transition:width .22s ease,height .22s ease,border-radius .22s ease}
-.kd-container-focus{width:100vw;height:100dvh;gap:0;border-radius:0;padding:0;background:transparent;box-shadow:none}
+.kd-overlay.kd-overlay-fullscreen{padding:0;background:#f1f3f6}
+.kd-container.kd-container-fullscreen{width:100vw;height:100dvh;max-width:none;max-height:none;border-radius:0;box-shadow:none}
 .kd-focus-btn{position:absolute;left:16px;top:14px;z-index:20;display:flex;height:30px;width:30px;align-items:center;justify-content:center;border:none;border-radius:999px;padding:0;background:transparent;color:#7c8794;cursor:pointer;transition:transform .18s ease}
 .kd-focus-btn:hover{transform:translateY(-1px)}
 .kd-focus-btn::after{content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%) translateX(-2px);border-radius:999px;padding:10px 24px;background:rgba(243,245,248,.96);color:#22252b;font-size:17px;font-weight:500;line-height:1;opacity:0;pointer-events:none;white-space:nowrap;box-shadow:0 10px 28px rgba(15,23,42,.1);transition:opacity .16s ease,transform .16s ease}
@@ -16,11 +17,11 @@
 .kd-outline-level-2{padding-left:14px}
 .kd-outline-level-3{padding-left:26px;color:#929ba7}
 .kd-outline-level-4{padding-left:38px;color:#a0a8b0}
-.kd-outline-focus{position:absolute;left:clamp(24px,4vw,72px);top:72px;bottom:104px;z-index:9;width:clamp(188px,13vw,224px);background:rgba(238,242,246,.66);box-shadow:none;backdrop-filter:blur(16px)}
-.kd-outline-focus .kd-outline-header{padding:18px 16px 8px}
-.kd-outline-focus .kd-outline-list{padding:0 16px 16px 10px}
-.kd-left-shell{display:flex;flex:1;min-width:0;overflow:visible;border-radius:6px;background:#fff;box-shadow:0 10px 24px rgba(21,38,61,.07)}
+.kd-left-shell{position:relative;display:flex;flex:1;min-width:0;overflow:visible;border-radius:6px;background:#fff;box-shadow:0 10px 24px rgba(21,38,61,.07)}
+.kd-left-shell .kd-format-toolbar-host.sqe-toolbar-host{z-index:20;width:max-content}
+.kd-left-shell .kd-format-toolbar-host .sqe-toolbar{pointer-events:auto}
 .kd-left{display:flex;flex:1;min-width:0;flex-direction:column;overflow-y:auto;margin-right:-8px;border-radius:6px;padding:52px 80px 64px 72px;background:transparent;scrollbar-gutter:stable}
+.kd-left-shell .kd-format-toolbar-host + .kd-left{padding-top:76px}
 .kd-left-static{overflow:hidden;margin-right:0}
 .kd-right{position:relative;display:flex;width:clamp(272px,22vw,304px);flex-shrink:0;flex-direction:column;overflow:hidden;border-radius:6px;background:#eef2f6;box-shadow:0 10px 24px rgba(21,38,61,.08)}
 .kd-right-header{padding:22px 20px 16px;background:linear-gradient(160deg,#dce4ee 0%,#eef0f3 100%)}
@@ -56,9 +57,6 @@
 .kd-linetype-item{display:flex;width:100%;align-items:center;gap:10px;border:none;padding:11px 16px;background:none;color:#333;font-family:inherit;font-size:13.5px;cursor:pointer}
 .kd-linetype-item:hover{background:#f9f9f9}
 .kd-linetype-dot{display:flex;height:14px;width:14px;flex-shrink:0;align-items:center;justify-content:center;border:2px solid #ccc;border-radius:50%}
-.kd-immersive-bottom{position:absolute;right:0;bottom:0;left:0;display:flex;align-items:flex-end;justify-content:space-between;padding:20px 26px 26px;pointer-events:none}
-.kd-immersive-save-btn{margin-left:auto}
-.kab-chip.kd-immersive-learning-state{display:inline-flex;align-items:center;gap:8px;color:#2d8a2d;cursor:default}
 .kd-bottom,.kd-bottom-learning{display:flex;align-items:center}
 .kd-bottom{justify-content:center;padding:14px 20px 16px}
 .kd-bottom-learning{width:100%;justify-content:center}
@@ -73,8 +71,7 @@
 .kd-content-editable .sqe-editor{cursor:text}
 @keyframes kdFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes kdPopIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-@media (max-width:1500px){.kd-focus-shell-with-outline .kfs-editor-area{box-sizing:border-box;padding-left:220px}.kd-focus-shell-with-outline .kfs-editor-inner{max-width:min(var(--kfs-editor-max-width),calc(100vw - 300px))}}
 @media (max-width:1360px){.kd-overlay{padding:20px}.kd-container{width:min(1320px,calc(100vw - 40px));height:min(800px,calc(100dvh - 40px))}.kd-outline{width:196px}.kd-outline-header{padding-top:44px}.kd-left{padding:44px 64px 52px 56px}.kd-right{width:288px}}
 @media (max-width:1100px){.kd-overlay{padding:16px}.kd-container{width:calc(100vw - 32px);height:min(760px,calc(100dvh - 32px))}.kd-outline{display:none}.kd-left{padding:36px 48px 44px 40px}.kd-right{width:260px}.kd-right-header{padding:18px 16px 14px}.kd-right-body{padding:16px}.kd-bottom{padding:12px 16px 14px}.kd-content{max-width:100%}}
-@media (max-width:860px){.kd-overlay{padding:12px}.kd-container{width:min(100%,760px);height:min(760px,calc(100dvh - 24px));flex-direction:column;gap:6px;padding:6px}.kd-focus-btn{left:12px;top:12px}.kd-left{margin-right:0;padding:28px 22px 32px}.kd-right{width:100%;max-height:min(260px,34dvh)}.kd-right-body{padding:14px 16px}.kd-action-group,.kd-edit-actions{gap:18px}}
+@media (max-width:860px){.kd-overlay{padding:12px}.kd-container{width:min(100%,760px);height:min(760px,calc(100dvh - 24px));flex-direction:column;gap:6px;padding:6px}.kd-focus-btn{left:12px;top:12px}.kd-left{margin-right:0;padding:28px 22px 32px}.kd-left-shell .kd-format-toolbar-host + .kd-left{padding-top:68px}.kd-right{width:100%;max-height:min(260px,34dvh)}.kd-right-body{padding:14px 16px}.kd-action-group,.kd-edit-actions{gap:18px}}
 @media (max-width:640px){.kd-overlay{padding:10px}.kd-container{width:100%;height:calc(100dvh - 20px);border-radius:10px}.kd-left{padding:24px 18px 28px}.kd-right{max-height:min(280px,38dvh)}.kd-focus-btn::after{display:none}}

@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.playwright-cli
 
 # Environment — keep local copies; commit only *.example
 .env

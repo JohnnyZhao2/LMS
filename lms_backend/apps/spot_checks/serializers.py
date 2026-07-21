@@ -10,6 +10,11 @@ from .policies import get_spot_check_actions_payload
 class SpotCheckItemIssueSerializer(serializers.Serializer):
     topic = serializers.CharField(max_length=120, trim_whitespace=True)
     instruction = serializers.CharField(required=False, allow_blank=True, default='', trim_whitespace=True)
+    instruction_images = serializers.ListField(
+        child=serializers.CharField(allow_blank=False),
+        required=False,
+        default=list,
+    )
 
 
 class SpotCheckItemSubmitSerializer(serializers.Serializer):
@@ -37,7 +42,7 @@ class SpotCheckItemScoreSerializer(serializers.Serializer):
 
 
 class SpotCheckItemListSerializer(serializers.ModelSerializer):
-    """列表用，不含 images。"""
+    """列表用，不含图片数据。"""
 
     class Meta:
         model = SpotCheckItem
@@ -47,7 +52,7 @@ class SpotCheckItemListSerializer(serializers.ModelSerializer):
 class SpotCheckItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpotCheckItem
-        fields = ['id', 'topic', 'instruction', 'content', 'score', 'comment', 'images', 'order']
+        fields = ['id', 'topic', 'instruction', 'instruction_images', 'content', 'score', 'comment', 'images', 'order']
 
 
 class SpotCheckListSerializer(serializers.ModelSerializer):
@@ -93,10 +98,25 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
 
 class SpotCheckStudentSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
+    spot_check_count = serializers.IntegerField(read_only=True, default=0)
+    average_score = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'employee_id', 'avatar_key', 'department_name']
+        fields = [
+            'id',
+            'username',
+            'employee_id',
+            'avatar_key',
+            'department_name',
+            'spot_check_count',
+            'average_score',
+        ]
 
 
 class SpotCheckDetailSerializer(serializers.ModelSerializer):

@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：106 个
+- Feature 作用域视觉组件：105 个
 
 ## 共享组件
 
@@ -13,7 +13,7 @@
 - `src/components/common/micro-label.tsx`
 - `src/components/common/selection-indicator.tsx`
 - `src/components/common/user-avatar.tsx`
-- `src/components/common/user-select-list.tsx`
+- `src/components/common/user-selectable-list.tsx`
 
 ### ui (44 个)
 
@@ -136,7 +136,7 @@
 - `src/features/dashboard/components/student-dashboard/mini-calendar.tsx`
 - `src/features/dashboard/components/team-manager-dashboard.tsx`
 
-### knowledge (16 个)
+### knowledge (15 个)
 
 #### components
 
@@ -146,11 +146,10 @@
 - `src/features/knowledge/components/editor/knowledge-text-editor.tsx`
 - `src/features/knowledge/components/editor/slash-menu.tsx`
 - `src/features/knowledge/components/knowledge-center.tsx`
+- `src/features/knowledge/components/knowledge-masonry-grid.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-modal.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-outline.tsx`
 - `src/features/knowledge/components/modals/knowledge-detail-side-panel.tsx`
-- `src/features/knowledge/components/modals/knowledge-focus-metadata-bar.tsx`
-- `src/features/knowledge/components/modals/knowledge-focus-shell.tsx`
 - `src/features/knowledge/components/modals/knowledge-learning-action.tsx`
 - `src/features/knowledge/components/shared/focus-icon.tsx`
 - `src/features/knowledge/components/shared/knowledge-action-button.tsx`

@@ -26,13 +26,13 @@ import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from '@/features/knowledge/components/cards/knowledge-card';
 import { AddKnowledgeCard } from '@/features/knowledge/components/cards/knowledge-add-card';
+import { KnowledgeMasonryGrid } from '@/features/knowledge/components/knowledge-masonry-grid';
 import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
 type KnowledgeModalState =
     | { kind: 'create'; initialContent: string; initialSpaceTagId?: number }
-    | { kind: 'detail'; knowledgeId: number; startEditing: boolean; presentation: 'modal' }
-    | { kind: 'detail'; knowledgeId: number; startEditing: false; presentation: 'focus'; onFocusExit: 'detail' | 'close' };
+    | { kind: 'detail'; knowledgeId: number; startFullscreen: boolean };
 
 interface KnowledgeCenterProps {
     isAdmin?: boolean;
@@ -76,8 +76,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
     }, [location.hash]);
     const fromDashboard = searchParams.get('from') === 'dashboard';
     const isCreateRoute = location.pathname.endsWith('/knowledge/create');
-    const isEditRoute = location.pathname.endsWith('/edit');
-
     const {
         search,
         searchValue,
@@ -121,22 +119,14 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         }
     };
 
-    const openDetailModal = React.useCallback((knowledgeId: number, startEditing = false) => {
+    const openDetailModal = React.useCallback((
+        knowledgeId: number,
+        startFullscreen = false,
+    ) => {
         setModalState({
             kind: 'detail',
             knowledgeId,
-            startEditing,
-            presentation: 'modal',
-        });
-    }, []);
-
-    const openFocusedDetail = React.useCallback((knowledgeId: number, onFocusExit: 'detail' | 'close') => {
-        setModalState({
-            kind: 'detail',
-            knowledgeId,
-            startEditing: false,
-            presentation: 'focus',
-            onFocusExit,
+            startFullscreen,
         });
     }, []);
 
@@ -163,7 +153,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
             return;
         }
         if (routeKnowledgeIdNumber && Number.isFinite(routeKnowledgeIdNumber)) {
-            openDetailModal(routeKnowledgeIdNumber, isEditRoute);
+            openDetailModal(routeKnowledgeIdNumber);
             return;
         }
         if (hashKnowledgeId && Number.isFinite(hashKnowledgeId)) {
@@ -171,7 +161,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
             return;
         }
         setModalState(null);
-    }, [hashKnowledgeId, isCreateRoute, isEditRoute, openDetailModal, routeKnowledgeIdNumber, selectedSpaceTagId]);
+    }, [hashKnowledgeId, isCreateRoute, openDetailModal, routeKnowledgeIdNumber, selectedSpaceTagId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
@@ -193,7 +183,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         syncDetailHash(id);
     }, [incrementViewCount, isManagementView, openDetailModal, refetch, syncDetailHash]);
 
-    const handleFocusView = React.useCallback((id: number) => {
+    const handleFullscreenView = React.useCallback((id: number) => {
         if (!isManagementView) {
             incrementViewCount(id, {
                 onSuccess: () => {
@@ -201,8 +191,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
                 },
             });
         }
-        openFocusedDetail(id, 'close');
-    }, [incrementViewCount, isManagementView, openFocusedDetail, refetch]);
+        openDetailModal(id, true);
+    }, [incrementViewCount, isManagementView, openDetailModal, refetch]);
 
     const closeDetailModal = React.useCallback(() => {
         setModalState(null);
@@ -405,13 +395,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
                     </div>
                 ) : shouldShowKnowledgeGrid ? (
                     <>
-                        <div
-                            style={{
-                                columns: '280px',
-                                columnGap: 25,
-                            }}
-                            className="sm:[column-width:280px] [column-width:100%]"
-                        >
+                        <KnowledgeMasonryGrid>
                             {canCreateKnowledge && (
                                 <AddKnowledgeCard
                                     onSave={handleQuickSave}
@@ -430,11 +414,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
                                     key={item.id}
                                     item={item}
                                     onClick={handleView}
-                                    onFocusOpen={handleFocusView}
+                                    onFullscreenOpen={handleFullscreenView}
                                     index={index}
                                 />
                             ))}
-                        </div>
+                        </KnowledgeMasonryGrid>
 
                         {hasKnowledgeResults && (
                             <div className="flex flex-col items-center gap-3 pt-8">
@@ -487,21 +471,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
 
             {detailModalState && (
                 <KnowledgeDetailModal
-                    key={`${detailModalState.presentation}-${detailModalState.knowledgeId}-${detailModalState.startEditing ? 'edit' : 'view'}`}
+                    key={`${detailModalState.knowledgeId}-${detailModalState.startFullscreen ? 'fullscreen' : 'modal'}`}
                     knowledgeId={detailModalState.knowledgeId}
-                    startEditing={detailModalState.startEditing}
-                    startInFocus={detailModalState.presentation === 'focus'}
-                    forceFocus={detailModalState.presentation === 'focus'}
-                    closeOnExitFocus={detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'close'}
+                    startFullscreen={detailModalState.startFullscreen}
                     tagDeps={tagDeps}
-                    onFocusOpen={(id) => openFocusedDetail(id, 'detail')}
-                    onClose={() => {
-                        if (detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'detail') {
-                            openDetailModal(detailModalState.knowledgeId);
-                            return;
-                        }
-                        closeDetailModal();
-                    }}
+                    onClose={closeDetailModal}
                     onDelete={handleDeleteFromModal}
                     onUpdated={() => refetch()}
                 />

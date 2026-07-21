@@ -3,11 +3,11 @@ import { Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SpotCheckImageGallery } from '@/features/spot-checks/components/spot-check-image-gallery';
 import type { SpotCheckItem } from '@/features/spot-checks/types/spot-check';
 import { appendPasteImages } from '@/features/spot-checks/utils/spot-check-images';
 
@@ -19,7 +19,12 @@ interface SpotCheckItemEditorProps {
   mode: SpotCheckItemEditorMode;
   canRemove: boolean;
   errors: Record<string, string>;
-  onChange: (index: number, field: keyof SpotCheckItem, value: string | string[]) => void;
+  className?: string;
+  onChange: (
+    index: number,
+    field: keyof SpotCheckItem,
+    value: string | string[],
+  ) => void;
   /** 评分模式：评语失焦时即时保存 */
   onCommentBlur?: (index: number) => void;
   onRemove: (index: number) => void;
@@ -28,6 +33,8 @@ interface SpotCheckItemEditorProps {
 /** 五星制：满星 2 分，半星 1 分，满分 10 */
 const STAR_COUNT = 5;
 const POINTS_PER_STAR = 2;
+const SPOT_CHECK_TEXTAREA_CLASSNAME =
+  'resize-none scroll-mb-5 rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] font-medium leading-5 placeholder:font-medium focus:border-primary/20 focus:bg-background focus:ring-0';
 
 /** 分数 → 星数（支持 0.5） */
 const scoreToStars = (score: string | null | undefined) => {
@@ -81,11 +88,11 @@ const SpotCheckStarRating: React.FC<SpotCheckStarRatingProps> = ({
           >
             {/* 底星 */}
             <Star
-              className={cn(iconClass, 'fill-transparent text-border')}
+              className={cn(iconClass, 'text-border fill-transparent')}
               strokeWidth={1.75}
             />
             {/* 半星 / 满星填充 */}
-            {(isFull || isHalf) ? (
+            {isFull || isHalf ? (
               <div
                 className={cn(
                   'pointer-events-none absolute inset-0 overflow-hidden',
@@ -140,17 +147,19 @@ const SpotCheckStarRating: React.FC<SpotCheckStarRatingProps> = ({
 export { SpotCheckStarRating };
 
 /** 列表/卡片只读星级芯片；无分时显示「未评分」避免空星像 0 分 */
-export const SpotCheckStarChip: React.FC<{ value: string | null | undefined }> = ({ value }) => {
+export const SpotCheckStarChip: React.FC<{
+  value: string | null | undefined;
+}> = ({ value }) => {
   const empty = value === '' || value == null || Number.isNaN(Number(value));
   if (empty) {
     return (
-      <span className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-muted/40 px-2 py-1 text-[12px] text-text-muted">
+      <span className="border-border/70 bg-muted/40 text-text-muted inline-flex shrink-0 items-center rounded-lg border px-2 py-1 text-[12px]">
         未评分
       </span>
     );
   }
   return (
-    <div className="inline-flex shrink-0 items-center rounded-lg border border-border/70 bg-white px-1.5 py-1 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
+    <div className="border-border/70 inline-flex shrink-0 items-center rounded-lg border bg-white px-1.5 py-1 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
       <SpotCheckStarRating value={value} readOnly size="sm" />
     </div>
   );
@@ -162,31 +171,75 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
   mode,
   canRemove,
   errors,
+  className,
   onChange,
   onCommentBlur,
   onRemove,
 }) => {
   const images = item.images ?? [];
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const instructionImages = item.instruction_images ?? [];
+  const previewInput =
+    mode === 'submit'
+      ? {
+          label: '填写内容',
+          placeholder: '填写抽查内容',
+          value: item.content ?? '',
+          onChange: (content: string) => onChange(index, 'content', content),
+        }
+      : mode === 'score'
+        ? {
+            label: '评语',
+            placeholder: '填写评语',
+            value: item.comment ?? '',
+            onChange: (comment: string) =>
+              onChange(index, 'comment', comment),
+            onBlur: () => onCommentBlur?.(index),
+          }
+        : undefined;
+  const previewContext =
+    mode === 'score'
+      ? {
+          label: '学员答案',
+          value: item.content?.trim() || '（未填写）',
+        }
+      : undefined;
+  const instructionPreviewContext =
+    mode === 'submit'
+      ? {
+          label: '要求说明',
+          value: item.instruction?.trim() || '（无文字说明）',
+        }
+      : previewContext;
 
-  const handlePasteImages = async (event: React.ClipboardEvent) => {
-    if (mode !== 'submit') return;
-    const files = [...event.clipboardData.files].filter((file) => file.type.startsWith('image/'));
+  const handlePasteImages = async (
+    event: React.ClipboardEvent,
+    field: 'images' | 'instruction_images',
+  ) => {
+    if (mode !== 'submit' && mode !== 'issue') return;
+    const files = [...event.clipboardData.files].filter((file) =>
+      file.type.startsWith('image/'),
+    );
     if (files.length === 0) return;
     event.preventDefault();
-    const { urls, error } = await appendPasteImages(files, images);
+    const currentImages = field === 'images' ? images : instructionImages;
+    const { urls, error } = await appendPasteImages(files, currentImages);
     if (error) toast.error(error);
-    if (urls.length !== images.length) onChange(index, 'images', urls);
+    if (urls.length !== currentImages.length) onChange(index, field, urls);
   };
 
   return (
-    <section className="group relative space-y-3 rounded-xl border border-border/55 bg-white/72 p-4">
+    <section
+      className={cn(
+        'group border-border/55 relative space-y-3 rounded-xl border bg-white/72 p-4',
+        className,
+      )}
+    >
       {canRemove && mode === 'issue' ? (
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute right-0 top-0 z-10 h-[26px] w-[26px] translate-x-[18%] -translate-y-[18%] rounded-full border border-border/70 bg-white text-text-muted opacity-0 shadow-[0_2px_8px_rgba(15,23,42,0.05)] pointer-events-none transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+          className="border-border/70 text-text-muted pointer-events-none absolute top-2 right-2 z-10 h-[26px] w-[26px] rounded-full border bg-white opacity-0 shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
           onClick={() => onRemove(index)}
           aria-label={`删除主题 ${index + 1}`}
         >
@@ -203,27 +256,33 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
         )}
       >
         <div className="min-w-0">
-          <Label className="mb-3 block text-xs font-medium text-text-muted">主题 {index + 1}</Label>
+          <Label className="text-text-muted mb-3 block text-xs font-medium">
+            主题 {index + 1}
+          </Label>
           {mode === 'issue' ? (
             <Input
               value={item.topic}
               onChange={(event) => onChange(index, 'topic', event.target.value)}
               placeholder="例如：HTTP 缓存"
-              className="h-10 rounded-lg border-transparent bg-muted/40 px-3.5 text-[13px] focus:border-primary/20 focus:bg-background focus:ring-0"
+              className="bg-muted/40 focus:border-primary/20 focus:bg-background h-10 rounded-lg border-transparent px-3.5 text-[13px] focus:ring-0"
             />
           ) : (
-            <p className="rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] font-medium text-foreground">
+            <p className="bg-muted/40 text-foreground rounded-lg px-3.5 py-2.5 text-[13px] font-medium">
               {item.topic || '—'}
             </p>
           )}
           {errors[`item-${index}-topic`] ? (
-            <p className="text-sm text-destructive-500">{errors[`item-${index}-topic`]}</p>
+            <p className="text-destructive-500 text-sm">
+              {errors[`item-${index}-topic`]}
+            </p>
           ) : null}
         </div>
 
-        {(mode === 'score' || mode === 'view') ? (
+        {mode === 'score' || mode === 'view' ? (
           <div className="md:pt-0">
-            <Label className="mb-3 block text-xs font-medium text-text-muted">得分</Label>
+            <Label className="text-text-muted mb-3 block text-xs font-medium">
+              得分
+            </Label>
             <div className="flex h-10 items-center">
               <SpotCheckStarRating
                 value={item.score}
@@ -232,7 +291,9 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
               />
             </div>
             {errors[`item-${index}-score`] ? (
-              <p className="mt-1 text-sm text-destructive-500">{errors[`item-${index}-score`]}</p>
+              <p className="text-destructive-500 mt-1 text-sm">
+                {errors[`item-${index}-score`]}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -241,113 +302,112 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
       {/* 要求说明：发起可编辑；学员/评分/查看只读展示 */}
       {mode === 'issue' ? (
         <div>
-          <Label className="mb-3 block text-xs font-medium text-text-muted">要求说明（可选）</Label>
+          <Label className="text-text-muted mb-3 block text-xs font-medium">
+            要求说明（可选，可 Ctrl/Cmd+V 贴图）
+          </Label>
           <Textarea
             autoResize
             value={item.instruction ?? ''}
-            onChange={(event) => onChange(index, 'instruction', event.target.value)}
+            onChange={(event) =>
+              onChange(index, 'instruction', event.target.value)
+            }
+            onPaste={(event) => handlePasteImages(event, 'instruction_images')}
             placeholder="给学员的填写要求"
-            className="min-h-[56px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+            className={`min-h-[56px] ${SPOT_CHECK_TEXTAREA_CLASSNAME}`}
+          />
+          <SpotCheckImageGallery
+            images={instructionImages}
+            editable
+            onRemove={(imageIndex) =>
+              onChange(
+                index,
+                'instruction_images',
+                instructionImages.filter(
+                  (_, currentIndex) => currentIndex !== imageIndex,
+                ),
+              )
+            }
           />
         </div>
-      ) : (item.instruction ?? '').trim() ? (
+      ) : (item.instruction ?? '').trim() || instructionImages.length > 0 ? (
         <div>
-          <Label className="mb-3 block text-xs font-medium text-text-muted">要求说明</Label>
-          <p className="whitespace-pre-wrap rounded-lg bg-primary-50/60 px-3.5 py-2.5 text-[13px] leading-5 text-primary-900/90">
-            {(item.instruction ?? '').trim()}
-          </p>
+          <Label className="text-text-muted mb-3 block text-xs font-medium">
+            要求说明
+          </Label>
+          {(item.instruction ?? '').trim() ? (
+            <p className="bg-primary-50/60 text-primary-900/90 rounded-lg px-3.5 py-2.5 text-[13px] leading-5 whitespace-pre-wrap">
+              {(item.instruction ?? '').trim()}
+            </p>
+          ) : null}
+          <SpotCheckImageGallery
+            images={instructionImages}
+            previewContext={instructionPreviewContext}
+            previewInput={previewInput}
+          />
         </div>
       ) : null}
 
-      {(mode === 'submit' || mode === 'score' || mode === 'view') ? (
+      {mode === 'submit' || mode === 'score' || mode === 'view' ? (
         <div>
-          <Label className="mb-3 block text-xs font-medium text-text-muted">
+          <Label className="text-text-muted mb-3 block text-xs font-medium">
             {mode === 'submit' ? '填写内容（可 Ctrl/Cmd+V 贴图）' : '学员填写'}
           </Label>
           {mode === 'submit' ? (
             <Textarea
               autoResize
               value={item.content ?? ''}
-              onChange={(event) => onChange(index, 'content', event.target.value)}
-              onPaste={handlePasteImages}
+              onChange={(event) =>
+                onChange(index, 'content', event.target.value)
+              }
+              onPaste={(event) => handlePasteImages(event, 'images')}
               placeholder="填写说明，可直接粘贴截图"
-              className="min-h-[88px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+              className={`min-h-[88px] ${SPOT_CHECK_TEXTAREA_CLASSNAME}`}
             />
           ) : (
-            <p className="min-h-[56px] whitespace-pre-wrap rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 text-foreground/90">
+            <p className="bg-muted/40 text-foreground/90 min-h-[56px] rounded-lg px-3.5 py-2.5 text-[13px] leading-5 whitespace-pre-wrap">
               {item.content?.trim() || '（未填写）'}
             </p>
           )}
           {errors[`item-${index}-content`] ? (
-            <p className="text-sm text-destructive-500">{errors[`item-${index}-content`]}</p>
+            <p className="text-destructive-500 text-sm">
+              {errors[`item-${index}-content`]}
+            </p>
           ) : null}
 
-          {images.length > 0 ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {images.map((src, imageIndex) => (
-                <div key={`${index}-img-${imageIndex}`} className="relative">
-                  <button
-                    type="button"
-                    className="block overflow-hidden rounded-lg border border-border/60 transition hover:border-primary/40 hover:ring-2 hover:ring-primary/15"
-                    onClick={() => setPreviewSrc(src)}
-                    aria-label={`查看贴图 ${imageIndex + 1}`}
-                  >
-                    <img
-                      src={src}
-                      alt={`贴图 ${imageIndex + 1}`}
-                      className="h-20 w-20 object-cover"
-                    />
-                  </button>
-                  {mode === 'submit' ? (
-                    <button
-                      type="button"
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-white"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onChange(
-                          index,
-                          'images',
-                          images.filter((_, i) => i !== imageIndex),
-                        );
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <SpotCheckImageGallery
+            images={images}
+            editable={mode === 'submit'}
+            onRemove={(imageIndex) =>
+              onChange(
+                index,
+                'images',
+                images.filter((_, currentIndex) => currentIndex !== imageIndex),
+              )
+            }
+            previewContext={previewContext}
+            previewInput={previewInput}
+          />
         </div>
       ) : null}
 
-      <Dialog open={previewSrc !== null} onOpenChange={(open) => !open && setPreviewSrc(null)}>
-        <DialogContent className="max-h-[92vh] w-[min(92vw,960px)] max-w-[960px] overflow-hidden border-transparent bg-background p-3 shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
-          <DialogTitle className="sr-only">贴图预览</DialogTitle>
-          {previewSrc ? (
-            <img
-              src={previewSrc}
-              alt="贴图预览"
-              className="max-h-[calc(92vh-2rem)] w-full rounded-lg object-contain"
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
-      {(mode === 'score' || (mode === 'view' && item.comment)) ? (
+      {mode === 'score' || (mode === 'view' && item.comment) ? (
         <div>
-          <Label className="mb-3 block text-xs font-medium text-text-muted">评语</Label>
+          <Label className="text-text-muted mb-3 block text-xs font-medium">
+            评语
+          </Label>
           {mode === 'score' ? (
             <Textarea
               autoResize
               value={item.comment ?? ''}
-              onChange={(event) => onChange(index, 'comment', event.target.value)}
+              onChange={(event) =>
+                onChange(index, 'comment', event.target.value)
+              }
               onBlur={() => onCommentBlur?.(index)}
               placeholder="可选"
-              className="min-h-[56px] resize-none rounded-lg border-transparent bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 focus:border-primary/20 focus:bg-background focus:ring-0"
+              className={`min-h-[56px] ${SPOT_CHECK_TEXTAREA_CLASSNAME}`}
             />
           ) : (
-            <p className="rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-5 text-foreground/85">
+            <p className="bg-muted/40 text-foreground/85 rounded-lg px-3.5 py-2.5 text-[13px] leading-5">
               {item.comment}
             </p>
           )}

@@ -10,11 +10,18 @@ import type { TaskResourceOption } from '@/types/task';
 import type { QuizDetail } from '@/types/quiz';
 import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
-import { useCreateTask, type TaskCreateRequest } from '@/features/tasks/api/create-task';
+import {
+  useCreateTask,
+  type TaskCreateRequest,
+} from '@/features/tasks/api/create-task';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useTaskResourceOptions } from '@/features/tasks/api/get-task-resources';
 import { useUpdateTask } from '@/features/tasks/api/update-task';
-import type { ResourceItem, SelectedResource, ResourceType } from '@/features/tasks/components/task-form/task-form.types';
+import type {
+  ResourceItem,
+  SelectedResource,
+  ResourceType,
+} from '@/features/tasks/components/task-form/task-form.types';
 import { mapTaskResourceOptionToResource } from '@/features/tasks/components/task-form/task-form.types';
 import {
   buildStableUid,
@@ -31,7 +38,7 @@ interface UseTaskFormOptions {
   initialQuizDetail?: QuizDetail;
 }
 
-const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
+const getPaginatedResults = <T>(data?: PaginatedResponse<T> | T[]): T[] => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
   return data.results;
@@ -39,7 +46,7 @@ const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
 
 type Updater<T> = T | ((prev: T) => T);
 
-const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
+const applyUpdater = <T>(updater: Updater<T>, current: T): T => {
   if (typeof updater === 'function') {
     return (updater as (prev: T) => T)(current);
   }
@@ -58,17 +65,27 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
-  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(null);
-  const [selectedResourcesDraft, setSelectedResourcesDraft] = useState<SelectedResource[] | null>(null);
+  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(
+    null,
+  );
+  const [selectedResourcesDraft, setSelectedResourcesDraft] = useState<
+    SelectedResource[] | null
+  >(null);
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
-  const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<number[] | null>(null);
+  const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<
+    number[] | null
+  >(null);
   const [userSearch, setUserSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const { data: task, isLoading: taskLoading, isError: taskError } = useTaskDetail(taskId, {
+  const {
+    data: task,
+    isLoading: taskLoading,
+    isError: taskError,
+  } = useTaskDetail(taskId, {
     enabled: isEdit && Number.isFinite(taskId) && taskId > 0,
   });
   const quizDetail = initialQuizDetail;
@@ -79,8 +96,9 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
   const canRemoveAssignee = !(isEdit && hasProgress);
 
   const initialTitle = isEdit && task ? task.title : '';
-  const initialDescription = isEdit && task ? (task.description || '') : '';
-  const initialDeadline = isEdit && task?.deadline ? new Date(task.deadline) : undefined;
+  const initialDescription = isEdit && task ? task.description || '' : '';
+  const initialDeadline =
+    isEdit && task?.deadline ? new Date(task.deadline) : undefined;
 
   const initialSelectedResources = useMemo<SelectedResource[]>(() => {
     return buildTaskFormInitialSelectedResources({
@@ -92,7 +110,10 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
   }, [isEdit, task, quizDetail, paramQuizId]);
 
   const initialSelectedUserIds = useMemo<number[]>(
-    () => (isEdit && task ? (task.assignments?.map((item) => item.assignee) || []) : []),
+    () =>
+      isEdit && task
+        ? task.assignments?.map((item) => item.assignee) || []
+        : [],
     [isEdit, task],
   );
   const originalAssigneeIds = initialSelectedUserIds;
@@ -104,29 +125,39 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
   const selectedUserIds = selectedUserIdsDraft ?? initialSelectedUserIds;
 
   const setTitle = (nextTitle: string) => setTitleDraft(nextTitle);
-  const setDescription = (nextDescription: string) => setDescriptionDraft(nextDescription);
-  const setDeadline = (nextDeadline: Date | undefined) => setDeadlineDraft(nextDeadline);
+  const setDescription = (nextDescription: string) =>
+    setDescriptionDraft(nextDescription);
+  const setDeadline = (nextDeadline: Date | undefined) =>
+    setDeadlineDraft(nextDeadline);
   const setSelectedResources = (updater: Updater<SelectedResource[]>) => {
-    setSelectedResourcesDraft((prev) => applyUpdater(updater, prev ?? initialSelectedResources));
+    setSelectedResourcesDraft((prev) =>
+      applyUpdater(updater, prev ?? initialSelectedResources),
+    );
   };
   const setSelectedUserIds = (updater: Updater<number[]>) => {
-    setSelectedUserIdsDraft((prev) => applyUpdater(updater, prev ?? initialSelectedUserIds));
+    setSelectedUserIdsDraft((prev) =>
+      applyUpdater(updater, prev ?? initialSelectedUserIds),
+    );
   };
 
   const excludedDocumentIds = useMemo(() => {
-    return Array.from(new Set(
-      selectedResources
-        .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
-        .map((item) => item.id),
-    )).sort((left, right) => left - right);
+    return Array.from(
+      new Set(
+        selectedResources
+          .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
+          .map((item) => item.id),
+      ),
+    ).sort((left, right) => left - right);
   }, [selectedResources]);
 
   const excludedQuizIds = useMemo(() => {
-    return Array.from(new Set(
-      selectedResources
-        .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
-        .map((item) => item.id),
-    )).sort((left, right) => left - right);
+    return Array.from(
+      new Set(
+        selectedResources
+          .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
+          .map((item) => item.id),
+      ),
+    ).sort((left, right) => left - right);
   }, [selectedResources]);
 
   const resourceQuery = useTaskResourceOptions({
@@ -139,31 +170,48 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
   });
 
   const availableResources = useMemo(
-    () => getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource),
+    () =>
+      getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(
+        mapTaskResourceOptionToResource,
+      ),
     [resourceQuery.data],
   );
 
   const totalCount = resourceQuery.data?.count ?? availableResources.length;
-  const totalPages = resourceQuery.data?.total_pages ?? Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const safeCurrentPage = resourceQuery.data?.current_page ?? Math.min(currentPage, totalPages);
+  const totalPages =
+    resourceQuery.data?.total_pages ??
+    Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safeCurrentPage =
+    resourceQuery.data?.current_page ?? Math.min(currentPage, totalPages);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    return users.filter((user) => (
-      user.username.toLowerCase().includes(userSearch.toLowerCase())
-      || (user.employee_id && user.employee_id.toLowerCase().includes(userSearch.toLowerCase()))
-    ));
+    return users.filter(
+      (user) =>
+        user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+        (user.employee_id &&
+          user.employee_id.toLowerCase().includes(userSearch.toLowerCase())),
+    );
   }, [users, userSearch]);
 
   const addResource = (resource: ResourceItem) => {
     if (resourcesDisabled) return;
     setSelectedResources((prev) => {
-      if (prev.some((item) => item.resourceType === resource.resourceType && item.id === resource.id)) {
+      if (
+        prev.some(
+          (item) =>
+            item.resourceType === resource.resourceType &&
+            item.id === resource.id,
+        )
+      ) {
         return prev;
       }
       return insertSelectedResourceByGroup(prev, {
         ...resource,
-        uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
+        uid: buildStableUid(
+          `${resource.resourceType}:${resource.id}:${prev.length}`,
+          resource.id + prev.length,
+        ),
       });
     });
   };
@@ -175,11 +223,14 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
 
   const toggleUser = (userId: number) => {
     const isRemoving = selectedUserIds.includes(userId);
-    const canRemove = canRemoveAssignee || !originalAssigneeIds.includes(userId);
+    const canRemove =
+      canRemoveAssignee || !originalAssigneeIds.includes(userId);
     if (isRemoving && !canRemove) return;
-    setSelectedUserIds((prev) => (
-      prev.includes(userId) ? prev.filter((idValue) => idValue !== userId) : [...prev, userId]
-    ));
+    setSelectedUserIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((idValue) => idValue !== userId)
+        : [...prev, userId],
+    );
   };
 
   const toggleUsers = (userIds: number[], checked: boolean) => {
@@ -189,11 +240,18 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
     }
 
     if (canRemoveAssignee) {
-      setSelectedUserIds((prev) => prev.filter((idValue) => !userIds.includes(idValue)));
+      setSelectedUserIds((prev) =>
+        prev.filter((idValue) => !userIds.includes(idValue)),
+      );
       return;
     }
 
-    setSelectedUserIds((prev) => prev.filter((idValue) => !userIds.includes(idValue) || originalAssigneeIds.includes(idValue)));
+    setSelectedUserIds((prev) =>
+      prev.filter(
+        (idValue) =>
+          !userIds.includes(idValue) || originalAssigneeIds.includes(idValue),
+      ),
+    );
   };
 
   const clearUsers = () => {
@@ -204,7 +262,11 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setSelectedResources((currentItems) => {
-        return reorderSelectedResourcesWithinGroup(currentItems, String(active.id), String(over.id));
+        return reorderSelectedResourcesWithinGroup(
+          currentItems,
+          String(active.id),
+          String(over.id),
+        );
       });
     }
   };
@@ -255,11 +317,11 @@ export const useTaskForm = (options: UseTaskFormOptions = {}) => {
   const isLoading = resourceQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
   const canSubmit = Boolean(
-    title.trim()
-    && deadline
-    && selectedResources.length > 0
-    && selectedUserIds.length > 0
-    && (resourcesDisabled || !hasMissingSources)
+    title.trim() &&
+    deadline &&
+    selectedResources.length > 0 &&
+    selectedUserIds.length > 0 &&
+    (resourcesDisabled || !hasMissingSources),
   );
 
   return {

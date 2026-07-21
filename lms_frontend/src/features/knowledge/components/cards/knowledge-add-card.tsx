@@ -65,9 +65,8 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
 
   return (
     <div
+      className="w-full"
       style={{
-        marginBottom: 14,
-        breakInside: 'avoid',
         position: 'relative',
         zIndex: focused ? 40 : 1,
       }}
@@ -153,6 +152,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             placeholderWrap
             className="akc-editor ke-content-card"
             minHeight={46}
+            enableFormatToolbar={false}
           />
         </div>
 
@@ -167,7 +167,6 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             }}
           >
             <KnowledgeActionButton
-              variant="solid"
               onMouseDown={(event) => {
                 event.preventDefault();
                 void saveDraft();

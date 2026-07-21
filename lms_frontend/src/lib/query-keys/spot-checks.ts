@@ -6,12 +6,16 @@ export const spotChecksQueryKeys = {
       currentRole,
       studentId,
       batchId,
+      status,
+      topic,
       page,
       pageSize,
     }: {
       currentRole: QueryRole;
       studentId?: number;
       batchId?: string;
+      status?: string;
+      topic?: string;
       page: number;
       pageSize: number;
     }) => [
@@ -19,6 +23,8 @@ export const spotChecksQueryKeys = {
       normalizeRoleKey(currentRole),
       studentId ?? 'ALL',
       batchId ?? 'ALL',
+      status ?? 'ALL',
+      topic ?? '',
       page,
       pageSize,
     ] as const,

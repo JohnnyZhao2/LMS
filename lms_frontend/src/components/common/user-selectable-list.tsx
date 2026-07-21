@@ -3,42 +3,44 @@ import {
   SelectableList,
   type SelectableListItem,
 } from '@/components/ui/selectable-list';
-import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
 
-export interface UserSelectPanelItem extends SelectableListItem {
+export interface UserSelectableListItem extends SelectableListItem {
   avatarKey?: string | null;
 }
 
 type SelectableListProps = ComponentProps<typeof SelectableList>;
 
-type UserSelectListProps = Omit<SelectableListProps, 'items' | 'renderLeading' | 'emptyMetaText'> & {
-  items: UserSelectPanelItem[];
-};
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
 
-export function UserSelectList({
+type UserSelectableListProps = DistributiveOmit<
+  SelectableListProps,
+  'items' | 'renderLeading' | 'emptyMetaText'
+> & { items: UserSelectableListItem[] };
+
+export function UserSelectableList({
   items,
   emptyText = '暂无成员',
   ...props
-}: UserSelectListProps) {
+}: UserSelectableListProps) {
   return (
     <SelectableList
       {...props}
       items={items}
       emptyText={emptyText}
       emptyMetaText="未填写工号"
-      renderLeading={(item, { appearance, density, layout }) => {
-        const userItem = item as UserSelectPanelItem;
+      renderLeading={(item, { layout }) => {
+        const userItem = item as UserSelectableListItem;
+
         if (layout === 'grid') {
           return (
             <UserAvatar
               avatarKey={userItem.avatarKey}
               name={item.name}
               size="sm"
-              className={cn(
-                'mt-0.5 shrink-0 ring-1 ring-border/60',
-                density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
-              )}
+              className="ring-border/60 mt-0.5 h-7 w-7 shrink-0 ring-1"
             />
           );
         }
@@ -47,11 +49,8 @@ export function UserSelectList({
           <UserAvatar
             avatarKey={userItem.avatarKey}
             name={item.name}
-            size={appearance === 'panel' ? (density === 'compact' ? 'sm' : 'md') : 'sm'}
-            className={cn(
-              'shrink-0',
-              appearance === 'panel' && (density === 'compact' ? 'h-8 w-8' : 'h-9 w-9'),
-            )}
+            size="md"
+            className="h-9 w-9 shrink-0"
           />
         );
       }}

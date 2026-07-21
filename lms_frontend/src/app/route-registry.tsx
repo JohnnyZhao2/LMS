@@ -10,7 +10,7 @@
  */
 import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';
+import { Activity, BookOpen, ClipboardCheck, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';
 import { Navigate, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
@@ -22,17 +22,35 @@ import type { DashboardVariant, WorkspaceConfig } from '@/app/workspace-config';
 export type PermissionMode = 'all' | 'any';
 export type MenuLabelResolver = string | ((workspace: WorkspaceConfig, role: RoleCode) => string);
 
+export type MenuGroupMeta = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  order: number;
+};
+
+export type MenuGroupResolver =
+  | MenuGroupMeta
+  | ((workspace: WorkspaceConfig, role: RoleCode) => MenuGroupMeta | undefined);
+
 export type MenuMeta = {
   label: MenuLabelResolver;
   icon?: LucideIcon;
-  group?: {
-    key: string;
-    label: string;
-    icon: LucideIcon;
-    order: number;
-  };
+  group?: MenuGroupResolver;
   order: number;
 };
+
+/** 管理端：任务管理分组（综合任务 + 抽查任务）；学员端不分组 */
+const TASK_MANAGEMENT_GROUP: MenuGroupMeta = {
+  key: 'task-mgmt',
+  label: '任务管理',
+  icon: ListTodo,
+  order: 50,
+};
+
+const resolveTaskManagementGroup = (_workspace: WorkspaceConfig, role: RoleCode): MenuGroupMeta | undefined => (
+  role === 'STUDENT' ? undefined : TASK_MANAGEMENT_GROUP
+);
 
 type BaseRouteMeta = {
   key: string;
@@ -132,8 +150,10 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['task.view'],
     showInMenu: true,
     menu: {
-      label: (_workspace, role) => (role === 'STUDENT' ? '任务中心' : '任务管理'),
+      label: (_workspace, role) => (role === 'STUDENT' ? '任务中心' : '综合任务'),
       icon: ListTodo,
+      group: resolveTaskManagementGroup,
+      // 学员端无分组时作顶层排序；管理端在任务管理组内排在抽查任务前
       order: 50,
     },
     render: () => <TaskRoutePage />,
@@ -297,8 +317,9 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     requiredPermissions: ['spot_check.view'],
     showInMenu: true,
     menu: {
-      label: '抽查管理',
+      label: '抽查任务',
       icon: FileSearch,
+      group: TASK_MANAGEMENT_GROUP,
       order: 60,
     },
     component: SpotCheckList,
@@ -432,13 +453,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     showInMenu: true,
     menu: {
       label: '阅卷中心',
-      group: {
-        key: 'assessment',
-        label: '测评管理',
-        icon: HelpCircle,
-        order: 40,
-      },
-      order: 30,
+      icon: ClipboardCheck,
+      order: 45,
     },
     component: GradingCenterRoutePage,
   },

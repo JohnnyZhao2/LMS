@@ -3,7 +3,7 @@
 """
 from uuid import UUID
 
-from django.db.models import Q
+from django.db.models import Avg, Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
@@ -42,6 +42,8 @@ class SpotCheckListCreateView(BaseAPIView):
         parameters=[
             OpenApiParameter(name='student_id', type=int, description='按学员ID筛选'),
             OpenApiParameter(name='batch_id', type=str, description='按批次标识筛选'),
+            OpenApiParameter(name='status', type=str, description='按状态筛选：PENDING/SUBMITTED/SCORED'),
+            OpenApiParameter(name='topic', type=str, description='按抽查主题搜索'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
@@ -65,9 +67,19 @@ class SpotCheckListCreateView(BaseAPIView):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='batch_id 格式无效',
                 ) from exc
+        status = (request.query_params.get('status') or '').strip().upper() or None
+        if status and status not in {
+            SpotCheck.STATUS_PENDING,
+            SpotCheck.STATUS_SUBMITTED,
+            SpotCheck.STATUS_SCORED,
+        }:
+            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='status 无效')
+        topic = (request.query_params.get('topic') or '').strip()
         spot_checks = self.service.get_list(
             student_id=student_id,
             batch_id=batch_id,
+            status=status,
+            topic=topic,
             ordering='-created_at',
         )
         paginator = self.pagination_class()
@@ -139,14 +151,20 @@ class SpotCheckStudentListView(BaseAPIView):
             'spot_check.view',
             request,
             resource_model=User,
-        ).filter(roles__code='STUDENT').select_related('department').distinct()
+        ).filter(roles__code='STUDENT').select_related('department').annotate(
+            spot_check_count=Count('spot_checks_received', distinct=True),
+            average_score=Avg(
+                'spot_checks_received__items__score',
+                filter=Q(spot_checks_received__status=SpotCheck.STATUS_SCORED),
+            ),
+        ).distinct()
 
         search = (request.query_params.get('search') or '').strip()
         if search:
             queryset = queryset.filter(
                 Q(username__icontains=search) | Q(employee_id__icontains=search)
             )
-        queryset = queryset.order_by('username', 'employee_id')
+        queryset = queryset.order_by('-spot_check_count', 'username', 'employee_id')
         serializer = SpotCheckStudentSerializer(queryset, many=True)
         return list_response(serializer.data)
 

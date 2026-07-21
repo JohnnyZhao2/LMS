@@ -7,6 +7,7 @@ export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.spotChecks.all(),
     queryKeys.spotChecks.detailRoot(),
+    queryKeys.spotChecks.studentsRoot(),
     ['spot-checks-mine'],
     ['spot-checks-batch-peers'],
   ]);

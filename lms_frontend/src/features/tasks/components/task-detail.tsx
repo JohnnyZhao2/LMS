@@ -202,7 +202,7 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({ KnowledgeDetail }) => {
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
   const isStudent = !authLoading && currentRole === 'STUDENT';
-  const taskListLabel = isStudent ? '任务中心' : '任务管理';
+  const taskListLabel = isStudent ? '任务中心' : '综合任务';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;

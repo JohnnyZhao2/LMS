@@ -20,7 +20,12 @@ type TextareaProps = React.ComponentProps<"textarea"> & {
 const syncTextareaHeight = (node: HTMLTextAreaElement | null) => {
   if (!node) return
   node.style.height = "0px"
-  node.style.height = `${node.scrollHeight}px`
+  const contentHeight = node.scrollHeight
+  const maxHeight = Number.parseFloat(window.getComputedStyle(node).maxHeight)
+  const hasMaxHeight = Number.isFinite(maxHeight)
+
+  node.style.height = `${hasMaxHeight ? Math.min(contentHeight, maxHeight) : contentHeight}px`
+  node.style.overflowY = hasMaxHeight && contentHeight > maxHeight ? "auto" : "hidden"
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(

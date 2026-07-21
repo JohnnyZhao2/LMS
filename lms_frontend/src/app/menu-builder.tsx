@@ -1,7 +1,15 @@
 import { LayoutGrid } from 'lucide-react';
 import type { RoleCode } from '@/types/common';
 import { getRolePathPrefix } from '@/config/role-paths';
-import { BUSINESS_ROUTE_META, type BusinessRouteMeta, type MenuItem, type MenuLabelResolver, type OrderedMenuItem } from '@/app/route-registry';
+import {
+  BUSINESS_ROUTE_META,
+  type BusinessRouteMeta,
+  type MenuGroupMeta,
+  type MenuGroupResolver,
+  type MenuItem,
+  type MenuLabelResolver,
+  type OrderedMenuItem,
+} from '@/app/route-registry';
 import { getWorkspaceConfig, type WorkspaceConfig } from '@/app/workspace-config';
 
 const resolveMenuLabel = (
@@ -9,6 +17,17 @@ const resolveMenuLabel = (
   workspace: WorkspaceConfig,
   role: RoleCode,
 ): string => (typeof label === 'function' ? label(workspace, role) : label);
+
+const resolveMenuGroup = (
+  group: MenuGroupResolver | undefined,
+  workspace: WorkspaceConfig,
+  role: RoleCode,
+): MenuGroupMeta | undefined => {
+  if (!group) {
+    return undefined;
+  }
+  return typeof group === 'function' ? group(workspace, role) : group;
+};
 
 const isPermissionGranted = (
   route: BusinessRouteMeta,
@@ -43,7 +62,7 @@ export const getMenuItemsBySection = (
     return [];
   }
 
-  const items: Array<MenuItem & { order: number; group?: string }> = [
+  const items: Array<MenuItem & { order: number; group?: MenuGroupMeta }> = [
     {
       key: `${rolePrefix}/dashboard`,
       icon: <LayoutGrid className="h-4 w-4" />,
@@ -68,7 +87,7 @@ export const getMenuItemsBySection = (
       icon: route.menu.icon ? <route.menu.icon className="h-4 w-4" /> : undefined,
       label: resolveMenuLabel(route.menu.label, workspace, role),
       order: route.menu.order,
-      group: route.menu.group?.key,
+      group: resolveMenuGroup(route.menu.group, workspace, role),
     });
   });
 
@@ -86,15 +105,15 @@ export const getMenuItemsBySection = (
     }));
 
   const groupedLeafItems = items.filter(
-    (item): item is MenuItem & { order: number; group: string } => typeof item.group === 'string',
+    (item): item is MenuItem & { order: number; group: MenuGroupMeta } => Boolean(item.group),
   );
 
-  const groupedItems = groupedLeafItems.reduce<Record<string, Array<MenuItem & { order: number; group: string }>>>(
+  const groupedItems = groupedLeafItems.reduce<Record<string, Array<MenuItem & { order: number; group: MenuGroupMeta }>>>(
     (result, item) => {
-      if (!result[item.group]) {
-        result[item.group] = [];
+      if (!result[item.group.key]) {
+        result[item.group.key] = [];
       }
-      result[item.group].push(item);
+      result[item.group.key].push(item);
       return result;
     },
     {},
@@ -102,10 +121,8 @@ export const getMenuItemsBySection = (
 
   const groupItems = Object.entries(groupedItems).reduce<OrderedMenuItem[]>(
     (result, [groupKey, groupChildren]) => {
-      const groupMeta = BUSINESS_ROUTE_META.find(
-        (route) => route.menu?.group?.key === groupKey,
-      )?.menu?.group;
-      if (!groupMeta) {
+      const groupMeta = groupChildren[0]?.group;
+      if (!groupMeta || groupMeta.key !== groupKey) {
         return result;
       }
 

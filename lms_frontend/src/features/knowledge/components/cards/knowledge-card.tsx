@@ -10,14 +10,14 @@ import { FocusOrbIcon } from '@/features/knowledge/components/shared/focus-icon'
 interface KnowledgeCardMymindProps {
   item: KnowledgeListItem;
   onClick: (id: number) => void;
-  onFocusOpen?: (id: number) => void;
+  onFullscreenOpen?: (id: number) => void;
   index: number;
 }
 
 const KnowledgeCardMymindComponent: React.FC<KnowledgeCardMymindProps> = ({
   item,
   onClick,
-  onFocusOpen,
+  onFullscreenOpen,
   index,
 }) => {
   const long = isLong(item.content_preview_html);
@@ -38,27 +38,24 @@ const KnowledgeCardMymindComponent: React.FC<KnowledgeCardMymindProps> = ({
 
   return (
     <div
-      className="group [break-inside:avoid]"
-      style={{
-        marginBottom: 22,
-        animation: 'mymind-appear .25s ease both',
-        animationDelay: `${index * 0.015}s`,
-      }}
+      className="group w-full"
     >
       <div
         onClick={() => onClick(item.id)}
         className="relative cursor-pointer overflow-hidden rounded-[7px] border-[2.5px] border-transparent bg-card transition-[box-shadow,border-color] duration-[220ms] hover:border-gray-300 hover:[box-shadow:0_4px_20px_rgba(0,0,0,0.08)] [box-shadow:0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)]"
         style={{
           padding: short ? '28px 26px 24px' : '24px 26px 22px',
+          animation: 'mymind-appear .25s ease both',
+          animationDelay: `${index * 0.015}s`,
         }}
       >
-        {onFocusOpen && (
+        {onFullscreenOpen && (
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onFocusOpen(item.id);
+              onFullscreenOpen(item.id);
             }}
             className="absolute top-[10px] right-[10px] z-[3] flex h-7 w-7 -translate-y-[2px] items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 transition-[opacity,transform] duration-180 group-hover:translate-y-0 group-hover:opacity-100"
             style={{

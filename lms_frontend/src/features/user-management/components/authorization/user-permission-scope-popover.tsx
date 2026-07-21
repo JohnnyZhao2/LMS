@@ -1,6 +1,6 @@
 import { Settings2 } from 'lucide-react';
 
-import { UserSelectList } from '@/components/common/user-select-list';
+import { UserSelectableList } from '@/components/common/user-selectable-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { SearchInput } from '@/components/ui/search-input';
@@ -29,10 +29,7 @@ interface UserPermissionScopePopoverProps {
   onReset: () => void;
   scopeUserSearch: string;
   onScopeUserSearchChange: (value: string) => void;
-  isAllFilteredScopeUsersSelected: boolean;
-  hasPartialFilteredScopeSelection: boolean;
   onToggleSelectAllFilteredScopeUsers: () => void;
-  selectedFilteredScopeCount: number;
   filteredScopeUsers: UserList[];
   selectedScopeUserIds: number[];
   onToggleScopeUser: (scopeUserId: number) => void;
@@ -48,7 +45,9 @@ const SCOPE_TYPE_LABELS: Record<PermissionOverrideScope, string> = {
   EXPLICIT_USERS: '指定用户',
 };
 
-export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProps> = ({
+export const UserPermissionScopePopover: React.FC<
+  UserPermissionScopePopoverProps
+> = ({
   open,
   onOpenChange,
   summary,
@@ -62,17 +61,23 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
   onReset,
   scopeUserSearch,
   onScopeUserSearchChange,
-  isAllFilteredScopeUsersSelected,
-  hasPartialFilteredScopeSelection,
   onToggleSelectAllFilteredScopeUsers,
-  selectedFilteredScopeCount,
   filteredScopeUsers,
   selectedScopeUserIds,
   onToggleScopeUser,
   isScopeUsersLoading,
   dialogContentElement,
 }) => {
-  const canSelectExplicitScopeUsers = availableScopeTypes.includes('EXPLICIT_USERS');
+  const canSelectExplicitScopeUsers =
+    availableScopeTypes.includes('EXPLICIT_USERS');
+  const checkedFilteredScopeCount = filteredScopeUsers.filter((user) =>
+    selectedScopeUserIds.includes(user.id),
+  ).length;
+  const areAllFilteredScopeUsersChecked =
+    filteredScopeUsers.length > 0 &&
+    checkedFilteredScopeCount === filteredScopeUsers.length;
+  const areSomeFilteredScopeUsersChecked =
+    checkedFilteredScopeCount > 0 && !areAllFilteredScopeUsersChecked;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange} modal={false}>
@@ -81,11 +86,11 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
         className={cn(
           'flex h-9 w-full items-center justify-between rounded-lg border px-4 text-xs transition-all duration-200',
           open
-            ? 'border-primary/40 bg-primary/[0.04] text-primary ring-4 ring-primary/5'
-            : 'border-border/70 bg-white text-slate-700 hover:border-primary-200 hover:bg-primary-50/30',
+            ? 'border-primary/40 bg-primary/[0.04] text-primary ring-primary/5 ring-4'
+            : 'border-border/70 hover:border-primary-200 hover:bg-primary-50/30 bg-white text-slate-700',
         )}
       >
-        <span className="font-bold line-clamp-1 text-left">{summary}</span>
+        <span className="line-clamp-1 text-left font-bold">{summary}</span>
         <Settings2
           className={cn(
             'ml-2 h-3.5 w-3.5 shrink-0 transition-all duration-300',
@@ -96,7 +101,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
       <PopoverContent
         align="end"
         className={cn(
-          'p-0 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden bg-white',
+          'overflow-hidden rounded-xl border border-slate-200 bg-white p-0 shadow-[0_8px_30px_rgba(0,0,0,0.12)]',
           canSelectExplicitScopeUsers ? 'w-[400px]' : 'w-[180px]',
         )}
         container={dialogContentElement}
@@ -115,8 +120,8 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                     className={cn(
                       'w-full rounded-md border py-1.5 text-center text-[10px] font-bold transition-all duration-200',
                       isActive
-                        ? 'border-primary/15 bg-white text-primary shadow-sm'
-                        : 'border-transparent text-slate-500 hover:bg-primary-50/70 hover:text-slate-700',
+                        ? 'border-primary/15 text-primary bg-white shadow-sm'
+                        : 'hover:bg-primary-50/70 border-transparent text-slate-500 hover:text-slate-700',
                     )}
                   >
                     {option.label}
@@ -127,7 +132,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                 <button
                   type="button"
                   onClick={onReset}
-                  className="mt-auto w-full py-1.5 text-center text-[9px] font-bold text-slate-400 transition-colors duration-200 hover:text-primary"
+                  className="hover:text-primary mt-auto w-full py-1.5 text-center text-[9px] font-bold text-slate-400 transition-colors duration-200"
                 >
                   重置
                 </button>
@@ -142,36 +147,44 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                   placeholder="搜索用户..."
                   inputClassName="h-7 rounded-lg border-slate-200/60 bg-white pl-8 text-[10px] shadow-none placeholder:text-slate-300 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
-                <label className={cn('inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5', GHOST_ACCENT_HOVER_CLASSNAME)}>
+                <label
+                  className={cn(
+                    'inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 select-none',
+                    GHOST_ACCENT_HOVER_CLASSNAME,
+                  )}
+                >
                   <Checkbox
-                    checked={isAllFilteredScopeUsersSelected ? true : hasPartialFilteredScopeSelection ? 'indeterminate' : false}
+                    checked={
+                      areAllFilteredScopeUsersChecked
+                        ? true
+                        : areSomeFilteredScopeUsersChecked
+                          ? 'indeterminate'
+                          : false
+                    }
                     onCheckedChange={onToggleSelectAllFilteredScopeUsers}
                     className="rounded-[3px]"
                   />
-                  <span className="whitespace-nowrap text-[9px] font-bold tabular-nums text-slate-500">
-                    {selectedFilteredScopeCount}/{filteredScopeUsers.length}
+                  <span className="text-[9px] font-bold whitespace-nowrap text-slate-500 tabular-nums">
+                    {checkedFilteredScopeCount}/{filteredScopeUsers.length}
                   </span>
                 </label>
               </div>
 
-              <UserSelectList
+              <UserSelectableList
+                mode="select"
                 items={filteredScopeUsers.map((user) => ({
                   id: user.id,
                   name: user.username,
                   avatarKey: user.avatar_key,
                   meta: user.department?.name
                     ? `${user.employee_id || '未填写工号'} · ${user.department.name}`
-                    : (user.employee_id || '未填写工号'),
+                    : user.employee_id || '未填写工号',
                 }))}
                 selectedIds={selectedScopeUserIds}
-                onSelect={onToggleScopeUser}
-                selectionMode="multiple"
-                appearance="panel"
-                density="compact"
+                onToggle={onToggleScopeUser}
                 isLoading={isScopeUsersLoading}
                 emptyText="无匹配用户"
                 loadingText="加载用户列表..."
-                listClassName="space-y-[6px]"
               />
             </div>
           </div>
@@ -187,7 +200,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                   className={cn(
                     'flex h-8 w-full items-center justify-between rounded-md px-2.5 text-xs font-bold transition-colors duration-150',
                     isActive
-                      ? 'border border-primary/15 bg-primary-50/80 text-primary'
+                      ? 'border-primary/15 bg-primary-50/80 text-primary border'
                       : 'text-slate-600 hover:bg-slate-100',
                   )}
                 >
@@ -199,7 +212,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
               <button
                 type="button"
                 onClick={onReset}
-                className="mt-1 h-7 w-full rounded-md text-[10px] font-bold text-slate-400 transition-colors duration-150 hover:bg-slate-50 hover:text-primary"
+                className="hover:text-primary mt-1 h-7 w-full rounded-md text-[10px] font-bold text-slate-400 transition-colors duration-150 hover:bg-slate-50"
               >
                 重置
               </button>

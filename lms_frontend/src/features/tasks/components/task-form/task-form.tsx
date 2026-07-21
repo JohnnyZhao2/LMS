@@ -2,7 +2,7 @@ import { useState, type ComponentType } from 'react';
 import { FileText, LayoutList, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import type { UserSelectPanelItem } from '@/components/common/user-select-list';
+import type { UserSelectableListItem } from '@/components/common/user-selectable-list';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 
 import { useTaskForm } from '@/features/tasks/components/task-form/use-task-form';
@@ -37,16 +37,16 @@ interface TaskFormProps {
   initialQuizDetail?: QuizDetail;
 }
 
-const ASSIGNEE_ROLE_LABELS = new Map([
-  ['DEPT_MANAGER', '室经理'],
-]);
+const ASSIGNEE_ROLE_LABELS = new Map([['DEPT_MANAGER', '室经理']]);
 
 export const TaskForm: React.FC<TaskFormProps> = ({
   KnowledgePreview,
   QuizPreview,
   initialQuizDetail,
 }) => {
-  const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
+  const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(
+    null,
+  );
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
     isEdit,
@@ -87,23 +87,31 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     roleNavigate,
   } = useTaskForm({ initialQuizDetail });
 
-  const userPanelItems: UserSelectPanelItem[] = filteredUsers.map((user) => ({
-    id: user.id,
-    name: user.username,
-    avatarKey: user.avatar_key,
-    meta: [
-      user.employee_id || '-',
-      user.department?.name || '无部门',
-      user.roles.map((role) => ASSIGNEE_ROLE_LABELS.get(role.code)).find(Boolean),
-    ].filter(Boolean).join(' · '),
-  }));
+  const userPanelItems: UserSelectableListItem[] = filteredUsers.map(
+    (user) => ({
+      id: user.id,
+      name: user.username,
+      avatarKey: user.avatar_key,
+      meta: [
+        user.employee_id || '-',
+        user.department?.name || '无部门',
+        user.roles
+          .map((role) => ASSIGNEE_ROLE_LABELS.get(role.code))
+          .find(Boolean),
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    }),
+  );
   const hasTaskContent = selectedResources.length > 0;
 
   if (taskError) {
     return (
-      <div className="flex h-full min-h-[32rem] flex-col items-center justify-center rounded-2xl border border-border bg-background py-16">
-        <FileText className="mb-4 h-12 w-12 text-text-muted" />
-        <span className="mb-4 text-sm font-medium text-text-muted">加载任务失败</span>
+      <div className="border-border bg-background flex h-full min-h-[32rem] flex-col items-center justify-center rounded-2xl border py-16">
+        <FileText className="text-text-muted mb-4 h-12 w-12" />
+        <span className="text-text-muted mb-4 text-sm font-medium">
+          加载任务失败
+        </span>
         <Button onClick={() => roleNavigate('tasks')}>返回</Button>
       </div>
     );
@@ -137,9 +145,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             onPageChange={setCurrentPage}
           />
 
-          <div className="relative min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[12px] font-semibold text-foreground">
-              <LayoutList className="h-4 w-4 text-text-muted" />
+          <div className="border-border bg-background relative flex min-h-0 flex-col overflow-hidden rounded-xl border">
+            <div className="border-border text-foreground flex h-11 shrink-0 items-center gap-2 border-b px-4 text-[12px] font-semibold">
+              <LayoutList className="text-text-muted h-4 w-4" />
               <span>任务节点</span>
             </div>
 
@@ -155,9 +163,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                className="absolute bottom-5 right-5 z-30 h-10 shrink-0 rounded-full bg-foreground px-4 text-[12px] font-semibold text-background shadow-[0_14px_34px_rgba(15,23,42,0.22)] hover:bg-foreground/90 hover:shadow-[0_18px_40px_rgba(15,23,42,0.28)]"
+                className="bg-foreground text-background hover:bg-foreground/90 absolute right-5 bottom-5 z-30 h-10 shrink-0 rounded-full px-4 text-[12px] font-semibold shadow-[0_14px_34px_rgba(15,23,42,0.22)] hover:shadow-[0_18px_40px_rgba(15,23,42,0.28)]"
               >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 {isEdit ? '保存修改' : '发布任务'}
               </Button>
             ) : null}
@@ -191,7 +203,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           }
         }}
         onPrimaryAction={(quizId) => {
-          const target = availableResources.find((resource) => resource.resourceType === 'QUIZ' && resource.id === quizId);
+          const target = availableResources.find(
+            (resource) =>
+              resource.resourceType === 'QUIZ' && resource.id === quizId,
+          );
           if (target) {
             addResource(target);
           }

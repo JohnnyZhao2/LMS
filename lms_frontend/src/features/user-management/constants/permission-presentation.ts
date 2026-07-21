@@ -33,7 +33,7 @@ const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     order: 50,
   },
   spot_check: {
-    label: '抽查管理',
+    label: '抽查任务',
     order: 60,
   },
   user: {

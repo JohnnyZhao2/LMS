@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,8 +21,6 @@ import {
   getKnowledgeOutlineItems,
   type KnowledgeOutlineItem,
 } from '@/features/knowledge/components/modals/knowledge-detail-outline-utils';
-import { KnowledgeFocusShell } from '@/features/knowledge/components/modals/knowledge-focus-shell';
-import { KnowledgeFocusMetadataBar } from '@/features/knowledge/components/modals/knowledge-focus-metadata-bar';
 import { KnowledgeLearningAction } from '@/features/knowledge/components/modals/knowledge-learning-action';
 import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
 import { showApiError } from '@/lib/api-error-handler';
@@ -93,10 +90,7 @@ export interface KnowledgeLearningState {
 
 interface KnowledgeDetailModalProps {
   knowledgeId?: number;
-  startEditing?: boolean;
-  startInFocus?: boolean;
-  closeOnExitFocus?: boolean;
-  forceFocus?: boolean;
+  startFullscreen?: boolean;
   previewOnly?: boolean;
   initialContent?: string;
   initialSpaceTagId?: number;
@@ -108,16 +102,13 @@ interface KnowledgeDetailModalProps {
   tagDeps: KnowledgeTagDeps;
   onClose: () => void;
   onCreated?: (id: number) => void;
-  onFocusOpen?: (id: number) => void;
   onDelete?: (id: number) => void;
   onUpdated?: () => void;
 }
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
-  startInFocus = false,
-  closeOnExitFocus = false,
-  forceFocus = false,
+  startFullscreen = false,
   previewOnly = false,
   initialContent = '',
   initialSpaceTagId,
@@ -127,17 +118,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   tagDeps,
   onClose,
   onCreated,
-  onFocusOpen,
   onDelete,
   onUpdated,
 }) => {
   const isCreateMode = typeof knowledgeId !== 'number' && !taskKnowledgeId;
   const { currentRole, hasCapability } = useAuth();
-  const { useTags, TagInput, TagAssignmentSection } = tagDeps;
+  const { useTags, TagAssignmentSection } = tagDeps;
   const isStudent = currentRole === 'STUDENT';
   // 任务知识快照（KnowledgeRevision）只读，禁止写回源知识
   const isPreviewOnly = previewOnly || Boolean(taskKnowledgeId);
   const canUpdateKnowledge = !isPreviewOnly && hasCapability('knowledge.update');
+  const canEditContent = isCreateMode ? hasCapability('knowledge.create') : canUpdateKnowledge;
   const canDeleteKnowledge = !isPreviewOnly && hasCapability('knowledge.delete');
 
   const { data, isLoading } = useKnowledgeDetail({
@@ -192,8 +183,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       spaceTagId: hasPreferredSpaceTag ? initialSpaceTagId : undefined,
       relatedLinks: [],
     });
-    setShowFocusTagPanel(false);
-    setShowFocusRelatedLinksPanel(false);
   }, [initialContent, initialSpaceTagId, isCreateMode, spaces]);
 
   // 编辑草稿
@@ -206,6 +195,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const contentScrollRef = useRef<HTMLElement | null>(null);
   const contentHostRef = useRef<HTMLDivElement | null>(null);
   const isOutlineScrollLockedRef = useRef(false);
+  const [formatToolbarHost, setFormatToolbarHost] = useState<HTMLDivElement | null>(null);
   const [editingLinks, setEditingLinks] = useState(false);
   const [activeOutlineId, setActiveOutlineId] = useState<string | undefined>();
 
@@ -213,13 +203,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showTagInput, setShowTagInput] = useState(false);
   // space选择
   const [showSpaceTags, setShowSpaceTags] = useState(false);
-  const [showFocusTagPanel, setShowFocusTagPanel] = useState(false);
-  const [showFocusRelatedLinksPanel, setShowFocusRelatedLinksPanel] = useState(false);
-  // 专注模式（全屏查看）
-  const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
+  const [isFullscreen, setIsFullscreen] = useState(startFullscreen || isCreateMode);
   const isSaving = updateKnowledge.isPending;
 
-  const activeContent = editContent ?? knowledge?.content ?? '';
+  const activeContent = isCreateMode
+    ? createDraft.content
+    : editContent ?? knowledge?.content ?? '';
   const outlineContent = isCreateMode ? createDraft.content : activeContent;
   const outlineItems = useMemo(() => getKnowledgeOutlineItems(outlineContent), [outlineContent]);
   const visibleOutlineId = outlineItems.some((item) => item.id === activeOutlineId)
@@ -227,13 +216,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     : outlineItems[0]?.id;
 
   // 实际使用的值
-  const activeTitle = editTitle ?? knowledge?.title ?? '';
-  const activeTags = editTags ?? knowledge?.tags ?? [];
+  const activeTitle = isCreateMode ? createDraft.title : editTitle ?? knowledge?.title ?? '';
+  const activeTags = isCreateMode ? createDraft.tags : editTags ?? knowledge?.tags ?? [];
   const shouldShowSystemTagsSection = !isStudent || activeTags.length > 0;
-  const activeSpaceTagId = editSpaceTagId === undefined
-    ? knowledge?.space_tag?.id ?? null
-    : editSpaceTagId;
-  const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
+  const activeSpaceTagId = isCreateMode
+    ? createDraft.spaceTagId ?? null
+    : editSpaceTagId === undefined
+      ? knowledge?.space_tag?.id ?? null
+      : editSpaceTagId;
+  const activeRelatedLinks = isCreateMode
+    ? createDraft.relatedLinks
+    : editRelatedLinks ?? knowledge?.related_links ?? [];
 
   // 判断是否有改动
   const hasChanges = Boolean(knowledge && (
@@ -306,6 +299,80 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [parseDocument]);
 
+  const handleCreateTitleChange = useCallback((title: string) => {
+    setCreateDraft((current) => ({ ...current, title }));
+  }, []);
+
+  const handleCreateAddTag = useCallback((tag: { id: number; name: string }) => {
+    setCreateDraft((current) => (
+      current.tags.some((item) => item.id === tag.id)
+        ? current
+        : { ...current, tags: [...current.tags, tag] }
+    ));
+  }, []);
+
+  const handleCreateRemoveTag = useCallback((tagId: number) => {
+    setCreateDraft((current) => ({
+      ...current,
+      tags: current.tags.filter((tag) => tag.id !== tagId),
+    }));
+  }, []);
+
+  const handleCreateOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
+    setEditingLinks(true);
+    if (!appendEmpty) return;
+
+    setCreateDraft((current) => ({
+      ...current,
+      relatedLinks: [...current.relatedLinks, createEmptyRelatedLink()],
+    }));
+  }, []);
+
+  const handleCreateAddRelatedLink = useCallback(() => {
+    setCreateDraft((current) => ({
+      ...current,
+      relatedLinks: [...current.relatedLinks, createEmptyRelatedLink()],
+    }));
+  }, []);
+
+  const handleCreateRelatedLinkChange = useCallback((
+    index: number,
+    field: keyof RelatedLink,
+    value: string,
+  ) => {
+    setCreateDraft((current) => ({
+      ...current,
+      relatedLinks: current.relatedLinks.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [field]: value } : item
+      )),
+    }));
+  }, []);
+
+  const handleCreateRelatedLinksBlur = useCallback(() => {
+    const draftError = getRelatedLinksDraftError(createDraft.relatedLinks);
+    if (draftError) {
+      toast.error(draftError);
+      return;
+    }
+    setEditingLinks(false);
+  }, [createDraft.relatedLinks]);
+
+  const handleCreateRemoveRelatedLink = useCallback((index: number) => {
+    setCreateDraft((current) => ({
+      ...current,
+      relatedLinks: current.relatedLinks.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  }, []);
+
+  const handleCreateSpaceTagSelect = useCallback((spaceTagId: number) => {
+    setCreateDraft((current) => ({ ...current, spaceTagId }));
+    setShowSpaceTags(false);
+  }, []);
+
+  const handleCreateUploadOpen = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   const handleCreateSave = useCallback(async () => {
     if (!createCanSave) return;
 
@@ -333,9 +400,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     if (current.some(t => t.id === tag.id)) return;
     const nextTags = [...current, tag];
     setEditTags(nextTags);
-    if (isFocusMode) {
-      return;
-    }
     void commitPatch(
       { tag_ids: nextTags.map((item) => item.id) },
       '标签保存失败',
@@ -345,15 +409,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         ));
       },
     );
-  }, [commitPatch, editTags, isFocusMode, knowledge?.tags]);
+  }, [commitPatch, editTags, knowledge?.tags]);
 
   const removeTag = useCallback((tagId: number) => {
     const current = editTags ?? knowledge?.tags ?? [];
     const nextTags = current.filter(t => t.id !== tagId);
     setEditTags(nextTags);
-    if (isFocusMode) {
-      return;
-    }
     void commitPatch(
       { tag_ids: nextTags.map((item) => item.id) },
       '标签保存失败',
@@ -363,7 +424,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         ));
       },
     );
-  }, [commitPatch, editTags, isFocusMode, knowledge?.tags]);
+  }, [commitPatch, editTags, knowledge?.tags]);
 
   const updateRelatedLinksDraft = useCallback((
     updater: (current: RelatedLink[]) => RelatedLink[],
@@ -389,14 +450,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const handleAddRelatedLink = useCallback(() => {
     updateRelatedLinksDraft((current) => [...current, createEmptyRelatedLink()]);
   }, [updateRelatedLinksDraft]);
-
-  const handleFocusRemoveRelatedLink = useCallback((index: number) => {
-    updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  }, [updateRelatedLinksDraft]);
-
-  const handleFocusSpaceTagChange = useCallback((nextSpaceTagId?: number) => {
-    setEditSpaceTagId(nextSpaceTagId ?? null);
-  }, []);
 
   const handleRemoveRelatedLink = useCallback((index: number) => {
     const nextLinks = updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
@@ -524,8 +577,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditTags(undefined);
       setEditSpaceTagId(undefined);
       setEditRelatedLinks(undefined);
-      setShowFocusTagPanel(false);
-      setShowFocusRelatedLinksPanel(false);
       onUpdated?.();
       return true;
     } catch (error) {
@@ -534,30 +585,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
 
-  const handleExitFocusMode = useCallback(async () => {
-    setShowFocusTagPanel(false);
-    setShowFocusRelatedLinksPanel(false);
-    if (hasChanges && canUpdateKnowledge) {
-      const saved = await handleSave();
-      if (!saved) return;
-    }
-    if (closeOnExitFocus || forceFocus) {
-      onClose();
-      return;
-    }
-    setIsFocusMode(false);
-  }, [canUpdateKnowledge, closeOnExitFocus, forceFocus, handleSave, hasChanges, onClose]);
-
   useKnowledgeModalInteractions({
     onEscape: () => {
-      if (showFocusRelatedLinksPanel) {
-        setShowFocusRelatedLinksPanel(false);
-      } else if (showFocusTagPanel) {
-        setShowFocusTagPanel(false);
-      } else if (isCreateMode) {
-        onClose();
-      } else if (isFocusMode) {
-        handleExitFocusMode();
+      if (isFullscreen) {
+        setIsFullscreen(false);
       } else if (showSpaceTags) {
         setShowSpaceTags(false);
       } else {
@@ -569,7 +600,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         void handleCreateSave();
         return;
       }
-      if (isFocusMode) {
+      if (isFullscreen) {
         void handleSave();
       }
     },
@@ -596,7 +627,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       heading.id = item.id;
       heading.dataset.outlineId = item.id;
     });
-  }, [isFocusMode, outlineContent, outlineItems]);
+  }, [isFullscreen, outlineContent, outlineItems]);
 
   useEffect(() => {
     const container = contentScrollRef.current;
@@ -639,7 +670,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       container.removeEventListener('scroll', requestUpdate);
       window.removeEventListener('resize', requestUpdate);
     };
-  }, [isFocusMode, outlineItems]);
+  }, [isFullscreen, outlineItems]);
 
   const handleOutlineSelect = useCallback((item: KnowledgeOutlineItem) => {
     const container = contentScrollRef.current;
@@ -679,8 +710,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditingLinks(false);
     setShowTagInput(false);
     setShowSpaceTags(false);
-    setShowFocusTagPanel(false);
-    setShowFocusRelatedLinksPanel(false);
   }, []);
 
   const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
@@ -714,202 +743,27 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       docked
     />
   ) : null;
-  const immersiveLearningAction = showLearningAction ? (
-    <KnowledgeLearningAction
-      visible
-      completed={Boolean(learningState?.completed)}
-      pending={Boolean(learningState?.pending)}
-      onComplete={() => { void onCompleteLearning?.(); }}
-      immersive
-    />
-  ) : null;
-
-  if (isCreateMode) {
-    return createPortal(
-      <KnowledgeFocusShell
-        content={createDraft.content}
-        onContentChange={handleCreateContentChange}
-        onExit={onClose}
-        fixed
-        zIndex={500}
-        fadeInDuration="0.25s"
-        shellClassName="kd-focus-shell-with-outline"
-        editorClassName="akm-editor"
-        editorMaxWidth={960}
-        editorPadding="72px 40px 120px"
-        editorMinHeight={380}
-        minimizeIconSize={16}
-        editorAreaRef={contentScrollRef}
-        editorHostRef={contentHostRef}
-      >
-        <KnowledgeDetailOutline
-          items={outlineItems}
-          activeId={visibleOutlineId}
-          onSelect={handleOutlineSelect}
-          className="kd-outline-focus"
-        />
-        <KnowledgeFocusMetadataBar
-          spaces={spaces}
-          spaceTagId={createDraft.spaceTagId}
-          onSpaceTagChange={(nextSpaceTagId) => setCreateDraft((current) => ({
-            ...current,
-            spaceTagId: nextSpaceTagId,
-          }))}
-          selectedTags={createDraft.tags}
-          onAddTag={(tag) => setCreateDraft((current) => (
-            current.tags.some((item) => item.id === tag.id)
-              ? current
-              : { ...current, tags: [...current.tags, tag] }
-          ))}
-          onRemoveTag={(tagId) => setCreateDraft((current) => ({
-            ...current,
-            tags: current.tags.filter((tag) => tag.id !== tagId),
-          }))}
-          TagInput={TagInput}
-          title={createDraft.title}
-          onTitleChange={(title) => setCreateDraft((current) => ({ ...current, title }))}
-          relatedLinks={createDraft.relatedLinks}
-          onRelatedLinkChange={(index, field, value) => setCreateDraft((current) => ({
-            ...current,
-            relatedLinks: current.relatedLinks.map((item, itemIndex) => (
-              itemIndex === index ? { ...item, [field]: value } : item
-            )),
-          }))}
-          onAddRelatedLink={() => setCreateDraft((current) => ({
-            ...current,
-            relatedLinks: [...current.relatedLinks, createEmptyRelatedLink()],
-          }))}
-          onRemoveRelatedLink={(index) => setCreateDraft((current) => ({
-            ...current,
-            relatedLinks: current.relatedLinks.filter((_, itemIndex) => itemIndex !== index),
-          }))}
-          showTagPanel={showFocusTagPanel}
-          onShowTagPanelChange={setShowFocusTagPanel}
-          showRelatedLinksPanel={showFocusRelatedLinksPanel}
-          onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
-          onSave={handleCreateSave}
-          saveDisabled={!createCanSubmit}
-          isSaving={createKnowledge.isPending}
-          extraTools={(
-            <>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="akm-upload-btn"
-              >
-                <Upload size={13} />
-                {isUploading ? '上传中…' : '上传'}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".docx,.pptx,.pdf"
-                onChange={handleCreateFileUpload}
-                style={{ display: 'none' }}
-                disabled={isUploading}
-              />
-            </>
-          )}
-        />
-      </KnowledgeFocusShell>,
-      document.body,
-    );
-  }
-
-  if (isFocusMode && knowledge) {
-    return createPortal(
-      <KnowledgeFocusShell
-        content={activeContent}
-        onContentChange={handleContentChange}
-        onExit={handleExitFocusMode}
-        fixed
-        zIndex={500}
-        fadeInDuration="0.18s"
-        shellClassName="kd-focus-shell-with-outline"
-        editorClassName="kd-immersive-editor"
-        editorMaxWidth={1040}
-        editorPadding="64px 40px 144px"
-        editorMinHeight={380}
-        minimizeIconSize={22}
-        readOnly={!canUpdateKnowledge}
-        editorAreaRef={contentScrollRef}
-        editorHostRef={contentHostRef}
-      >
-        <KnowledgeDetailOutline
-          items={outlineItems}
-          activeId={visibleOutlineId}
-          onSelect={handleOutlineSelect}
-          className="kd-outline-focus"
-        />
-        {canUpdateKnowledge ? (
-          <KnowledgeFocusMetadataBar
-            spaces={spaces}
-            spaceTagId={activeSpaceTagId}
-            onSpaceTagChange={handleFocusSpaceTagChange}
-            selectedTags={activeTags}
-            onAddTag={addTag}
-            onRemoveTag={removeTag}
-            TagInput={TagInput}
-            title={activeTitle}
-            onTitleChange={(value) => setEditTitle(value)}
-            relatedLinks={activeRelatedLinks}
-            onRelatedLinkChange={handleRelatedLinkChange}
-            onAddRelatedLink={handleAddRelatedLink}
-            onRemoveRelatedLink={handleFocusRemoveRelatedLink}
-            showTagPanel={showFocusTagPanel}
-            onShowTagPanelChange={setShowFocusTagPanel}
-            showRelatedLinksPanel={showFocusRelatedLinksPanel}
-            onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
-            onSave={handleSave}
-            showSaveAction={hasChanges}
-            saveDisabled={!hasChanges}
-            isSaving={isSaving}
-            trailingActions={immersiveLearningAction}
-          />
-        ) : immersiveLearningAction ? (
-          <div className="kd-immersive-bottom">
-            {immersiveLearningAction}
-          </div>
-        ) : null}
-      </KnowledgeFocusShell>,
-      document.body,
-    );
-  }
-
   const modalContent = (
     <div
-      className="kd-overlay"
+      className={`kd-overlay${isFullscreen ? ' kd-overlay-fullscreen' : ''}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="kd-container"
+        className={`kd-container${isFullscreen ? ' kd-container-fullscreen' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {!isFocusMode && (
-          <button
-            type="button"
-            onClick={() => {
-              if (onFocusOpen) {
-                onFocusOpen(knowledgeId!);
-                return;
-              }
-              if (isFocusMode) {
-                handleExitFocusMode();
-              } else {
-                setIsFocusMode(true);
-              }
-            }}
-            className="kd-focus-btn"
-            data-tip={isFocusMode ? '退出专注' : '专注'}
-            title={isFocusMode ? '退出专注' : '专注'}
-            aria-label={isFocusMode ? '退出专注' : '专注'}
-          >
-            <FocusOrbIcon size={20} active={isFocusMode} interactive />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setIsFullscreen((current) => !current)}
+          className="kd-focus-btn"
+          data-tip={isFullscreen ? '退出专注' : '专注'}
+          title={isFullscreen ? '退出专注' : '专注'}
+          aria-label={isFullscreen ? '退出专注' : '专注'}
+        >
+          <FocusOrbIcon size={20} interactive />
+        </button>
 
-        {isLoading ? (
+        {!isCreateMode && isLoading ? (
           <>
             <div className="kd-left-shell">
               <div className="kd-left kd-left-static">
@@ -931,7 +785,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               </div>
             </div>
           </>
-        ) : !knowledge ? (
+        ) : !isCreateMode && !knowledge ? (
           <div className="kd-left-shell">
             <div className="kd-left kd-left-static" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
@@ -947,20 +801,29 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             />
 
             <div className="kd-left-shell">
+              {canEditContent && (
+                <div
+                  ref={setFormatToolbarHost}
+                  className="sqe-toolbar-host kd-format-toolbar-host"
+                />
+              )}
+
               <ScrollContainer ref={contentScrollRef} className="kd-left">
                 <div
                   ref={contentHostRef}
-                  style={{ cursor: canUpdateKnowledge ? 'text' : 'default' }}
+                  style={{ cursor: canEditContent ? 'text' : 'default' }}
                 >
                   <KnowledgeTextEditor
                     value={activeContent}
-                    onChange={handleContentChange}
-                    onBlur={handleContentBlur}
+                    onChange={isCreateMode ? handleCreateContentChange : handleContentChange}
+                    onBlur={isCreateMode ? undefined : handleContentBlur}
                     placeholder="键入 / 调出快捷指令"
-                    className={`kd-content kd-content-shell ke-content-detail${canUpdateKnowledge ? ' kd-content-editable' : ''}`}
+                    className={`kd-content kd-content-shell ke-content-detail${canEditContent ? ' kd-content-editable' : ''}`}
                     minHeight={300}
-                    autoFocus={false}
-                    readOnly={!canUpdateKnowledge}
+                    autoFocus={isCreateMode}
+                    readOnly={!canEditContent}
+                    enableFormatToolbar={canEditContent}
+                    toolbarPortalTarget={formatToolbarHost}
                   />
                 </div>
               </ScrollContainer>
@@ -968,39 +831,62 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
             <KnowledgeDetailSidePanel
               knowledge={knowledge}
+              isCreateMode={isCreateMode}
               activeTitle={activeTitle}
               activeTags={activeTags}
               activeRelatedLinks={activeRelatedLinks}
               activeSpaceTagId={activeSpaceTagId}
               spaces={spaces}
-              updatedRelativeTime={relTime(knowledge.updated_at)}
-              canUpdateKnowledge={canUpdateKnowledge}
-              canDeleteKnowledge={canDeleteKnowledge}
-              shouldShowSystemTagsSection={shouldShowSystemTagsSection}
+              updatedRelativeTime={isCreateMode ? '新建知识' : relTime(knowledge!.updated_at)}
+              canUpdateKnowledge={canEditContent}
+              canDeleteKnowledge={!isCreateMode && canDeleteKnowledge}
+              shouldShowSystemTagsSection={isCreateMode || shouldShowSystemTagsSection}
               showTagInput={showTagInput}
               showSpaceTags={showSpaceTags}
-              hasContentChanges={hasContentChanges}
+              hasContentChanges={isCreateMode ? createCanSave : hasContentChanges}
               editingLinks={editingLinks}
-              isSaving={isSaving}
-              learningAction={learningAction}
+              isSaving={isCreateMode ? createKnowledge.isPending : isSaving}
+              canSave={createCanSubmit}
+              isUploading={isUploading}
+              learningAction={isCreateMode ? null : learningAction}
               relatedLinksSectionRef={relatedLinksSectionRef}
               TagAssignmentSection={TagAssignmentSection}
-              onTitleChange={setEditTitle}
-              onTitleBlur={handleTitleBlur}
+              onTitleChange={isCreateMode ? handleCreateTitleChange : setEditTitle}
+              onTitleBlur={isCreateMode ? undefined : handleTitleBlur}
               onShowTagInputChange={setShowTagInput}
-              onAddTag={addTag}
-              onRemoveTag={removeTag}
-              onOpenRelatedLinksEditor={handleOpenRelatedLinksEditor}
-              onAddRelatedLink={handleAddRelatedLink}
-              onRelatedLinkChange={handleRelatedLinkChange}
-              onRelatedLinksBlur={handleRelatedLinksBlur}
-              onRemoveRelatedLink={handleRemoveRelatedLink}
+              onAddTag={isCreateMode ? handleCreateAddTag : addTag}
+              onRemoveTag={isCreateMode ? handleCreateRemoveTag : removeTag}
+              onOpenRelatedLinksEditor={isCreateMode
+                ? handleCreateOpenRelatedLinksEditor
+                : handleOpenRelatedLinksEditor}
+              onAddRelatedLink={isCreateMode ? handleCreateAddRelatedLink : handleAddRelatedLink}
+              onRelatedLinkChange={isCreateMode
+                ? handleCreateRelatedLinkChange
+                : handleRelatedLinkChange}
+              onRelatedLinksBlur={isCreateMode
+                ? handleCreateRelatedLinksBlur
+                : handleRelatedLinksBlur}
+              onRemoveRelatedLink={isCreateMode
+                ? handleCreateRemoveRelatedLink
+                : handleRemoveRelatedLink}
               onToggleSpaceTags={() => setShowSpaceTags(!showSpaceTags)}
-              onSpaceTagSelect={handleSpaceTagSelect}
-              onDelete={handleDelete}
-              onCancelEdit={handleCancelEdit}
-              onSave={handleSave}
+              onSpaceTagSelect={isCreateMode ? handleCreateSpaceTagSelect : handleSpaceTagSelect}
+              onDelete={isCreateMode ? undefined : handleDelete}
+              onCancelEdit={isCreateMode ? undefined : handleCancelEdit}
+              onSave={isCreateMode ? handleCreateSave : handleSave}
+              onUpload={isCreateMode ? handleCreateUploadOpen : undefined}
             />
+
+            {isCreateMode && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx,.pptx,.pdf"
+                onChange={handleCreateFileUpload}
+                style={{ display: 'none' }}
+                disabled={isUploading}
+              />
+            )}
           </>
         )}
       </div>

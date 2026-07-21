@@ -1,22 +1,17 @@
 import * as React from 'react';
 
-import { cn } from '@/lib/utils';
-
 import '@/features/knowledge/components/shared/knowledge-editor-shared.css';
 
-interface KnowledgeActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'floating' | 'solid';
-}
+type KnowledgeActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const KnowledgeActionButton: React.FC<KnowledgeActionButtonProps> = ({
-  variant = 'floating',
   className,
   type = 'button',
   ...props
 }) => (
   <button
     type={type}
-    className={cn('kab-btn', variant === 'solid' ? 'kab-btn-solid' : 'kab-btn-floating', className)}
+    className={`kab-btn kab-btn-solid${className ? ` ${className}` : ''}`}
     {...props}
   />
 );

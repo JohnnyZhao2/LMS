@@ -4,11 +4,15 @@
 
 export type SpotCheckStatus = 'PENDING' | 'SUBMITTED' | 'SCORED';
 
+export type SpotCheckRecordFilter = 'all' | 'pending-score' | 'pending-fill';
+
 export interface SpotCheckItem {
   id?: number;
   topic: string;
   /** 导师要求说明，提交后仍保留 */
   instruction?: string;
+  /** 导师要求说明的贴图 */
+  instruction_images?: string[];
   /** 学员填写内容 */
   content?: string;
   score?: string | null;
@@ -54,11 +58,19 @@ export interface SpotCheckStudent {
   employee_id?: string;
   avatar_key?: string | null;
   department_name?: string | null;
+  /** 抽查记录总数 */
+  spot_check_count?: number;
+  /** 全部已评分抽查项的平均分 */
+  average_score?: string | null;
 }
 
 export interface SpotCheckCreateRequest {
   students: number[];
-  items: Array<{ topic: string; instruction?: string }>;
+  items: Array<{
+    topic: string;
+    instruction?: string;
+    instruction_images?: string[];
+  }>;
 }
 
 export interface SpotCheckSubmitRequest {
