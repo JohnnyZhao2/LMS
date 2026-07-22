@@ -112,7 +112,11 @@ class UserDetailView(APIView):
 
     @extend_schema(
         summary='更新用户信息',
-        description='更新用户的基础信息和组织归属',
+        description=(
+            '一次 PATCH 更新用户资料、导师与角色。'
+            '修改 username / employee_id / department_id / mentor_id 需要 user.update；'
+            '修改 role_codes 需要 user.role.assign。'
+        ),
         request=UserUpdateSerializer,
         responses={
             200: UserDetailSerializer,
@@ -123,7 +127,6 @@ class UserDetailView(APIView):
         tags=['用户管理'],
     )
     def patch(self, request, pk):
-        enforce('user.update', request, error_message='只有管理员可以更新用户信息')
         user = self.get_object(pk)
         serializer = UserUpdateSerializer(
             user,
@@ -132,9 +135,17 @@ class UserDetailView(APIView):
             context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
-        if serializer.validated_data.get('role_codes') is not None:
+        validated_data = dict(serializer.validated_data)
+        if not validated_data:
+            return success_response(UserDetailSerializer(user).data)
+
+        profile_keys = {'username', 'employee_id', 'department_id', 'mentor_id'}
+        if profile_keys.intersection(validated_data):
+            enforce('user.update', request, error_message='只有管理员可以更新用户信息')
+        if 'role_codes' in validated_data:
             enforce('user.role.assign', request, error_message='无权分配用户角色')
-        user = UserManagementService(request).update_user(user, dict(serializer.validated_data))
+
+        user = UserManagementService(request).update_user(user, validated_data)
         return success_response(UserDetailSerializer(user).data)
 
     @extend_schema(

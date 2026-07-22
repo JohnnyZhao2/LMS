@@ -189,7 +189,7 @@ class AvatarUpdateSerializer(serializers.Serializer):
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating user information.
-    支持同时更新基本信息、部门和角色，在一个事务中处理以保证数据一致性。
+    支持一次 PATCH 同时更新基本信息、部门、导师与角色，由 Service 在同一事务中落库。
     """
     department_id = serializers.IntegerField(
         required=False,
@@ -199,6 +199,11 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     employee_id = serializers.CharField(
         required=False,
         help_text='工号'
+    )
+    mentor_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text='导师ID，传入 null 解除绑定'
     )
     role_codes = serializers.ListField(
         child=serializers.ChoiceField(choices=[
@@ -215,7 +220,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'username', 'employee_id', 'department_id', 'role_codes'
+            'username', 'employee_id', 'department_id', 'mentor_id', 'role_codes'
         ]
 
     def validate_username(self, value):
@@ -226,30 +231,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
 
     def validate_department_id(self, value):
         return self.validate_department_id_field(value)
-class AssignRolesSerializer(serializers.Serializer):
-    """
-    Serializer for assigning roles to a user.
-    """
-    role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('STUDENT', '学员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
-        required=True,
-        help_text='最终角色代码列表；学员可与一个非学员系统角色叠加，也可移除；超管账号禁止分配业务角色'
-    )
-class AssignMentorSerializer(serializers.Serializer):
-    """
-    Serializer for assigning a mentor to a user.
-    """
-    mentor_id = serializers.IntegerField(
-        required=False,
-        allow_null=True,
-        help_text='导师用户ID，传入null解除绑定'
-    )
+
     def validate_mentor_id(self, value):
         """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)

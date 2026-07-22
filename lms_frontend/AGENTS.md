@@ -1,47 +1,5 @@
 # AGENTS.md
 
-## Project Overview
-
-Bulletproof React is a scalable React application architecture that provides opinionated guidelines and best practices for building production-ready React applications. The project includes three different implementations:
-
-- **React Vite**: Modern Vite-based React application
-- **Next.js App Router**: Next.js 13+ with App Router
-- **Next.js Pages**: Traditional Next.js with Pages Router
-
-### Application Domain
-The demo application is a team collaboration platform where users can:
-- Create and join teams
-- Start discussions within teams  
-- Comment on discussions
-- Manage user roles (ADMIN/USER permissions)
-
-**Live Demo**: [https://bulletproof-react-app.netlify.app](https://bulletproof-react-app.netlify.app)
-
-## Setup Commands
-
-```bash
-# Navigate to desired app
-cd apps/react-vite        # or apps/nextjs-app or apps/nextjs-pages
-
-# Install dependencies
-yarn install
-
-# Start development server
-yarn dev
-
-# Run tests
-yarn test
-
-# Run e2e tests
-yarn test:e2e
-
-# Lint code
-yarn lint
-
-# Build for production
-yarn build
-```
-
 ## Project Structure
 
 The codebase follows a feature-based architecture organized as follows:

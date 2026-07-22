@@ -552,18 +552,6 @@
     "view": "apps.users.views.status.UserActivateView"
   },
   {
-    "method": "POST",
-    "path": "/api/users/<int:pk>/assign-mentor/",
-    "route_name": "user-assign-mentor",
-    "view": "apps.users.views.assignment.UserAssignMentorView"
-  },
-  {
-    "method": "POST",
-    "path": "/api/users/<int:pk>/assign-roles/",
-    "route_name": "user-assign-roles",
-    "view": "apps.users.views.assignment.UserAssignRolesView"
-  },
-  {
     "method": "PATCH",
     "path": "/api/users/<int:pk>/avatar/",
     "route_name": "user-avatar",

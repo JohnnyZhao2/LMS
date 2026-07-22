@@ -134,6 +134,8 @@ class UserManagementService(BaseService):
         username = validated_data.get('username')
         employee_id = validated_data.get('employee_id')
         role_codes = validated_data.get('role_codes')
+        mentor_provided = 'mentor_id' in validated_data
+        mentor_id = validated_data.get('mentor_id')
 
         with transaction.atomic():
             if department_id is not None:
@@ -143,6 +145,9 @@ class UserManagementService(BaseService):
             if employee_id is not None:
                 user.employee_id = employee_id
             user.save()
+
+            if mentor_provided:
+                user = self.assign_mentor(user_id=user.id, mentor_id=mentor_id)
 
             if role_codes is not None:
                 user = self.assign_roles(

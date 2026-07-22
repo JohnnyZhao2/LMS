@@ -5,7 +5,7 @@ import { isAllowedDepartmentCode, useDepartments } from '@/features/user-managem
 import { useRoles } from '@/features/user-management/api/roles/get-roles';
 import { useUserDetail } from '@/features/user-management/api/users/get-user-detail';
 import { useUsers } from '@/features/user-management/api/users/get-users';
-import { useAssignRoles } from '@/features/user-management/api/roles/assign-roles';
+import { useUpdateUser } from '@/features/user-management/api/users/update-user';
 import { useAuth } from '@/lib/auth-context';
 import { useUserPermissionOverrides } from '@/features/user-management/api/authorization/get-user-permission-overrides';
 import { useUserScopeGroupOverrides } from '@/features/user-management/api/authorization/get-user-scope-group-overrides';
@@ -54,7 +54,7 @@ export function useRolePermissionTemplateState({
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [isResettingOverrides, setIsResettingOverrides] = useState(false);
   const deferredMemberSearch = useDeferredValue(memberSearch);
-  const assignRoles = useAssignRoles();
+  const updateUser = useUpdateUser();
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
 
@@ -215,9 +215,11 @@ export function useRolePermissionTemplateState({
     }
     setMutatingUserId(user.id);
     try {
-      await assignRoles.mutateAsync({
+      await updateUser.mutateAsync({
         id: user.id,
-        roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), resolvedActiveRole),
+        data: {
+          role_codes: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), resolvedActiveRole),
+        },
       });
     } catch (error) {
       showApiError(error);
@@ -233,9 +235,9 @@ export function useRolePermissionTemplateState({
     const nextRoles = getManagedRoleCodes(user.roles).filter((roleCode) => roleCode !== resolvedActiveRole);
     setMutatingUserId(user.id);
     try {
-      await assignRoles.mutateAsync({
+      await updateUser.mutateAsync({
         id: user.id,
-        roles: nextRoles,
+        data: { role_codes: nextRoles },
       });
     } catch (error) {
       showApiError(error);
@@ -272,9 +274,9 @@ export function useRolePermissionTemplateState({
     }
 
     try {
-      await assignRoles.mutateAsync({
+      await updateUser.mutateAsync({
         id: selectedUserDetail.id,
-        roles: nextRoles,
+        data: { role_codes: nextRoles },
       });
       const nextEditorRoleCode = getNextUserPermissionEditorRoleCode({
         currentRoleCode: resolvedActiveRole,
@@ -335,7 +337,7 @@ export function useRolePermissionTemplateState({
     handleSelectMember,
     handleSelectRole,
     handleUserRoleToggle,
-    isAssigningRoles: assignRoles.isPending,
+    isAssigningRoles: updateUser.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
     isResettingOverrides,

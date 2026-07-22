@@ -4,16 +4,15 @@
 - 成功响应: {code: 'SUCCESS', message: '...', data: {...}}
 - 错误响应: {code: 'ERROR_CODE', message: '...', details: {...}}
 使用方式:
-    from core.responses import success_response, error_response, paginated_response
+    from core.responses import success_response, error_response
     # 成功响应
     return success_response(data=serializer.data)
     return success_response(data=serializer.data, message='创建成功', status_code=201)
-    # 分页响应
-    return paginated_response(page, serializer.data, paginator)
+    # 分页响应请使用 StandardResultsSetPagination.get_paginated_response
     # 错误响应（通常通过 BusinessError 自动处理）
     return error_response(code='VALIDATION_ERROR', message='参数错误')
 """
-from typing import Any, List, Optional
+from typing import Any, List
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -76,40 +75,6 @@ def error_response(
         },
         status=status_code
     )
-def paginated_response(
-    page: List[Any],
-    serialized_data: List[dict],
-    paginator: Any
-) -> Response:
-    """
-    统一分页响应格式
-    Args:
-        page: 分页后的数据列表
-        serialized_data: 序列化后的数据
-        paginator: 分页器实例（如 StandardResultsSetPagination）
-    Returns:
-        Response 对象
-    Example:
-        paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = MySerializer(page, many=True)
-        return paginated_response(page, serializer.data, paginator)
-        # => {"code": "SUCCESS", "message": "success", "data": {
-        #       "count": 123, "total_pages": 7, "current_page": 1, "page_size": 20,
-        #       "next": "...", "previous": "...", "results": [...]
-        #    }}
-    """
-    # 获取分页器的响应数据（包含完整的分页元数据）
-    paginated_data = {
-        'count': paginator.page.paginator.count,
-        'total_pages': paginator.page.paginator.num_pages,
-        'current_page': paginator.page.number,
-        'page_size': paginator.get_page_size(paginator.request),
-        'next': paginator.get_next_link(),
-        'previous': paginator.get_previous_link(),
-        'results': serialized_data,
-    }
-    return success_response(data=paginated_data)
 def list_response(data: List[Any], message: str = 'success') -> Response:
     """
     列表响应（非分页）

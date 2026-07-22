@@ -13,6 +13,7 @@ export interface UpdateUserRequest {
   username?: string;
   employee_id?: string;
   department_id?: number | null;
+  mentor_id?: number | null;
   role_codes?: RoleCode[];
 }
 

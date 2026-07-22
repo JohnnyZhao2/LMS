@@ -36,17 +36,16 @@ import {
   isAssignableRoleCode,
 } from '@/utils/authorization/user-role-assignment';
 
-import { useAssignMentor } from '@/features/user-management/api/users/assign-mentor';
 import { useCreateUser } from '@/features/user-management/api/users/create-user';
 import { useMentors } from '@/features/user-management/api/users/get-mentors';
 import { useUpdateUser } from '@/features/user-management/api/users/update-user';
-import { useAssignRoles } from '@/features/user-management/api/roles/assign-roles';
 import { useDepartments } from '@/features/user-management/api/users/get-departments';
 import { useRoles } from '@/features/user-management/api/roles/get-roles';
 import { useUserDetail } from '@/features/user-management/api/users/get-user-detail';
 import { showApiError } from '@/lib/api-error-handler';
 import type { RoleCode } from '@/types/common';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
+import type { UpdateUserRequest } from '@/types/user-api';
 
 interface UserFormProps {
   open: boolean;
@@ -187,8 +186,6 @@ const UserFormContent: React.FC<{
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
-    const assignRoles = useAssignRoles();
-    const assignMentor = useAssignMentor();
     // 直接从 props 初始化，组件通过 key 重挂载时自动重置
     const [initialRoleCodes] = useState<RoleCode[]>(() =>
       isEdit && userDetail
@@ -224,7 +221,6 @@ const UserFormContent: React.FC<{
           },
     });
     const formData = useWatch({ control: form.control });
-    const [mentorTouched, setMentorTouched] = useState(false);
     const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
     const canEditBaseInfo = isEdit ? canUpdateUser : canCreateUser;
 
@@ -241,7 +237,7 @@ const UserFormContent: React.FC<{
             || values.employee_id !== (userDetail?.employee_id ?? '')
             || (values.department_id ?? null) !== (userDetail?.department?.id ?? null)
           );
-          const mentorChanged = mentorTouched && values.mentor_id !== initialAssignedMentorId;
+          const mentorChanged = values.mentor_id !== initialAssignedMentorId;
 
           if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
@@ -252,21 +248,20 @@ const UserFormContent: React.FC<{
             return;
           }
 
+          const data: UpdateUserRequest = {};
           if (baseInfoChanged) {
-            await updateUser.mutateAsync({
-              id: userId!,
-              data: {
-                username: values.username,
-                employee_id: values.employee_id,
-                department_id: values.department_id,
-              },
-            });
+            data.username = values.username;
+            data.employee_id = values.employee_id;
+            data.department_id = values.department_id;
           }
           if (mentorChanged) {
-            await assignMentor.mutateAsync({ id: userId!, mentorId: values.mentor_id });
+            data.mentor_id = values.mentor_id;
           }
           if (rolesChanged) {
-            await assignRoles.mutateAsync({ id: userId!, roles: values.role_codes });
+            data.role_codes = values.role_codes;
+          }
+          if (Object.keys(data).length > 0) {
+            await updateUser.mutateAsync({ id: userId!, data });
           }
           toast.success("账号信息已更新");
         } else {
@@ -309,9 +304,7 @@ const UserFormContent: React.FC<{
 
     const isLoading = form.formState.isSubmitting
       || createUser.isPending
-      || updateUser.isPending
-      || assignRoles.isPending
-      || assignMentor.isPending;
+      || updateUser.isPending;
 
     return (
       <>
@@ -421,7 +414,6 @@ const UserFormContent: React.FC<{
                         disabled={!canEditBaseInfo}
                         onValueChange={(v) => {
                           if (!canEditBaseInfo) return;
-                          setMentorTouched(true);
                           form.setValue('mentor_id', v ? Number(v) : null, { shouldDirty: true });
                         }}
                       >
@@ -453,7 +445,6 @@ const UserFormContent: React.FC<{
                           className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-destructive transition-colors z-[20]"
                           onClick={() => {
                             if (!canEditBaseInfo) return;
-                            setMentorTouched(true);
                             form.setValue('mentor_id', null, { shouldDirty: true });
                           }}
                         >

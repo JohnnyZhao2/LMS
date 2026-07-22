@@ -33,7 +33,6 @@ from core.responses import (
     created_response,
     list_response,
     no_content_response,
-    paginated_response,
     success_response,
 )
 
@@ -292,7 +291,7 @@ class TaskListView(BaseAPIView):
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = TaskListSerializer(page, many=True, context={'request': request})
-        return paginated_response(page, serializer.data, paginator)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class TaskDetailView(BaseAPIView):

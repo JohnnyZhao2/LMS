@@ -13,9 +13,7 @@ import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { getQuestion } from '@/features/assessment/api/questions/get-question-detail';
-import { useQuestions } from '@/features/assessment/api/questions/get-questions';
-import { QuestionBankPanel } from '@/features/assessment/components/questions/question-bank-panel';
-import { QuestionDetailDialog } from '@/features/assessment/components/questions/question-detail-dialog';
+import { QuestionBankPicker } from '@/features/assessment/components/questions/question-bank-picker';
 import {
   createBlankEditableQuestion,
   normalizeQuestionScore,
@@ -94,10 +92,7 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
   const [passScore, setPassScore] = useState<number | undefined>();
   const [items, setItems] = useState<InlineQuestionItem[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [resourceSearch, setResourceSearch] = useState('');
-  const [filterSpaceTagId, setFilterSpaceTagId] = useState<string>('all');
-  const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
-  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+  const [blankSpaceTagId, setBlankSpaceTagId] = useState<number | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [questionBankCollapsed, setQuestionBankCollapsed] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth < 1500 : false),
@@ -111,12 +106,6 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
 
   const { data: quizData } = useQuizDetail(Number(id));
   const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
-  const { data: questionsData, isLoading: questionsLoading } = useQuestions({
-    pageSize: 1000,
-    search: resourceSearch || undefined,
-    spaceTagId: filterSpaceTagId === 'all' ? undefined : Number(filterSpaceTagId),
-    questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType,
-  });
 
   const createQuiz = useCreateQuiz();
   const updateQuiz = useUpdateQuiz();
@@ -200,14 +189,6 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
     [items],
   );
 
-  const filteredQuestionsData = useMemo(() => {
-    if (!questionsData) return undefined;
-    return {
-      ...questionsData,
-      results: questionsData.results.filter((question) => !selectedSourceQuestionIds.has(question.id)),
-    };
-  }, [questionsData, selectedSourceQuestionIds]);
-
   const workbenchClassName = questionBankCollapsed
     ? COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME
     : THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME;
@@ -228,13 +209,8 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
   }, [appendItemPreservingFocus, selectedSourceQuestionIds]);
 
   const handleAddBlank = useCallback((questionType: QuestionType = 'SINGLE_CHOICE') => {
-    appendItemPreservingFocus(
-      createBlankEditableQuestion(
-        questionType,
-        filterSpaceTagId !== 'all' ? Number(filterSpaceTagId) : null,
-      ),
-    );
-  }, [appendItemPreservingFocus, filterSpaceTagId]);
+    appendItemPreservingFocus(createBlankEditableQuestion(questionType, blankSpaceTagId));
+  }, [appendItemPreservingFocus, blankSpaceTagId]);
 
   const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
     setItems((prev) => prev.map((item) => (
@@ -254,15 +230,6 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
       if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
       return arrayMove(prev, oldIndex, newIndex);
     });
-  }, []);
-
-  const handlePreviewQuestion = useCallback(async (question: Question) => {
-    try {
-      const full = await getQuestion(question.id);
-      setPreviewQuestion(full);
-    } catch (error) {
-      showApiError(error);
-    }
   }, []);
 
   const handleSubmitQuiz = async () => {
@@ -426,20 +393,12 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
               questionBankCollapsed && 'min-h-fit self-start justify-self-end overflow-visible rounded-none border-0 bg-transparent',
             )}
           >
-            <QuestionBankPanel
-              collapsed={questionBankCollapsed}
-              onToggleCollapse={() => setQuestionBankCollapsed((prev) => !prev)}
-              resourceSearch={resourceSearch}
-              onResourceSearchChange={setResourceSearch}
-              filterSpaceTagId={filterSpaceTagId}
-              onFilterSpaceTagIdChange={setFilterSpaceTagId}
-              filterQuestionType={filterQuestionType}
-              onFilterQuestionTypeChange={setFilterQuestionType}
-              spaceTags={spaceTags}
-              questionsData={filteredQuestionsData}
-              questionsLoading={questionsLoading}
-              onPreview={handlePreviewQuestion}
-              onAddQuestion={handleAddQuestion}
+            <QuestionBankPicker
+              excludedQuestionIds={selectedSourceQuestionIds}
+              onAdd={handleAddQuestion}
+              tagDeps={tagDeps}
+              onCollapsedChange={setQuestionBankCollapsed}
+              onSpaceFilterChange={setBlankSpaceTagId}
             />
           </div>
         </div>
@@ -461,25 +420,6 @@ export const QuizForm: React.FC<QuizFormProps> = ({ tagDeps }) => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <QuestionDetailDialog
-        question={previewQuestion}
-        open={!!previewQuestion}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewQuestion(null);
-          }
-        }}
-        onEdit={(question) => {
-          setPreviewQuestion(null);
-          roleNavigate(`/questions/${question.id}/edit`);
-        }}
-        onDelete={() => {
-          setPreviewQuestion(null);
-          toast.info('请在题库管理页删除题目');
-        }}
-        tagDeps={tagDeps}
-      />
     </EditorPageShell>
   );
 };
