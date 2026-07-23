@@ -8,7 +8,7 @@ import { showApiError } from '@/lib/api-error-handler';
 import type { QuestionType, Tag } from '@/types/common';
 import type { Question, QuestionCreateRequest } from '@/types/question';
 
-import { QuestionDocumentList } from '@/features/assessment/components/questions/question-document-list';
+import { QuestionDocumentList } from '@/features/assessment/questions/components/question-document-list';
 import {
   buildQuestionCreatePayload,
   buildQuestionPatchPayload,
@@ -16,10 +16,10 @@ import {
   hasQuestionAnswer,
   syncEditableQuestionItem,
   type EditableQuestionItem,
-} from '@/features/assessment/components/questions/question-editor-helpers';
+} from '@/features/assessment/questions/editor-utils';
 import type { AssessmentTagDeps } from '@/features/assessment/types/tag-deps';
 
-interface QuestionBatchEditorProps {
+interface QuestionEditorProps {
   initialItems: EditableQuestionItem[];
   spaceTags?: Tag[];
   TagInput: AssessmentTagDeps['TagInput'];
@@ -31,7 +31,10 @@ interface QuestionBatchEditorProps {
   onEmpty?: () => void;
 }
 
-export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
+/**
+ * 题目批量编辑器：维护题目列表状态，负责保存、删除、新增与排序。
+ */
+export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   initialItems,
   spaceTags,
   TagInput,

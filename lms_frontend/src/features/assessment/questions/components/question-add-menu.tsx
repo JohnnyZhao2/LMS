@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { QUESTION_TYPE_PICKER_OPTIONS, getQuestionTypePresentation } from '@/features/assessment/components/questions/question-config';
+import { QUESTION_TYPE_PICKER_OPTIONS, getQuestionTypePresentation } from '@/features/assessment/questions/config';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
 

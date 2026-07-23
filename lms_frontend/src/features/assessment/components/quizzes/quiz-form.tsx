@@ -13,12 +13,12 @@ import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { getQuestion } from '@/features/assessment/api/questions-api';
-import { QuestionBankPicker } from '@/features/assessment/components/questions/question-bank-picker';
+import { QuestionBankPicker } from '@/features/assessment/questions/components/question-bank-picker';
 import {
   createBlankEditableQuestion,
   normalizeQuestionScore,
   questionToEditableItem,
-} from '@/features/assessment/components/questions/question-editor-helpers';
+} from '@/features/assessment/questions/editor-utils';
 import { useAuth } from '@/lib/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';

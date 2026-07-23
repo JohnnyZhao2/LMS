@@ -17,11 +17,14 @@ import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
 import type { QuestionType, Tag } from '@/types/common';
 
-import { QuestionAddMenu } from '@/features/assessment/components/questions/question-add-menu';
-import { QuestionEditCard, type QuestionEditCardValue } from '@/features/assessment/components/questions/question-edit-card';
+import { QuestionAddMenu } from '@/features/assessment/questions/components/question-add-menu';
+import {
+  QuestionEditorCard,
+  type QuestionEditorCardValue,
+} from '@/features/assessment/questions/components/question-editor-card';
 import type { AssessmentTagDeps } from '@/features/assessment/types/tag-deps';
 
-type QuestionListItem = QuestionEditCardValue & {
+type QuestionListItem = QuestionEditorCardValue & {
   key: string;
 };
 
@@ -32,7 +35,7 @@ interface QuestionDocumentListProps {
   TagInput: AssessmentTagDeps['TagInput'];
   showScore?: boolean;
   lockQuestionType?: boolean;
-  onChangeItem: (key: string, patch: Partial<QuestionEditCardValue>) => void;
+  onChangeItem: (key: string, patch: Partial<QuestionEditorCardValue>) => void;
   onSelectItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
   onSaveItem?: (key: string) => void;
@@ -53,7 +56,7 @@ interface SortableQuestionListItemProps {
   TagInput: AssessmentTagDeps['TagInput'];
   showScore: boolean;
   lockQuestionType?: boolean;
-  onChange: (patch: Partial<QuestionEditCardValue>) => void;
+  onChange: (patch: Partial<QuestionEditorCardValue>) => void;
   onSave?: () => void;
   onDelete?: () => void;
   onFocus: () => void;
@@ -142,19 +145,17 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
           isOverlay && 'overflow-hidden rounded-xl shadow-[0_18px_40px_rgba(15,23,42,0.18)]',
         )}
       >
-        <QuestionEditCard
+        <QuestionEditorCard
           item={item}
           spaceTags={spaceTags}
           TagInput={TagInput}
           showScore={showScore}
           lockQuestionType={lockQuestionType}
           onChange={onChange}
-          onFocus={onFocus}
           onDelete={onDelete}
           onSave={onSave}
           isSaving={isSaving}
           isDeleting={isDeleting}
-          showMetaToolbar
           headerActions={headerActions}
         />
       </div>
@@ -162,6 +163,9 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
   );
 };
 
+/**
+ * 题目文档列表：拖拽排序、滚动定位与拖拽预览。题目编辑与试卷编辑共用。
+ */
 export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
   items,
   activeKey,

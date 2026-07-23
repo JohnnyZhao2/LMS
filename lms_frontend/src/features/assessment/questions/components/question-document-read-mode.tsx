@@ -4,10 +4,10 @@ import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 
-import { QuestionDocumentResponsePanel } from '@/features/assessment/components/questions/question-document-answer-panels';
-import { QuestionDocumentDivider } from '@/features/assessment/components/questions/question-document-shared';
-import type { QuestionChoiceOption, QuestionDocumentBodyProps } from '@/features/assessment/components/questions/question-document-types';
-import { useQuestionDocumentSplitLayout } from '@/features/assessment/components/questions/question-document-utils';
+import { QuestionAnswer } from '@/features/assessment/questions/components/question-answer';
+import { QuestionDocumentDivider } from '@/features/assessment/questions/components/question-document-shared';
+import type { QuestionChoiceOption, QuestionDocumentBodyProps } from '@/features/assessment/questions/types';
+import { useQuestionDocumentSplitLayout } from '@/features/assessment/questions/editor-utils';
 
 interface QuestionDocumentReadRendererProps {
   value: string;
@@ -144,14 +144,14 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               {isChoiceType ? '选项' : (isAnswerMode ? '作答区域' : '参考答案')}
             </div>
-            <QuestionDocumentResponsePanel
+            <QuestionAnswer
+              mode={isAnswerMode ? 'response' : 'read'}
               questionType={questionType}
               options={options}
               answer={answer}
               response={response}
               optionLabelRenderer={optionLabelRenderer}
               disabled={disabled}
-              interactive={isAnswerMode}
               onResponseChange={onResponseChange}
             />
           </div>

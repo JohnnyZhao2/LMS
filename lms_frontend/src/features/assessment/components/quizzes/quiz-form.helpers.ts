@@ -1,4 +1,4 @@
-import { hasQuestionAnswer, normalizeQuestionScore } from '@/features/assessment/components/questions/question-editor-helpers';
+import { hasQuestionAnswer, normalizeQuestionScore } from '@/features/assessment/questions/editor-utils';
 import type { QuizCreateRequest, QuizType } from '@/types/quiz';
 
 import type { InlineQuestionItem } from '@/features/assessment/components/quizzes/quiz-editor-types';

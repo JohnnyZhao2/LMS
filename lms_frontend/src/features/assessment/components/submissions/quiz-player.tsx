@@ -9,7 +9,7 @@ import {
 } from '@/features/assessment/api/submissions-queries';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Spinner } from '@/components/ui/spinner';
-import { buildQuestionSections } from '@/features/assessment/components/questions/question-sections';
+import { buildQuestionSections } from '@/features/assessment/questions/config';
 import { showApiError } from '@/lib/api-error-handler';
 import type { SubmissionDetail } from '@/features/assessment/types/submission';
 

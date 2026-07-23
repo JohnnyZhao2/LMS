@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { QuestionDocumentList } from '@/features/assessment/components/questions/question-document-list';
+import { QuestionDocumentList } from '@/features/assessment/questions/components/question-document-list';
 import type { QuestionType, Tag } from '@/types/common';
 
 import type { InlineQuestionItem } from '@/features/assessment/components/quizzes/quiz-editor-types';

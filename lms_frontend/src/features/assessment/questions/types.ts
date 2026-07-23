@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 import type { QuestionType } from '@/types/common';
 
-export type QuestionDocumentMode = 'edit' | 'preview' | 'answer';
+/** 题目文档只读展示模式：预览参考答案 / 用户作答 */
+export type QuestionDocumentMode = 'preview' | 'answer';
 
 export interface QuestionChoiceOption {
   key: string;
@@ -12,7 +13,6 @@ export interface QuestionChoiceOption {
 export interface QuestionDocumentBodyProps {
   mode?: QuestionDocumentMode;
   className?: string;
-  metaBar?: ReactNode;
   footerActions?: ReactNode;
   score?: string | number;
   questionType: QuestionType;
@@ -22,13 +22,7 @@ export interface QuestionDocumentBodyProps {
   response?: string | string[];
   explanation: string;
   showExplanation: boolean;
-  readOnly?: boolean;
   disabled?: boolean;
   questionNumber?: number;
-  onContentChange?: (value: string) => void;
-  onOptionsChange?: (value: QuestionChoiceOption[]) => void;
-  onAnswerChange?: (value: string | string[]) => void;
   onResponseChange?: (value: string | string[]) => void;
-  onExplanationChange?: (value: string) => void;
-  onShowExplanationChange?: (show: boolean) => void;
 }

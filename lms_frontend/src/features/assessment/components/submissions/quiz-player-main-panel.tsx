@@ -1,5 +1,5 @@
-import { QuestionTypeBadge } from '@/features/assessment/components/questions/question-type-badge';
-import type { QuestionSection, QuestionSectionEntry } from '@/features/assessment/components/questions/question-sections';
+import { QuestionTypeBadge } from '@/features/assessment/questions/components/question-type-badge';
+import type { QuestionSection, QuestionSectionEntry } from '@/features/assessment/questions/config';
 import type { MutableRefObject } from 'react';
 
 import type { SubmissionDetail } from '@/features/assessment/types/submission';

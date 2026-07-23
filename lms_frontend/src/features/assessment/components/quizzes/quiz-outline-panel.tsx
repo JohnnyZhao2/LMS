@@ -9,8 +9,8 @@ import { Clock3, Target } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
-import { QuestionTypeBadge } from '@/features/assessment/components/questions/question-type-badge';
-import { buildQuestionSections } from '@/features/assessment/components/questions/question-sections';
+import { QuestionTypeBadge } from '@/features/assessment/questions/components/question-type-badge';
+import { buildQuestionSections } from '@/features/assessment/questions/config';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';

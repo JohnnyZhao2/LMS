@@ -8,8 +8,8 @@ import {
   useQuestionDetail,
   useUpdateQuestion,
 } from '@/features/assessment/api/questions-queries';
-import { QuestionBatchEditor } from '@/features/assessment/components/questions/question-batch-editor';
-import { createBlankEditableQuestion, questionToEditableItem } from '@/features/assessment/components/questions/question-editor-helpers';
+import { QuestionEditor } from '@/features/assessment/questions/components/question-editor';
+import { createBlankEditableQuestion, questionToEditableItem } from '@/features/assessment/questions/editor-utils';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { AssessmentTagDeps } from '@/features/assessment/types/tag-deps';
 
@@ -40,7 +40,7 @@ export const QuestionFormPage: React.FC<QuestionFormPageProps> = ({ tagDeps }) =
       <EditorPageShell>
         <PageWorkbench className="min-w-0">
           {isEdit && isLoading ? null : (
-            <QuestionBatchEditor
+            <QuestionEditor
               key={isEdit ? `question-edit-${questionId}` : 'question-create-page'}
               initialItems={initialItems}
               spaceTags={spaceTags}

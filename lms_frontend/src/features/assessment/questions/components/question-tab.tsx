@@ -1,12 +1,12 @@
 import React from 'react';
 import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
 import { useDeleteQuestion, useQuestions } from '@/features/assessment/api/questions-queries';
-import { QuestionDetailDialog } from '@/features/assessment/components/questions/question-detail-dialog';
+import { QuestionDetailDialog } from '@/features/assessment/questions/components/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/features/assessment/components/questions/question-config';
+import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/features/assessment/questions/config';
 import { showApiError } from '@/lib/api-error-handler';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

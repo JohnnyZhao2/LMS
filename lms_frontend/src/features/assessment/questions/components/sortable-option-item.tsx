@@ -6,7 +6,7 @@ import { GripVertical, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
-import { QuestionChoiceIndicator } from '@/features/assessment/components/questions/question-document-shared';
+import { QuestionChoiceIndicator } from '@/features/assessment/questions/components/question-document-shared';
 
 interface SortableOptionItemProps {
   id: string;

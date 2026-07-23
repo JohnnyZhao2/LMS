@@ -1,4 +1,4 @@
-import type { EditableQuestionItem } from '@/features/assessment/components/questions/question-editor-helpers';
+import type { EditableQuestionItem } from '@/features/assessment/questions/editor-utils';
 
 export type InlineQuestionItem = EditableQuestionItem;
 
