@@ -12,10 +12,11 @@ export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateUser,
-    onSuccess: () =>
+    onSuccess: (_data, variables) =>
       invalidateAfterUserMutation(queryClient, {
         includeMentors: true,
         includeAssignableUsers: true,
+        includeAuthorization: variables.data.role_codes !== undefined,
       }),
   });
 };

@@ -1,21 +1,25 @@
-import type { PermissionOverrideScope } from '@/types/authorization';
-import type { RoleCode } from '@/types/common';
+import type { ScopeType } from '@/types/authorization';
 import type { Department, UserList } from '@/types/common';
 
 import {
   formatScopeSummary,
-  normalizeScopeTypes,
   sameScopeUserIds,
 } from '@/features/user-management/components/authorization/user-form.utils';
-import { normalizeScopeUserIds } from '@/features/user-management/components/authorization/user-permission-section.helpers';
-import type { ScopeGroupOverrideEntry } from '@/features/user-management/components/authorization/user-permission-section.types';
+import type { AuthorizationFormScope } from '@/types/authorization';
 
-export interface RoleScopeSelection {
-  scopeTypes: PermissionOverrideScope[];
-  scopeUserIds: number[];
+export interface ScopeFilterOption {
+  value: string;
+  label: string;
 }
 
-export const AVAILABLE_SCOPE_TYPES: PermissionOverrideScope[] = [
+/** 单范围组当前选择 */
+export interface RoleScopeSelection {
+  scopeType: ScopeType | null;
+  targetUserIds: number[];
+}
+
+export const AVAILABLE_SCOPE_TYPES: ScopeType[] = [
+  'OWN',
   'SELF',
   'MENTEES',
   'DEPARTMENT',
@@ -23,327 +27,218 @@ export const AVAILABLE_SCOPE_TYPES: PermissionOverrideScope[] = [
   'EXPLICIT_USERS',
 ];
 
+export const normalizeScopeUserIds = (scopeUserIds: number[]): number[] => (
+  Array.from(new Set(scopeUserIds)).sort((left, right) => left - right)
+);
+
+/**
+ * 按目录允许列表过滤可选范围类型。
+ */
 export const normalizeAvailableScopeTypes = (
-  scopeTypes: PermissionOverrideScope[],
-): PermissionOverrideScope[] => {
+  scopeTypes: ScopeType[],
+): ScopeType[] => {
   const scopeTypeSet = new Set(scopeTypes);
   return AVAILABLE_SCOPE_TYPES.filter((scopeType) => scopeTypeSet.has(scopeType));
 };
 
-const filterScopeTypesByAvailability = (
-  scopeTypes: PermissionOverrideScope[],
-  availableScopeTypes?: PermissionOverrideScope[],
-): PermissionOverrideScope[] => {
-  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
-  if (!availableScopeTypes || availableScopeTypes.length === 0) {
-    return normalizedScopeTypes;
-  }
-
-  const availableScopeTypeSet = new Set(normalizeAvailableScopeTypes(availableScopeTypes));
-  return normalizeScopeTypes(
-    normalizedScopeTypes.filter((scopeType) => availableScopeTypeSet.has(scopeType)),
-  );
-};
-
-export const TASK_ASSIGNEE_SCOPE_PERMISSION_CODES = new Set<string>([
-  'task.assign',
-  'task.analytics.view',
-]);
-
-export const STUDENT_ONLY_SCOPE_PERMISSION_CODES = new Set<string>([
-  'spot_check.view',
-  'spot_check.create',
-]);
-
+/**
+ * 指定人员可选池：活跃学员（含兼任管理角色），排除超管。
+ */
 export const getSelectableScopeUsers = (
   scopeUsers: UserList[],
-  scopePermissionCode?: string | null,
 ): UserList[] => scopeUsers.filter((scopeUser) => {
-  if (scopeUser.is_superuser) {
+  if (!scopeUser.is_active || scopeUser.is_superuser) {
     return false;
   }
-  if (scopePermissionCode && TASK_ASSIGNEE_SCOPE_PERMISSION_CODES.has(scopePermissionCode)) {
-    return scopeUser.roles.some((role) => role.code === 'STUDENT' || role.code === 'DEPT_MANAGER');
-  }
-  if (scopePermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePermissionCode)) {
-    return scopeUser.roles.some((role) => role.code === 'STUDENT');
-  }
-  return true;
+  return scopeUser.roles.some((role) => role.code === 'STUDENT');
 });
 
+/**
+ * 预设范围类型对应的用户集合（用于摘要展示）。
+ */
 export const getPresetMatchedScopeUserIds = ({
   departmentId,
-  scopeTypes,
+  scopeType,
   selectableScopeUsers,
   userId,
 }: {
   departmentId: number | null;
-  scopeTypes: PermissionOverrideScope[];
+  scopeType: ScopeType | null;
   selectableScopeUsers: UserList[];
   userId: number | null;
 }): number[] => {
-  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
-  if (normalizedScopeTypes.length === 0) {
+  if (!scopeType || scopeType === 'OWN' || scopeType === 'EXPLICIT_USERS') {
     return [];
   }
 
   const matchedUserIds = new Set<number>();
 
-  for (const scopeType of normalizedScopeTypes) {
-    if (scopeType === 'ALL') {
-      selectableScopeUsers.forEach((scopeUser) => matchedUserIds.add(scopeUser.id));
-      continue;
-    }
-
-    if (scopeType === 'MENTEES' && userId) {
-      selectableScopeUsers.forEach((scopeUser) => {
-        if (scopeUser.mentor?.id === userId) {
-          matchedUserIds.add(scopeUser.id);
-        }
-      });
-      continue;
-    }
-
-    if (scopeType === 'DEPARTMENT' && departmentId) {
-      selectableScopeUsers.forEach((scopeUser) => {
-        if (scopeUser.department.id === departmentId) {
-          matchedUserIds.add(scopeUser.id);
-        }
-      });
-      continue;
-    }
-
-    if (scopeType === 'SELF' && userId) {
-      const hasSelf = selectableScopeUsers.some((scopeUser) => scopeUser.id === userId);
-      if (hasSelf) {
-        matchedUserIds.add(userId);
+  if (scopeType === 'ALL') {
+    selectableScopeUsers.forEach((scopeUser) => matchedUserIds.add(scopeUser.id));
+  } else if (scopeType === 'MENTEES' && userId) {
+    selectableScopeUsers.forEach((scopeUser) => {
+      if (scopeUser.mentor?.id === userId) {
+        matchedUserIds.add(scopeUser.id);
       }
+    });
+  } else if (scopeType === 'DEPARTMENT' && departmentId) {
+    selectableScopeUsers.forEach((scopeUser) => {
+      if (scopeUser.department.id === departmentId) {
+        matchedUserIds.add(scopeUser.id);
+      }
+    });
+  } else if (scopeType === 'SELF' && userId) {
+    const hasSelf = selectableScopeUsers.some((scopeUser) => scopeUser.id === userId);
+    if (hasSelf) {
+      matchedUserIds.add(userId);
     }
   }
 
   return normalizeScopeUserIds(Array.from(matchedUserIds));
 };
 
+/**
+ * 从草稿 scopes 读取某一范围组选择。
+ */
+export const getScopeSelectionFromDraft = (
+  scopes: AuthorizationFormScope[],
+  scopeGroupKey?: string | null,
+): RoleScopeSelection | null => {
+  if (!scopeGroupKey) {
+    return null;
+  }
+  const scope = scopes.find((item) => item.scopeGroupKey === scopeGroupKey);
+  if (!scope) {
+    return null;
+  }
+  return {
+    scopeType: scope.scopeType,
+    targetUserIds: normalizeScopeUserIds(scope.targetUserIds),
+  };
+};
+
+/**
+ * 同步选择：校验可用类型并裁剪指定人员。
+ */
 export const syncRoleScopeSelection = ({
-  getPresetMatchedScopeUserIdsForSelection,
-  selectableScopeUserIdSet,
   selection,
+  selectableScopeUserIdSet,
   availableScopeTypes,
 }: {
-  getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
-  selectableScopeUserIdSet: Set<number>;
   selection: RoleScopeSelection;
-  availableScopeTypes?: PermissionOverrideScope[];
+  selectableScopeUserIdSet: Set<number>;
+  availableScopeTypes?: ScopeType[];
 }): RoleScopeSelection => {
-  const scopeTypes = filterScopeTypesByAvailability(selection.scopeTypes, availableScopeTypes);
-  if (scopeTypes.includes('EXPLICIT_USERS')) {
+  const normalizedAvailable = availableScopeTypes && availableScopeTypes.length > 0
+    ? new Set(normalizeAvailableScopeTypes(availableScopeTypes))
+    : null;
+
+  if (
+    selection.scopeType
+    && normalizedAvailable
+    && !normalizedAvailable.has(selection.scopeType)
+  ) {
+    return { scopeType: null, targetUserIds: [] };
+  }
+
+  if (selection.scopeType === 'EXPLICIT_USERS') {
     return {
-      scopeTypes,
-      scopeUserIds: normalizeScopeUserIds(
-        selection.scopeUserIds.filter((scopeUserId) => selectableScopeUserIdSet.has(scopeUserId)),
+      scopeType: 'EXPLICIT_USERS',
+      targetUserIds: normalizeScopeUserIds(
+        selection.targetUserIds.filter((id) => selectableScopeUserIdSet.has(id)),
       ),
     };
   }
 
   return {
-    scopeTypes,
-    scopeUserIds: getPresetMatchedScopeUserIdsForSelection(scopeTypes),
+    scopeType: selection.scopeType,
+    targetUserIds: [],
   };
 };
 
-export const getRoleScopeSelectionFromOverrides = ({
-  getPresetMatchedScopeUserIdsForSelection,
-  scopeGroupKey,
-  roleCode,
-  scopeGroupOverrides,
-  availableScopeTypes,
-}: {
-  getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
-  scopeGroupKey?: string | null;
-  roleCode: RoleCode;
-  scopeGroupOverrides: ScopeGroupOverrideEntry[];
-  availableScopeTypes?: PermissionOverrideScope[];
-}): RoleScopeSelection | null => {
-  if (!scopeGroupKey) {
-    return null;
-  }
-  const availableScopeTypeSet = availableScopeTypes && availableScopeTypes.length > 0
-    ? new Set(normalizeAvailableScopeTypes(availableScopeTypes))
-    : null;
-
-  const scopedOverrides = scopeGroupOverrides.filter((override) => (
-    override.appliesToRole === roleCode
-    && override.scopeGroupKey === scopeGroupKey
-    && (!availableScopeTypeSet || availableScopeTypeSet.has(override.scopeType))
-  ));
-  if (scopedOverrides.length === 0) {
-    return null;
-  }
-
-  const scopedAllowOverrides = scopedOverrides.filter((override) => override.effect === 'ALLOW');
-  const sourceOverrides = scopedAllowOverrides.length > 0 ? scopedAllowOverrides : scopedOverrides;
-  const standardScopeTypes = normalizeScopeTypes(
-    sourceOverrides
-      .map((override) => override.scopeType)
-      .filter((scopeType): scopeType is Exclude<PermissionOverrideScope, 'EXPLICIT_USERS'> => (
-        scopeType !== 'EXPLICIT_USERS'
-      )),
-  );
-  const explicitOverride = sourceOverrides.find((override) => (
-    override.scopeType === 'EXPLICIT_USERS' && override.scopeUserIds.length > 0
-  ));
-  const explicitScopeUserIds = normalizeScopeUserIds(explicitOverride?.scopeUserIds ?? []);
-  const scopeTypes = normalizeScopeTypes([
-    ...standardScopeTypes,
-    ...(explicitScopeUserIds.length > 0 ? ['EXPLICIT_USERS' as const] : []),
-  ]);
-
-  if (scopeTypes.length === 0 && explicitScopeUserIds.length === 0) {
-    return { scopeTypes: [], scopeUserIds: [] };
-  }
-
-  return {
-    scopeTypes,
-    scopeUserIds: explicitScopeUserIds.length > 0
-      ? explicitScopeUserIds
-      : getPresetMatchedScopeUserIdsForSelection(scopeTypes),
-  };
-};
-
+/**
+ * 解析范围组当前选择：优先草稿，否则空。
+ */
 export const resolveRoleScopeSelection = ({
-  cachedSelection,
-  getPresetMatchedScopeUserIdsForSelection,
+  draftScopes,
   scopeGroupKey,
-  roleCode,
   selectableScopeUserIdSet,
-  selectedRoleDefaultScopeTypes,
-  scopeGroupOverrides,
   availableScopeTypes,
 }: {
-  cachedSelection?: RoleScopeSelection;
-  getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
+  draftScopes: AuthorizationFormScope[];
   scopeGroupKey?: string | null;
-  roleCode: RoleCode;
   selectableScopeUserIdSet: Set<number>;
-  selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
-  scopeGroupOverrides: ScopeGroupOverrideEntry[];
-  availableScopeTypes?: PermissionOverrideScope[];
+  availableScopeTypes?: ScopeType[];
 }): RoleScopeSelection => {
-  if (cachedSelection) {
-    return syncRoleScopeSelection({
-      getPresetMatchedScopeUserIdsForSelection,
-      selectableScopeUserIdSet,
-      selection: cachedSelection,
-      availableScopeTypes,
-    });
-  }
-
-  const overrideSelection = getRoleScopeSelectionFromOverrides({
-    getPresetMatchedScopeUserIdsForSelection,
-    scopeGroupKey,
-    roleCode,
-    scopeGroupOverrides,
-    availableScopeTypes,
-  });
-  const fallbackScopeTypes = filterScopeTypesByAvailability(selectedRoleDefaultScopeTypes, availableScopeTypes);
-  const fallbackSelection: RoleScopeSelection = overrideSelection ?? {
-    scopeTypes: fallbackScopeTypes,
-    scopeUserIds: getPresetMatchedScopeUserIdsForSelection(fallbackScopeTypes),
+  const fromDraft = getScopeSelectionFromDraft(draftScopes, scopeGroupKey);
+  const fallback: RoleScopeSelection = fromDraft ?? {
+    scopeType: null,
+    targetUserIds: [],
   };
 
   return syncRoleScopeSelection({
-    getPresetMatchedScopeUserIdsForSelection,
+    selection: fallback,
     selectableScopeUserIdSet,
-    selection: fallbackSelection,
     availableScopeTypes,
   });
 };
 
-const formatScopeSummaryWithDedup = ({
-  getPresetMatchedScopeUserIdsForSelection,
-  scopeTypes,
-  scopeUserIds,
-}: {
-  getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
-  scopeTypes: PermissionOverrideScope[];
-  scopeUserIds: number[];
-}): string => {
-  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
-  if (!normalizedScopeTypes.includes('EXPLICIT_USERS')) {
-    return formatScopeSummary(normalizedScopeTypes, scopeUserIds);
-  }
-
-  const standardScopeTypes = normalizedScopeTypes.filter((scopeType) => scopeType !== 'EXPLICIT_USERS');
-  const coveredUserIdSet = new Set(getPresetMatchedScopeUserIdsForSelection(standardScopeTypes));
-  const explicitExtraUserIds = Array.from(new Set(scopeUserIds)).filter(
-    (scopeUserId) => !coveredUserIdSet.has(scopeUserId),
-  );
-  const displayScopeTypes = explicitExtraUserIds.length > 0
-    ? normalizedScopeTypes
-    : normalizedScopeTypes.filter((scopeType) => scopeType !== 'EXPLICIT_USERS');
-
-  return formatScopeSummary(displayScopeTypes, explicitExtraUserIds);
-};
-
+/**
+ * 格式化范围摘要（含部门名别名）。
+ */
 export const formatScopeSummaryForDisplay = ({
   departments,
-  getPresetMatchedScopeUserIdsForSelection,
-  scopeTypes,
-  scopeUserIds,
+  scopeType,
+  targetUserIds,
   selectableScopeUsers,
   selectedDepartmentName,
 }: {
   departments: Department[];
-  getPresetMatchedScopeUserIdsForSelection: (scopeTypes: PermissionOverrideScope[]) => number[];
-  scopeTypes: PermissionOverrideScope[];
-  scopeUserIds: number[];
+  scopeType: ScopeType | null;
+  targetUserIds: number[];
   selectableScopeUsers: UserList[];
   selectedDepartmentName?: string;
 }): string => {
-  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
-  const normalizedScopeUserIds = normalizeScopeUserIds(scopeUserIds);
+  const normalizedScopeUserIds = normalizeScopeUserIds(targetUserIds);
   const allScopeUserIds = selectableScopeUsers.map((scopeUser) => scopeUser.id);
-  const resolveExplicitUsersAlias = (): string | null => {
+
+  if (scopeType === 'ALL') {
+    return '全部';
+  }
+  if (scopeType === 'DEPARTMENT' && selectedDepartmentName) {
+    return selectedDepartmentName;
+  }
+  if (scopeType === 'OWN') {
+    return '本人数据';
+  }
+  if (scopeType === 'EXPLICIT_USERS') {
     if (normalizedScopeUserIds.length === 0) {
-      return null;
+      return '指定用户';
     }
 
     for (const department of departments) {
       const departmentUserIds = selectableScopeUsers
         .filter((scopeUser) => scopeUser.department?.id === department.id)
         .map((scopeUser) => scopeUser.id);
-      if (departmentUserIds.length > 0 && sameScopeUserIds(normalizedScopeUserIds, departmentUserIds)) {
+      if (
+        departmentUserIds.length > 0
+        && sameScopeUserIds(normalizedScopeUserIds, departmentUserIds)
+      ) {
         return department.name;
       }
     }
 
-    if (allScopeUserIds.length > 0 && sameScopeUserIds(normalizedScopeUserIds, allScopeUserIds)) {
+    if (
+      allScopeUserIds.length > 0
+      && sameScopeUserIds(normalizedScopeUserIds, allScopeUserIds)
+    ) {
       return '全部';
     }
 
-    return null;
-  };
-
-  if (normalizedScopeTypes.length === 1) {
-    if (normalizedScopeTypes[0] === 'ALL') {
-      return '全部';
-    }
-    if (normalizedScopeTypes[0] === 'DEPARTMENT' && selectedDepartmentName) {
-      return selectedDepartmentName;
-    }
-    if (normalizedScopeTypes[0] === 'EXPLICIT_USERS') {
-      const explicitUsersAlias = resolveExplicitUsersAlias();
-      if (explicitUsersAlias) {
-        return explicitUsersAlias;
-      }
-    }
+    return formatScopeSummary(scopeType, normalizedScopeUserIds);
   }
 
-  return formatScopeSummaryWithDedup({
-    getPresetMatchedScopeUserIdsForSelection,
-    scopeTypes: normalizedScopeTypes,
-    scopeUserIds: normalizedScopeUserIds,
-  })
+  return formatScopeSummary(scopeType, normalizedScopeUserIds)
     .replaceAll('全部对象', '全部')
     .replaceAll('同部门', selectedDepartmentName ?? '同部门');
 };

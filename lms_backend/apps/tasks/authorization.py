@@ -5,10 +5,10 @@ from apps.authorization.owner_scope import filter_queryset_by_owner_scope, is_ow
 from apps.authorization.registry import (
     AuthorizationSpec,
     ResourceAuthorizationHandler,
+    SCOPE_KIND_DATA,
+    SCOPE_KIND_TARGET,
     ScopeFilterHandler,
-    crud_codes,
     crud_permissions,
-    scope_rules,
     perm,
 )
 from apps.tasks.models import Task, TaskAssignment
@@ -19,8 +19,8 @@ TASK_RESOURCE_SCOPE_GROUP = 'task_resource_scope'
 TASK_ASSIGNMENT_SCOPE_GROUP = 'task_assignment_scope'
 TASK_RESOURCE_SCOPE_SUMMARY = '任务可见范围'
 TASK_ASSIGNMENT_SCOPE_SUMMARY = '指派人员范围'
-TASK_MANAGER_CODES = (*crud_codes('task'), 'task.assign', 'task.analytics.view')
-TASK_ADMIN_CODES = (*crud_codes('task'), 'task.assign')
+TASK_RESOURCE_SCOPE_TYPES = ('OWN', 'ALL')
+TASK_ASSIGNMENT_SCOPE_TYPES = ('MENTEES', 'DEPARTMENT', 'ALL', 'EXPLICIT_USERS')
 TASK_ASSIGNEE_ROLE_CODES = ('STUDENT',)
 
 
@@ -78,7 +78,9 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
     return base_decision
 
 
-def _filter_task_queryset(engine, *, queryset, context=None):
+def _filter_task_queryset(engine, *, queryset, resolved_scope, context=None):
+    """按任务资源最终范围过滤。"""
+    _ = resolved_scope, context
     scoped_owner_tasks = filter_queryset_by_owner_scope(engine, 'task.view', queryset)
     if engine.get_current_role() != 'STUDENT':
         return scoped_owner_tasks
@@ -94,7 +96,9 @@ def _task_assignee_queryset():
     ).distinct()
 
 
-def _filter_assignable_users(engine, *, queryset, context=None):
+def _filter_assignable_users(engine, *, queryset, resolved_scope, context=None):
+    """按指派范围过滤可分配学员。"""
+    _ = resolved_scope, context
     return engine.get_scoped_user_queryset(
         'task.assign',
         _task_assignee_queryset(),
@@ -102,12 +106,15 @@ def _filter_assignable_users(engine, *, queryset, context=None):
     )
 
 
-def _filter_task_analytics_users(engine, *, queryset, context=None):
+def _filter_task_analytics_users(engine, *, queryset, resolved_scope, context=None):
+    """按分析范围过滤学员。"""
+    _ = resolved_scope, context
     return engine.get_scoped_user_queryset(
         'task.analytics.view',
         _task_assignee_queryset(),
         cache_key='task_assignees',
     )
+
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
@@ -120,16 +127,19 @@ AUTHORIZATION_SPECS = (
                 descriptions={'update': '编辑任务和预览任务'},
                 kwargs_by_action={
                     'view': {
+                        'scope_kind': SCOPE_KIND_DATA,
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
+                        'allowed_scope_types': TASK_RESOURCE_SCOPE_TYPES,
                     },
                     'update': {
+                        'scope_kind': SCOPE_KIND_DATA,
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
+                        'allowed_scope_types': TASK_RESOURCE_SCOPE_TYPES,
                     },
                     'delete': {
+                        'scope_kind': SCOPE_KIND_DATA,
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
+                        'allowed_scope_types': TASK_RESOURCE_SCOPE_TYPES,
                     },
                 },
             ),
@@ -137,35 +147,20 @@ AUTHORIZATION_SPECS = (
                 code='task.assign',
                 name='分配任务',
                 description='为任务分配执行人',
+                scope_kind=SCOPE_KIND_TARGET,
                 scope_group_key=TASK_ASSIGNMENT_SCOPE_GROUP,
+                allowed_scope_types=TASK_ASSIGNMENT_SCOPE_TYPES,
                 implies=('task.view',),
             ),
             perm(
                 code='task.analytics.view',
                 name='查看任务分析',
                 description='查看任务进度、执行情况和分析统计',
+                scope_kind=SCOPE_KIND_TARGET,
                 scope_group_key=TASK_ASSIGNMENT_SCOPE_GROUP,
+                allowed_scope_types=TASK_ASSIGNMENT_SCOPE_TYPES,
                 implies=('task.view',),
             ),
-        ),
-        role_defaults={
-            'STUDENT': ('task.view',),
-            'MENTOR': TASK_MANAGER_CODES,
-            'DEPT_MANAGER': TASK_MANAGER_CODES,
-            'ADMIN': TASK_ADMIN_CODES,
-        },
-        scope_rules=(
-            *scope_rules(
-                'task.view',
-                STUDENT='SELF',
-                MENTOR='SELF',
-                DEPT_MANAGER='SELF',
-                ADMIN='ALL',
-            ),
-            *scope_rules('task.update', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
-            *scope_rules('task.delete', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
-            *scope_rules('task.assign', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
-            *scope_rules('task.analytics.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
         ),
         resource_authorization_handlers=(
             ResourceAuthorizationHandler(

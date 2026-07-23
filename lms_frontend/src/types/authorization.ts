@@ -1,5 +1,17 @@
 import type { RoleCode } from '@/types/common';
 
+/** 权限范围种类：无范围 / 数据归属 / 作用对象 */
+export type ScopeKind = 'NONE' | 'DATA' | 'TARGET';
+
+/** 范围类型；DATA 用 OWN 表示本人数据，不再用 SELF */
+export type ScopeType =
+  | 'ALL'
+  | 'OWN'
+  | 'SELF'
+  | 'MENTEES'
+  | 'DEPARTMENT'
+  | 'EXPLICIT_USERS';
+
 export interface PermissionCatalogItem {
   code: string;
   name: string;
@@ -7,65 +19,50 @@ export interface PermissionCatalogItem {
   description: string;
   constraint_summary: string;
   scope_aware: boolean;
+  scope_kind: ScopeKind;
   scope_group_key: string | null;
-  allowed_scope_types: PermissionOverrideScope[];
+  allowed_scope_types: ScopeType[];
   implies: string[];
   is_active: boolean;
-}
-
-export interface RoleScopeGroup {
-  key: string;
-  permission_codes: string[];
-  default_scope_types: PermissionOverrideScope[];
+  is_configurable: boolean;
+  required_role_codes: RoleCode[];
 }
 
 export type PermissionCatalogView = 'role_template' | 'user_authorization';
 
-export interface RolePermissionTemplate {
+/** API 范围条目（snake_case） */
+export interface AuthorizationScopePayload {
+  scope_group_key: string;
+  scope_type: ScopeType;
+  target_user_ids?: number[];
+}
+
+/** 角色模板完整授权状态 */
+export interface RoleAuthorizationState {
   role_code: RoleCode;
   permission_codes: string[];
-  default_scope_types: PermissionOverrideScope[];
-  scope_groups: RoleScopeGroup[];
+  scopes: AuthorizationScopePayload[];
 }
 
-export type PermissionOverrideEffect = 'ALLOW' | 'DENY';
-export type PermissionOverrideScope = 'ALL' | 'SELF' | 'MENTEES' | 'DEPARTMENT' | 'EXPLICIT_USERS';
-
-export interface UserPermissionOverride {
-  id: number;
-  permission_code: string;
-  permission_name: string;
-  effect: PermissionOverrideEffect;
-  applies_to_role: RoleCode | null;
-  granted_by_name: string | null;
-  created_at: string;
-  updated_at: string;
+/** 用户最终授权状态 */
+export interface UserAuthorizationState {
+  role_code: RoleCode;
+  permission_codes: string[];
+  scopes: AuthorizationScopePayload[];
 }
 
-export interface CreateUserPermissionOverrideRequest {
-  permission_code: string;
-  effect: PermissionOverrideEffect;
-  applies_to_role?: RoleCode | null;
+/** 前端本地表单范围（camelCase） */
+export interface AuthorizationFormScope {
+  scopeGroupKey: string;
+  scopeType: ScopeType;
+  targetUserIds: number[];
 }
 
-export interface UserScopeGroupOverride {
-  id: number;
-  scope_group_key: string;
-  effect: PermissionOverrideEffect;
-  applies_to_role: RoleCode | null;
-  scope_type: PermissionOverrideScope;
-  scope_user_ids: number[];
-  granted_by_name: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateUserScopeGroupOverrideRequest {
-  scope_group_key: string;
-  effect: PermissionOverrideEffect;
-  applies_to_role?: RoleCode | null;
-  scope_type: PermissionOverrideScope;
-  scope_user_ids?: number[];
+/** 前端本地表单状态 */
+export interface AuthorizationFormState {
+  roleCode: RoleCode;
+  permissionCodes: string[];
+  scopes: AuthorizationFormScope[];
 }
 
 interface PermissionCapability {

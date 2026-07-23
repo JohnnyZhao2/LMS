@@ -6,7 +6,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { Department, UserList as UserDetail } from '@/types/common';
 import type { RoleCode } from '@/types/common';
-import { UserPermissionSection } from '@/features/user-management/components/authorization/user-permission-section';
+import {
+  UserPermissionSection,
+} from '@/features/user-management/components/authorization/user-permission-section';
 import { UserRoleAssignmentChips } from '@/features/user-management/components/authorization/user-role-assignment-chips';
 
 interface UserPermissionWorkbenchProps {
@@ -27,6 +29,9 @@ interface UserPermissionWorkbenchProps {
   contentClassName?: string;
 }
 
+/**
+ * 用户授权工作台：头部信息 + 权限编辑区。
+ */
 export function UserPermissionWorkbench({
   userDetail,
   departments,

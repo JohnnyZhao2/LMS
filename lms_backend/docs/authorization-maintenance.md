@@ -2,108 +2,75 @@
 
 ## 真相源
 
-- 权限声明入口：各模块自己的 `authorization.py`
-- 汇总注册：`lms_backend/apps/authorization/registry.py`
-- 导出常量：`lms_backend/apps/authorization/constants.py`
-- 运行时判定入口：`lms_backend/apps/authorization/engine.py`
-- 数据同步入口：`lms_backend/apps/authorization/services.py`
-- 数据表承载：
-  - 代码默认权限同步到 `Permission`
-  - 角色模板差异在 `RolePermission`
-  - 用户能力例外在 `UserPermissionOverride`
-  - 范围组默认规则来自代码注册表
-  - 用户范围覆盖在 `UserScopeGroupOverride`
-- 前端说明：`lms_frontend/src/entities/authorization/constants/permission-presentation.ts`
+- 各业务模块的 `authorization.py` 声明权限、范围、依赖和约束。
+- `apps/authorization/registry.py` 自动发现声明并校验唯一性与范围一致性。
+- `apps/authorization/constants.py` 导出注册表生成的运行时元数据。
+- `Permission` 保存同步后的权限目录。
+- `RolePermission / RoleScope` 保存完整角色模板。
+- `UserRolePermission / UserRoleScope / UserRoleScopeMember` 保存管理用户的最终授权。
+- `apps/authorization/final_authorization_service.py` 直接读取最终权限和最终范围。
+- `apps/authorization/engine.py` 统一执行能力判断与资源约束。
 
-现在已经没有 `policies.py` 这个运行时中心。附加约束走两条主链：
+运行时不叠加角色模板与用户授权，也不补默认范围或权限依赖。角色模板只在新增管理角色、用户主动重置时复制到用户最终授权；修改模板不会影响已有用户。
 
-- 资源级约束：各模块 `authorization.py` 里的 `resource_authorization_handlers`
-- 范围过滤：各模块 `authorization.py` 里的 `scope_filter_handlers` / `scope_rules`
+## 权限声明
 
-现在的范围模型已经不是“按模块共享”，而是：
+在对应模块的 `authorization.py` 中维护：
 
-- 权限自己声明 `scope_group_key`
-- 默认范围按 `scope_group_key + role` 从代码注册表解析
-- 用户页面改的是 `scope_group`，不是单个 permission 的范围
-- `scope-aware permission` 的开关和范围分离：
-  - 能力开关看 `RolePermission / UserPermissionOverride`
-  - 默认范围看权限注册表，用户例外范围看 `UserScopeGroupOverride`
+- `permissions`：权限定义。
+- `scope_kind / scope_group_key / allowed_scope_types`：范围模型。
+- `implies`：写入角色模板或用户授权时必须满足的依赖。
+- `is_configurable / required_role_codes`：固定权限归属。
+- `resource_authorization_handlers`：单对象资源约束。
+- `scope_filter_handlers`：列表查询范围过滤。
+
+同一 `scope_group_key` 下的权限必须使用相同的 `scope_kind` 和 `allowed_scope_types`。
+
+## 数据同步
+
+正常执行 migration 后，`post_migrate` 会同步权限目录与固定权限：
+
+```bash
+cd /Users/johnnyzhao/Documents/LMS/lms_backend
+conda run -n lms python manage.py migrate
+```
+
+需要立即手动同步时执行：
+
+```bash
+conda run -n lms python manage.py sync_authorization
+```
+
+同步规则：
+
+- 新权限默认不授予任何角色或用户，固定权限除外。
+- 已删除的声明会被标记为停用，并从角色模板和用户最终授权移除。
+- 固定权限按 `required_role_codes` 强制同步到对应角色及已有用户。
+- 已失去权限引用的范围记录会被清理。
 
 ## 日常改动
 
 ### 新增或修改权限
 
-去对应模块 `authorization.py` 改：
+1. 修改业务模块的 `authorization.py`。
+2. 更新前端 `src/features/user-management/constants/permission-presentation.ts`、入口和守卫。
+3. 涉及模型时生成 migration。
+4. 执行 migration；仅需本地立即收敛时再运行 `sync_authorization`。
+5. 在授权中心配置角色模板；需要影响已有用户时显式重置对应用户。
 
-- `permissions`：权限点定义
-- `role_defaults`：角色默认权限
-- `role_system_defaults` / `system_managed_codes`：系统保留权限
-- `scope_rules`：默认范围规则
-- `scope_group_key`：该权限归属的范围组
-- `resource_authorization_handlers`：资源级条件约束
-- `scope_filter_handlers`：列表/查询过滤约束
+### 删除权限
 
-### 前端同步
+1. 删除后端业务引用和权限声明。
+2. 删除前端说明、入口和守卫。
+3. 执行 migration 或 `sync_authorization` 收敛目录及授权行。
 
-- 权限说明：`lms_frontend/src/entities/authorization/constants/permission-presentation.ts`
-- 路由守卫、菜单显隐、页面入口
+## 禁止事项
 
-## 同步与校验
+- 不直接修改数据库维护授权。
+- 不把默认值或权限依赖补齐放回运行时。
+- 不在业务 service / view 中自行拼装权限结果。
+- 不只修改前端而遗漏后端声明。
 
-先进入后端目录：
+## 数据流
 
-```bash
-cd /Users/johnnyzhao/Documents/LMS/lms_backend
-```
-
-同步权限目录与默认模板：
-
-```bash
-python manage.py sync_authorization --settings=config.settings.development
-```
-
-现在只要正常执行 `python manage.py migrate`，权限目录和日志策略目录都会自动同步。
-`sync_authorization` 只在你想本地手动立即收敛时再用。
-
-如果要强制把角色模板覆盖重置回代码默认值：
-
-```bash
-python manage.py sync_authorization --settings=config.settings.development --overwrite-existing-role-templates
-```
-
-## 常见场景
-
-### 新增一个权限点
-
-1. 在对应模块 `authorization.py` 增加权限定义
-2. 需要默认授予时补 `role_defaults`
-3. 需要范围规则时补 `scope_rules`
-4. 需要资源级限制时补 `resource_authorization_handlers`
-5. 前端补说明和守卫
-6. 执行 `sync_authorization`
-
-### 只调整默认角色模板
-
-改对应模块 `role_defaults`，然后执行：
-
-```bash
-python manage.py sync_authorization --settings=config.settings.development
-```
-
-### 删除一个权限点
-
-1. 先删业务代码中的引用
-2. 再删对应模块 `authorization.py` 里的定义
-3. 删前端说明、菜单和路由引用
-4. 执行 `sync_authorization`
-
-## 不要这样做
-
-- 不要直接改库表维护默认权限
-- 不要只改前端，不改后端声明
-- 不要把运行时约束散回 service / view
-- 不要继续引用不存在的 `check_authorization`
-
-## 一句话原则
-
-`各模块 authorization.py 声明 -> registry/constants 汇总 -> sync_authorization 同步 -> engine 统一判定 -> 前端消费结果`
+`业务 authorization.py → registry/constants → 权限目录同步 → 角色模板/用户最终授权 → engine 判定`

@@ -7,7 +7,5 @@ AUTHORIZATION_SPECS = (
         'knowledge',
         'knowledge',
         '知识',
-        view_roles=('STUDENT', 'TEAM_MANAGER'),
-        full_roles=('DEPT_MANAGER', 'ADMIN'),
     ),
 )

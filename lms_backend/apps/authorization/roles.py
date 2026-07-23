@@ -6,7 +6,6 @@ from typing import Iterable, Optional
 SUPER_ADMIN_ROLE = 'SUPER_ADMIN'
 SUPER_ADMIN_ROLE_NAME = '超管'
 ADMIN_LIKE_ROLES = {'ADMIN', SUPER_ADMIN_ROLE}
-LEARNING_POOL_EXCLUDED_ROLE_CODES = ['DEPT_MANAGER', 'TEAM_MANAGER']
 
 
 def is_super_admin(user) -> bool:

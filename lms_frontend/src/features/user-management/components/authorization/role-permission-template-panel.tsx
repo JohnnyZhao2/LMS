@@ -24,6 +24,9 @@ interface RolePermissionTemplatePanelProps {
   initialSelectedUserId?: number | null;
 }
 
+/**
+ * 角色模板与用户授权工作台。
+ */
 export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelProps> = ({
   canViewRoleTemplate,
   canUpdateRoleTemplate,
@@ -40,21 +43,21 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     canManageRoleMembers,
     canViewUserAuthorization,
     candidateUsers,
-    canResetCurrentRoleOverrides,
+    canResetCurrentUserAuthorization,
     departments,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
-    handleResetCurrentRoleOverrides,
+    handleResetCurrentUserAuthorization,
     handleSelectMember,
     handleSelectRole,
     handleUserRoleToggle,
     isAssigningRoles,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isResettingOverrides,
+    isResetting,
     isSavingCurrentRole,
-    isViewingUserOverrides,
+    isViewingUserAuthorization,
     memberSearch,
     mutatingUserId,
     permissionSections,
@@ -107,7 +110,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
             onSelectMember={handleSelectMember}
           />
           <div ref={setWorkbenchElement} className="flex min-h-0 flex-col">
-            {!isViewingUserOverrides ? (
+            {!isViewingUserAuthorization ? (
               <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
                 <>
                   <h3 className="text-sm font-semibold text-foreground">
@@ -121,7 +124,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
             ) : null}
 
             <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
-              {isViewingUserOverrides ? (
+              {isViewingUserAuthorization ? (
                 <UserPermissionWorkbench
                   userDetail={selectedUserDetail}
                   departments={departments}
@@ -142,7 +145,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={!canResetCurrentRoleOverrides || isResettingOverrides}
+                      disabled={!canResetCurrentUserAuthorization || isResetting}
                       onClick={() => setResetDialogOpen(true)}
                       className="h-8 px-3 text-[12px]"
                     >
@@ -172,7 +175,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                             permissionCatalog,
                             permissionCode: permission.code,
                           });
-                          onChangeCodes(resolvedActiveRole, nextCodes);
+                          onChangeCodes(resolvedActiveRole, Array.from(new Set(nextCodes)).sort());
                         }}
                       />
                     );
@@ -191,12 +194,12 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
         open={resetDialogOpen}
         onOpenChange={setResetDialogOpen}
         title="重置当前角色授权？"
-        description={`将撤销该用户在“${ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}”角色下的全部例外权限与范围配置，并恢复为角色模板继承。`}
+        description={`将把该用户在“${ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}”角色下的最终权限与范围恢复为角色模板。`}
         confirmText="确认重置"
         cancelText="取消"
         confirmVariant="destructive"
-        onConfirm={handleResetCurrentRoleOverrides}
-        isConfirming={isResettingOverrides}
+        onConfirm={handleResetCurrentUserAuthorization}
+        isConfirming={isResetting}
       />
     </div>
   );

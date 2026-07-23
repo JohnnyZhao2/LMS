@@ -1,16 +1,14 @@
 import type {
   PermissionCatalogItem,
-  PermissionOverrideScope,
+  ScopeType,
 } from '@/types/authorization';
 import type { UserList } from '@/types/common';
 import { PermissionModuleSections } from '@/features/user-management/components/authorization/permission-module-sections';
 import { PermissionToggleCard } from '@/features/user-management/components/authorization/permission-toggle-card';
 import { UserPermissionScopePopover } from '@/features/user-management/components/authorization/user-permission-scope-popover';
-import { sameScopeTypes } from '@/features/user-management/components/authorization/user-form.utils';
-import type {
-  PermissionState,
-  ScopeFilterOption,
-} from '@/features/user-management/components/authorization/user-permission-section.types';
+import { sameScopeType } from '@/features/user-management/components/authorization/user-form.utils';
+import type { PermissionState } from '@/features/user-management/components/authorization/user-form.utils';
+import type { ScopeFilterOption } from '@/features/user-management/components/authorization/user-permission-scope.utils';
 
 interface UserPermissionModuleSectionItem {
   module: string;
@@ -20,18 +18,20 @@ interface UserPermissionModuleSectionItem {
 
 interface UserPermissionScopeGroupItem {
   key: string;
-  selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
+  defaultScopeType: ScopeType | null;
+  availableScopeTypes: ScopeType[];
   scopeSummary: string;
+  scopeSelection: {
+    scopeType: ScopeType | null;
+    targetUserIds: number[];
+  };
 }
 
 interface UserPermissionModuleListProps {
-  activeScopeGroup: UserPermissionScopeGroupItem | null;
-  availableScopeTypes: PermissionOverrideScope[];
-  dialogContentElement: HTMLDivElement | null;
   filteredScopeUsers: UserList[];
   formatScopeSummaryForDisplay: (
-    scopeTypes: PermissionOverrideScope[],
-    scopeUserIds?: number[],
+    scopeType: ScopeType | null,
+    targetUserIds?: number[],
   ) => string;
   getPermissionState: (permissionCode: string) => PermissionState;
   handlePermissionToggle: (
@@ -45,7 +45,7 @@ interface UserPermissionModuleListProps {
   onApplyDefaultScopePreset: () => void;
   onOpenScopeGroupChange: (scopeGroupKey: string | null) => void;
   onScopeUserSearchChange: (value: string) => void;
-  onSelectPresetScope: (scopeType: PermissionOverrideScope) => void;
+  onSelectPresetScope: (scopeType: ScopeType) => void;
   onSetScopeUserFilter: (value: string) => void;
   onSetShowScopeAdjustPanel: (open: boolean) => void;
   onToggleScopeUser: (scopeUserId: number) => void;
@@ -54,15 +54,16 @@ interface UserPermissionModuleListProps {
   scopeFilterOptions: ScopeFilterOption[];
   scopeUserFilter: string;
   scopeUserSearch: string;
-  selectedPermissionScopes: PermissionOverrideScope[];
+  selectedScopeType: ScopeType | null;
   selectedScopeUserIds: number[];
   showScopeAdjustPanel: boolean;
+  dialogContentElement: HTMLDivElement | null;
 }
 
+/**
+ * 用户权限模块列表与范围弹窗。
+ */
 export function UserPermissionModuleList({
-  activeScopeGroup,
-  availableScopeTypes,
-  dialogContentElement,
   filteredScopeUsers,
   formatScopeSummaryForDisplay,
   getPermissionState,
@@ -83,9 +84,10 @@ export function UserPermissionModuleList({
   scopeFilterOptions,
   scopeUserFilter,
   scopeUserSearch,
-  selectedPermissionScopes,
+  selectedScopeType,
   selectedScopeUserIds,
   showScopeAdjustPanel,
+  dialogContentElement,
 }: UserPermissionModuleListProps) {
   const getScopeGroupLabel = (scopeGroupKey: string) =>
     scopeGroupKey.endsWith('_resource_scope') ? '数据范围' : '作用范围';
@@ -98,7 +100,12 @@ export function UserPermissionModuleList({
         sectionAction:
           section.scopeGroups.length > 0 ? (
             <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-              {section.scopeGroups.map((scopeGroup) => (
+              {section.scopeGroups.map((scopeGroup) => {
+                const isOpen =
+                  showScopeAdjustPanel
+                  && openScopeGroupKey === scopeGroup.key;
+
+                return (
                 <div
                   key={scopeGroup.key}
                   className="flex min-w-[210px] items-center gap-2"
@@ -108,33 +115,34 @@ export function UserPermissionModuleList({
                   </span>
                   <div className="min-w-0 flex-1">
                     <UserPermissionScopePopover
-                      open={
-                        showScopeAdjustPanel &&
-                        openScopeGroupKey === scopeGroup.key
-                      }
+                      open={isOpen}
                       onOpenChange={(open) => {
                         onOpenScopeGroupChange(open ? scopeGroup.key : null);
                         onSetShowScopeAdjustPanel(open);
                       }}
                       summary={
-                        openScopeGroupKey === scopeGroup.key
+                        isOpen
                           ? formatScopeSummaryForDisplay(
-                              selectedPermissionScopes,
-                              selectedScopeUserIds,
-                            )
+                            selectedScopeType,
+                            selectedScopeUserIds,
+                          )
                           : scopeGroup.scopeSummary
                       }
                       scopeFilterOptions={scopeFilterOptions}
-                      availableScopeTypes={availableScopeTypes}
-                      selectedPermissionScopes={selectedPermissionScopes}
+                      availableScopeTypes={scopeGroup.availableScopeTypes}
+                      selectedScopeType={
+                        isOpen
+                          ? selectedScopeType
+                          : scopeGroup.scopeSelection.scopeType
+                      }
                       onSelectPresetScope={onSelectPresetScope}
                       scopeUserFilter={scopeUserFilter}
                       onScopeFilterChange={handleScopeFilterChange}
                       showReset={
-                        openScopeGroupKey === scopeGroup.key &&
-                        !sameScopeTypes(
-                          selectedPermissionScopes,
-                          activeScopeGroup?.selectedRoleDefaultScopeTypes ?? [],
+                        isOpen
+                        && !sameScopeType(
+                          selectedScopeType,
+                          scopeGroup.defaultScopeType,
                         )
                       }
                       onReset={() => {
@@ -146,23 +154,29 @@ export function UserPermissionModuleList({
                       onToggleSelectAllFilteredScopeUsers={
                         onToggleSelectAllFilteredScopeUsers
                       }
-                      filteredScopeUsers={filteredScopeUsers}
-                      selectedScopeUserIds={selectedScopeUserIds}
+                      filteredScopeUsers={isOpen ? filteredScopeUsers : []}
+                      selectedScopeUserIds={
+                        isOpen
+                          ? selectedScopeUserIds
+                          : scopeGroup.scopeSelection.targetUserIds
+                      }
                       onToggleScopeUser={onToggleScopeUser}
                       isScopeUsersLoading={isScopeUsersLoading}
                       dialogContentElement={dialogContentElement}
                     />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : null,
       }))}
       renderPermissionCard={(permission) => {
         const permissionState = getPermissionState(permission.code);
         const disabled = Boolean(
-          isPermissionSaving(permission.code) ||
-          (permissionState.checked
+          permissionState.locked
+          || isPermissionSaving(permission.code)
+          || (permissionState.checked
             ? permissionState.disableBlockedReason
             : permissionState.enableBlockedReason),
         );

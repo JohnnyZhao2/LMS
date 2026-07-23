@@ -2,18 +2,18 @@ from apps.authorization.decisions import conditional_allow, conditional_deny
 from apps.authorization.registry import (
     AuthorizationSpec,
     ResourceAuthorizationHandler,
+    SCOPE_KIND_TARGET,
     ScopeFilterHandler,
-    crud_codes,
     crud_permissions,
     perm,
-    scope_rules,
 )
 from apps.authorization.roles import is_admin_like_role
 from apps.spot_checks.models import SpotCheck
 from apps.users.models import User
 
-MANAGER_DEFAULT_PERMISSIONS = crud_codes('spot_check')
+
 SPOT_CHECK_SCOPE_SUMMARY = '学员范围'
+SPOT_CHECK_STUDENT_SCOPE_TYPES = ('SELF', 'MENTEES', 'DEPARTMENT', 'EXPLICIT_USERS')
 
 
 def _authorize_spot_check(engine, permission_code, *, resource=None, context=None, error_message=None):
@@ -120,7 +120,9 @@ def _authorize_spot_check(engine, permission_code, *, resource=None, context=Non
     return base_decision
 
 
-def _filter_spot_check_queryset(engine, *, queryset, context=None):
+def _filter_spot_check_queryset(engine, *, queryset, resolved_scope, context=None):
+    """按抽查学员最终范围过滤记录。"""
+    _ = resolved_scope, context
     if engine.get_current_role() == 'STUDENT':
         return queryset.filter(student_id=getattr(engine.user, 'id', None))
     accessible_students = engine.get_scoped_learning_members('spot_check.view')
@@ -136,8 +138,17 @@ AUTHORIZATION_SPECS = (
                 'spot_check',
                 '抽查',
                 kwargs_by_action={
-                    'view': {'scope_group_key': 'spot_check_student_scope'},
-                    'create': {'scope_group_key': 'spot_check_student_scope', 'implies': ('spot_check.view',)},
+                    'view': {
+                        'scope_kind': SCOPE_KIND_TARGET,
+                        'scope_group_key': 'spot_check_student_scope',
+                        'allowed_scope_types': SPOT_CHECK_STUDENT_SCOPE_TYPES,
+                    },
+                    'create': {
+                        'scope_kind': SCOPE_KIND_TARGET,
+                        'scope_group_key': 'spot_check_student_scope',
+                        'allowed_scope_types': SPOT_CHECK_STUDENT_SCOPE_TYPES,
+                        'implies': ('spot_check.view',),
+                    },
                 },
             ),
             perm(
@@ -146,15 +157,6 @@ AUTHORIZATION_SPECS = (
                 '学员填写并提交自己的抽查',
                 implies=('spot_check.view',),
             ),
-        ),
-        role_defaults={
-            'MENTOR': MANAGER_DEFAULT_PERMISSIONS,
-            'DEPT_MANAGER': MANAGER_DEFAULT_PERMISSIONS,
-            'STUDENT': ('spot_check.view', 'spot_check.submit'),
-        },
-        scope_rules=(
-            *scope_rules('spot_check.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', STUDENT='SELF'),
-            *scope_rules('spot_check.create', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT'),
         ),
         resource_authorization_handlers=(
             ResourceAuthorizationHandler(
@@ -188,7 +190,7 @@ AUTHORIZATION_SPECS = (
                 key='spot_checks.scope_filter.students_view',
                 permission_code='spot_check.view',
                 resource_model=User,
-                filter_queryset=lambda engine, *, queryset, context=None: (
+                filter_queryset=lambda engine, *, queryset, resolved_scope, context=None: (
                     queryset.filter(pk=engine.user.id)
                     if engine.get_current_role() == 'STUDENT'
                     else engine.get_scoped_learning_members('spot_check.view')
@@ -199,7 +201,9 @@ AUTHORIZATION_SPECS = (
                 key='spot_checks.scope_filter.students_create',
                 permission_code='spot_check.create',
                 resource_model=User,
-                filter_queryset=lambda engine, *, queryset, context=None: engine.get_scoped_learning_members('spot_check.create'),
+                filter_queryset=lambda engine, *, queryset, resolved_scope, context=None: (
+                    engine.get_scoped_learning_members('spot_check.create')
+                ),
                 constraint_summary=SPOT_CHECK_SCOPE_SUMMARY,
             ),
         ),

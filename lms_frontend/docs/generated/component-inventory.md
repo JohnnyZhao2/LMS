@@ -3,7 +3,7 @@
 > 自动生成文件。请勿手改；执行 `npm run docs:generate` 更新。
 
 - 共享组件：49 个
-- Feature 作用域视觉组件：105 个
+- Feature 作用域视觉组件：107 个
 
 ## 共享组件
 
@@ -74,7 +74,7 @@
 - `src/features/activity-logs/components/activity-log-policy-panel.tsx`
 - `src/features/activity-logs/components/activity-logs-panel.tsx`
 
-### assessment (35 个)
+### assessment (36 个)
 
 #### components
 
@@ -82,6 +82,7 @@
 - `src/features/assessment/components/grading/grading-center-tab.tsx`
 - `src/features/assessment/components/questions/question-add-menu.tsx`
 - `src/features/assessment/components/questions/question-bank-panel.tsx`
+- `src/features/assessment/components/questions/question-bank-picker.tsx`
 - `src/features/assessment/components/questions/question-batch-editor.tsx`
 - `src/features/assessment/components/questions/question-detail-dialog.tsx`
 - `src/features/assessment/components/questions/question-detail-preview.tsx`
@@ -156,11 +157,12 @@
 - `src/features/knowledge/components/shared/knowledge-content-renderer.tsx`
 - `src/features/knowledge/components/shared/related-links-editor.tsx`
 
-### spot-checks (6 个)
+### spot-checks (7 个)
 
 #### components
 
 - `src/features/spot-checks/components/spot-check-form.tsx`
+- `src/features/spot-checks/components/spot-check-image-gallery.tsx`
 - `src/features/spot-checks/components/spot-check-item-editor.tsx`
 - `src/features/spot-checks/components/spot-check-list.tsx`
 - `src/features/spot-checks/components/spot-check-record-list.tsx`

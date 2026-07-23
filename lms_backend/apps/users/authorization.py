@@ -1,15 +1,20 @@
 from apps.authorization.registry import (
     AuthorizationSpec,
+    SCOPE_KIND_TARGET,
     ScopeFilterHandler,
     crud_permissions,
-    scope_rules,
     perm,
 )
 from apps.users.models import User
 
 
-def _filter_viewable_users(engine, *, queryset, context=None):
+def _filter_viewable_users(engine, *, queryset, resolved_scope, context=None):
+    """按最终范围过滤可查看用户。"""
+    _ = resolved_scope, context
     return engine.get_scoped_user_queryset('user.view', queryset.distinct(), cache_key='viewable_users')
+
+
+USER_SCOPE_TYPES = ('MENTEES', 'DEPARTMENT', 'ALL', 'EXPLICIT_USERS')
 
 
 AUTHORIZATION_SPECS = (
@@ -21,8 +26,18 @@ AUTHORIZATION_SPECS = (
                 'user',
                 '用户',
                 names={'update': '编辑用户'},
-                descriptions={'create': '创建新用户', 'update': '编辑用户资料和指定导师', 'delete': '彻底删除离职用户'},
-                kwargs_by_action={'view': {'scope_group_key': 'user_scope'}},
+                descriptions={
+                    'create': '创建新用户',
+                    'update': '编辑用户资料和指定导师',
+                    'delete': '彻底删除离职用户',
+                },
+                kwargs_by_action={
+                    'view': {
+                        'scope_kind': SCOPE_KIND_TARGET,
+                        'scope_group_key': 'user_scope',
+                        'allowed_scope_types': USER_SCOPE_TYPES,
+                    },
+                },
             ),
             perm(
                 code='user.activate',
@@ -38,13 +53,13 @@ AUTHORIZATION_SPECS = (
             perm(
                 code='user.permission.view',
                 name='查看用户权限',
-                description='查看用户继承的角色权限和用户权限自定义',
+                description='查看用户继承的角色权限和用户最终授权',
                 implies=('user.view',),
             ),
             perm(
                 code='user.permission.update',
                 name='更新用户权限',
-                description='配置用户权限自定义和范围自定义',
+                description='配置用户最终权限和范围',
                 implies=('user.permission.view',),
             ),
             perm(
@@ -53,10 +68,6 @@ AUTHORIZATION_SPECS = (
                 description='管理员修改指定用户头像',
             ),
         ),
-        role_defaults={
-            'ADMIN': ('user.avatar.update',),
-        },
-        scope_rules=scope_rules('user.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
         scope_filter_handlers=(
             ScopeFilterHandler(
                 key='users.scope_filter.user_view',
@@ -71,12 +82,20 @@ AUTHORIZATION_SPECS = (
         key='users.profile_permissions',
         module='profile',
         permissions=(
-            perm(code='profile.student.view', name='查看学员个人中心', description='查看学员个人中心'),
-            perm(code='profile.student.update', name='更新学员个人资料', description='更新学员个人资料'),
+            perm(
+                code='profile.student.view',
+                name='查看学员个人中心',
+                description='查看学员个人中心',
+                is_configurable=False,
+                required_role_codes=('STUDENT',),
+            ),
+            perm(
+                code='profile.student.update',
+                name='更新学员个人资料',
+                description='更新学员个人资料',
+                is_configurable=False,
+                required_role_codes=('STUDENT',),
+            ),
         ),
-        system_managed_codes=('profile.student.view', 'profile.student.update'),
-        role_system_defaults={
-            'STUDENT': ('profile.student.view', 'profile.student.update'),
-        },
     ),
 )

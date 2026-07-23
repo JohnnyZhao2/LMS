@@ -12,6 +12,11 @@ from core.base_service import BaseService
 from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
+from apps.authorization.final_authorization_service import (
+    MANAGED_ROLE_CODES,
+    copy_role_template_to_user_role,
+)
+
 from .avatar_constants import validate_avatar_key
 from .models import Role, User, UserRole
 from .role_constraints import validate_role_assignment_constraints
@@ -248,12 +253,15 @@ class UserManagementService(BaseService):
                     message=f"角色不存在：{'、'.join(missing_role_codes)}",
                 )
             for role_code in roles_to_add:
-                if not user.roles.filter(code=role_code).exists():
-                    UserRole.objects.create(
-                        user_id=user.id,
-                        role_id=roles_by_code[role_code].id,
-                        assigned_by_id=assigned_by.id
-                    )
+                if user.roles.filter(code=role_code).exists():
+                    continue
+                user_role = UserRole.objects.create(
+                    user_id=user.id,
+                    role_id=roles_by_code[role_code].id,
+                    assigned_by_id=assigned_by.id
+                )
+                if role_code in MANAGED_ROLE_CODES:
+                    copy_role_template_to_user_role(user_role)
         # Refresh user from database
         user.refresh_from_db()
 

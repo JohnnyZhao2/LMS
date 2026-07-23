@@ -17,7 +17,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             self.create_departments()
             self.create_roles()
-            AuthorizationService.ensure_defaults(sync_role_templates=True)
+            AuthorizationService.ensure_defaults()
         self.stdout.write(self.style.SUCCESS('✅ 初始化数据完成！'))
 
     def create_departments(self):

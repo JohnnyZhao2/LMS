@@ -1,32 +1,30 @@
 """列表范围过滤。
 
-资源级 `authorize` 负责单对象判定；本模块负责列表页和选择器的 queryset 收窄。
-默认范围来自各模块 `authorization.py` 的 `scope_rules`，用户例外来自数据库里的
-用户范围组覆盖。
+能力开关确认后，读取最终 RoleScope / UserRoleScope，构造 ResolvedScope，
+交给模块 scope_filter_handler；人员池解析将 OWN 视作当前用户本人。
 """
 
 from typing import Any, Optional, Type
 
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 
-from apps.authorization.roles import LEARNING_POOL_EXCLUDED_ROLE_CODES, resolve_current_role
+from apps.authorization.roles import resolve_current_role
 from apps.users.models import User
 
 from .constants import (
-    EFFECT_ALLOW,
-    EFFECT_DENY,
     SCOPE_AWARE_PERMISSION_CODES,
     SCOPE_ALL,
     SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
     SCOPE_FILTER_HANDLERS,
     SCOPE_MENTEES,
+    SCOPE_OWN,
     SCOPE_SELF,
 )
 
 
 class ScopedQuerysetEngineMixin:
-    """把权限范围解析为 queryset 过滤条件。"""
+    """把最终范围解析为 queryset 过滤条件。"""
 
     def get_current_role(self) -> Optional[str]:
         return resolve_current_role(self.user)
@@ -46,8 +44,6 @@ class ScopedQuerysetEngineMixin:
                 raise ValueError('resource_model 和 base_queryset 不能同时为空')
             queryset = model.objects.all()
 
-        # scope-aware 权限的“能力开关”和“可见范围”分开计算：
-        # 先确认用户拥有能力，再按默认范围和用户覆盖收窄列表。
         if permission_code in SCOPE_AWARE_PERMISSION_CODES:
             has_capability = self._authorization_service.is_capability_granted(permission_code)
         else:
@@ -55,19 +51,25 @@ class ScopedQuerysetEngineMixin:
         if not has_capability:
             return queryset.none()
 
+        resolved_scope = None
+        if permission_code in SCOPE_AWARE_PERMISSION_CODES:
+            resolved_scope = self._authorization_service.get_resolved_scope(permission_code)
+            if resolved_scope is None:
+                return queryset.none()
+
         for handler in SCOPE_FILTER_HANDLERS:
             if handler.permission_code != permission_code or handler.resource_model is not model:
                 continue
             return handler.filter_queryset(
                 self,
                 queryset=queryset,
+                resolved_scope=resolved_scope,
                 context=context or {},
             )
 
+        if permission_code in SCOPE_AWARE_PERMISSION_CODES:
+            return queryset.none()
         return queryset
-
-    def has_allow_override(self, permission_code: str) -> bool:
-        return self._authorization_service.has_allow_override(permission_code)
 
     def get_scoped_learning_members(self, permission_code: str) -> QuerySet:
         return self.get_scoped_user_queryset(
@@ -96,47 +98,22 @@ class ScopedQuerysetEngineMixin:
                     return scoped_queryset.none()
                 return scoped_queryset.filter(id__in=cached_ids).distinct()
 
-        current_role = self.get_current_role()
-        if not current_role:
+        if not self._authorization_service.is_capability_granted(permission_code):
+            if cache_key:
+                self._get_request_cache()['scoped_user_ids'][(permission_code, cache_key)] = set()
             return scoped_queryset.none()
 
-        default_scope_types = self._get_default_scope_types(permission_code, current_role)
-        default_ids = self._resolve_scope_ids(
-            scope_types=default_scope_types,
+        resolved_scope = self._authorization_service.get_resolved_scope(permission_code)
+        if resolved_scope is None:
+            if cache_key:
+                self._get_request_cache()['scoped_user_ids'][(permission_code, cache_key)] = set()
+            return scoped_queryset.none()
+
+        final_ids = self._resolve_single_scope_ids(
+            scope_type=resolved_scope.scope_type,
+            scope_user_ids=list(resolved_scope.member_ids),
             user_queryset=scoped_queryset,
         )
-        allow_ids: set[int] = set()
-        deny_ids: set[int] = set()
-
-        # 新模型优先用 scope_group 覆盖；没有范围组的旧权限点才读取单权限覆盖。
-        scope_group_key = self._authorization_service._get_scope_group_key(permission_code)
-        if scope_group_key:
-            overrides = self._authorization_service._list_active_scope_group_overrides_cached(
-                user_id=self.user.id,
-                current_role=current_role,
-                scope_group_key=scope_group_key,
-            )
-        else:
-            overrides = self._authorization_service._list_active_user_overrides_cached(
-                user_id=self.user.id,
-                current_role=current_role,
-                permission_code=permission_code,
-            )
-
-        for override in overrides:
-            scope_ids = self._resolve_single_scope_ids(
-                scope_type=override.scope_type,
-                scope_user_ids=override.scope_user_ids or [],
-                user_queryset=scoped_queryset,
-            )
-            if override.effect == EFFECT_DENY:
-                deny_ids.update(scope_ids)
-            elif override.effect == EFFECT_ALLOW:
-                allow_ids.update(scope_ids)
-
-        # 最终可见范围 = 默认范围移除显式拒绝，再加入显式允许。
-        # 角色默认范围和用户覆盖统一按同一规则合并。
-        final_ids = (default_ids - deny_ids) | allow_ids
         if cache_key:
             self._get_request_cache()['scoped_user_ids'][(permission_code, cache_key)] = final_ids
         if not final_ids:
@@ -144,45 +121,12 @@ class ScopedQuerysetEngineMixin:
         return scoped_queryset.filter(id__in=final_ids).distinct()
 
     def _learning_member_queryset(self) -> QuerySet:
-        excluded_ids = User.objects.filter(
-            Q(is_superuser=True) | Q(roles__code__in=LEARNING_POOL_EXCLUDED_ROLE_CODES),
-        ).values_list('id', flat=True)
+        """学习对象人员池：活跃学员（含兼任管理角色），排除超管。"""
         return User.objects.filter(
             is_active=True,
+            is_superuser=False,
             roles__code='STUDENT',
-        ).exclude(id__in=excluded_ids).distinct()
-
-    def _get_default_scope_types(self, permission_code: str, role_code: str) -> list[str]:
-        cache_key = (permission_code, role_code)
-        cached_scope_types = self._get_request_cache()['default_scope_types'].get(cache_key)
-        if cached_scope_types is not None:
-            return list(cached_scope_types)
-
-        scope_types = list(
-            self._authorization_service.get_permission_scope_types(
-                permission_code=permission_code,
-                current_role=role_code,
-            )
-        )
-        self._get_request_cache()['default_scope_types'][cache_key] = tuple(scope_types)
-        return scope_types
-
-    def _resolve_scope_ids(
-        self,
-        *,
-        scope_types: list[str],
-        user_queryset: QuerySet,
-    ) -> set[int]:
-        resolved_ids: set[int] = set()
-        for scope_type in scope_types:
-            resolved_ids.update(
-                self._resolve_single_scope_ids(
-                    scope_type=scope_type,
-                    scope_user_ids=[],
-                    user_queryset=user_queryset,
-                )
-            )
-        return resolved_ids
+        ).distinct()
 
     def _resolve_single_scope_ids(
         self,
@@ -193,7 +137,8 @@ class ScopedQuerysetEngineMixin:
     ) -> set[int]:
         if scope_type == SCOPE_ALL:
             return set(user_queryset.values_list('id', flat=True))
-        if scope_type == SCOPE_SELF:
+        # DATA.OWN 与旧 DATA.SELF 等价：当前用户自己
+        if scope_type in {SCOPE_SELF, SCOPE_OWN}:
             return set(user_queryset.filter(pk=getattr(self.user, 'id', None)).values_list('id', flat=True))
         if scope_type == SCOPE_MENTEES:
             return set(user_queryset.filter(mentor=self.user).values_list('id', flat=True))

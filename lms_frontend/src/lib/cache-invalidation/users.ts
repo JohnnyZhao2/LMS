@@ -8,6 +8,7 @@ export const invalidateAfterUserMutation = (
   options: {
     includeMentors?: boolean;
     includeAssignableUsers?: boolean;
+    includeAuthorization?: boolean;
   } = {},
 ) => {
   const keys: QueryKey[] = [
@@ -21,6 +22,10 @@ export const invalidateAfterUserMutation = (
 
   if (options.includeAssignableUsers) {
     keys.push(queryKeys.users.assignableRoot());
+  }
+
+  if (options.includeAuthorization) {
+    keys.push(queryKeys.authorization.userAuthorizationRoot());
   }
 
   return invalidateMany(queryClient, keys);

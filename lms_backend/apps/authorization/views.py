@@ -5,17 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 
 from core.base_view import BaseAPIView
-from core.responses import created_response, list_response, success_response
+from core.responses import list_response, success_response
 
 from .engine import enforce, enforce_any
 from .serializers import (
     PermissionSerializer,
-    RolePermissionSerializer,
-    RolePermissionTemplateSerializer,
-    UserPermissionOverrideCreateSerializer,
-    UserPermissionOverrideSerializer,
-    UserScopeGroupOverrideCreateSerializer,
-    UserScopeGroupOverrideSerializer,
+    RoleTemplateSerializer,
+    UserAuthorizationSerializer,
 )
 from .services import AuthorizationService
 
@@ -69,16 +65,16 @@ class PermissionCatalogView(BaseAPIView):
         return list_response(serializer.data)
 
 
-class RolePermissionView(BaseAPIView):
-    """Role baseline permission management."""
+class RoleTemplateView(BaseAPIView):
+    """角色模板完整状态管理。"""
 
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='获取角色权限模板',
+        summary='获取角色模板',
         responses={
-            200: RolePermissionTemplateSerializer,
+            200: RoleTemplateSerializer,
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
@@ -89,22 +85,13 @@ class RolePermissionView(BaseAPIView):
             request,
             error_message='无权查看角色权限模板',
         )
-
-        permission_codes = self.service.get_role_permission_codes(role_code)
-        return success_response(
-            {
-                'role_code': role_code,
-                'permission_codes': permission_codes,
-                'default_scope_types': self.service.get_role_default_scope_types(role_code),
-                'scope_groups': self.service.get_role_scope_groups(role_code),
-            }
-        )
+        return success_response(self.service.get_role_template(role_code))
 
     @extend_schema(
-        summary='替换角色权限模板',
-        request=RolePermissionSerializer,
+        summary='替换角色模板',
+        request=RoleTemplateSerializer,
         responses={
-            200: RolePermissionTemplateSerializer,
+            200: RoleTemplateSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
         },
@@ -112,38 +99,29 @@ class RolePermissionView(BaseAPIView):
     )
     def put(self, request, role_code: str):
         enforce('role_permission_template.update', request, error_message='无权配置角色权限模板')
-
-        serializer = RolePermissionSerializer(data=request.data)
+        serializer = RoleTemplateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         requested_role_code = serializer.validated_data['role_code']
         if requested_role_code != role_code:
             raise serializers.ValidationError({'role_code': '路径角色与请求体角色不一致'})
-
-        permission_codes = self.service.replace_role_permissions(
+        result = self.service.replace_role_template(
             role_code=role_code,
             permission_codes=serializer.validated_data['permission_codes'],
+            scopes=serializer.validated_data.get('scopes') or [],
         )
-        return success_response(
-            {
-                'role_code': role_code,
-                'permission_codes': permission_codes,
-                'default_scope_types': self.service.get_role_default_scope_types(role_code),
-                'scope_groups': self.service.get_role_scope_groups(role_code),
-            }
-        )
+        return success_response(result)
 
 
-class UserPermissionOverrideListCreateView(BaseAPIView):
-    """User override management."""
+class UserAuthorizationView(BaseAPIView):
+    """用户最终授权管理。"""
 
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='获取用户权限覆盖规则',
+        summary='获取用户最终授权',
         responses={
-            200: UserPermissionOverrideSerializer(many=True),
+            200: UserAuthorizationSerializer,
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
@@ -152,134 +130,51 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         enforce_any(
             USER_PERMISSION_ACCESS_CODES,
             request,
-            error_message='无权查看用户权限覆盖',
+            error_message='无权查看用户最终授权',
         )
-
-        overrides = self.service.list_user_permission_overrides(
-            user_id=user_id,
-        )
-        serializer = UserPermissionOverrideSerializer(overrides, many=True)
-        return list_response(serializer.data)
+        return success_response(self.service.get_user_authorization(user_id))
 
     @extend_schema(
-        summary='创建用户权限覆盖规则',
-        request=UserPermissionOverrideCreateSerializer,
+        summary='替换用户最终授权',
+        request=UserAuthorizationSerializer,
         responses={
-            201: UserPermissionOverrideSerializer,
+            200: UserAuthorizationSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
     )
-    def post(self, request, user_id: int):
-        enforce('user.permission.update', request, error_message='无权创建用户权限覆盖')
-
-        serializer = UserPermissionOverrideCreateSerializer(data=request.data)
+    def put(self, request, user_id: int):
+        enforce('user.permission.update', request, error_message='无权配置用户最终授权')
+        serializer = UserAuthorizationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        override = self.service.create_user_permission_override(
+        current = self.service.get_user_authorization(user_id)
+        requested_role = serializer.validated_data.get('role_code')
+        if requested_role and requested_role != current['role_code']:
+            raise serializers.ValidationError({'role_code': '不可通过授权接口变更用户角色'})
+        result = self.service.replace_user_authorization(
             user_id=user_id,
-            permission_code=serializer.validated_data['permission_code'],
-            effect=serializer.validated_data['effect'],
-            applies_to_role=serializer.validated_data.get('applies_to_role'),
+            permission_codes=serializer.validated_data['permission_codes'],
+            scopes=serializer.validated_data.get('scopes') or [],
         )
-        response_serializer = UserPermissionOverrideSerializer(override)
-        return created_response(response_serializer.data)
+        return success_response(result)
 
 
-class UserPermissionOverrideDeleteView(BaseAPIView):
-    """Delete an override."""
+class UserAuthorizationResetView(BaseAPIView):
+    """重置用户最终授权为角色模板。"""
 
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='删除用户权限覆盖规则',
+        summary='重置用户最终授权为角色模板',
         responses={
-            200: UserPermissionOverrideSerializer,
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='规则不存在'),
-        },
-        tags=['授权管理'],
-    )
-    def delete(self, request, user_id: int, override_id: int):
-        enforce('user.permission.update', request, error_message='无权删除用户权限覆盖')
-        override = self.service.delete_user_permission_override(
-            user_id=user_id,
-            override_id=override_id,
-        )
-        response_serializer = UserPermissionOverrideSerializer(override)
-        return success_response(response_serializer.data)
-
-
-class UserScopeGroupOverrideListCreateView(BaseAPIView):
-    permission_classes = [IsAuthenticated]
-    service_class = AuthorizationService
-
-    @extend_schema(
-        summary='获取用户范围组覆盖规则',
-        responses={
-            200: UserScopeGroupOverrideSerializer(many=True),
-            403: OpenApiResponse(description='无权限'),
-        },
-        tags=['授权管理'],
-    )
-    def get(self, request, user_id: int):
-        enforce_any(
-            USER_PERMISSION_ACCESS_CODES,
-            request,
-            error_message='无权查看用户范围组覆盖',
-        )
-        overrides = self.service.list_user_scope_group_overrides(
-            user_id=user_id,
-        )
-        serializer = UserScopeGroupOverrideSerializer(overrides, many=True)
-        return list_response(serializer.data)
-
-    @extend_schema(
-        summary='创建用户范围组覆盖规则',
-        request=UserScopeGroupOverrideCreateSerializer,
-        responses={
-            201: UserScopeGroupOverrideSerializer,
-            400: OpenApiResponse(description='参数错误'),
+            200: UserAuthorizationSerializer,
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
     )
     def post(self, request, user_id: int):
-        enforce('user.permission.update', request, error_message='无权创建用户范围组覆盖')
-        serializer = UserScopeGroupOverrideCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        override = self.service.create_user_scope_group_override(
-            user_id=user_id,
-            scope_group_key=serializer.validated_data['scope_group_key'],
-            effect=serializer.validated_data['effect'],
-            applies_to_role=serializer.validated_data.get('applies_to_role'),
-            scope_type=serializer.validated_data['scope_type'],
-            scope_user_ids=serializer.validated_data.get('scope_user_ids') or [],
-        )
-        response_serializer = UserScopeGroupOverrideSerializer(override)
-        return created_response(response_serializer.data)
-
-
-class UserScopeGroupOverrideDeleteView(BaseAPIView):
-    permission_classes = [IsAuthenticated]
-    service_class = AuthorizationService
-
-    @extend_schema(
-        summary='删除用户范围组覆盖规则',
-        responses={
-            200: UserScopeGroupOverrideSerializer,
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='规则不存在'),
-        },
-        tags=['授权管理'],
-    )
-    def delete(self, request, user_id: int, override_id: int):
-        enforce('user.permission.update', request, error_message='无权删除用户范围组覆盖')
-        override = self.service.delete_user_scope_group_override(
-            user_id=user_id,
-            override_id=override_id,
-        )
-        response_serializer = UserScopeGroupOverrideSerializer(override)
-        return success_response(response_serializer.data)
+        enforce('user.permission.update', request, error_message='无权重置用户最终授权')
+        result = self.service.reset_user_authorization(user_id=user_id)
+        return success_response(result)

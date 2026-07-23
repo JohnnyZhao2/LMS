@@ -136,7 +136,7 @@ class ResourcePolicyEngineMixin:
         if cached_decision is not None:
             return cached_decision
 
-        # 这里不做资源判断，只看角色模板和用户级 allow/deny 覆盖后的能力结果。
+        # 这里不做资源判断，只看最终权限集合（scoped 权限还需存在最终范围）。
         if self._authorization_service.is_capability_granted(permission_code):
             decision = AuthorizationDecision.allow(permission_code)
         else:

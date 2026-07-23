@@ -24,19 +24,6 @@ ROLE_LABELS = {
     'SUPER_ADMIN': '超管',
 }
 
-EFFECT_LABELS = {
-    'ALLOW': '允许',
-    'DENY': '拒绝',
-}
-
-SCOPE_TYPE_LABELS = {
-    'ALL': '全部对象',
-    'SELF': '本人',
-    'MENTEES': '我的学员',
-    'DEPARTMENT': '本部门',
-    'EXPLICIT_USERS': '指定用户',
-}
-
 SUBMISSION_STATUS_DETAILS = {
     'IN_PROGRESS': '仍在作答中',
     'SUBMITTED': '已提交',
@@ -145,23 +132,12 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
     role_code = template_vars.get('role_code')
     if role_code:
         template_vars['role_label'] = ROLE_LABELS.get(role_code, role_code)
-    applies_to_role = template_vars.get('applies_to_role')
-    if applies_to_role:
-        template_vars['applies_to_role_label'] = ROLE_LABELS.get(applies_to_role, applies_to_role)
-    effect = template_vars.get('effect')
-    if effect:
-        template_vars['effect_label'] = EFFECT_LABELS.get(effect, effect)
-    scope_type = template_vars.get('scope_type')
-    if scope_type:
-        template_vars['scope_type_label'] = SCOPE_TYPE_LABELS.get(scope_type, scope_type)
-
     for field_name, count_name in (
         ('knowledge_ids', 'knowledge_count'),
         ('quiz_ids', 'quiz_count'),
         ('assignee_ids', 'assignee_count'),
         ('question_ids', 'input_question_count'),
         ('permission_codes', 'permission_count'),
-        ('scope_user_ids', 'scope_user_count'),
         ('source_tag_ids', 'source_tag_count'),
         ('ordered_tag_ids', 'ordered_tag_count'),
     ):

@@ -14,7 +14,6 @@ class AuthorizationEngineCacheMixin:
                 'base_permission_decisions': {},
                 'resource_decisions': {},
                 'scoped_user_ids': {},
-                'default_scope_types': {},
             }
             setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
         return cache

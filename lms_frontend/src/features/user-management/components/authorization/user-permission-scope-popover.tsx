@@ -10,19 +10,19 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { PermissionOverrideScope } from '@/types/authorization';
+import type { ScopeType } from '@/types/authorization';
 import type { UserList } from '@/types/common';
 
-import type { ScopeFilterOption } from '@/features/user-management/components/authorization/user-permission-section.types';
+import type { ScopeFilterOption } from '@/features/user-management/components/authorization/user-permission-scope.utils';
 
 interface UserPermissionScopePopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   summary: string;
   scopeFilterOptions: ScopeFilterOption[];
-  availableScopeTypes: PermissionOverrideScope[];
-  selectedPermissionScopes: PermissionOverrideScope[];
-  onSelectPresetScope: (scopeType: PermissionOverrideScope) => void;
+  availableScopeTypes: ScopeType[];
+  selectedScopeType: ScopeType | null;
+  onSelectPresetScope: (scopeType: ScopeType) => void;
   scopeUserFilter: string;
   onScopeFilterChange: (filterValue: string) => void;
   showReset: boolean;
@@ -37,14 +37,18 @@ interface UserPermissionScopePopoverProps {
   dialogContentElement: HTMLDivElement | null;
 }
 
-const SCOPE_TYPE_LABELS: Record<PermissionOverrideScope, string> = {
+const SCOPE_TYPE_LABELS: Record<ScopeType, string> = {
   ALL: '全部',
+  OWN: '本人数据',
   SELF: '本人',
   MENTEES: '学生',
   DEPARTMENT: '同部门',
   EXPLICIT_USERS: '指定用户',
 };
 
+/**
+ * 权限范围选择弹窗。
+ */
 export const UserPermissionScopePopover: React.FC<
   UserPermissionScopePopoverProps
 > = ({
@@ -53,7 +57,7 @@ export const UserPermissionScopePopover: React.FC<
   summary,
   scopeFilterOptions,
   availableScopeTypes,
-  selectedPermissionScopes,
+  selectedScopeType,
   onSelectPresetScope,
   scopeUserFilter,
   onScopeFilterChange,
@@ -74,8 +78,8 @@ export const UserPermissionScopePopover: React.FC<
     selectedScopeUserIds.includes(user.id),
   ).length;
   const areAllFilteredScopeUsersChecked =
-    filteredScopeUsers.length > 0 &&
-    checkedFilteredScopeCount === filteredScopeUsers.length;
+    filteredScopeUsers.length > 0
+    && checkedFilteredScopeCount === filteredScopeUsers.length;
   const areSomeFilteredScopeUsersChecked =
     checkedFilteredScopeCount > 0 && !areAllFilteredScopeUsersChecked;
 
@@ -147,7 +151,9 @@ export const UserPermissionScopePopover: React.FC<
                   placeholder="搜索用户..."
                   inputClassName="h-7 rounded-lg border-slate-200/60 bg-white pl-8 text-[10px] shadow-none placeholder:text-slate-300 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
-                <label
+                <button
+                  type="button"
+                  onClick={onToggleSelectAllFilteredScopeUsers}
                   className={cn(
                     'inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 select-none',
                     GHOST_ACCENT_HOVER_CLASSNAME,
@@ -161,13 +167,13 @@ export const UserPermissionScopePopover: React.FC<
                           ? 'indeterminate'
                           : false
                     }
-                    onCheckedChange={onToggleSelectAllFilteredScopeUsers}
-                    className="rounded-[3px]"
+                    tabIndex={-1}
+                    className="pointer-events-none rounded-[3px]"
                   />
                   <span className="text-[9px] font-bold whitespace-nowrap text-slate-500 tabular-nums">
                     {checkedFilteredScopeCount}/{filteredScopeUsers.length}
                   </span>
-                </label>
+                </button>
               </div>
 
               <UserSelectableList
@@ -191,7 +197,7 @@ export const UserPermissionScopePopover: React.FC<
         ) : (
           <div className="space-y-1 p-2">
             {availableScopeTypes.map((scopeType) => {
-              const isActive = selectedPermissionScopes.includes(scopeType);
+              const isActive = selectedScopeType === scopeType;
               return (
                 <button
                   key={scopeType}

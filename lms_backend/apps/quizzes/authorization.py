@@ -2,9 +2,9 @@ from apps.authorization.decisions import conditional_allow, conditional_deny
 from apps.authorization.owner_scope import filter_queryset_by_owner_scope, is_owner_in_scope
 from apps.authorization.registry import (
     ResourceAuthorizationHandler,
+    SCOPE_KIND_DATA,
     ScopeFilterHandler,
     crud_authorization_spec,
-    scope_rules,
 )
 
 from .models import Quiz
@@ -39,7 +39,9 @@ def _authorize_quiz_resource(engine, permission_code, *, resource=None, context=
     )
 
 
-def _filter_quiz_queryset(engine, *, queryset, context=None):
+def _filter_quiz_queryset(engine, *, queryset, resolved_scope, context=None):
+    """按试卷资源最终范围过滤。"""
+    _ = resolved_scope, context
     return filter_queryset_by_owner_scope(engine, 'quiz.view', queryset)
 
 
@@ -49,24 +51,14 @@ AUTHORIZATION_SPECS = (
         'quiz',
         'quiz',
         '试卷',
-        full_roles=('MENTOR', 'DEPT_MANAGER', 'ADMIN'),
         kwargs_by_action={
             action: {
+                'scope_kind': SCOPE_KIND_DATA,
                 'scope_group_key': QUIZ_RESOURCE_SCOPE_GROUP,
-                'allowed_scope_types': ('SELF', 'ALL'),
+                'allowed_scope_types': ('OWN', 'ALL'),
             }
             for action in QUIZ_SCOPED_ACTIONS
         },
-        scope_rules=tuple(
-            rule
-            for permission_code in QUIZ_SCOPED_PERMISSION_CODES
-            for rule in scope_rules(
-                permission_code,
-                MENTOR='SELF',
-                DEPT_MANAGER='SELF',
-                ADMIN='ALL',
-            )
-        ),
         resource_authorization_handlers=(
             ResourceAuthorizationHandler(
                 key='quizzes.resource_decisions',

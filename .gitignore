@@ -33,14 +33,19 @@
 /*.pdf
 /招乎统一认证-API使用文档_副本.md
 
-# 本机 E2E 环境与运行产物不入库；单元/集成测试属于源码，应随仓库维护。
+# 测试相关：本地验收可用，一律不入库
 /LOCAL_TESTING.md
 /lms_backend/.e2e/
 /lms_backend/requirements.test.local.txt
 /lms_backend/apps/users/management/commands/prepare_e2e_db.py
 /lms_backend/apps/users/management/commands/seed_e2e.py
+/lms_backend/tests/
+/lms_backend/pytest.ini
+/lms_backend/config/settings/test.py
 /lms_frontend/e2e/
 /lms_frontend/playwright.config.ts
 /lms_frontend/scripts/run-acceptance.mjs
 /lms_frontend/output/playwright/
 /lms_frontend/playwright-report/
+/lms_frontend/src/testing/
+/lms_frontend/vitest.config.ts

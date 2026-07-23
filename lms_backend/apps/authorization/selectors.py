@@ -2,15 +2,11 @@
 
 from typing import Iterable, List, Optional
 
-from django.db.models import Q
-
 from .constants import (
     CONFIG_PERMISSION_MODULE,
-    PERMISSION_SCOPE_GROUPS,
     REGISTERED_PERMISSION_CODES,
-    SYSTEM_MANAGED_PERMISSION_CODES,
 )
-from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
+from .models import Permission
 
 
 def list_permissions(
@@ -25,63 +21,8 @@ def list_permissions(
         queryset = queryset.filter(module=module)
     if catalog_view in {'role_template', 'user_authorization'}:
         queryset = queryset.exclude(module=CONFIG_PERMISSION_MODULE)
-    queryset = queryset.exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
+        queryset = queryset.filter(is_configurable=True)
     return list(queryset.order_by('module', 'code'))
-
-
-def list_active_user_overrides(
-    *,
-    user_id: int,
-    current_role: Optional[str],
-    permission_code: Optional[str] = None,
-) -> List[UserPermissionOverride]:
-    if current_role in {'STUDENT', 'SUPER_ADMIN'}:
-        return []
-
-    queryset = UserPermissionOverride.objects.select_related('permission', 'user').filter(
-        user_id=user_id,
-    ).exclude(
-        applies_to_role='STUDENT',
-    )
-
-    if current_role:
-        queryset = queryset.filter(
-            Q(applies_to_role__isnull=True) | Q(applies_to_role='') | Q(applies_to_role=current_role)
-        )
-
-    if permission_code:
-        queryset = queryset.filter(permission__code=permission_code)
-
-    return list(queryset.order_by('-created_at', '-id'))
-
-
-def list_active_scope_group_overrides(
-    *,
-    user_id: int,
-    current_role: Optional[str],
-    scope_group_key: Optional[str] = None,
-) -> List[UserScopeGroupOverride]:
-    if current_role in {'STUDENT', 'SUPER_ADMIN'}:
-        return []
-
-    queryset = UserScopeGroupOverride.objects.select_related('user').filter(
-        user_id=user_id,
-    ).exclude(
-        applies_to_role='STUDENT',
-    )
-
-    if current_role:
-        queryset = queryset.filter(
-            Q(applies_to_role__isnull=True) | Q(applies_to_role='') | Q(applies_to_role=current_role)
-        )
-
-    if scope_group_key:
-        queryset = queryset.filter(scope_group_key=scope_group_key)
-        scope_group = PERMISSION_SCOPE_GROUPS.get(scope_group_key)
-        if scope_group:
-            queryset = queryset.filter(scope_type__in=scope_group['available_scope_types'])
-
-    return list(queryset.order_by('-created_at', '-id'))
 
 
 def get_permissions_by_codes(permission_codes: Iterable[str]) -> List[Permission]:

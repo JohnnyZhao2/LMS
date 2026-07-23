@@ -7,10 +7,7 @@ import { useUserDetail } from '@/features/user-management/api/users/get-user-det
 import { useUsers } from '@/features/user-management/api/users/get-users';
 import { useUpdateUser } from '@/features/user-management/api/users/update-user';
 import { useAuth } from '@/lib/auth-context';
-import { useUserPermissionOverrides } from '@/features/user-management/api/authorization/get-user-permission-overrides';
-import { useUserScopeGroupOverrides } from '@/features/user-management/api/authorization/get-user-scope-group-overrides';
-import { useRevokeUserPermissionOverride } from '@/features/user-management/api/authorization/revoke-user-permission-override';
-import { useRevokeUserScopeGroupOverride } from '@/features/user-management/api/authorization/revoke-user-scope-group-override';
+import { useResetUserAuthorization } from '@/features/user-management/api/authorization/user-authorization';
 import { showApiError } from '@/lib/api-error-handler';
 import { buildPermissionModuleSections } from '@/features/user-management/utils/permission-sections';
 import {
@@ -21,6 +18,7 @@ import {
 } from '@/utils/authorization/user-role-assignment';
 import {
   USER_PERMISSION_ACCESS_PERMISSIONS,
+  USER_PERMISSION_UPDATE_PERMISSION,
   USER_ROLE_ASSIGN_PERMISSION,
 } from '@/config/authorization-access';
 
@@ -33,6 +31,9 @@ interface UseRolePermissionTemplateStateParams {
   initialSelectedUserId?: number | null;
 }
 
+/**
+ * 角色权限模板面板状态：成员管理、用户授权查看与重置。
+ */
 export function useRolePermissionTemplateState({
   roleCodes,
   permissionCatalog,
@@ -52,11 +53,10 @@ export function useRolePermissionTemplateState({
   const [workbenchElement, setWorkbenchElement] = useState<HTMLDivElement | null>(null);
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [isResettingOverrides, setIsResettingOverrides] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const deferredMemberSearch = useDeferredValue(memberSearch);
   const updateUser = useUpdateUser();
-  const revokeUserOverride = useRevokeUserPermissionOverride();
-  const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
+  const resetUserAuthorization = useResetUserAuthorization();
 
   const resolvedActiveRole = useMemo(
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
@@ -86,14 +86,6 @@ export function useRolePermissionTemplateState({
     isLoading: isLoadingSelectedUser,
     refetch: refetchSelectedUserDetail,
   } = useUserDetail(selectedUserId ?? 0);
-  const {
-    data: selectedUserPermissionOverrides = [],
-    refetch: refetchSelectedUserPermissionOverrides,
-  } = useUserPermissionOverrides(selectedUserId, Boolean(selectedUserId));
-  const {
-    data: selectedUserScopeGroupOverrides = [],
-    refetch: refetchSelectedUserScopeGroupOverrides,
-  } = useUserScopeGroupOverrides(selectedUserId, Boolean(selectedUserId));
 
   const roleNameMap = useMemo(
     () => new Map(roles.map((role) => [role.code, role.name])),
@@ -170,19 +162,11 @@ export function useRolePermissionTemplateState({
     () => selectedUserDetail?.roles.map((role) => role.code as RoleCode) ?? [],
     [selectedUserDetail],
   );
-  const currentRolePermissionOverrides = useMemo(
-    () => selectedUserPermissionOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserPermissionOverrides],
-  );
-  const currentRoleScopeOverrides = useMemo(
-    () => selectedUserScopeGroupOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserScopeGroupOverrides],
-  );
-  const canResetCurrentRoleOverrides = currentRolePermissionOverrides.length > 0 || currentRoleScopeOverrides.length > 0;
+  /** 有用户授权更新权限、已选中用户且当前角色非 STUDENT 时可重置为角色模板 */
+  const canResetCurrentUserAuthorization =
+    hasCapability(USER_PERMISSION_UPDATE_PERMISSION)
+    && Boolean(selectedUserId)
+    && resolvedActiveRole !== 'STUDENT';
 
   useEffect(() => {
     if (!selectedUserDetail || !resolvedActiveRole) {
@@ -294,33 +278,25 @@ export function useRolePermissionTemplateState({
     }
   };
 
-  const handleResetCurrentRoleOverrides = async () => {
-    if (!selectedUserId || isResettingOverrides || !canResetCurrentRoleOverrides) {
+  /**
+   * 将选中用户的授权重置为当前管理角色模板。
+   */
+  const handleResetCurrentUserAuthorization = async () => {
+    if (!selectedUserId || isResetting || !canResetCurrentUserAuthorization) {
       setResetDialogOpen(false);
       return;
     }
 
-    setIsResettingOverrides(true);
+    setIsResetting(true);
     try {
-      await Promise.all([
-        ...currentRolePermissionOverrides.map((override) => (
-          revokeUserOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-        ...currentRoleScopeOverrides.map((override) => (
-          revokeUserScopeGroupOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-      ]);
+      await resetUserAuthorization.mutateAsync(selectedUserId);
       await refreshUser();
-      await Promise.all([
-        refetchSelectedUserDetail(),
-        refetchSelectedUserPermissionOverrides(),
-        refetchSelectedUserScopeGroupOverrides(),
-      ]);
+      await refetchSelectedUserDetail();
       setResetDialogOpen(false);
     } catch (error) {
       showApiError(error);
     } finally {
-      setIsResettingOverrides(false);
+      setIsResetting(false);
     }
   };
 
@@ -328,21 +304,21 @@ export function useRolePermissionTemplateState({
     canManageRoleMembers,
     canViewUserAuthorization,
     candidateUsers,
-    canResetCurrentRoleOverrides,
+    canResetCurrentUserAuthorization,
     departments,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
-    handleResetCurrentRoleOverrides,
+    handleResetCurrentUserAuthorization,
     handleSelectMember,
     handleSelectRole,
     handleUserRoleToggle,
     isAssigningRoles: updateUser.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isResettingOverrides,
+    isResetting,
     isSavingCurrentRole,
-    isViewingUserOverrides: Boolean(selectedUserId),
+    isViewingUserAuthorization: Boolean(selectedUserId),
     memberSearch,
     mutatingUserId,
     permissionSections,

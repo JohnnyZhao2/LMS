@@ -21,12 +21,12 @@ flowchart LR
   app -->|20| lib
   app -->|20| config
   app -->|8| types
-  features -->|306| components
+  features -->|310| components
   features -->|61| hooks
-  features -->|335| lib
+  features -->|323| lib
   features -->|3| utils
   features -->|19| config
-  features -->|179| types
+  features -->|165| types
   components -->|45| lib
   hooks -->|2| lib
   hooks -->|2| config
@@ -35,8 +35,8 @@ flowchart LR
   utils -->|1| config
   utils -->|1| types
   config -->|3| types
-  testing -->|1| features
-  testing -->|1| components
+  testing -->|4| features
+  testing -->|2| components
   testing -->|1| lib
 ```
 
@@ -48,12 +48,12 @@ flowchart LR
 | `app` | `lib` | 20 |
 | `app` | `config` | 20 |
 | `app` | `types` | 8 |
-| `features` | `components` | 306 |
+| `features` | `components` | 310 |
 | `features` | `hooks` | 61 |
-| `features` | `lib` | 335 |
+| `features` | `lib` | 323 |
 | `features` | `utils` | 3 |
 | `features` | `config` | 19 |
-| `features` | `types` | 179 |
+| `features` | `types` | 165 |
 | `components` | `lib` | 45 |
 | `hooks` | `lib` | 2 |
 | `hooks` | `config` | 2 |
@@ -62,8 +62,8 @@ flowchart LR
 | `utils` | `config` | 1 |
 | `utils` | `types` | 1 |
 | `config` | `types` | 3 |
-| `testing` | `features` | 1 |
-| `testing` | `components` | 1 |
+| `testing` | `features` | 4 |
+| `testing` | `components` | 2 |
 | `testing` | `lib` | 1 |
 
 ## Cross-feature 直接依赖

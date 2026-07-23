@@ -2,17 +2,15 @@
 
 from core.base_service import BaseService
 
+from .final_authorization_service import FinalAuthorizationServiceMixin
 from .permission_catalog_service import PermissionCatalogServiceMixin
 from .policy_cache import AuthorizationPolicyCacheMixin
-from .role_template_service import RoleTemplateServiceMixin
-from .user_override_service import UserOverrideServiceMixin
 
 
 class AuthorizationService(
     AuthorizationPolicyCacheMixin,
     PermissionCatalogServiceMixin,
-    RoleTemplateServiceMixin,
-    UserOverrideServiceMixin,
+    FinalAuthorizationServiceMixin,
     BaseService,
 ):
     """Unified authorization service facade."""

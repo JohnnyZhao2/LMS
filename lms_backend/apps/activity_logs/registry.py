@@ -16,8 +16,7 @@ _DECLARATION_MODULES = (
     'apps.submissions.services',
     'apps.spot_checks.services',
     'apps.tags.services',
-    'apps.authorization.role_template_service',
-    'apps.authorization.user_override_service',
+    'apps.authorization.final_authorization_service',
     'apps.grading.views',
 )
 
