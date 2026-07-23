@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.activity_logs.decorators import log_operation
 from apps.grading.selectors import (
@@ -21,7 +22,6 @@ from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
-from core.responses import list_response, success_response
 from apps.submissions.workflows import grade_subjective_answer
 
 
@@ -67,7 +67,7 @@ class GradingQuestionsView(GradingBaseView):
 
         questions = self._get_grading_questions(task, quiz_id)
         serializer = GradingQuestionSerializer(questions, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
     def _get_grading_questions(self, task, quiz_id):
         """获取阅卷中心题目列表"""
@@ -128,7 +128,7 @@ class GradingAnswersView(GradingBaseView):
 
         answers = self._get_grading_answers(task, question_id, quiz_id)
         serializer = GradingAnswerResponseSerializer(answers)
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
@@ -290,7 +290,7 @@ class GradingSubmitView(GradingBaseView):
             comments=data['comments']
         )
 
-        return success_response({'message': '评分成功'})
+        return Response({'message': '评分成功'})
 
     @log_operation(
         'grading',
@@ -396,7 +396,7 @@ class PendingQuizzesView(GradingBaseView):
                 })
 
         serializer = PendingTaskSerializer(results, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
     def _has_analysis_data(self, task, quiz_id):
         objective_answers = get_latest_quiz_answers(

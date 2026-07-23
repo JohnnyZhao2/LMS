@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authorization.engine import authorize, enforce, scope_filter
@@ -29,12 +30,6 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import (
-    created_response,
-    list_response,
-    no_content_response,
-    success_response,
-)
 
 
 def _parse_positive_int_list_query_param(request, name: str) -> list[int]:
@@ -110,7 +105,7 @@ class AssignableUserListView(APIView):
             
         queryset = queryset.order_by('username', 'employee_id')
         serializer = UserListSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
 
 class TaskResourceOptionListView(APIView):
@@ -183,7 +178,7 @@ class TaskResourceOptionListView(APIView):
             return request.build_absolute_uri(f'{request.path}?{next_query_params.urlencode()}')
 
         serializer = TaskResourceOptionSerializer(page_items, many=True)
-        return success_response(data={
+        return Response({
             'count': total_count,
             'total_pages': total_pages,
             'current_page': current_page,
@@ -224,7 +219,7 @@ class TaskCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         task = TaskService(request).create_task(**dict(serializer.validated_data))
         response_serializer = TaskDetailSerializer(task, context={'request': request})
-        return created_response(response_serializer.data)
+        return Response(response_serializer.data, status=201)
 
 
 class TaskListView(BaseAPIView):
@@ -312,7 +307,7 @@ class TaskDetailView(BaseAPIView):
         task = self.service.get_task_by_id(pk)
         self.service.check_task_read_permission(task)
         serializer = TaskDetailSerializer(task, context={'request': request})
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
     @extend_schema(
         summary='更新任务',
@@ -345,7 +340,7 @@ class TaskDetailView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
         updated_task = self.service.update_task(task=task, **dict(serializer.validated_data))
         response_serializer = TaskDetailSerializer(updated_task, context={'request': request})
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)
 
     @extend_schema(
         summary='删除任务',
@@ -361,4 +356,4 @@ class TaskDetailView(BaseAPIView):
         task = self.service.get_task_by_id(pk)
         self.service.check_task_edit_permission(task, 'task.delete', '无权删除任务')
         self.service.delete_task(task)
-        return no_content_response()
+        return Response(None)

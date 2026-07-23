@@ -6,6 +6,7 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.dashboard.serializers import (
@@ -15,7 +16,6 @@ from apps.dashboard.serializers import (
 from apps.dashboard.services import StudentDashboardService
 from core.base_view import BaseAPIView
 from core.query_params import parse_int_query_param
-from core.responses import list_response, success_response
 
 
 class StudentDashboardView(BaseAPIView):
@@ -64,7 +64,7 @@ class StudentDashboardView(BaseAPIView):
             knowledge_limit=knowledge_limit
         )
 
-        return success_response(StudentDashboardSerializer(data).data)
+        return Response(StudentDashboardSerializer(data).data)
 
 
 class TaskParticipantsView(BaseAPIView):
@@ -89,4 +89,4 @@ class TaskParticipantsView(BaseAPIView):
         )
         user = request.user
         participants = self.service.get_task_participants(user, task_id)
-        return list_response(PeerRankingSerializer(participants, many=True).data)
+        return Response(PeerRankingSerializer(participants, many=True).data)

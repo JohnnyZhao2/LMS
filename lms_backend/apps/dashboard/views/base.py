@@ -1,9 +1,9 @@
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.dashboard.services import MentorDashboardService
 from core.base_view import BaseAPIView
-from core.responses import success_response
 
 
 class MentorScopedDashboardView(BaseAPIView):
@@ -19,4 +19,4 @@ class MentorScopedDashboardView(BaseAPIView):
             error_message=self.permission_error_message,
         )
         data = self.service.get_dashboard_data()
-        return success_response(data)
+        return Response(data)

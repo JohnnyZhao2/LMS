@@ -8,6 +8,7 @@ Implements:
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers as drf_serializers
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.engine import enforce
@@ -24,11 +25,6 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import (
-    created_response,
-    no_content_response,
-    success_response,
-)
 
 
 class ViewCountResponseSerializer(drf_serializers.Serializer):
@@ -122,7 +118,7 @@ class KnowledgeListCreateView(BaseAPIView):
         )
         # 5. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
-        return created_response(response_serializer.data)
+        return Response(response_serializer.data, status=201)
 class KnowledgeDetailView(BaseAPIView):
     """
     Knowledge detail, update, delete endpoint.
@@ -144,7 +140,7 @@ class KnowledgeDetailView(BaseAPIView):
         knowledge = self.service.get_by_id(pk)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
-        return success_response(serializer.data)
+        return Response(serializer.data)
     @extend_schema(
         summary='更新知识文档',
         description='更新知识文档内容（管理员或室经理）',
@@ -171,7 +167,7 @@ class KnowledgeDetailView(BaseAPIView):
         )
         # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)
     @extend_schema(
         summary='删除知识文档',
         description='删除知识文档（管理员或室经理，被任务引用时禁止删除）',
@@ -186,7 +182,7 @@ class KnowledgeDetailView(BaseAPIView):
     def delete(self, request, pk):
         enforce('knowledge.delete', request, error_message='无权删除知识文档')
         self.service.delete(pk)
-        return no_content_response()
+        return Response(None)
 class StudentTaskKnowledgeDetailView(BaseAPIView):
     """学员任务知识详情端点 - 允许访问任务锁定版本"""
     permission_classes = [IsAuthenticated]
@@ -230,7 +226,7 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
             )
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
-        return success_response(serializer.data)
+        return Response(serializer.data)
 class KnowledgeIncrementViewCountView(BaseAPIView):
     """Increment knowledge view count endpoint."""
     permission_classes = [IsAuthenticated]
@@ -247,4 +243,4 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
     def post(self, request, pk):
         enforce('knowledge.view', request, error_message='无权记录知识阅读')
         view_count = self.service.increment_view_count(pk)
-        return success_response({'view_count': view_count})
+        return Response({'view_count': view_count})

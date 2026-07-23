@@ -7,6 +7,7 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.tasks.serializers import (
     CompleteKnowledgeLearningSerializer,
@@ -17,7 +18,6 @@ from apps.tasks.serializers import (
 from apps.tasks.student_task_service import StudentTaskService
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
-from core.responses import success_response
 
 
 class StudentAssignmentListView(BaseAPIView):
@@ -80,7 +80,7 @@ class StudentTaskDetailView(BaseAPIView):
         assignment = self.service.get_student_assignment(task_id)
         
         serializer = StudentTaskDetailSerializer(assignment)
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
 
 class CompleteKnowledgeLearningView(BaseAPIView):
@@ -121,4 +121,4 @@ class CompleteKnowledgeLearningView(BaseAPIView):
         response_data['task_status'] = assignment.status
         response_data['task_completed'] = assignment.status == 'COMPLETED'
         
-        return success_response(response_data)
+        return Response(response_data)

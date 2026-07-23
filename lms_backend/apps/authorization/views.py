@@ -2,10 +2,10 @@
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework import serializers
 
 from core.base_view import BaseAPIView
-from core.responses import list_response, success_response
 
 from .engine import enforce, enforce_any
 from .serializers import (
@@ -62,7 +62,7 @@ class PermissionCatalogView(BaseAPIView):
             raise serializers.ValidationError({'view': '无效的权限目录视图类型'})
         permissions = self.service.list_permission_catalog(module=module, catalog_view=catalog_view)
         serializer = PermissionSerializer(permissions, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
 
 class RoleTemplateView(BaseAPIView):
@@ -85,7 +85,7 @@ class RoleTemplateView(BaseAPIView):
             request,
             error_message='无权查看角色权限模板',
         )
-        return success_response(self.service.get_role_template(role_code))
+        return Response(self.service.get_role_template(role_code))
 
     @extend_schema(
         summary='替换角色模板',
@@ -109,7 +109,7 @@ class RoleTemplateView(BaseAPIView):
             permission_codes=serializer.validated_data['permission_codes'],
             scopes=serializer.validated_data.get('scopes') or [],
         )
-        return success_response(result)
+        return Response(result)
 
 
 class UserAuthorizationView(BaseAPIView):
@@ -132,7 +132,7 @@ class UserAuthorizationView(BaseAPIView):
             request,
             error_message='无权查看用户最终授权',
         )
-        return success_response(self.service.get_user_authorization(user_id))
+        return Response(self.service.get_user_authorization(user_id))
 
     @extend_schema(
         summary='替换用户最终授权',
@@ -157,7 +157,7 @@ class UserAuthorizationView(BaseAPIView):
             permission_codes=serializer.validated_data['permission_codes'],
             scopes=serializer.validated_data.get('scopes') or [],
         )
-        return success_response(result)
+        return Response(result)
 
 
 class UserAuthorizationResetView(BaseAPIView):
@@ -177,4 +177,4 @@ class UserAuthorizationResetView(BaseAPIView):
     def post(self, request, user_id: int):
         enforce('user.permission.update', request, error_message='无权重置用户最终授权')
         result = self.service.reset_user_authorization(user_id=user_id)
-        return success_response(result)
+        return Response(result)

@@ -6,6 +6,7 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.tasks.selectors import (
@@ -15,7 +16,6 @@ from apps.tasks.selectors import (
 from apps.tasks.serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
 from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
-from core.responses import list_response, success_response
 
 
 class TaskAnalyticsView(BaseAPIView):
@@ -43,7 +43,7 @@ class TaskAnalyticsView(BaseAPIView):
 
         analytics = task_analytics_payload(task.id)
         serializer = TaskAnalyticsSerializer(analytics)
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
 
 class StudentExecutionsView(BaseAPIView):
@@ -71,4 +71,4 @@ class StudentExecutionsView(BaseAPIView):
 
         executions = task_student_executions(task.id)
         serializer = StudentExecutionSerializer(executions, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)

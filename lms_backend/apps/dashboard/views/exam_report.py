@@ -4,13 +4,13 @@ from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce_any
 from apps.dashboard.exam_report_service import ExamReportService
 from apps.dashboard.serializers import ExamReportExportQuerySerializer, ExamReportQuerySerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from core.responses import success_response
 
 EXAM_REPORT_PERMISSIONS = (
     'dashboard.mentor.view',
@@ -54,7 +54,7 @@ class ExamReportView(ExamReportBaseView):
         self._enforce_access()
         filters = self._parse_filters(ExamReportQuerySerializer)
         data = self.service.get_report(filters)
-        return success_response(data)
+        return Response(data)
 
 
 class ExamReportExportView(ExamReportBaseView):

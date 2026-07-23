@@ -6,6 +6,7 @@ from uuid import UUID
 from django.db.models import Avg, Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce, scope_filter
 from apps.users.models import User
@@ -13,12 +14,6 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import (
-    created_response,
-    list_response,
-    no_content_response,
-    success_response,
-)
 
 from .models import SpotCheck
 from .serializers import (
@@ -99,7 +94,7 @@ class SpotCheckListCreateView(BaseAPIView):
         enforce('spot_check.create', request, error_message='无权创建抽查记录')
         created = self.service.batch_create(data=serializer.validated_data)
         response_serializer = SpotCheckDetailSerializer(created, many=True, context={'request': request})
-        return created_response(response_serializer.data)
+        return Response(response_serializer.data, status=201)
 
 
 class SpotCheckMineView(BaseAPIView):
@@ -166,7 +161,7 @@ class SpotCheckStudentListView(BaseAPIView):
             )
         queryset = queryset.order_by('-spot_check_count', 'username', 'employee_id')
         serializer = SpotCheckStudentSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
 
 class SpotCheckDetailView(BaseAPIView):
@@ -177,12 +172,12 @@ class SpotCheckDetailView(BaseAPIView):
     def get(self, request, pk):
         spot_check = self.service.get_by_id(pk)
         serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
     @extend_schema(summary='删除抽查记录', tags=['抽查管理'])
     def delete(self, request, pk):
         self.service.delete(pk)
-        return no_content_response()
+        return Response(None)
 
 
 class SpotCheckSubmitView(BaseAPIView):
@@ -195,7 +190,7 @@ class SpotCheckSubmitView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
         spot_check = self.service.submit(pk=pk, data=serializer.validated_data)
         response_serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)
 
 
 class SpotCheckScoreView(BaseAPIView):
@@ -208,4 +203,4 @@ class SpotCheckScoreView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
         spot_check = self.service.score(pk=pk, data=serializer.validated_data)
         response_serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)

@@ -1,11 +1,11 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce_any
 from apps.users.models import Department, Role, User
 from apps.users.serializers import DepartmentSerializer, MentorSerializer, RoleSerializer
-from core.responses import list_response
 
 from .constants import USER_REFERENCE_PERMISSION_CODES
 
@@ -32,7 +32,7 @@ class MentorsListView(APIView):
             roles__code='MENTOR',
             is_active=True,
         ).distinct().order_by('username')
-        return list_response(MentorSerializer(mentors, many=True).data)
+        return Response(MentorSerializer(mentors, many=True).data)
 
 
 class DepartmentsListView(APIView):
@@ -53,7 +53,7 @@ class DepartmentsListView(APIView):
             request,
             error_message='无权查看部门列表',
         )
-        return list_response(DepartmentSerializer(Department.objects.order_by('code'), many=True).data)
+        return Response(DepartmentSerializer(Department.objects.order_by('code'), many=True).data)
 
 
 class RolesListView(APIView):
@@ -75,4 +75,4 @@ class RolesListView(APIView):
             error_message='无权查看角色列表',
         )
         roles = Role.objects.order_by('code')
-        return list_response(RoleSerializer(roles, many=True).data)
+        return Response(RoleSerializer(roles, many=True).data)

@@ -5,11 +5,11 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.dashboard.services import TeamManagerDashboardService
 from core.base_view import BaseAPIView
-from core.responses import success_response
 
 
 class TeamManagerDashboardView(BaseAPIView):
@@ -36,4 +36,4 @@ class TeamManagerDashboardView(BaseAPIView):
             error_message='只有团队经理或超管可以访问此仪表盘',
         )
         data = self.service.get_dashboard_data()
-        return success_response(data)
+        return Response(data)

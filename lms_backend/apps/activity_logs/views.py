@@ -5,12 +5,12 @@ from typing import Any
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
-from core.responses import no_content_response, success_response
 
 from .models import ActivityLog, ActivityLogPolicy
 from .selectors import (
@@ -69,7 +69,7 @@ class ActivityLogListView(BaseAPIView):
         results = [serialize_activity_log_item(log) for log in page]
         serializer = ActivityLogItemSerializer(results, many=True)
 
-        return success_response(
+        return Response(
             {
                 'members': members,
                 'results': serializer.data,
@@ -107,7 +107,7 @@ class ActivityLogPolicyView(BaseAPIView):
             ActivityLogPolicy.objects.all().order_by('category', 'group', 'label'),
             many=True,
         )
-        return success_response(serializer.data)
+        return Response(serializer.data)
 
     @extend_schema(
         summary='更新日志策略',
@@ -125,7 +125,7 @@ class ActivityLogPolicyView(BaseAPIView):
         policy.enabled = serializer.validated_data['enabled']
         policy.save(update_fields=['enabled', 'updated_at'])
         ActivityLogService.invalidate_policy_cache(key)
-        return success_response(ActivityLogPolicySerializer(policy).data)
+        return Response(ActivityLogPolicySerializer(policy).data)
 
 
 class ActivityLogItemView(BaseAPIView):
@@ -152,7 +152,7 @@ class ActivityLogItemView(BaseAPIView):
                 message='活动日志不存在',
             )
 
-        return no_content_response()
+        return Response(None)
 
 
 class ActivityLogBulkDeleteView(BaseAPIView):
@@ -189,7 +189,7 @@ class ActivityLogBulkDeleteView(BaseAPIView):
         deleted_count, _ = ActivityLog.objects.filter(
             id__in=[record_id for _, record_id in requested_refs]
         ).delete()
-        return success_response({'deleted_count': deleted_count})
+        return Response({'deleted_count': deleted_count})
 
 
 def _extract_validation_message(errors: Any) -> str:

@@ -10,9 +10,9 @@ Implements:
 from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
 from core.base_view import BaseAPIView
-from core.responses import success_response
 from core.throttles import AuthThrottle
 from apps.auth.serializers import (
     AuthSessionSerializer,
@@ -37,10 +37,10 @@ def _refresh_cookie_token(request):
     return serializer.validated_data['refresh_token']
 
 
-def _session_response(result, *, message=None):
+def _session_response(result):
     payload = dict(result)
     refresh_token = payload.pop('refresh_token')
-    response = success_response(payload) if message is None else success_response(payload, message=message)
+    response = Response(payload)
     response.set_cookie(
         key=settings.AUTH_REFRESH_COOKIE_NAME,
         value=refresh_token,
@@ -101,7 +101,7 @@ class LogoutView(BaseAPIView):
     )
     def post(self, request):
         self.service.logout(request.user, _refresh_cookie_token(request))
-        response = success_response(message='登出成功')
+        response = Response(None)
         response.delete_cookie(
             settings.AUTH_REFRESH_COOKIE_NAME,
             path=settings.AUTH_REFRESH_COOKIE_PATH,
@@ -186,7 +186,7 @@ class MeView(BaseAPIView):
             user=request.user,
             requested_role=getattr(request.user, 'current_role', None),
         )
-        return success_response(result)
+        return Response(result)
 
 
 class ChangePasswordView(BaseAPIView):
@@ -217,7 +217,7 @@ class ChangePasswordView(BaseAPIView):
             password=serializer.validated_data['password'],
         )
 
-        return success_response(message='密码已修改')
+        return Response(None)
 
 
 class ChangeMyPasswordView(BaseAPIView):
@@ -248,7 +248,7 @@ class ChangeMyPasswordView(BaseAPIView):
             password=serializer.validated_data['password'],
         )
 
-        return _session_response(result, message='密码已修改')
+        return _session_response(result)
 
 
 class OneAccountAuthorizeUrlView(BaseAPIView):
@@ -266,7 +266,7 @@ class OneAccountAuthorizeUrlView(BaseAPIView):
     )
     def get(self, request):
         result = self.service.get_one_account_authorize_url()
-        return success_response(result)
+        return Response(result)
 
 
 class OneAccountCodeLoginView(BaseAPIView):

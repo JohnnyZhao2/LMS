@@ -1,11 +1,11 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.users.serializers import UserDetailSerializer
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
-from core.responses import success_response
 
 
 class UserDeactivateView(BaseAPIView):
@@ -25,7 +25,7 @@ class UserDeactivateView(BaseAPIView):
     def post(self, request, pk):
         enforce('user.activate', request, error_message='只有管理员可以停用用户')
         user = self.service.deactivate_user(pk)
-        return success_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data)
 
 
 class UserActivateView(BaseAPIView):
@@ -45,4 +45,4 @@ class UserActivateView(BaseAPIView):
     def post(self, request, pk):
         enforce('user.activate', request, error_message='只有管理员可以启用用户')
         user = self.service.activate_user(pk)
-        return success_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data)

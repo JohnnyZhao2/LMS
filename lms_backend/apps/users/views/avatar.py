@@ -1,11 +1,11 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from apps.users.serializers import AvatarUpdateSerializer, UserDetailSerializer, UserInfoSerializer
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
-from core.responses import success_response
 
 
 class UserSelfAvatarView(BaseAPIView):
@@ -27,7 +27,7 @@ class UserSelfAvatarView(BaseAPIView):
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.update_avatar(request.user.id, serializer.validated_data['avatar_key'])
-        return success_response(UserInfoSerializer(user).data)
+        return Response(UserInfoSerializer(user).data)
 
 
 class UserAvatarUpdateView(BaseAPIView):
@@ -51,4 +51,4 @@ class UserAvatarUpdateView(BaseAPIView):
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.update_avatar(pk, serializer.validated_data['avatar_key'])
-        return success_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data)

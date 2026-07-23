@@ -3,10 +3,11 @@
 提供文档上传解析接口
 """
 from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
-from core.responses import success_response, error_response
+from core.exceptions import BusinessError, ErrorCodes
 from ..services import DocumentParserService
 
 
@@ -23,7 +24,7 @@ class ParseDocumentView(APIView):
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
-            return error_response(code='VALIDATION_ERROR', message='请上传文件')
+            raise BusinessError(ErrorCodes.VALIDATION_ERROR, '请上传文件')
 
         try:
             parser = DocumentParserService()
@@ -31,12 +32,14 @@ class ParseDocumentView(APIView):
 
             ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
 
-            return success_response({
+            return Response({
                 'suggested_title': suggested_title,
                 'content': content,
                 'file_type': ext
             })
         except ValueError as e:
-            return error_response(code='VALIDATION_ERROR', message=str(e))
+            raise BusinessError(ErrorCodes.VALIDATION_ERROR, str(e)) from e
+        except BusinessError:
+            raise
         except Exception as e:
-            return error_response(code='PARSE_ERROR', message=f'文档解析失败：{str(e)}')
+            raise BusinessError('PARSE_ERROR', f'文档解析失败：{str(e)}') from e

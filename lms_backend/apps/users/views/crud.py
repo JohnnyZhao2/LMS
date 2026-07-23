@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce, scope_filter
@@ -14,7 +15,6 @@ from apps.users.serializers import (
 from apps.users.services import UserManagementService
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_bool_query_param, parse_int_query_param
-from core.responses import created_response, list_response, no_content_response, success_response
 
 
 class UserListCreateView(APIView):
@@ -50,7 +50,7 @@ class UserListCreateView(APIView):
             base_queryset=queryset,
         )
         serializer = UserListSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
     @extend_schema(
         summary='创建用户',
@@ -70,7 +70,7 @@ class UserListCreateView(APIView):
         if 'role_codes' in serializer.validated_data:
             enforce('user.role.assign', request, error_message='无权分配用户角色')
         user = UserManagementService(request).create_user(dict(serializer.validated_data))
-        return created_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data, status=201)
 
 
 class UserDetailView(APIView):
@@ -108,7 +108,7 @@ class UserDetailView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权查看该用户详情',
             )
-        return success_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data)
 
     @extend_schema(
         summary='更新用户信息',
@@ -137,7 +137,7 @@ class UserDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         validated_data = dict(serializer.validated_data)
         if not validated_data:
-            return success_response(UserDetailSerializer(user).data)
+            return Response(UserDetailSerializer(user).data)
 
         profile_keys = {'username', 'employee_id', 'department_id', 'mentor_id'}
         if profile_keys.intersection(validated_data):
@@ -146,7 +146,7 @@ class UserDetailView(APIView):
             enforce('user.role.assign', request, error_message='无权分配用户角色')
 
         user = UserManagementService(request).update_user(user, validated_data)
-        return success_response(UserDetailSerializer(user).data)
+        return Response(UserDetailSerializer(user).data)
 
     @extend_schema(
         summary='删除用户',
@@ -162,4 +162,4 @@ class UserDetailView(APIView):
     def delete(self, request, pk):
         enforce('user.delete', request, error_message='只有管理员可以删除用户')
         UserManagementService(request).delete_user(pk)
-        return no_content_response()
+        return Response(None)

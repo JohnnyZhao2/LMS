@@ -2,12 +2,12 @@
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import created_response, no_content_response, success_response
 
 from .serializers import (
     QuizCreateSerializer,
@@ -68,7 +68,7 @@ class QuizListCreateView(BaseAPIView):
         validated_data = serializer.validated_data
         questions = validated_data.pop('questions', [])
         quiz = self.service.create(data=validated_data, questions=questions)
-        return created_response(QuizDetailSerializer(quiz).data)
+        return Response(QuizDetailSerializer(quiz).data, status=201)
 
 
 class QuizDetailView(BaseAPIView):
@@ -87,7 +87,7 @@ class QuizDetailView(BaseAPIView):
     def get(self, request, pk):
         enforce('quiz.view', request, error_message='无权查看试卷详情')
         quiz = self.service.get_by_id(pk)
-        return success_response(QuizDetailSerializer(quiz).data)
+        return Response(QuizDetailSerializer(quiz).data)
 
     @extend_schema(
         summary='更新试卷',
@@ -109,7 +109,7 @@ class QuizDetailView(BaseAPIView):
         validated_data = serializer.validated_data
         questions = validated_data.pop('questions', None)
         quiz = self.service.update(pk=pk, data=validated_data, questions=questions)
-        return success_response(QuizDetailSerializer(quiz).data)
+        return Response(QuizDetailSerializer(quiz).data)
 
     @extend_schema(
         summary='删除试卷',
@@ -124,4 +124,4 @@ class QuizDetailView(BaseAPIView):
     def delete(self, request, pk):
         enforce('quiz.delete', request, error_message='无权删除试卷')
         self.service.delete(pk)
-        return no_content_response()
+        return Response(None)

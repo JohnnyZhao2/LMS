@@ -6,12 +6,12 @@ Implements unified interfaces and common functionality:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from core.responses import created_response, success_response
 
 from ..serializers import (
     SaveAnswerSerializer,
@@ -64,8 +64,8 @@ class StartQuizView(APIView):
         )
         response_serializer = SubmissionDetailSerializer(submission)
         if not created:
-            return success_response(response_serializer.data)
-        return created_response(response_serializer.data)
+            return Response(response_serializer.data)
+        return Response(response_serializer.data, status=201)
 
 
 class SubmitView(BaseAPIView):
@@ -94,7 +94,7 @@ class SubmitView(BaseAPIView):
         submission = self.service.get_submission_by_id(pk, user=request.user)
         submission = self.service.submit(submission)
         response_serializer = SubmissionDetailSerializer(submission)
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)
 
 
 class ResultView(BaseAPIView):
@@ -122,7 +122,7 @@ class ResultView(BaseAPIView):
                 message='答卷尚未提交'
             )
         response_serializer = SubmissionDetailSerializer(submission)
-        return success_response(response_serializer.data)
+        return Response(response_serializer.data)
 
 
 class SaveAnswerView(BaseAPIView):
@@ -160,7 +160,7 @@ class SaveAnswerView(BaseAPIView):
             user_answer=serializer.validated_data.get('user_answer', UNSET),
             is_marked=serializer.validated_data.get('is_marked', UNSET),
         )
-        return success_response(
+        return Response(
             data={
                 'question_id': answer.question_id,
                 'user_answer': answer.user_answer,

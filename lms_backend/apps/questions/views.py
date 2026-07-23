@@ -2,12 +2,12 @@
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import created_response, no_content_response, success_response
 
 from .serializers import (
     QuestionCreateSerializer,
@@ -79,7 +79,7 @@ class QuestionListCreateView(BaseAPIView):
         serializer = QuestionCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         question = self.service.create(data=serializer.validated_data)
-        return created_response(QuestionSerializer(question).data)
+        return Response(QuestionSerializer(question).data, status=201)
 
 
 class QuestionDetailView(BaseAPIView):
@@ -98,7 +98,7 @@ class QuestionDetailView(BaseAPIView):
     def get(self, request, pk):
         enforce('question.view', request, error_message='无权查看题目详情')
         question = self.service.get_by_id(pk)
-        return success_response(QuestionSerializer(question).data)
+        return Response(QuestionSerializer(question).data)
 
     @extend_schema(
         summary='更新题目',
@@ -117,7 +117,7 @@ class QuestionDetailView(BaseAPIView):
         serializer = QuestionUpdateSerializer(instance=question, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated_question = self.service.update(pk=pk, data=serializer.validated_data)
-        return success_response(QuestionSerializer(updated_question).data)
+        return Response(QuestionSerializer(updated_question).data)
 
     @extend_schema(
         summary='删除题目',
@@ -131,4 +131,4 @@ class QuestionDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         self.service.delete(pk=pk)
-        return no_content_response()
+        return Response(None)

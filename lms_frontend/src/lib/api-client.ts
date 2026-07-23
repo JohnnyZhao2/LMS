@@ -2,18 +2,14 @@ import { config } from '@/config/app-config';
 import { tokenStorage } from '@/lib/token-storage';
 import { z, type ZodType } from 'zod';
 
-/**
- * 统一 API 响应格式
- */
+/** 统一 API 响应 envelope */
 const apiResponseSchema = z.object({
   code: z.string(),
   message: z.string(),
   data: z.unknown(),
 });
 
-/**
- * API 错误类
- */
+/** API 错误 */
 export class ApiError extends Error {
   status: number;
   statusText: string;
@@ -21,30 +17,20 @@ export class ApiError extends Error {
   data?: unknown;
 
   constructor(status: number, statusText: string, data?: unknown) {
-    // 尝试从响应数据中提取错误信息
-    let message = `API Error: ${status} ${statusText}`;
-    let code: string | undefined;
-    
-    if (data && typeof data === 'object') {
-      const errorData = data as { code?: string; message?: string };
-      if (errorData.message) {
-        message = errorData.message;
-      }
-      code = errorData.code;
-    }
-    
-    super(message);
+    const errorData =
+      data && typeof data === 'object'
+        ? (data as { code?: string; message?: string })
+        : undefined;
+    super(errorData?.message ?? `API Error: ${status} ${statusText}`);
     this.name = 'ApiError';
     this.status = status;
     this.statusText = statusText;
-    this.code = code;
+    this.code = errorData?.code;
     this.data = data;
   }
 }
 
-/**
- * API 请求选项
- */
+/** API 请求选项 */
 interface ApiRequestOptions<T = unknown> extends RequestInit {
   skipAuth?: boolean;
   schema?: ZodType<T>;
@@ -52,43 +38,31 @@ interface ApiRequestOptions<T = unknown> extends RequestInit {
 
 /**
  * API 客户端。
- *
- * 后端统一返回 `{ code, message, data }`，调用方只拿 `data`。401 时集中刷新
- * token，页面层不需要各自处理刷新逻辑。
+ * 公共管道：buildRequest → sendWithRefresh → parseError；上层解析 JSON / Blob。
  */
 class ApiClient {
   private baseURL: string;
-  // 多个请求同时遇到 401 时，共享同一次 refresh，避免刷新令牌被并发消费。
   private refreshPromise: Promise<void> | null = null;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
   }
 
-  /**
-   * 刷新 token
-   */
+  /** 刷新 access token（单飞） */
   private async refreshToken(): Promise<void> {
-    if (this.refreshPromise) {
-      return this.refreshPromise;
-    }
+    if (this.refreshPromise) return this.refreshPromise;
 
     this.refreshPromise = (async () => {
       const response = await fetch(`${this.baseURL}/auth/refresh/`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
-
-      const responseData = apiResponseSchema.parse(await response.json());
-      const accessTokenPayload = z.object({ access_token: z.string().min(1) }).parse(responseData.data);
-      tokenStorage.setAccessTokenPayload(accessTokenPayload);
+      if (!response.ok) await this.parseError(response);
+      const envelope = apiResponseSchema.parse(await response.json());
+      tokenStorage.setAccessTokenPayload(
+        z.object({ access_token: z.string().min(1) }).parse(envelope.data),
+      );
     })();
 
     try {
@@ -101,204 +75,144 @@ class ApiClient {
     }
   }
 
+  /** 序列化请求体 */
   private buildBody(data?: unknown): BodyInit | undefined {
-    if (typeof FormData !== 'undefined' && data instanceof FormData) {
-      return data;
-    }
-
+    if (typeof FormData !== 'undefined' && data instanceof FormData) return data;
     return data ? JSON.stringify(data) : undefined;
   }
 
-  /**
-   * 发送请求
-   */
-  async request<T>(
+  /** 组装 URL / headers / fetchInit */
+  private buildRequest(
     endpoint: string,
-    options: ApiRequestOptions<T> = {},
-  ): Promise<T> {
-    const { skipAuth = false, schema, ...fetchOptions } = options;
-    const url = `${this.baseURL}${endpoint}`;
+    options: ApiRequestOptions = {},
+  ) {
+    const skipAuth = options.skipAuth ?? false;
+    const fetchOptions = { ...options };
+    delete fetchOptions.skipAuth;
+    delete fetchOptions.schema;
 
+    const url = endpoint.startsWith('http')
+      ? endpoint
+      : `${this.baseURL}${endpoint}`;
     const isFormData =
       typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
-
-    // FormData 不能手动设置 Content-Type，浏览器需要自动写入 boundary。
-    const headers: Record<string, string> = {};
-    if (!isFormData) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    // 合并现有 headers
-    if (fetchOptions.headers) {
-      const existingHeaders = fetchOptions.headers as Record<string, string>;
-      Object.assign(headers, existingHeaders);
-    }
+    const headers = new Headers(fetchOptions.headers);
 
     if (isFormData) {
-      delete headers['Content-Type'];
+      headers.delete('Content-Type');
+    } else if (fetchOptions.body !== undefined && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
     }
-
-    // 添加认证头
     if (!skipAuth) {
-      const accessToken = tokenStorage.getAccessToken();
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
+      const token = tokenStorage.getAccessToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
     }
 
-    // 发送请求
-    let response = await fetch(url, {
-      ...fetchOptions,
-      credentials: 'include',
-      headers,
-    });
-
-    // access token 过期时刷新后重放原请求；刷新失败只清理令牌，路由由认证上下文处理。
-    if (response.status === 401 && !skipAuth) {
-      try {
-        await this.refreshToken();
-        // 重新发送请求
-        const accessToken = tokenStorage.getAccessToken();
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-        response = await fetch(url, {
-          ...fetchOptions,
-          credentials: 'include',
-          headers,
-        });
-      } catch (error) {
-        tokenStorage.clearTokens();
-        throw error;
-      }
-    }
-
-    // 处理错误响应
-    if (!response.ok) {
-      let errorData: unknown;
-      try {
-        const text = await response.text();
-        try {
-          errorData = JSON.parse(text);
-        } catch {
-          errorData = text;
-        }
-      } catch {
-        errorData = undefined;
-      }
-      throw new ApiError(response.status, response.statusText, errorData);
-    }
-
-    // 处理空响应
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      return schema ? schema.parse(null) : null as T;
-    }
-
-    const envelope = apiResponseSchema.parse(await response.json());
-    return schema ? schema.parse(envelope.data) : envelope.data as T;
+    return {
+      url,
+      skipAuth,
+      fetchInit: { ...fetchOptions, credentials: 'include' as const, headers },
+    };
   }
 
-  /**
-   * GET 请求
-   */
-  get<T>(endpoint: string, options?: ApiRequestOptions<T>): Promise<T> {
+  /** 发送请求；401 时刷新后重放一次 */
+  private async sendWithRefresh(
+    url: string,
+    fetchInit: RequestInit,
+    skipAuth: boolean,
+  ): Promise<Response> {
+    const headers = new Headers(fetchInit.headers);
+    let response = await fetch(url, { ...fetchInit, headers });
+
+    if (response.status === 401 && !skipAuth) {
+      await this.refreshToken();
+      const token = tokenStorage.getAccessToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      response = await fetch(url, { ...fetchInit, headers });
+    }
+    return response;
+  }
+
+  /** 解析错误响应并抛出 ApiError */
+  private async parseError(response: Response): Promise<never> {
+    let errorData: unknown;
+    try {
+      const text = await response.text();
+      try {
+        errorData = JSON.parse(text);
+      } catch {
+        errorData = text;
+      }
+    } catch {
+      errorData = undefined;
+    }
+    throw new ApiError(response.status, response.statusText, errorData);
+  }
+
+  /** 公共发送：认证 / 刷新 / 错误解析 */
+  private async send(
+    endpoint: string,
+    options: ApiRequestOptions = {},
+  ): Promise<Response> {
+    const built = this.buildRequest(endpoint, options);
+    const response = await this.sendWithRefresh(
+      built.url,
+      built.fetchInit,
+      built.skipAuth,
+    );
+    if (!response.ok) await this.parseError(response);
+    return response;
+  }
+
+  /** JSON 请求，解包 envelope.data */
+  async request<T>(endpoint: string, options: ApiRequestOptions<T> = {}): Promise<T> {
+    const { schema } = options;
+    const response = await this.send(endpoint, options);
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      return schema ? schema.parse(null) : (null as T);
+    }
+    const envelope = apiResponseSchema.parse(await response.json());
+    return schema ? schema.parse(envelope.data) : (envelope.data as T);
+  }
+
+  get<T>(endpoint: string, options?: ApiRequestOptions<T>) {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  /**
-   * POST 请求
-   */
-  post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
-    const body = this.buildBody(data);
+  post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>) {
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body,
+      body: this.buildBody(data),
     });
   }
 
-  /**
-   * PUT 请求
-   */
-  put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
-    const body = this.buildBody(data);
+  put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>) {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body,
+      body: this.buildBody(data),
     });
   }
 
-  /**
-   * PATCH 请求
-   */
-  patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>): Promise<T> {
-    const body = this.buildBody(data);
+  patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions<T>) {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body,
+      body: this.buildBody(data),
     });
   }
 
-  /**
-   * DELETE 请求
-   */
-  delete<T>(endpoint: string, options?: ApiRequestOptions<T>): Promise<T> {
+  delete<T>(endpoint: string, options?: ApiRequestOptions<T>) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 
-  /**
-   * 下载二进制文件（Excel 等）
-   */
-  async download(endpoint: string, options?: ApiRequestOptions): Promise<Blob> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
-    const headers: Record<string, string> = {
-      ...(options?.headers as Record<string, string> | undefined),
-    };
-
-    if (!options?.skipAuth) {
-      const accessToken = tokenStorage.getAccessToken();
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-    }
-
-    let response = await fetch(url, {
-      ...options,
-      method: options?.method || 'GET',
-      credentials: 'include',
-      headers,
-    });
-
-    if (response.status === 401 && !options?.skipAuth) {
-      await this.refreshToken();
-      const accessToken = tokenStorage.getAccessToken();
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-      response = await fetch(url, {
-        ...options,
-        method: options?.method || 'GET',
-        credentials: 'include',
-        headers,
-      });
-    }
-
-    if (!response.ok) {
-      let errorData: unknown;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = undefined;
-      }
-      throw new ApiError(response.status, response.statusText, errorData);
-    }
-
+  /** 下载二进制，复用同一管道 */
+  async download(endpoint: string, options: ApiRequestOptions = {}): Promise<Blob> {
+    const response = await this.send(endpoint, { method: 'GET', ...options });
     return response.blob();
   }
 }
 
-// 导出单例
 export const apiClient = new ApiClient(config.apiUrl);

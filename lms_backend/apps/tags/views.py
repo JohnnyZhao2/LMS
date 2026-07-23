@@ -1,11 +1,11 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce
 from core.query_params import parse_int_query_param
-from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import TagSerializer
 from .services import (
@@ -52,7 +52,7 @@ class TagListCreateView(APIView):
             limit=limit,
         )
         serializer = TagSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        return Response(serializer.data)
 
     @extend_schema(
         summary='创建标签',
@@ -66,7 +66,7 @@ class TagListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
         tag = service.create(serializer.validated_data)
-        return created_response(TagSerializer(tag).data)
+        return Response(TagSerializer(tag).data, status=201)
 
 
 class TagDetailView(APIView):
@@ -84,7 +84,7 @@ class TagDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
         tag = service.update(pk, serializer.validated_data)
-        return success_response(TagSerializer(tag).data)
+        return Response(TagSerializer(tag).data)
 
     @extend_schema(
         summary='删除标签',
@@ -95,7 +95,7 @@ class TagDetailView(APIView):
         enforce('tag.delete', request, error_message='无权删除标签')
         service = TagService(request)
         service.delete(pk)
-        return no_content_response()
+        return Response(None)
 
 
 class TagMergeSerializer(serializers.Serializer):
@@ -131,7 +131,7 @@ class TagMergeView(APIView):
             serializer.validated_data['source_tag_ids'],
             serializer.validated_data['merged_name'],
         )
-        return success_response(TagSerializer(tag).data)
+        return Response(TagSerializer(tag).data)
 
 
 class TagReorderView(APIView):
@@ -149,4 +149,4 @@ class TagReorderView(APIView):
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
         service.reorder_spaces(serializer.validated_data['ordered_tag_ids'])
-        return success_response()
+        return Response(None)
