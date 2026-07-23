@@ -29,9 +29,11 @@ import type {
   SpotCheckStudent,
 } from '@/features/spot-checks/types/spot-check';
 import { showApiError } from '@/lib/api-error-handler';
-import { useDeleteSpotCheck } from '@/features/spot-checks/api/delete-spot-check';
-import { useSpotCheckStudents } from '@/features/spot-checks/api/get-spot-check-students';
-import { useSpotChecks } from '@/features/spot-checks/api/get-spot-checks';
+import {
+  useDeleteSpotCheck,
+  useSpotCheckStudents,
+  useSpotChecks,
+} from '@/features/spot-checks/api/spot-checks-queries';
 import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
 import { SPOT_CHECK_FORM_DIALOG_CLASSNAME } from '@/features/spot-checks/constants/spot-check-dialog';
 import { SpotCheckRecordList } from '@/features/spot-checks/components/spot-check-record-list';

@@ -3,8 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { showApiError } from '@/lib/api-error-handler';
-import { useCreateTag } from '@/features/tags/api/create-tag';
-import { useTags } from '@/features/tags/api/get-tags';
+import { useCreateTag, useTags } from '@/features/tags/api/tags-queries';
 
 interface TagInputProps {
   applicableTo: 'knowledge' | 'question';

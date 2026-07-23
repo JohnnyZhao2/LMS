@@ -15,10 +15,12 @@ import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/common';
 
-import { useInfiniteKnowledgeList } from '@/features/knowledge/api/get-knowledge-list';
-import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
-import { useDeleteKnowledge } from '@/features/knowledge/api/delete-knowledge';
-import { useIncrementViewCount } from '@/features/knowledge/api/increment-view-count';
+import {
+  useCreateKnowledge,
+  useDeleteKnowledge,
+  useIncrementViewCount,
+  useInfiniteKnowledgeList,
+} from '@/features/knowledge/api/knowledge-queries';
 import { useKnowledgeFilters } from '@/features/knowledge/hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '@/features/knowledge/utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '@/features/knowledge/utils/slash-shortcuts';

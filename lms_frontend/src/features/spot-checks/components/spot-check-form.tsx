@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { ApiError } from '@/lib/api-client';
-import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation/spot-checks';
 import { cn } from '@/lib/utils';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type {
@@ -32,10 +31,13 @@ import type {
   SpotCheckStudent,
 } from '@/features/spot-checks/types/spot-check';
 import { showApiError } from '@/lib/api-error-handler';
-import { useCreateSpotCheck } from '@/features/spot-checks/api/create-spot-check';
-import { useSpotCheckBatchPeers } from '@/features/spot-checks/api/get-spot-check-batch-peers';
-import { useSpotCheckDetail } from '@/features/spot-checks/api/get-spot-check';
-import { useScoreSpotCheck } from '@/features/spot-checks/api/score-spot-check';
+import {
+  invalidateAfterSpotCheckMutation,
+  useCreateSpotCheck,
+  useScoreSpotCheck,
+  useSpotCheckBatchPeers,
+  useSpotCheckDetail,
+} from '@/features/spot-checks/api/spot-checks-queries';
 import { SPOT_CHECK_STATUS_META } from '@/features/spot-checks/constants/spot-check-status';
 import {
   SpotCheckItemEditor,

@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { getQuestion } from '@/features/assessment/api/questions/get-question-detail';
-import { useQuestions } from '@/features/assessment/api/questions/get-questions';
+import { getQuestion } from '@/features/assessment/api/questions-api';
+import { useQuestions } from '@/features/assessment/api/questions-queries';
 import { QuestionBankPanel } from '@/features/assessment/components/questions/question-bank-panel';
 import { QuestionDetailDialog } from '@/features/assessment/components/questions/question-detail-dialog';
 import type { AssessmentTagDeps } from '@/features/assessment/types/tag-deps';

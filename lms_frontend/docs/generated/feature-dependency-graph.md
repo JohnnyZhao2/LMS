@@ -15,18 +15,18 @@ flowchart LR
   config["config"]
   testing["testing"]
   types["types"]
-  app -->|47| features
+  app -->|45| features
   app -->|15| components
   app -->|3| hooks
   app -->|20| lib
   app -->|20| config
   app -->|8| types
   features -->|310| components
-  features -->|61| hooks
-  features -->|323| lib
+  features -->|34| hooks
+  features -->|204| lib
   features -->|3| utils
   features -->|19| config
-  features -->|165| types
+  features -->|122| types
   components -->|45| lib
   hooks -->|2| lib
   hooks -->|2| config
@@ -42,18 +42,18 @@ flowchart LR
 
 | From | To | Imports |
 |------|----|---------|
-| `app` | `features` | 47 |
+| `app` | `features` | 45 |
 | `app` | `components` | 15 |
 | `app` | `hooks` | 3 |
 | `app` | `lib` | 20 |
 | `app` | `config` | 20 |
 | `app` | `types` | 8 |
 | `features` | `components` | 310 |
-| `features` | `hooks` | 61 |
-| `features` | `lib` | 323 |
+| `features` | `hooks` | 34 |
+| `features` | `lib` | 204 |
 | `features` | `utils` | 3 |
 | `features` | `config` | 19 |
-| `features` | `types` | 165 |
+| `features` | `types` | 122 |
 | `components` | `lib` | 45 |
 | `hooks` | `lib` | 2 |
 | `hooks` | `config` | 2 |
@@ -68,11 +68,19 @@ flowchart LR
 
 ## Cross-feature 直接依赖
 
-当前未发现 feature 对其他 feature 的直接源码依赖。
+| From Feature | To Feature | Imports |
+|--------------|------------|---------|
+| `assessment` | `tasks` | 2 |
+| `knowledge` | `tasks` | 1 |
+| `tags` | `assessment` | 1 |
+| `tags` | `knowledge` | 1 |
+| `tags` | `tasks` | 1 |
+| `tasks` | `assessment` | 1 |
+| `tasks` | `user-management` | 1 |
 
 ## 边界监控
 
 - `feature -> app`：0
-- `cross-feature`：0
+- `cross-feature`：8
 - `shared -> feature`：0
 - `shared -> app`：0

@@ -48,6 +48,26 @@ const featureBoundaryConfigs = featureNames.map((featureName) => ({
   },
 }))
 
+/** 仅 api/*-queries.ts 可跨 Feature 导入其它 Feature 的 api/*-queries（queryKeys / invalidate） */
+const featureQueryCrossImportConfigs = featureNames.map((featureName) => ({
+  files: [`src/features/${featureName}/api/*-queries.ts`],
+  rules: {
+    'no-restricted-imports': ['error', {
+      patterns: [
+        ...sourceImportPatterns,
+        {
+          regex: `^@/features/(?!${featureName}(?:/|$))(?!.*\\/api\\/[\\w-]+-queries$).+`,
+          message: '跨 feature 仅允许从 api/*-queries 导入 queryKeys/invalidate。',
+        },
+        {
+          group: ['@/app', '@/app/*'],
+          message: 'feature 不应依赖 app，请把路由和页面拼装留在 app 层。',
+        },
+      ],
+    }],
+  },
+}))
+
 export default defineConfig([
   globalIgnores(['dist']),
   {
@@ -95,4 +115,5 @@ export default defineConfig([
     },
   },
   ...featureBoundaryConfigs,
+  ...featureQueryCrossImportConfigs,
 ])

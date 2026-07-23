@@ -4,7 +4,7 @@
 import { useSearchParams } from 'react-router-dom';
 
 import { GradingCenterPage } from '@/features/assessment/components/grading/grading-center-page';
-import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { useTaskDetail } from '@/features/tasks/api/tasks-queries';
 
 export const GradingCenterRoutePage = () => {
   const [searchParams] = useSearchParams();

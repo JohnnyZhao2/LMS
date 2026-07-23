@@ -36,9 +36,9 @@ import { cn } from '@/lib/utils';
 import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
-import { useCompleteKnowledge } from '@/features/tasks/api/complete-knowledge';
-import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-student-learning-task-detail';
-import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { useCompleteKnowledge } from '@/features/tasks/api/tasks-queries';
+import { useStudentLearningTaskDetail } from '@/features/tasks/api/tasks-queries';
+import { useTaskDetail } from '@/features/tasks/api/tasks-queries';
 import type { TaskKnowledgePreviewProps } from '@/features/tasks/components/task-form/task-form';
 
 interface KnowledgeListViewItem {

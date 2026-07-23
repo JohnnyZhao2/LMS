@@ -1,13 +1,16 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useDepartments } from '@/features/user-management/api/users/get-departments';
-import { useRoles } from '@/features/user-management/api/roles/get-roles';
-import { useUserDetail } from '@/features/user-management/api/users/get-user-detail';
-import { useUsers } from '@/features/user-management/api/users/get-users';
-import { useUpdateUser } from '@/features/user-management/api/users/update-user';
+import { isAllowedDepartmentCode } from '@/features/user-management/api/users-api';
+import {
+  useDepartments,
+  useRoles,
+  useUpdateUser,
+  useUserDetail,
+  useUsers,
+} from '@/features/user-management/api/users-queries';
 import { useAuth } from '@/lib/auth-context';
-import { useResetUserAuthorization } from '@/features/user-management/api/authorization/user-authorization';
+import { useResetUserAuthorization } from '@/features/user-management/api/authorization-queries';
 import { showApiError } from '@/lib/api-error-handler';
 import { buildPermissionModuleSections } from '@/features/user-management/utils/permission-sections';
 import {

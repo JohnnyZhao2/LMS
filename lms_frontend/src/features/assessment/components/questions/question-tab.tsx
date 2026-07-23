@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
-import { useQuestions } from '@/features/assessment/api/questions/get-questions';
-import { useDeleteQuestion } from '@/features/assessment/api/questions/delete-question';
+import { useDeleteQuestion, useQuestions } from '@/features/assessment/api/questions-queries';
 import { QuestionDetailDialog } from '@/features/assessment/components/questions/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';

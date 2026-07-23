@@ -12,14 +12,16 @@ import {
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
-import { useActivateUser } from '@/features/user-management/api/users/activate-user'
-import { useChangePassword } from '@/features/user-management/api/users/change-user-password'
-import { useDeactivateUser } from '@/features/user-management/api/users/deactivate-user'
-import { useDeleteUser } from '@/features/user-management/api/users/delete-user'
-import { useMentors } from '@/features/user-management/api/users/get-mentors'
-import { useUpdateUserAvatar } from '@/features/user-management/api/users/update-user-avatar'
-import { useDepartments } from '@/features/user-management/api/users/get-departments'
-import { useUsers } from '@/features/user-management/api/users/get-users'
+import {
+  useActivateUser,
+  useChangePassword,
+  useDeactivateUser,
+  useDeleteUser,
+  useDepartments,
+  useMentors,
+  useUpdateUserAvatar,
+  useUsers,
+} from '@/features/user-management/api/users-queries'
 import { UserForm } from "@/features/user-management/components/users/user-form"
 import { AvatarPickerPopover } from '@/features/user-management/components/users/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"

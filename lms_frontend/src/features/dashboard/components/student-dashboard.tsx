@@ -8,8 +8,10 @@ import {
   CheckCircle2,
   GraduationCap,
 } from 'lucide-react';
-import { useTaskParticipants } from '@/features/dashboard/api/get-task-participants';
-import { useStudentDashboard } from '@/features/dashboard/api/student-dashboard';
+import {
+  useStudentDashboard,
+  useTaskParticipants,
+} from '@/features/dashboard/api/dashboard-queries';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';

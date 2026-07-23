@@ -29,7 +29,7 @@ import type {
   ExamReportView,
 } from '@/features/dashboard/types/dashboard';
 
-import { useExamReport } from '@/features/dashboard/api/exam-report';
+import { useExamReport } from '@/features/dashboard/api/dashboard-queries';
 import { ExamReportExportDialog } from '@/features/dashboard/components/exam-report-export-dialog';
 import { VIEW_OPTIONS } from '@/features/dashboard/components/exam-report-view-meta';
 

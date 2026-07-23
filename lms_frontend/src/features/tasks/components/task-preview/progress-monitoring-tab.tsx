@@ -20,8 +20,8 @@ import type {
   StudentExecution,
   TaskAnalytics,
 } from '@/types/task-analytics';
-import { useStudentExecutions } from '@/features/tasks/api/get-student-executions';
-import { useTaskAnalytics } from '@/features/tasks/api/get-task-analytics';
+import { useStudentExecutions } from '@/features/tasks/api/tasks-queries';
+import { useTaskAnalytics } from '@/features/tasks/api/tasks-queries';
 import { IconBox } from '@/components/common/icon-box';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { StatCard } from '@/components/ui/stat-card';

@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { usePermissionCatalog } from '@/features/user-management/api/authorization/get-permission-catalog';
-import { useRolePermissionTemplates } from '@/features/user-management/api/authorization/role-authorization';
 import {
+  usePermissionCatalog,
   useReplaceUserAuthorization,
+  useRolePermissionTemplates,
   useUserAuthorization,
-} from '@/features/user-management/api/authorization/user-authorization';
+} from '@/features/user-management/api/authorization-queries';
 import type { ScopeType, UserAuthorizationState } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import type { Department, UserList as UserDetail } from '@/types/common';
@@ -15,7 +15,7 @@ import {
   buildPermissionModuleSections,
 } from '@/features/user-management/utils/permission-sections';
 
-import { useUsers } from '@/features/user-management/api/users/get-users';
+import { useUsers } from '@/features/user-management/api/users-queries';
 import {
   pickDefaultScopeType,
 } from '@/features/user-management/components/authorization/user-form.utils';

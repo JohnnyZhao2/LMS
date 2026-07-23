@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatScore } from '@/lib/score';
-import { usePracticeResult, useExamResult } from '@/features/assessment/api/submissions/get-result';
+import { useExamResult, usePracticeResult } from '@/features/assessment/api/submissions-queries';
 import { QuestionCard } from '@/features/assessment/components/submissions/question-card';
 
 interface AnswerReviewProps {

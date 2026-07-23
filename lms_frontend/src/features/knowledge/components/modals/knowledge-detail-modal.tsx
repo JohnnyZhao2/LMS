@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { useKnowledgeDetail } from '@/features/knowledge/api/use-knowledge-detail';
-import { useCreateKnowledge } from '@/features/knowledge/api/create-knowledge';
-import { useUpdateKnowledge } from '@/features/knowledge/api/update-knowledge';
-import { useParseDocument } from '@/features/knowledge/api/parse-document';
+import {
+  useCreateKnowledge,
+  useKnowledgeDetail,
+  useParseDocument,
+  useUpdateKnowledge,
+} from '@/features/knowledge/api/knowledge-queries';
 import { useKnowledgeModalInteractions } from '@/features/knowledge/hooks/use-knowledge-modal-interactions';
 import { useAuth } from '@/lib/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeUpdateRequest } from '@/types/knowledge';

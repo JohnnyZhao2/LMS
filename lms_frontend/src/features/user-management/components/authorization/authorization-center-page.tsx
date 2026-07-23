@@ -6,11 +6,11 @@ import { showApiError } from '@/lib/api-error-handler';
 import type { RoleAuthorizationState } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
-import { usePermissionCatalog } from '@/features/user-management/api/authorization/get-permission-catalog';
 import {
+  usePermissionCatalog,
   useReplaceRolePermissionTemplate,
   useRolePermissionTemplates,
-} from '@/features/user-management/api/authorization/role-authorization';
+} from '@/features/user-management/api/authorization-queries';
 import {
   reconcileAuthorizationScopes,
   toAuthorizationFormState,

@@ -3,8 +3,10 @@ import { Activity, BookOpenText, ShieldCheck, UserRound, Zap } from 'lucide-reac
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { showApiError } from '@/lib/api-error-handler';
-import { useActivityLogPolicies } from '@/features/activity-logs/api/get-activity-log-policies';
-import { useUpdateActivityLogPolicy } from '@/features/activity-logs/api/update-activity-log-policy';
+import {
+  useActivityLogPolicies,
+  useUpdateActivityLogPolicy,
+} from '@/features/activity-logs/api/activity-logs-queries';
 import type { ActivityLogPolicy, ActivityLogType } from '@/features/activity-logs/types';
 import { ActivityLogPolicyCategorySection } from '@/features/activity-logs/components/activity-log-policy-category-section';
 

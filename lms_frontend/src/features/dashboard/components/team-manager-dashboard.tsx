@@ -20,8 +20,7 @@ import type {
   TeamManagerDepartmentStudentViewItem,
 } from '@/features/dashboard/types/dashboard';
 
-import { useTeamManagerDashboard } from '@/features/dashboard/api/team-manager-dashboard';
-
+import { useTeamManagerDashboard } from '@/features/dashboard/api/dashboard-queries';
 const cardTitleClass =
   'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';
 

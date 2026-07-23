@@ -20,7 +20,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getWorkspaceHome } from '@/config/role-paths';
 import { showApiError } from '@/lib/api-error-handler';
 import { ApiError } from '@/lib/api-client';
-import { beginOneAccountLogin } from '@/features/auth/api/get-one-account-authorize-url';
+import { getOneAccountAuthorizeUrl } from '@/features/auth/api/auth-api';
 
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
@@ -74,7 +74,8 @@ export const LoginForm: React.FC = () => {
   const handleOneAccountLogin = async () => {
     setPendingAction('one-account');
     try {
-      await beginOneAccountLogin();
+      const result = await getOneAccountAuthorizeUrl();
+      window.location.assign(result.authorize_url);
     } catch (error) {
       if (error instanceof ApiError) {
         showApiError(error, '获取扫码登录地址失败');

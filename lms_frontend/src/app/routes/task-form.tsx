@@ -4,7 +4,7 @@
 import { useSearchParams } from 'react-router-dom';
 
 import { knowledgeTagDeps } from '@/app/tag-deps';
-import { useQuizDetail } from '@/features/assessment/api/quizzes/get-quiz-detail';
+import { useQuizDetail } from '@/features/assessment/api/quizzes-queries';
 import { QuizPreviewDialog } from '@/features/assessment/components/quizzes/quiz-preview-dialog';
 import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 import {

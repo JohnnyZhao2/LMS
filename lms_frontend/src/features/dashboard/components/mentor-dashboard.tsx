@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
 import { Card } from '@/components/ui/card';
 
-import { useMentorDashboard } from '@/features/dashboard/api/mentor-dashboard';
+import { useMentorDashboard } from '@/features/dashboard/api/dashboard-queries';
 import { ExamReportPanel } from '@/features/dashboard/components/exam-report-panel';
 
 

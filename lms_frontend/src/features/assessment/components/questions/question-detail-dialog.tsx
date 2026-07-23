@@ -3,8 +3,7 @@ import { Calendar, Circle, PencilLine, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { SelectionIndicator } from '@/components/common/selection-indicator';
-import { useQuestionDetail } from '@/features/assessment/api/questions/get-question-detail';
-import { useUpdateQuestion } from '@/features/assessment/api/questions/update-question';
+import { useQuestionDetail, useUpdateQuestion } from '@/features/assessment/api/questions-queries';
 import { QuestionDetailPreview } from '@/features/assessment/components/questions/question-detail-preview';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';

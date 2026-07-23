@@ -8,8 +8,8 @@ import {
     BarChart3,
     FileCheck,
 } from "lucide-react"
-import { useTaskList } from "@/features/tasks/api/get-tasks"
-import { useDeleteTask } from "@/features/tasks/api/delete-task"
+import { useTaskList } from "@/features/tasks/api/tasks-queries"
+import { useDeleteTask } from "@/features/tasks/api/tasks-queries"
 import { useAuth } from "@/lib/auth-context"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';

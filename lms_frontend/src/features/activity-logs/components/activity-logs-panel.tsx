@@ -21,8 +21,10 @@ import { useAuth } from '@/lib/auth-context';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { showApiError } from '@/lib/api-error-handler';
 import { cn } from '@/lib/utils';
-import { useBulkDeleteActivityLogs } from '@/features/activity-logs/api/bulk-delete-activity-logs';
-import { useActivityLogs } from '@/features/activity-logs/api/get-activity-logs';
+import {
+  useActivityLogs,
+  useBulkDeleteActivityLogs,
+} from '@/features/activity-logs/api/activity-logs-queries';
 import { ActivityLogFeed } from '@/features/activity-logs/components/activity-log-feed';
 import { ActivityLogMemberList } from '@/features/activity-logs/components/activity-log-member-list';
 import type {

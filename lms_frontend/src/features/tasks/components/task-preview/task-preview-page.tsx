@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { useTaskDetail } from '@/features/tasks/api/tasks-queries';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { ProgressMonitoringTab } from '@/features/tasks/components/task-preview/progress-monitoring-tab';

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import type { ExamReportFiltersState, ExamReportView } from '@/features/dashboard/types/dashboard';
 
-import { downloadExamReport } from '@/features/dashboard/api/download-exam-report';
+import { downloadExamReport } from '@/features/dashboard/api/dashboard-api';
 import { VIEW_META } from '@/features/dashboard/components/exam-report-view-meta';
 
 interface ExamReportExportDialogProps<TData> {

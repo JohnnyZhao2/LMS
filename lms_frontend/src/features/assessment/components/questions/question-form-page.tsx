@@ -2,10 +2,12 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useQuestionDetail } from '@/features/assessment/api/questions/get-question-detail';
-import { useCreateQuestion } from '@/features/assessment/api/questions/create-question';
-import { useDeleteQuestion } from '@/features/assessment/api/questions/delete-question';
-import { useUpdateQuestion } from '@/features/assessment/api/questions/update-question';
+import {
+  useCreateQuestion,
+  useDeleteQuestion,
+  useQuestionDetail,
+  useUpdateQuestion,
+} from '@/features/assessment/api/questions-queries';
 import { QuestionBatchEditor } from '@/features/assessment/components/questions/question-batch-editor';
 import { createBlankEditableQuestion, questionToEditableItem } from '@/features/assessment/components/questions/question-editor-helpers';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';

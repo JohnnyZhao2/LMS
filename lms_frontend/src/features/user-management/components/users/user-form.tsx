@@ -36,12 +36,14 @@ import {
   isAssignableRoleCode,
 } from '@/utils/authorization/user-role-assignment';
 
-import { useCreateUser } from '@/features/user-management/api/users/create-user';
-import { useMentors } from '@/features/user-management/api/users/get-mentors';
-import { useUpdateUser } from '@/features/user-management/api/users/update-user';
-import { useDepartments } from '@/features/user-management/api/users/get-departments';
-import { useRoles } from '@/features/user-management/api/roles/get-roles';
-import { useUserDetail } from '@/features/user-management/api/users/get-user-detail';
+import {
+  useCreateUser,
+  useDepartments,
+  useMentors,
+  useRoles,
+  useUpdateUser,
+  useUserDetail,
+} from '@/features/user-management/api/users-queries';
 import { showApiError } from '@/lib/api-error-handler';
 import type { RoleCode } from '@/types/common';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';

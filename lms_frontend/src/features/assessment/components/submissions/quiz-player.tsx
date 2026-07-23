@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
-import { useStartQuiz } from '@/features/assessment/api/submissions/start-quiz';
-import { useSubmitQuiz } from '@/features/assessment/api/submissions/submit-quiz';
-import { useSaveAnswer } from '@/features/assessment/api/submissions/save-answer';
+import {
+  useSaveAnswer,
+  useStartQuiz,
+  useSubmitQuiz,
+} from '@/features/assessment/api/submissions-queries';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Spinner } from '@/components/ui/spinner';
 import { buildQuestionSections } from '@/features/assessment/components/questions/question-sections';

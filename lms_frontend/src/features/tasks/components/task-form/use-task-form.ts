@@ -8,15 +8,14 @@ import { showApiError } from '@/lib/api-error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
 import type { QuizDetail } from '@/types/quiz';
-import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
-
 import {
+  useAssignableUsers,
   useCreateTask,
+  useTaskDetail,
+  useTaskResourceOptions,
+  useUpdateTask,
   type TaskCreateRequest,
-} from '@/features/tasks/api/create-task';
-import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
-import { useTaskResourceOptions } from '@/features/tasks/api/get-task-resources';
-import { useUpdateTask } from '@/features/tasks/api/update-task';
+} from '@/features/tasks/api/tasks-queries';
 import type {
   ResourceItem,
   SelectedResource,

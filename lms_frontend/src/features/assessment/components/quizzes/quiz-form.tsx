@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { getQuestion } from '@/features/assessment/api/questions/get-question-detail';
+import { getQuestion } from '@/features/assessment/api/questions-api';
 import { QuestionBankPicker } from '@/features/assessment/components/questions/question-bank-picker';
 import {
   createBlankEditableQuestion,
@@ -27,9 +27,11 @@ import type { Question } from '@/types/question';
 import type { QuizCreateRequest, QuizQuestion, QuizType } from '@/types/quiz';
 import { showApiError } from '@/lib/api-error-handler';
 
-import { useCreateQuiz } from '@/features/assessment/api/quizzes/create-quiz';
-import { useUpdateQuiz } from '@/features/assessment/api/quizzes/update-quiz';
-import { useQuizDetail } from '@/features/assessment/api/quizzes/get-quiz-detail';
+import {
+  useCreateQuiz,
+  useQuizDetail,
+  useUpdateQuiz,
+} from '@/features/assessment/api/quizzes-queries';
 import type { InlineQuestionItem, QuizDraftState } from '@/features/assessment/components/quizzes/quiz-editor-types';
 
 import { QuizDocumentEditor } from '@/features/assessment/components/quizzes/quiz-document-editor';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Inbox } from 'lucide-react';
-import { useStudentTasks } from '@/features/tasks/api/get-student-tasks';
+import { useStudentTasks } from '@/features/tasks/api/tasks-queries';
 import { TaskCard } from '@/features/tasks/components/task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';

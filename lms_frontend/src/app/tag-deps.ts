@@ -2,9 +2,11 @@
  * app 层组装 Tags 实现，注入 Knowledge / Assessment 声明的能力契约。
  * 跨 feature 组合只允许发生在 app 层。
  */
-import { useCreateTag } from '@/features/tags/api/create-tag';
-import { useDeleteTag } from '@/features/tags/api/delete-tag';
-import { useTags } from '@/features/tags/api/get-tags';
+import {
+  useCreateTag,
+  useDeleteTag,
+  useTags,
+} from '@/features/tags/api/tags-queries';
 import { SpaceTagQuickCreateDialog } from '@/features/tags/components/space-tag-quick-create-dialog';
 import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
 import { TagInput } from '@/features/tags/components/tag-input';

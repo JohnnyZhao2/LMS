@@ -44,7 +44,7 @@ src/features/awesome-feature/
 - **camelCase** for functions and variables
 
 ### Architecture Rules
-- **No cross-feature imports** - Features should not import from each other
+- **No cross-feature imports** - Features should not import from each other（例外：`api/*-queries.ts` 可导入其它 Feature 的 `api/*-queries`）
 - **Unidirectional flow** - Code flows: shared → features → app
 - **Colocation** - Keep related code as close as possible to where it's used
 
@@ -75,7 +75,7 @@ src/features/awesome-feature/
 ### Server State
 - **React Query (TanStack Query)** for all server state management
 - **MSW (Mock Service Worker)** for API mocking during development
-- Separate fetcher functions from hooks
+- Separate fetcher functions (`*-api.ts`) from hooks (`*-queries.ts`)
 
 ### Form State
 - **React Hook Form** for form management
@@ -85,25 +85,51 @@ src/features/awesome-feature/
 ## API Layer
 
 ### Structure
-Each API endpoint should have:
-1. **Types & validation schemas** for request/response
-2. **Fetcher function** using configured API client
-3. **React Query hook** for data fetching/caching
+每个业务资源两个文件（放在 feature 的 `api/` 下）：
+
+1. **`<resource>-api.ts`** — 纯 fetcher（`apiClient`）
+2. **`<resource>-queries.ts`** — `queryKeys` + invalidate helpers + React Query hooks
 
 ### Example Pattern
 ```typescript
-// api/get-discussions.ts
-export const getDiscussions = (params: GetDiscussionsParams): Promise<Discussion[]> => {
-  return api.get('/discussions', { params });
+// api/discussions-api.ts
+export const getDiscussions = (params: GetDiscussionsParams) => {
+  return apiClient.get<Discussion[]>('/discussions', { params });
 };
+
+export const createDiscussion = (data: CreateDiscussionRequest) => {
+  return apiClient.post<Discussion>('/discussions/', data);
+};
+
+// api/discussions-queries.ts
+export const discussionsQueryKeys = {
+  all: () => ['discussions'] as const,
+  list: (params: GetDiscussionsParams) => ['discussions', params] as const,
+} as const;
+
+export const invalidateAfterDiscussionMutation = (queryClient: QueryClient) =>
+  invalidateMany(queryClient, [discussionsQueryKeys.all()]);
 
 export const useDiscussions = (params: GetDiscussionsParams) => {
   return useQuery({
-    queryKey: ['discussions', params],
+    queryKey: discussionsQueryKeys.list(params),
     queryFn: () => getDiscussions(params),
   });
 };
+
+export const useCreateDiscussion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createDiscussion,
+    onSuccess: () => invalidateAfterDiscussionMutation(queryClient),
+  });
+};
 ```
+
+### Cross-feature query keys
+- 默认禁止跨 Feature import
+- **例外**：仅 `api/*-queries.ts` 可导入其它 Feature 的 `api/*-queries`（用于跨域 cache invalidation / 共用 queryKeys）
+- 业务组件与 `*-api.ts` 仍禁止跨 Feature
 
 ## Testing Strategy
 
