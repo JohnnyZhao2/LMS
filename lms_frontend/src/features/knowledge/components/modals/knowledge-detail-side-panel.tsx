@@ -31,9 +31,7 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
   onRelatedLinksBlur,
   onRemoveRelatedLink,
 }) => {
-  if (!canUpdateKnowledge && activeRelatedLinks.length === 0) {
-    return null;
-  }
+  if (!canUpdateKnowledge && activeRelatedLinks.length === 0) return null;
 
   return (
     <div className="kd-section" ref={relatedLinksSectionRef}>
@@ -47,7 +45,6 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
                 onAddRelatedLink();
                 return;
               }
-
               onOpenRelatedLinksEditor(activeRelatedLinks.length === 0);
             }}
             className="kg-ghost-icon-btn krl-add-btn"
@@ -102,26 +99,32 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
   );
 };
 
-interface KnowledgeDetailSidePanelProps {
+type SidePanelDraft = {
   knowledge?: KnowledgeDetailType;
-  isCreateMode?: boolean;
-  activeTitle: string;
-  activeTags: SimpleTag[];
-  activeRelatedLinks: RelatedLink[];
-  activeSpaceTagId: number | null;
+  title: string;
+  tags: SimpleTag[];
+  relatedLinks: RelatedLink[];
+  spaceTagId: number | null;
   spaces: SimpleTag[];
   updatedRelativeTime: string;
+  showTagInput: boolean;
+  showSpaceTags: boolean;
+  editingLinks: boolean;
+  hasContentChanges: boolean;
+  isSaving: boolean;
+  canSave: boolean;
+  isUploading: boolean;
+  learningAction: ReactNode;
+};
+
+type SidePanelPermissions = {
+  isCreateMode: boolean;
   canUpdateKnowledge: boolean;
   canDeleteKnowledge: boolean;
   shouldShowSystemTagsSection: boolean;
-  showTagInput: boolean;
-  showSpaceTags: boolean;
-  hasContentChanges: boolean;
-  editingLinks: boolean;
-  isSaving: boolean;
-  canSave?: boolean;
-  isUploading?: boolean;
-  learningAction: ReactNode;
+};
+
+type SidePanelActions = {
   relatedLinksSectionRef: RefObject<HTMLDivElement | null>;
   TagAssignmentSection: KnowledgeTagDeps['TagAssignmentSection'];
   onTitleChange: (value: string) => void;
@@ -140,48 +143,59 @@ interface KnowledgeDetailSidePanelProps {
   onCancelEdit?: () => void;
   onSave: () => void;
   onUpload?: () => void;
+};
+
+interface KnowledgeDetailSidePanelProps {
+  draft: SidePanelDraft;
+  permissions: SidePanelPermissions;
+  actions: SidePanelActions;
 }
 
 export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> = ({
-  knowledge,
-  isCreateMode = false,
-  activeTitle,
-  activeTags,
-  activeRelatedLinks,
-  activeSpaceTagId,
-  spaces,
-  updatedRelativeTime,
-  canUpdateKnowledge,
-  canDeleteKnowledge,
-  shouldShowSystemTagsSection,
-  showTagInput,
-  showSpaceTags,
-  hasContentChanges,
-  editingLinks,
-  isSaving,
-  canSave = true,
-  isUploading = false,
-  learningAction,
-  relatedLinksSectionRef,
-  TagAssignmentSection,
-  onTitleChange,
-  onTitleBlur,
-  onShowTagInputChange,
-  onAddTag,
-  onRemoveTag,
-  onOpenRelatedLinksEditor,
-  onAddRelatedLink,
-  onRelatedLinkChange,
-  onRelatedLinksBlur,
-  onRemoveRelatedLink,
-  onToggleSpaceTags,
-  onSpaceTagSelect,
-  onDelete,
-  onCancelEdit,
-  onSave,
-  onUpload,
+  draft: {
+    knowledge,
+    title: activeTitle,
+    tags: activeTags,
+    relatedLinks: activeRelatedLinks,
+    spaceTagId: activeSpaceTagId,
+    spaces,
+    updatedRelativeTime,
+    showTagInput,
+    showSpaceTags,
+    editingLinks,
+    hasContentChanges,
+    isSaving,
+    canSave,
+    isUploading,
+    learningAction,
+  },
+  permissions: {
+    isCreateMode,
+    canUpdateKnowledge,
+    canDeleteKnowledge,
+    shouldShowSystemTagsSection,
+  },
+  actions: {
+    relatedLinksSectionRef,
+    TagAssignmentSection,
+    onTitleChange,
+    onTitleBlur,
+    onShowTagInputChange,
+    onAddTag,
+    onRemoveTag,
+    onOpenRelatedLinksEditor,
+    onAddRelatedLink,
+    onRelatedLinkChange,
+    onRelatedLinksBlur,
+    onRemoveRelatedLink,
+    onToggleSpaceTags,
+    onSpaceTagSelect,
+    onDelete,
+    onCancelEdit,
+    onSave,
+    onUpload,
+  },
 }) => (
-
   <div className="kd-right">
     <div className="kd-right-header">
       {canUpdateKnowledge ? (
@@ -275,9 +289,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
             >
               <span
                 className="kd-linetype-dot"
-                style={{
-                  borderColor: activeSpaceTagId === space.id ? '#e8793a' : '#ccc',
-                }}
+                style={{ borderColor: activeSpaceTagId === space.id ? '#e8793a' : '#ccc' }}
               >
                 {activeSpaceTagId === space.id && (
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#e8793a' }} />
@@ -291,13 +303,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
 
       {isCreateMode ? (
         <div className="kd-action-group">
-          <button
-            type="button"
-            onClick={onToggleSpaceTags}
-            className="kd-action-btn"
-            title="选择 space"
-            aria-label="选择 space"
-          >
+          <button type="button" onClick={onToggleSpaceTags} className="kd-action-btn" title="选择 space" aria-label="选择 space">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="12" cy="12" r="9" />
             </svg>
@@ -326,14 +332,7 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       ) : canUpdateKnowledge && hasContentChanges ? (
         <div className="kd-edit-actions">
-          <button
-            type="button"
-            onClick={onCancelEdit}
-            disabled={isSaving}
-            className="kd-edit-icon-btn"
-            title="取消编辑"
-            aria-label="取消编辑"
-          >
+          <button type="button" onClick={onCancelEdit} disabled={isSaving} className="kd-edit-icon-btn" title="取消编辑" aria-label="取消编辑">
             <X style={{ width: 15, height: 15 }} strokeWidth={1.9} />
           </button>
           <button
@@ -352,28 +351,18 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
           </button>
         </div>
       ) : learningAction ? (
-        <div className="kd-bottom-learning">
-          {learningAction}
-        </div>
+        <div className="kd-bottom-learning">{learningAction}</div>
       ) : (
         <div className="kd-action-group">
           {canUpdateKnowledge && (
-            <button
-              onClick={onToggleSpaceTags}
-              className="kd-action-btn"
-              title="切换 space"
-            >
+            <button onClick={onToggleSpaceTags} className="kd-action-btn" title="切换 space">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="9" />
               </svg>
             </button>
           )}
           {canDeleteKnowledge && (
-            <button
-              onClick={onDelete}
-              className="kd-action-btn kd-action-danger"
-              title="删除"
-            >
+            <button onClick={onDelete} className="kd-action-btn kd-action-danger" title="删除">
               <Trash2 style={{ width: 15, height: 15 }} />
             </button>
           )}

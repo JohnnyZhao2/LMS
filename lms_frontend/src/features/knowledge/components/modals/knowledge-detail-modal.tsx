@@ -37,6 +37,21 @@ import {
 import '@/features/knowledge/components/modals/knowledge-detail-modal.css';
 import type { KnowledgeTagDeps } from '@/features/knowledge/types/tag-deps';
 
+/** 解析后的完整草稿 */
+type KnowledgeDraft = {
+  content: string;
+  title: string;
+  tags: SimpleTag[];
+  spaceTagId: number | null;
+  relatedLinks: RelatedLink[];
+};
+
+/**
+ * 脏字段补丁：编辑态 undefined = 相对 base 未改。
+ * 自动保存成功后仅在脏值仍等于提交值时清除，避免覆盖并发编辑。
+ */
+type KnowledgeDraftPatch = Partial<KnowledgeDraft>;
+
 function relTime(dateStr: string): string {
   const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (d === 0) return '今天';
@@ -50,39 +65,63 @@ function hasSameTagIds(left: { id: number }[], right: { id: number }[]) {
 }
 
 function hasSameRelatedLinks(left: RelatedLink[], right: RelatedLink[]) {
-  const normalizedLeft = sanitizeRelatedLinks(left);
-  const normalizedRight = sanitizeRelatedLinks(right);
-
-  return (
-    normalizedLeft.length === normalizedRight.length
-    && normalizedLeft.every((link, index) => (
-      link.url === normalizedRight[index]?.url
-      && (link.title ?? '') === (normalizedRight[index]?.title ?? '')
-    ))
-  );
+  const a = sanitizeRelatedLinks(left);
+  const b = sanitizeRelatedLinks(right);
+  return a.length === b.length && a.every((link, i) => (
+    link.url === b[i]?.url && (link.title ?? '') === (b[i]?.title ?? '')
+  ));
 }
 
 function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
   for (const link of relatedLinks) {
     const title = link.title?.trim() ?? '';
     const url = link.url.trim();
-
-    if (!title && !url) {
-      continue;
-    }
-
-    if (!url) {
-      return '请填写链接地址';
-    }
-
+    if (!title && !url) continue;
+    if (!url) return '请填写链接地址';
     try {
       new URL(url);
     } catch {
       return '链接地址格式不正确';
     }
   }
-
   return null;
+}
+
+function resolveDraft(patch: KnowledgeDraftPatch, base?: KnowledgeDetailType): KnowledgeDraft {
+  return {
+    content: patch.content ?? base?.content ?? '',
+    title: patch.title ?? base?.title ?? '',
+    tags: patch.tags ?? base?.tags ?? [],
+    spaceTagId: patch.spaceTagId !== undefined ? patch.spaceTagId : base?.space_tag?.id ?? null,
+    relatedLinks: patch.relatedLinks ?? base?.related_links ?? [],
+  };
+}
+
+function hasDraftChanges(patch: KnowledgeDraftPatch, base: KnowledgeDetailType) {
+  return (
+    (patch.content !== undefined && patch.content !== base.content)
+    || (patch.title !== undefined && patch.title !== base.title)
+    || (patch.tags !== undefined && !hasSameTagIds(patch.tags, base.tags))
+    || (
+      patch.spaceTagId !== undefined
+      && patch.spaceTagId !== (base.space_tag?.id ?? null)
+    )
+    || (
+      patch.relatedLinks !== undefined
+      && !hasSameRelatedLinks(patch.relatedLinks, base.related_links ?? [])
+    )
+  );
+}
+
+function buildCreateDraft(content: string, spaceTagId?: number): KnowledgeDraftPatch {
+  const normalized = content.includes('<') ? content : textToKnowledgeHtml(content);
+  return {
+    content: normalized,
+    title: getKnowledgeTitleFromHtml(normalized),
+    tags: [],
+    spaceTagId,
+    relatedLinks: [],
+  };
 }
 
 export interface KnowledgeLearningState {
@@ -96,9 +135,7 @@ interface KnowledgeDetailModalProps {
   previewOnly?: boolean;
   initialContent?: string;
   initialSpaceTagId?: number;
-  /** 学生任务场景：通过 task-knowledge 节点加载内容 */
   taskKnowledgeId?: number;
-  /** 由 Tasks/app 注入的学习状态，存在时展示完成操作 */
   learningState?: KnowledgeLearningState;
   onCompleteLearning?: () => void | Promise<void>;
   tagDeps: KnowledgeTagDeps;
@@ -127,16 +164,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const { currentRole, hasCapability } = useAuth();
   const { useTags, TagAssignmentSection } = tagDeps;
   const isStudent = currentRole === 'STUDENT';
-  // 任务知识快照（KnowledgeRevision）只读，禁止写回源知识
   const isPreviewOnly = previewOnly || Boolean(taskKnowledgeId);
   const canUpdateKnowledge = !isPreviewOnly && hasCapability('knowledge.update');
   const canEditContent = isCreateMode ? hasCapability('knowledge.create') : canUpdateKnowledge;
   const canDeleteKnowledge = !isPreviewOnly && hasCapability('knowledge.delete');
 
-  const { data, isLoading } = useKnowledgeDetail({
-    knowledgeId,
-    taskKnowledgeId,
-  });
+  const { data, isLoading } = useKnowledgeDetail({ knowledgeId, taskKnowledgeId });
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const parseDocument = useParseDocument();
@@ -145,106 +178,78 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [localKnowledgeSnapshot, setLocalKnowledgeSnapshot] = useState<{
     knowledgeId: number;
     detail: KnowledgeDetailType;
-  } | undefined>(undefined);
-  const [createDraft, setCreateDraft] = useState<{
-    content: string;
-    title: string;
-    tags: SimpleTag[];
-    spaceTagId?: number;
-    relatedLinks: RelatedLink[];
-  }>({
-    content: initialContent,
-    title: '',
-    tags: [],
-    spaceTagId: undefined,
-    relatedLinks: [],
-  });
-  const hasLocalSnapshot = Boolean(localKnowledgeSnapshot && localKnowledgeSnapshot.knowledgeId === knowledgeId);
-  const fetchedKnowledge = hasLocalSnapshot
-    ? localKnowledgeSnapshot!.detail
-    : knowledgeFromQuery;
-  const knowledge = fetchedKnowledge;
+  }>();
+  const [draftPatch, setDraftPatch] = useState<KnowledgeDraftPatch>(() => (
+    isCreateMode ? buildCreateDraft(initialContent) : {}
+  ));
 
-  // space列表
+  const knowledge = localKnowledgeSnapshot && localKnowledgeSnapshot.knowledgeId === knowledgeId
+    ? localKnowledgeSnapshot.detail
+    : knowledgeFromQuery;
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
   useEffect(() => {
-    if (!isCreateMode) {
-      return;
-    }
-
-    const normalizedInitialContent = initialContent.includes('<')
-      ? initialContent
-      : textToKnowledgeHtml(initialContent);
-    const hasPreferredSpaceTag = typeof initialSpaceTagId === 'number' && spaces.some((tag) => tag.id === initialSpaceTagId);
-
-    setCreateDraft({
-      content: normalizedInitialContent,
-      title: getKnowledgeTitleFromHtml(normalizedInitialContent),
-      tags: [],
-      spaceTagId: hasPreferredSpaceTag ? initialSpaceTagId : undefined,
-      relatedLinks: [],
-    });
+    if (!isCreateMode) return;
+    const spaceOk = typeof initialSpaceTagId === 'number'
+      && spaces.some((tag) => tag.id === initialSpaceTagId);
+    setDraftPatch(buildCreateDraft(initialContent, spaceOk ? initialSpaceTagId : undefined));
   }, [initialContent, initialSpaceTagId, isCreateMode, spaces]);
 
-  // 编辑草稿
-  const [editContent, setEditContent] = useState<string | undefined>(undefined);
-  const [editTitle, setEditTitle] = useState<string | undefined>(undefined);
-  const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
-  const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
-  const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
   const contentScrollRef = useRef<HTMLElement | null>(null);
   const contentHostRef = useRef<HTMLDivElement | null>(null);
   const isOutlineScrollLockedRef = useRef(false);
   const [formatToolbarHost, setFormatToolbarHost] = useState<HTMLDivElement | null>(null);
   const [editingLinks, setEditingLinks] = useState(false);
-  const [activeOutlineId, setActiveOutlineId] = useState<string | undefined>();
-
-  // 标签输入展开
+  const [activeOutlineId, setActiveOutlineId] = useState<string>();
   const [showTagInput, setShowTagInput] = useState(false);
-  // space选择
   const [showSpaceTags, setShowSpaceTags] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(startFullscreen || isCreateMode);
-  const isSaving = updateKnowledge.isPending;
 
-  const activeContent = isCreateMode
-    ? createDraft.content
-    : editContent ?? knowledge?.content ?? '';
-  const outlineContent = isCreateMode ? createDraft.content : activeContent;
-  const outlineItems = useMemo(() => getKnowledgeOutlineItems(outlineContent), [outlineContent]);
+  const draft = useMemo(
+    () => resolveDraft(draftPatch, isCreateMode ? undefined : knowledge),
+    [draftPatch, isCreateMode, knowledge],
+  );
+  const outlineItems = useMemo(() => getKnowledgeOutlineItems(draft.content), [draft.content]);
   const visibleOutlineId = outlineItems.some((item) => item.id === activeOutlineId)
     ? activeOutlineId
     : outlineItems[0]?.id;
 
-  // 实际使用的值
-  const activeTitle = isCreateMode ? createDraft.title : editTitle ?? knowledge?.title ?? '';
-  const activeTags = isCreateMode ? createDraft.tags : editTags ?? knowledge?.tags ?? [];
-  const shouldShowSystemTagsSection = !isStudent || activeTags.length > 0;
-  const activeSpaceTagId = isCreateMode
-    ? createDraft.spaceTagId ?? null
-    : editSpaceTagId === undefined
-      ? knowledge?.space_tag?.id ?? null
-      : editSpaceTagId;
-  const activeRelatedLinks = isCreateMode
-    ? createDraft.relatedLinks
-    : editRelatedLinks ?? knowledge?.related_links ?? [];
+  const hasChanges = Boolean(knowledge && hasDraftChanges(draftPatch, knowledge));
+  const hasContentChanges = Boolean(
+    knowledge && draftPatch.content !== undefined && draftPatch.content !== knowledge.content,
+  );
+  const createCanSave = hasMeaningfulKnowledgeHtml(draft.content);
+  const isUploading = parseDocument.isPending;
+  const isSaving = isCreateMode ? createKnowledge.isPending : updateKnowledge.isPending;
+  const createCanSubmit = createCanSave && !isSaving && !isUploading;
 
-  // 判断是否有改动
-  const hasChanges = Boolean(knowledge && (
-    (editContent !== undefined && editContent !== knowledge.content) ||
-    (editTitle !== undefined && editTitle !== knowledge.title) ||
-    (editTags !== undefined) ||
-    (editSpaceTagId !== undefined) ||
-    (editRelatedLinks !== undefined)
-  ));
-  const hasContentChanges = Boolean(knowledge && editContent !== undefined && editContent !== knowledge.content);
-  const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
-    setLocalKnowledgeSnapshot({
-      knowledgeId: knowledgeId!,
-      detail: updatedKnowledge,
-    });
+  const applyKnowledgeSnapshot = useCallback((detail: KnowledgeDetailType) => {
+    setLocalKnowledgeSnapshot({ knowledgeId: knowledgeId!, detail });
   }, [knowledgeId]);
+
+  const updateDraft = useCallback((updater: (current: KnowledgeDraft) => Partial<KnowledgeDraft>) => {
+    setDraftPatch((prev) => {
+      const current = resolveDraft(prev, isCreateMode ? undefined : knowledge);
+      const next = updater(current);
+      return isCreateMode ? { ...current, ...next } : { ...prev, ...next };
+    });
+  }, [isCreateMode, knowledge]);
+
+  /** 编辑态自动保存后：脏值未变则清回 base */
+  const clearDirtyIf = useCallback(<K extends keyof KnowledgeDraft>(
+    key: K,
+    saved: KnowledgeDraft[K],
+    equals: (a: KnowledgeDraft[K], b: KnowledgeDraft[K]) => boolean,
+  ) => {
+    setDraftPatch((patch) => {
+      const current = patch[key];
+      if (current === undefined || !equals(current, saved)) return patch;
+      const next = { ...patch };
+      delete next[key];
+      return next;
+    });
+  }, []);
 
   const commitPatch = useCallback(async (
     data: KnowledgeUpdateRequest,
@@ -252,44 +257,47 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     onSuccess?: () => void,
   ) => {
     try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId!,
-        data,
-      });
-      applyKnowledgeSnapshot(updatedKnowledge);
+      const updated = await updateKnowledge.mutateAsync({ id: knowledgeId!, data });
+      applyKnowledgeSnapshot(updated);
       onSuccess?.();
       onUpdated?.();
-      return updatedKnowledge;
+      return updated;
     } catch (error) {
       showApiError(error, errorMessage);
       return null;
     }
   }, [applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
 
-  const createCanSave = hasMeaningfulKnowledgeHtml(createDraft.content);
-  const isUploading = parseDocument.isPending;
-  const createCanSubmit = createCanSave && !createKnowledge.isPending && !isUploading;
+  /** 写草稿；编辑态可选立即提交并按脏比较清字段 */
+  const mutateDraftField = useCallback(<K extends keyof KnowledgeDraft>(
+    key: K,
+    value: KnowledgeDraft[K],
+    request?: KnowledgeUpdateRequest,
+    errorMessage?: string,
+    equals?: (a: KnowledgeDraft[K], b: KnowledgeDraft[K]) => boolean,
+  ) => {
+    updateDraft(() => ({ [key]: value } as Partial<KnowledgeDraft>));
+    if (isCreateMode || !request || !errorMessage || !equals) return;
+    void commitPatch(request, errorMessage, () => clearDirtyIf(key, value, equals));
+  }, [clearDirtyIf, commitPatch, isCreateMode, updateDraft]);
 
-  const handleCreateContentChange = useCallback((nextContent: string) => {
-    setCreateDraft((current) => {
-      const derivedTitle = getKnowledgeTitleFromHtml(nextContent);
-      return {
-        ...current,
-        content: nextContent,
-        title: derivedTitle || current.title,
-      };
-    });
-  }, []);
+  const handleContentChange = useCallback((nextContent: string) => {
+    const derivedTitle = getKnowledgeTitleFromHtml(nextContent);
+    updateDraft((current) => ({
+      content: nextContent,
+      ...(isCreateMode
+        ? { title: derivedTitle || current.title }
+        : derivedTitle ? { title: derivedTitle } : {}),
+    }));
+  }, [isCreateMode, updateDraft]);
 
-  const handleCreateFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       const result = await parseDocument.mutateAsync(file);
       const derivedTitle = getKnowledgeTitleFromHtml(result.content);
-      setCreateDraft((current) => ({
-        ...current,
+      updateDraft(() => ({
         content: result.content,
         title: derivedTitle || result.suggested_title?.trim() || '',
       }));
@@ -299,337 +307,223 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     } finally {
       event.target.value = '';
     }
-  }, [parseDocument]);
+  }, [parseDocument, updateDraft]);
 
-  const handleCreateTitleChange = useCallback((title: string) => {
-    setCreateDraft((current) => ({ ...current, title }));
-  }, []);
+  const handleTitleChange = useCallback((title: string) => {
+    updateDraft(() => ({ title }));
+  }, [updateDraft]);
 
-  const handleCreateAddTag = useCallback((tag: { id: number; name: string }) => {
-    setCreateDraft((current) => (
-      current.tags.some((item) => item.id === tag.id)
-        ? current
-        : { ...current, tags: [...current.tags, tag] }
-    ));
-  }, []);
+  const commitTags = useCallback((nextTags: SimpleTag[]) => {
+    mutateDraftField(
+      'tags',
+      nextTags,
+      { tag_ids: nextTags.map((t) => t.id) },
+      '标签保存失败',
+      hasSameTagIds,
+    );
+  }, [mutateDraftField]);
 
-  const handleCreateRemoveTag = useCallback((tagId: number) => {
-    setCreateDraft((current) => ({
-      ...current,
-      tags: current.tags.filter((tag) => tag.id !== tagId),
-    }));
-  }, []);
+  const handleAddTag = useCallback((tag: { id: number; name: string }) => {
+    if (draft.tags.some((item) => item.id === tag.id)) return;
+    commitTags([...draft.tags, tag]);
+  }, [commitTags, draft.tags]);
 
-  const handleCreateOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
+  const handleRemoveTag = useCallback((tagId: number) => {
+    commitTags(draft.tags.filter((tag) => tag.id !== tagId));
+  }, [commitTags, draft.tags]);
+
+  const handleOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
     setEditingLinks(true);
     if (!appendEmpty) return;
-
-    setCreateDraft((current) => ({
-      ...current,
+    updateDraft((current) => ({
       relatedLinks: [...current.relatedLinks, createEmptyRelatedLink()],
     }));
-  }, []);
+  }, [updateDraft]);
 
-  const handleCreateAddRelatedLink = useCallback(() => {
-    setCreateDraft((current) => ({
-      ...current,
+  const handleAddRelatedLink = useCallback(() => {
+    updateDraft((current) => ({
       relatedLinks: [...current.relatedLinks, createEmptyRelatedLink()],
     }));
-  }, []);
-
-  const handleCreateRelatedLinkChange = useCallback((
-    index: number,
-    field: keyof RelatedLink,
-    value: string,
-  ) => {
-    setCreateDraft((current) => ({
-      ...current,
-      relatedLinks: current.relatedLinks.map((item, itemIndex) => (
-        itemIndex === index ? { ...item, [field]: value } : item
-      )),
-    }));
-  }, []);
-
-  const handleCreateRelatedLinksBlur = useCallback(() => {
-    const draftError = getRelatedLinksDraftError(createDraft.relatedLinks);
-    if (draftError) {
-      toast.error(draftError);
-      return;
-    }
-    setEditingLinks(false);
-  }, [createDraft.relatedLinks]);
-
-  const handleCreateRemoveRelatedLink = useCallback((index: number) => {
-    setCreateDraft((current) => ({
-      ...current,
-      relatedLinks: current.relatedLinks.filter((_, itemIndex) => itemIndex !== index),
-    }));
-  }, []);
-
-  const handleCreateSpaceTagSelect = useCallback((spaceTagId: number) => {
-    setCreateDraft((current) => ({ ...current, spaceTagId }));
-    setShowSpaceTags(false);
-  }, []);
-
-  const handleCreateUploadOpen = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleCreateSave = useCallback(async () => {
-    if (!createCanSave) return;
-
-    try {
-      const trimmedTitle = getKnowledgeTitleFromHtml(createDraft.content) || createDraft.title.trim();
-      const sanitizedLinks = sanitizeRelatedLinks(createDraft.relatedLinks);
-      const result = await createKnowledge.mutateAsync({
-        ...(trimmedTitle && { title: trimmedTitle }),
-        space_tag_id: createDraft.spaceTagId,
-        content: createDraft.content,
-        related_links: sanitizedLinks.length > 0 ? sanitizedLinks : undefined,
-        tag_ids: createDraft.tags.map((tag) => tag.id),
-      });
-      toast.success('知识创建成功');
-      onClose();
-      onCreated?.(result.id);
-    } catch (error) {
-      showApiError(error, '创建失败');
-    }
-  }, [createCanSave, createDraft, createKnowledge, onClose, onCreated]);
-
-  // 标签操作
-  const addTag = useCallback((tag: { id: number; name: string }) => {
-    const current = editTags ?? knowledge?.tags ?? [];
-    if (current.some(t => t.id === tag.id)) return;
-    const nextTags = [...current, tag];
-    setEditTags(nextTags);
-    void commitPatch(
-      { tag_ids: nextTags.map((item) => item.id) },
-      '标签保存失败',
-      () => {
-        setEditTags((currentTags) => (
-          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
-        ));
-      },
-    );
-  }, [commitPatch, editTags, knowledge?.tags]);
-
-  const removeTag = useCallback((tagId: number) => {
-    const current = editTags ?? knowledge?.tags ?? [];
-    const nextTags = current.filter(t => t.id !== tagId);
-    setEditTags(nextTags);
-    void commitPatch(
-      { tag_ids: nextTags.map((item) => item.id) },
-      '标签保存失败',
-      () => {
-        setEditTags((currentTags) => (
-          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
-        ));
-      },
-    );
-  }, [commitPatch, editTags, knowledge?.tags]);
-
-  const updateRelatedLinksDraft = useCallback((
-    updater: (current: RelatedLink[]) => RelatedLink[],
-  ) => {
-    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
-    const nextLinks = updater(current);
-    setEditRelatedLinks(nextLinks);
-    return nextLinks;
-  }, [editRelatedLinks, knowledge?.related_links]);
+  }, [updateDraft]);
 
   const handleRelatedLinkChange = useCallback((
     index: number,
     field: keyof RelatedLink,
     value: string,
   ) => {
-    updateRelatedLinksDraft((current) => current.map((item, itemIndex) => (
-      itemIndex === index
-        ? { ...item, [field]: value }
-        : item
-    )));
-  }, [updateRelatedLinksDraft]);
-
-  const handleAddRelatedLink = useCallback(() => {
-    updateRelatedLinksDraft((current) => [...current, createEmptyRelatedLink()]);
-  }, [updateRelatedLinksDraft]);
+    updateDraft((current) => ({
+      relatedLinks: current.relatedLinks.map((item, i) => (
+        i === index ? { ...item, [field]: value } : item
+      )),
+    }));
+  }, [updateDraft]);
 
   const handleRemoveRelatedLink = useCallback((index: number) => {
-    const nextLinks = updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    void commitPatch(
+    const nextLinks = draft.relatedLinks.filter((_, i) => i !== index);
+    mutateDraftField(
+      'relatedLinks',
+      nextLinks,
       { related_links: sanitizeRelatedLinks(nextLinks) },
       '相关链接保存失败',
-      () => {
-        setEditRelatedLinks((currentLinks) => (
-          currentLinks && hasSameRelatedLinks(currentLinks, nextLinks) ? undefined : currentLinks
-        ));
-      },
+      hasSameRelatedLinks,
     );
-  }, [commitPatch, updateRelatedLinksDraft]);
+  }, [draft.relatedLinks, mutateDraftField]);
 
   const handleTitleBlur = useCallback(() => {
-    if (!knowledge || editTitle === undefined || editTitle === knowledge.title) {
+    if (isCreateMode || !knowledge || draftPatch.title === undefined || draftPatch.title === knowledge.title) {
       return;
     }
-
-    const nextTitle = editTitle;
+    const nextTitle = draftPatch.title;
     void commitPatch(
       { title: nextTitle },
       '标题保存失败',
-      () => {
-        setEditTitle((currentTitle) => (
-          currentTitle === nextTitle ? undefined : currentTitle
-        ));
-      },
+      () => clearDirtyIf('title', nextTitle, (a, b) => a === b),
     );
-  }, [commitPatch, editTitle, knowledge]);
-
-  const handleOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
-    setEditingLinks(true);
-    if (!appendEmpty) {
-      return;
-    }
-
-    setEditRelatedLinks((currentLinks) => [
-      ...(currentLinks ?? knowledge?.related_links ?? []),
-      createEmptyRelatedLink(),
-    ]);
-  }, [knowledge?.related_links]);
+  }, [clearDirtyIf, commitPatch, draftPatch.title, isCreateMode, knowledge]);
 
   const handleRelatedLinksBlur = useCallback(() => {
-    if (!knowledge) {
+    const links = isCreateMode ? draft.relatedLinks : draftPatch.relatedLinks;
+    if (!isCreateMode && (links === undefined || !knowledge)) {
       setEditingLinks(false);
       return;
     }
-
-    if (editRelatedLinks === undefined) {
-      setEditingLinks(false);
-      return;
-    }
-
-    const nextLinks = editRelatedLinks;
+    const nextLinks = links ?? [];
     const draftError = getRelatedLinksDraftError(nextLinks);
     if (draftError) {
       toast.error(draftError);
       return;
     }
-
-    if (hasSameRelatedLinks(nextLinks, knowledge.related_links ?? [])) {
-      setEditRelatedLinks(undefined);
+    if (isCreateMode) {
       setEditingLinks(false);
       return;
     }
-
+    if (hasSameRelatedLinks(nextLinks, knowledge!.related_links ?? [])) {
+      clearDirtyIf('relatedLinks', nextLinks, hasSameRelatedLinks);
+      setEditingLinks(false);
+      return;
+    }
     setEditingLinks(false);
     void commitPatch(
       { related_links: sanitizeRelatedLinks(nextLinks) },
       '相关链接保存失败',
-      () => {
-        setEditRelatedLinks(undefined);
-      },
+      () => clearDirtyIf('relatedLinks', nextLinks, hasSameRelatedLinks),
     );
-  }, [commitPatch, editRelatedLinks, knowledge]);
+  }, [
+    clearDirtyIf,
+    commitPatch,
+    draft.relatedLinks,
+    draftPatch.relatedLinks,
+    isCreateMode,
+    knowledge,
+  ]);
 
   useEffect(() => {
-    if (!editingLinks) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (target && relatedLinksSectionRef.current?.contains(target)) {
-        return;
-      }
+    if (!editingLinks) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (relatedLinksSectionRef.current?.contains(event.target as Node)) return;
       handleRelatedLinksBlur();
     };
-
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true);
-    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [editingLinks, handleRelatedLinksBlur]);
 
   const handleSave = useCallback(async () => {
-    if (!hasChanges) return true;
-    if (!knowledge) return false;
-    const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
+    if (isCreateMode) {
+      if (!createCanSave) return;
+      try {
+        const trimmedTitle = getKnowledgeTitleFromHtml(draft.content) || draft.title.trim();
+        const sanitizedLinks = sanitizeRelatedLinks(draft.relatedLinks);
+        const result = await createKnowledge.mutateAsync({
+          ...(trimmedTitle && { title: trimmedTitle }),
+          space_tag_id: draft.spaceTagId ?? undefined,
+          content: draft.content,
+          related_links: sanitizedLinks.length > 0 ? sanitizedLinks : undefined,
+          tag_ids: draft.tags.map((tag) => tag.id),
+        });
+        toast.success('知识创建成功');
+        onClose();
+        onCreated?.(result.id);
+      } catch (error) {
+        showApiError(error, '创建失败');
+      }
+      return;
+    }
+
+    if (!hasChanges || !knowledge) return false;
+    const draftError = draftPatch.relatedLinks
+      ? getRelatedLinksDraftError(draftPatch.relatedLinks)
+      : null;
     if (draftError) {
       toast.error(draftError);
       return false;
     }
     try {
-      const updateDerivedTitle = editContent !== undefined ? getKnowledgeTitleFromHtml(editContent) : '';
-      const updateTitle = editContent !== undefined
-        ? (updateDerivedTitle || editTitle || knowledge.title)
-        : (editTitle ?? knowledge.title);
-      const detailRelatedLinks = sanitizeRelatedLinks(editRelatedLinks ?? []);
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
+      const derived = draftPatch.content !== undefined
+        ? getKnowledgeTitleFromHtml(draftPatch.content)
+        : '';
+      const title = draftPatch.content !== undefined
+        ? (derived || draftPatch.title || knowledge.title)
+        : (draftPatch.title ?? knowledge.title);
+      const updated = await updateKnowledge.mutateAsync({
         id: knowledgeId!,
         data: {
-          title: updateTitle,
-          ...(editContent !== undefined && { content: editContent }),
-          ...(editTags !== undefined && { tag_ids: editTags.map(t => t.id) }),
-          ...(editSpaceTagId !== undefined && { space_tag_id: editSpaceTagId ?? undefined }),
-          ...(editRelatedLinks !== undefined && { related_links: detailRelatedLinks }),
+          title,
+          ...(draftPatch.content !== undefined && { content: draftPatch.content }),
+          ...(draftPatch.tags !== undefined && { tag_ids: draftPatch.tags.map((t) => t.id) }),
+          ...(draftPatch.spaceTagId !== undefined && {
+            space_tag_id: draftPatch.spaceTagId ?? undefined,
+          }),
+          ...(draftPatch.relatedLinks !== undefined && {
+            related_links: sanitizeRelatedLinks(draftPatch.relatedLinks),
+          }),
         },
       });
-      applyKnowledgeSnapshot(updatedKnowledge);
+      applyKnowledgeSnapshot(updated);
       toast.success('已保存');
-      setEditContent(undefined);
-      setEditTitle(undefined);
-      setEditTags(undefined);
-      setEditSpaceTagId(undefined);
-      setEditRelatedLinks(undefined);
+      setDraftPatch({});
       onUpdated?.();
       return true;
     } catch (error) {
       showApiError(error, '保存失败');
       return false;
     }
-  }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
+  }, [
+    applyKnowledgeSnapshot,
+    createCanSave,
+    createKnowledge,
+    draft,
+    draftPatch,
+    hasChanges,
+    isCreateMode,
+    knowledge,
+    knowledgeId,
+    onClose,
+    onCreated,
+    onUpdated,
+    updateKnowledge,
+  ]);
 
   useKnowledgeModalInteractions({
     onEscape: () => {
-      if (isFullscreen) {
-        setIsFullscreen(false);
-      } else if (showSpaceTags) {
-        setShowSpaceTags(false);
-      } else {
-        onClose();
-      }
+      if (isFullscreen) setIsFullscreen(false);
+      else if (showSpaceTags) setShowSpaceTags(false);
+      else onClose();
     },
     onSubmit: () => {
-      if (isCreateMode) {
-        void handleCreateSave();
-        return;
-      }
-      if (isFullscreen) {
-        void handleSave();
-      }
+      if (isCreateMode || isFullscreen) void handleSave();
     },
   });
-
-  const handleContentChange = useCallback((nextContent: string) => {
-    setEditContent(nextContent);
-
-    const derivedTitle = getKnowledgeTitleFromHtml(nextContent);
-    if (derivedTitle) {
-      setEditTitle(derivedTitle);
-    }
-  }, []);
 
   useEffect(() => {
     const host = contentHostRef.current;
     if (!host) return;
-
-    const headings = Array.from(host.querySelectorAll<HTMLElement>('.sqe-editor :is(h1,h2,h3,h4)'));
-    headings.forEach((heading, index) => {
+    host.querySelectorAll<HTMLElement>('.sqe-editor :is(h1,h2,h3,h4)').forEach((heading, index) => {
       const item = outlineItems[index];
       if (!item) return;
-
       heading.id = item.id;
       heading.dataset.outlineId = item.id;
     });
-  }, [isFullscreen, outlineContent, outlineItems]);
+  }, [isFullscreen, draft.content, outlineItems]);
 
   useEffect(() => {
     const container = contentScrollRef.current;
@@ -640,35 +534,23 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     const updateActiveHeading = () => {
       frame = 0;
       if (isOutlineScrollLockedRef.current) return;
-
       const containerTop = container.getBoundingClientRect().top;
       const headings = Array.from(host.querySelectorAll<HTMLElement>('[data-outline-id]'));
       let nextActiveId = headings[0]?.dataset.outlineId;
-
       for (const heading of headings) {
-        const top = heading.getBoundingClientRect().top - containerTop;
-        if (top > 96) break;
+        if (heading.getBoundingClientRect().top - containerTop > 96) break;
         nextActiveId = heading.dataset.outlineId;
       }
-
-      if (nextActiveId) {
-        setActiveOutlineId(nextActiveId);
-      }
+      if (nextActiveId) setActiveOutlineId(nextActiveId);
     };
-
     const requestUpdate = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(updateActiveHeading);
+      if (!frame) frame = window.requestAnimationFrame(updateActiveHeading);
     };
-
     updateActiveHeading();
     container.addEventListener('scroll', requestUpdate, { passive: true });
     window.addEventListener('resize', requestUpdate);
-
     return () => {
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
+      if (frame) window.cancelAnimationFrame(frame);
       container.removeEventListener('scroll', requestUpdate);
       window.removeEventListener('resize', requestUpdate);
     };
@@ -678,11 +560,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     const container = contentScrollRef.current;
     const host = contentHostRef.current;
     if (!container || !host) return;
-
     const target = Array.from(host.querySelectorAll<HTMLElement>('[data-outline-id]'))
       .find((heading) => heading.dataset.outlineId === item.id);
     if (!target) return;
-
     const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24;
     isOutlineScrollLockedRef.current = true;
     setActiveOutlineId(item.id);
@@ -692,59 +572,46 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }, []);
 
-  const handleContentBlur = useCallback(() => {
-    if (hasChanges) {
-      void handleSave();
-    }
-  }, [handleSave, hasChanges]);
-
-  const handleDelete = () => {
-    onDelete?.(knowledgeId!);
-    onClose();
-  };
-
-  const handleCancelEdit = useCallback(() => {
-    setEditContent(undefined);
-    setEditTitle(undefined);
-    setEditTags(undefined);
-    setEditSpaceTagId(undefined);
-    setEditRelatedLinks(undefined);
-    setEditingLinks(false);
-    setShowTagInput(false);
-    setShowSpaceTags(false);
-  }, []);
-
   const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
     setShowSpaceTags(false);
-
-    if (activeSpaceTagId === nextSpaceTagId) {
+    if (draft.spaceTagId === nextSpaceTagId) return;
+    if (isCreateMode) {
+      updateDraft(() => ({ spaceTagId: nextSpaceTagId }));
       return;
     }
-
     try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
+      const updated = await updateKnowledge.mutateAsync({
         id: knowledgeId!,
         data: { space_tag_id: nextSpaceTagId },
       });
-      applyKnowledgeSnapshot(updatedKnowledge);
-      setEditSpaceTagId(undefined);
+      applyKnowledgeSnapshot(updated);
+      clearDirtyIf('spaceTagId', nextSpaceTagId, (a, b) => a === b);
       toast.success('空间已更新');
       onUpdated?.();
     } catch (error) {
       showApiError(error, '空间更新失败');
     }
-  }, [activeSpaceTagId, applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
+  }, [
+    applyKnowledgeSnapshot,
+    clearDirtyIf,
+    draft.spaceTagId,
+    isCreateMode,
+    knowledgeId,
+    onUpdated,
+    updateDraft,
+    updateKnowledge,
+  ]);
 
-  const showLearningAction = Boolean(learningState && onCompleteLearning);
-  const learningAction = showLearningAction ? (
+  const learningAction = learningState && onCompleteLearning ? (
     <KnowledgeLearningAction
       visible
-      completed={Boolean(learningState?.completed)}
-      pending={Boolean(learningState?.pending)}
-      onComplete={() => { void onCompleteLearning?.(); }}
+      completed={Boolean(learningState.completed)}
+      pending={Boolean(learningState.pending)}
+      onComplete={() => { void onCompleteLearning(); }}
       docked
     />
   ) : null;
+
   const modalContent = (
     <div
       className={`kd-overlay${isFullscreen ? ' kd-overlay-fullscreen' : ''}`}
@@ -756,7 +623,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       >
         <button
           type="button"
-          onClick={() => setIsFullscreen((current) => !current)}
+          onClick={() => setIsFullscreen((v) => !v)}
           className="kd-focus-btn"
           data-tip={isFullscreen ? '退出专注' : '专注'}
           title={isFullscreen ? '退出专注' : '专注'}
@@ -795,7 +662,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           </div>
         ) : (
           <>
-            {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <KnowledgeDetailOutline
               items={outlineItems}
               activeId={visibleOutlineId}
@@ -809,16 +675,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   className="sqe-toolbar-host kd-format-toolbar-host"
                 />
               )}
-
               <ScrollContainer ref={contentScrollRef} className="kd-left">
-                <div
-                  ref={contentHostRef}
-                  style={{ cursor: canEditContent ? 'text' : 'default' }}
-                >
+                <div ref={contentHostRef} style={{ cursor: canEditContent ? 'text' : 'default' }}>
                   <KnowledgeTextEditor
-                    value={activeContent}
-                    onChange={isCreateMode ? handleCreateContentChange : handleContentChange}
-                    onBlur={isCreateMode ? undefined : handleContentBlur}
+                    value={draft.content}
+                    onChange={handleContentChange}
+                    onBlur={isCreateMode || !hasChanges ? undefined : () => { void handleSave(); }}
                     placeholder="键入 / 调出快捷指令"
                     className={`kd-content kd-content-shell ke-content-detail${canEditContent ? ' kd-content-editable' : ''}`}
                     minHeight={300}
@@ -832,51 +694,57 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             </div>
 
             <KnowledgeDetailSidePanel
-              knowledge={knowledge}
-              isCreateMode={isCreateMode}
-              activeTitle={activeTitle}
-              activeTags={activeTags}
-              activeRelatedLinks={activeRelatedLinks}
-              activeSpaceTagId={activeSpaceTagId}
-              spaces={spaces}
-              updatedRelativeTime={isCreateMode ? '新建知识' : relTime(knowledge!.updated_at)}
-              canUpdateKnowledge={canEditContent}
-              canDeleteKnowledge={!isCreateMode && canDeleteKnowledge}
-              shouldShowSystemTagsSection={isCreateMode || shouldShowSystemTagsSection}
-              showTagInput={showTagInput}
-              showSpaceTags={showSpaceTags}
-              hasContentChanges={isCreateMode ? createCanSave : hasContentChanges}
-              editingLinks={editingLinks}
-              isSaving={isCreateMode ? createKnowledge.isPending : isSaving}
-              canSave={createCanSubmit}
-              isUploading={isUploading}
-              learningAction={isCreateMode ? null : learningAction}
-              relatedLinksSectionRef={relatedLinksSectionRef}
-              TagAssignmentSection={TagAssignmentSection}
-              onTitleChange={isCreateMode ? handleCreateTitleChange : setEditTitle}
-              onTitleBlur={isCreateMode ? undefined : handleTitleBlur}
-              onShowTagInputChange={setShowTagInput}
-              onAddTag={isCreateMode ? handleCreateAddTag : addTag}
-              onRemoveTag={isCreateMode ? handleCreateRemoveTag : removeTag}
-              onOpenRelatedLinksEditor={isCreateMode
-                ? handleCreateOpenRelatedLinksEditor
-                : handleOpenRelatedLinksEditor}
-              onAddRelatedLink={isCreateMode ? handleCreateAddRelatedLink : handleAddRelatedLink}
-              onRelatedLinkChange={isCreateMode
-                ? handleCreateRelatedLinkChange
-                : handleRelatedLinkChange}
-              onRelatedLinksBlur={isCreateMode
-                ? handleCreateRelatedLinksBlur
-                : handleRelatedLinksBlur}
-              onRemoveRelatedLink={isCreateMode
-                ? handleCreateRemoveRelatedLink
-                : handleRemoveRelatedLink}
-              onToggleSpaceTags={() => setShowSpaceTags(!showSpaceTags)}
-              onSpaceTagSelect={isCreateMode ? handleCreateSpaceTagSelect : handleSpaceTagSelect}
-              onDelete={isCreateMode ? undefined : handleDelete}
-              onCancelEdit={isCreateMode ? undefined : handleCancelEdit}
-              onSave={isCreateMode ? handleCreateSave : handleSave}
-              onUpload={isCreateMode ? handleCreateUploadOpen : undefined}
+              draft={{
+                knowledge,
+                title: draft.title,
+                tags: draft.tags,
+                relatedLinks: draft.relatedLinks,
+                spaceTagId: draft.spaceTagId,
+                spaces,
+                updatedRelativeTime: isCreateMode ? '新建知识' : relTime(knowledge!.updated_at),
+                showTagInput,
+                showSpaceTags,
+                editingLinks,
+                hasContentChanges: isCreateMode ? createCanSave : hasContentChanges,
+                isSaving,
+                canSave: createCanSubmit,
+                isUploading,
+                learningAction: isCreateMode ? null : learningAction,
+              }}
+              permissions={{
+                isCreateMode,
+                canUpdateKnowledge: canEditContent,
+                canDeleteKnowledge: !isCreateMode && canDeleteKnowledge,
+                shouldShowSystemTagsSection: isCreateMode || !isStudent || draft.tags.length > 0,
+              }}
+              actions={{
+                relatedLinksSectionRef,
+                TagAssignmentSection,
+                onTitleChange: handleTitleChange,
+                onTitleBlur: isCreateMode ? undefined : handleTitleBlur,
+                onShowTagInputChange: setShowTagInput,
+                onAddTag: handleAddTag,
+                onRemoveTag: handleRemoveTag,
+                onOpenRelatedLinksEditor: handleOpenRelatedLinksEditor,
+                onAddRelatedLink: handleAddRelatedLink,
+                onRelatedLinkChange: handleRelatedLinkChange,
+                onRelatedLinksBlur: handleRelatedLinksBlur,
+                onRemoveRelatedLink: handleRemoveRelatedLink,
+                onToggleSpaceTags: () => setShowSpaceTags((v) => !v),
+                onSpaceTagSelect: handleSpaceTagSelect,
+                onDelete: isCreateMode ? undefined : () => {
+                  onDelete?.(knowledgeId!);
+                  onClose();
+                },
+                onCancelEdit: isCreateMode ? undefined : () => {
+                  setDraftPatch({});
+                  setEditingLinks(false);
+                  setShowTagInput(false);
+                  setShowSpaceTags(false);
+                },
+                onSave: () => { void handleSave(); },
+                onUpload: isCreateMode ? () => fileInputRef.current?.click() : undefined,
+              }}
             />
 
             {isCreateMode && (
@@ -884,7 +752,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 ref={fileInputRef}
                 type="file"
                 accept=".docx,.pptx,.pdf"
-                onChange={handleCreateFileUpload}
+                onChange={handleFileUpload}
                 style={{ display: 'none' }}
                 disabled={isUploading}
               />
