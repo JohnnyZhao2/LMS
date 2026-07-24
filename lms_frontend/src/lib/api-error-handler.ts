@@ -14,8 +14,6 @@ interface ErrorToastContent {
   description?: string;
 }
 
-const handledErrors = new WeakSet<object>();
-
 function collectMessages(value: unknown): string[] {
   if (typeof value === 'string') {
     const text = value.trim();
@@ -99,13 +97,6 @@ export function getApiErrorContent(error: unknown, defaultMessage?: string): Err
 export function showApiError(error: unknown, defaultMessage?: string): void {
   if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
     return;
-  }
-
-  if (error && typeof error === 'object') {
-    if (handledErrors.has(error)) {
-      return;
-    }
-    handledErrors.add(error);
   }
 
   const { title, description } = getApiErrorContent(error, defaultMessage);

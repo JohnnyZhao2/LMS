@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
-import { showApiError } from '@/lib/api-error-handler';
 
 /**
  * React Query 客户端配置
+ * Mutation 错误由业务层 catch / onError 显式调用 showApiError，不在此全局弹 toast。
  */
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,11 +11,6 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnMount: 'always',
       staleTime: 0,
-    },
-    mutations: {
-      onError: (error) => {
-        showApiError(error);
-      },
     },
   },
 });

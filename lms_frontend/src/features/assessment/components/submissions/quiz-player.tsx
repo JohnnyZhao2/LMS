@@ -124,7 +124,7 @@ export const QuizPlayer: React.FC = () => {
         data: { question_id: questionId, user_answer: value },
       });
     } catch (error) {
-      console.error('保存答案失败:', error);
+      showApiError(error, '保存答案失败');
     }
   };
 

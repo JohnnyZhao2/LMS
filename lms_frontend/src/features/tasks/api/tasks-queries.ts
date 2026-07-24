@@ -7,8 +7,6 @@ import {
 import { gradingQueryKeys } from '@/features/assessment/api/grading-queries';
 import { usersQueryKeys } from '@/features/user-management/api/users-queries';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import { ApiError } from '@/lib/api-client';
-import { showApiError } from '@/lib/api-error-handler';
 import { invalidateMany } from '@/lib/react-query/invalidate-many';
 import {
   normalizeRoleKey,
@@ -277,14 +275,7 @@ export const useStudentExecutions = (
 export const useCreateTask = () => useAppMutation(createTask, invalidateAfterTaskMutation);
 
 /** 更新任务 */
-export const useUpdateTask = () =>
-  useAppMutation(updateTask, invalidateAfterTaskMutation, {
-    onError: (error: Error) => {
-      if (error instanceof ApiError && error.code === 'INVALID_OPERATION') {
-        showApiError(error);
-      }
-    },
-  });
+export const useUpdateTask = () => useAppMutation(updateTask, invalidateAfterTaskMutation);
 
 /** 删除任务 */
 export const useDeleteTask = () => useAppMutation(deleteTask, invalidateAfterTaskMutation);
