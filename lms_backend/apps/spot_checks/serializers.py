@@ -93,10 +93,11 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
 
 class SpotCheckStudentSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
+    pending_score_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'employee_id', 'avatar_key', 'department_name']
+        fields = ['id', 'username', 'employee_id', 'avatar_key', 'department_name', 'pending_score_count']
 
 
 class SpotCheckDetailSerializer(serializers.ModelSerializer):

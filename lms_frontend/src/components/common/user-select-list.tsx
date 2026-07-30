@@ -10,6 +10,8 @@ export interface UserSelectPanelItem {
   avatarKey?: string | null;
   meta?: string | null;
   count?: number;
+  /** 头像圆形角标数量（>0 时显示） */
+  badgeCount?: number;
   disabled?: boolean;
 }
 
@@ -126,6 +128,37 @@ function renderTrailing(
   }
 
   return checkVisual;
+}
+
+function AvatarWithBadge({
+  item,
+  size,
+  className,
+}: {
+  item: UserSelectPanelItem;
+  size: 'sm' | 'md';
+  className?: string;
+}) {
+  const badgeCount = item.badgeCount ?? 0;
+
+  return (
+    <div className="relative shrink-0">
+      <UserAvatar
+        avatarKey={item.avatarKey}
+        name={item.name}
+        size={size}
+        className={className}
+      />
+      {badgeCount > 0 ? (
+        <span
+          aria-label={`${badgeCount} 条待评分`}
+          className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning-500 px-0.5 text-[10px] font-bold leading-none text-white shadow-sm"
+        >
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 export function UserSelectList({
@@ -248,12 +281,11 @@ export function UserSelectList({
               >
                 {layout === 'grid' ? (
                   <>
-                    <UserAvatar
-                      avatarKey={item.avatarKey}
-                      name={item.name}
+                    <AvatarWithBadge
+                      item={item}
                       size="sm"
                       className={cn(
-                        'mt-0.5 shrink-0 ring-1 ring-border/60',
+                        'mt-0.5 ring-1 ring-border/60',
                         density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
                       )}
                     />
@@ -311,12 +343,10 @@ export function UserSelectList({
                   </>
                 ) : (
                   <>
-                    <UserAvatar
-                      avatarKey={item.avatarKey}
-                      name={item.name}
+                    <AvatarWithBadge
+                      item={item}
                       size={appearance === 'panel' ? (density === 'compact' ? 'sm' : 'md') : 'sm'}
                       className={cn(
-                        'shrink-0',
                         appearance === 'panel' && (density === 'compact' ? 'h-8 w-8' : 'h-9 w-9'),
                       )}
                     />

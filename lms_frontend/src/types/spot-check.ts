@@ -54,6 +54,8 @@ export interface SpotCheckStudent {
   employee_id?: string;
   avatar_key?: string | null;
   department_name?: string | null;
+  /** 待评分抽查数量 */
+  pending_score_count?: number;
 }
 
 export interface SpotCheckCreateRequest {

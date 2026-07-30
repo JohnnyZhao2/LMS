@@ -46,6 +46,7 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
     meta: student.department_name
       ? `${student.employee_id || '未填写工号'} · ${student.department_name}`
       : (student.employee_id || '未填写工号'),
+    badgeCount: student.pending_score_count ?? 0,
   }));
 
   const total = students.length;

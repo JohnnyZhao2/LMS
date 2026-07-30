@@ -3,7 +3,7 @@
 """
 from uuid import UUID
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
@@ -144,11 +144,23 @@ class SpotCheckStudentListView(BaseAPIView):
     )
     def get(self, request):
         enforce('spot_check.view', request, error_message='无权查看抽查学员列表')
-        queryset = scope_filter(
-            'spot_check.view',
-            request,
-            resource_model=User,
-        ).filter(roles__code='STUDENT').select_related('department').distinct()
+        queryset = (
+            scope_filter(
+                'spot_check.view',
+                request,
+                resource_model=User,
+            )
+            .filter(roles__code='STUDENT')
+            .select_related('department')
+            .annotate(
+                pending_score_count=Count(
+                    'spot_checks_received',
+                    filter=Q(spot_checks_received__status=SpotCheck.STATUS_SUBMITTED),
+                    distinct=True,
+                )
+            )
+            .distinct()
+        )
 
         search = (request.query_params.get('search') or '').strip()
         if search:
