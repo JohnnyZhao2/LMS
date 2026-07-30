@@ -2,6 +2,8 @@
 
 from typing import Iterable, Optional
 
+from django.db.models import QuerySet
+
 
 SUPER_ADMIN_ROLE = 'SUPER_ADMIN'
 SUPER_ADMIN_ROLE_NAME = '超管'
@@ -69,6 +71,21 @@ def resolve_current_role(user, requested_role: Optional[str] = None) -> Optional
         return current_role
 
     return get_default_role(role_codes)
+
+
+def filter_users_by_management_role(*, user, role_code: str, queryset: QuerySet) -> QuerySet:
+    """按固定管理角色过滤人员范围。"""
+    if user.is_superuser:
+        return queryset
+    if role_code == MENTOR_ROLE:
+        return queryset.filter(mentor=user)
+    if role_code == DEPT_ROLE:
+        if not user.department_id:
+            return queryset.none()
+        return queryset.filter(department_id=user.department_id)
+    if role_code == GLOBAL_ROLE:
+        return queryset
+    return queryset.none()
 
 
 def get_current_role(user):

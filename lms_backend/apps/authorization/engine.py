@@ -7,35 +7,299 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Optional, Type
 
 from django.db.models import QuerySet
 
+from apps.users.models import User
 from core.base_service import BaseService
+from core.exceptions import BusinessError, ErrorCodes
 
+from .constants import RESOURCE_AUTHORIZATION_HANDLERS, SCOPE_FILTER_HANDLERS
 from .decisions import AuthorizationDecision
-from .engine_cache import AuthorizationEngineCacheMixin
-from .resource_policy_engine import ResourcePolicyEngineMixin
-from .scoped_queryset import ScopedQuerysetEngineMixin
+from .roles import filter_users_by_management_role, resolve_current_role
 from .services import AuthorizationService
 
 
-class AuthorizationEngine(
-    AuthorizationEngineCacheMixin,
-    ResourcePolicyEngineMixin,
-    ScopedQuerysetEngineMixin,
-    BaseService,
-):
+class AuthorizationEngine(BaseService):
     """单次请求内的权限判定器。
 
     每次实例化都绑定当前 request；缓存实际挂在 request 上，所以同一个请求里
     多次创建 engine 也能复用已解析的权限、范围和资源判定。
     """
 
+    REQUEST_CACHE_ATTR = '_authorization_engine_cache'
+
     def __init__(self, request):
         super().__init__(request)
         self._authorization_service = AuthorizationService(request)
+
+    # ------------------------------------------------------------------
+    # 请求缓存
+    # ------------------------------------------------------------------
+
+    def _get_request_cache(self) -> dict[str, dict[Any, Any]]:
+        cache = getattr(self.request, self.REQUEST_CACHE_ATTR, None)
+        if cache is None:
+            cache = {
+                'base_permission_decisions': {},
+                'resource_decisions': {},
+                'scoped_user_ids': {},
+            }
+            setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
+        return cache
+
+    def _get_cached_base_permission_decision(
+        self,
+        permission_code: str,
+        error_message: Optional[str],
+    ) -> Optional[AuthorizationDecision]:
+        return self._get_request_cache()['base_permission_decisions'].get(
+            (permission_code, error_message or '')
+        )
+
+    def _set_cached_base_permission_decision(
+        self,
+        permission_code: str,
+        error_message: Optional[str],
+        decision: AuthorizationDecision,
+    ) -> AuthorizationDecision:
+        self._get_request_cache()['base_permission_decisions'][
+            (permission_code, error_message or '')
+        ] = decision
+        return decision
+
+    def _get_resource_decision_cache_key(
+        self,
+        permission_code: str,
+        resource: Optional[Any],
+        context: dict[str, Any],
+        error_message: Optional[str],
+    ) -> Optional[tuple[Any, ...]]:
+        frozen_context = self._freeze_cache_value(context)
+        if resource is None:
+            return ('__global__', permission_code, frozen_context, error_message or '')
+        resource_id = getattr(resource, 'pk', None)
+        if resource_id is None:
+            return None
+        return (
+            resource.__class__.__name__,
+            resource_id,
+            permission_code,
+            frozen_context,
+            error_message or '',
+        )
+
+    def _freeze_cache_value(self, value: Any) -> Any:
+        if isinstance(value, Mapping):
+            return tuple(sorted((key, self._freeze_cache_value(item)) for key, item in value.items()))
+        if isinstance(value, set):
+            return tuple(sorted(self._freeze_cache_value(item) for item in value))
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            return tuple(self._freeze_cache_value(item) for item in value)
+        resource_id = getattr(value, 'pk', None)
+        if resource_id is not None:
+            return (value.__class__.__name__, resource_id)
+        return value
+
+    # ------------------------------------------------------------------
+    # 基础权限判断 / 资源权限判断
+    # ------------------------------------------------------------------
+
+    def authorize(
+        self,
+        permission_code: str,
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        context = context or {}
+        decision_cache_key = self._get_resource_decision_cache_key(
+            permission_code,
+            resource,
+            context,
+            error_message,
+        )
+        if decision_cache_key is not None:
+            cached_decision = self._get_request_cache()['resource_decisions'].get(decision_cache_key)
+            if cached_decision is not None:
+                return cached_decision
+
+        decision = None
+        # 优先执行模块声明的资源级约束；未声明约束的权限退回纯能力开关。
+        for handler in RESOURCE_AUTHORIZATION_HANDLERS:
+            if permission_code not in handler.permission_codes:
+                continue
+            decision = handler.authorize(
+                self,
+                permission_code,
+                resource=resource,
+                context=context,
+                error_message=error_message,
+            )
+            if decision is not None:
+                break
+        if decision is None:
+            decision = self.base_permission_decision(permission_code, error_message=error_message)
+
+        if decision_cache_key is not None:
+            self._get_request_cache()['resource_decisions'][decision_cache_key] = decision
+        return decision
+
+    def enforce(
+        self,
+        permission_code: str,
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        decision = self.authorize(
+            permission_code,
+            resource=resource,
+            context=context,
+            error_message=error_message,
+        )
+        if decision.allowed:
+            return decision
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=decision.message or error_message or f'缺少权限: {permission_code}',
+        )
+
+    def authorize_any(
+        self,
+        permission_codes: Sequence[str],
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        if not permission_codes:
+            raise ValueError('permission_codes 不能为空')
+
+        for permission_code in permission_codes:
+            decision = self.authorize(
+                permission_code,
+                resource=resource,
+                context=context,
+                error_message=error_message,
+            )
+            if decision.allowed:
+                return decision
+
+        return AuthorizationDecision.deny(
+            permission_codes[0],
+            message=error_message or f"缺少任一权限: {', '.join(permission_codes)}",
+            reason='permission_denied',
+        )
+
+    def enforce_any(
+        self,
+        permission_codes: Sequence[str],
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        decision = self.authorize_any(
+            permission_codes,
+            resource=resource,
+            context=context,
+            error_message=error_message,
+        )
+        if decision.allowed:
+            return decision
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=decision.message or error_message or '缺少权限',
+        )
+
+    def base_permission_decision(
+        self,
+        permission_code: str,
+        *,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        cached_decision = self._get_cached_base_permission_decision(permission_code, error_message)
+        if cached_decision is not None:
+            return cached_decision
+
+        if self._authorization_service.has_permission(permission_code):
+            decision = AuthorizationDecision.allow(permission_code)
+        else:
+            decision = AuthorizationDecision.deny(
+                permission_code,
+                message=error_message or f'缺少权限: {permission_code}',
+                reason='permission_denied',
+            )
+        return self._set_cached_base_permission_decision(permission_code, error_message, decision)
+
+    # ------------------------------------------------------------------
+    # 列表范围过滤 / 管理人员范围过滤
+    # ------------------------------------------------------------------
+
+    def get_current_role(self) -> Optional[str]:
+        return resolve_current_role(self.user)
+
+    def scope_filter(
+        self,
+        permission_code: str,
+        *,
+        resource_model: Optional[Type[Any]] = None,
+        base_queryset: Optional[QuerySet] = None,
+        context: Optional[dict[str, Any]] = None,
+    ) -> QuerySet:
+        queryset = base_queryset
+        model = resource_model or (queryset.model if queryset is not None else None)
+        if queryset is None:
+            if model is None:
+                raise ValueError('resource_model 和 base_queryset 不能同时为空')
+            queryset = model.objects.all()
+
+        if not self._authorization_service.has_permission(permission_code):
+            return queryset.none()
+
+        for handler in SCOPE_FILTER_HANDLERS:
+            if handler.permission_code == permission_code and handler.resource_model is model:
+                return handler.filter_queryset(self, queryset=queryset, context=context or {})
+        return queryset
+
+    def get_role_scoped_user_queryset(
+        self,
+        user_queryset: QuerySet,
+        *,
+        cache_key: Optional[str] = None,
+    ) -> QuerySet:
+        if not self.user or not self.user.is_authenticated:
+            return user_queryset.none()
+        if self.user.is_superuser:
+            return user_queryset
+
+        role_code = self.get_current_role()
+        cache = self._get_request_cache()['scoped_user_ids']
+        resolved_cache_key = (role_code or '', cache_key or '')
+        if cache_key and resolved_cache_key in cache:
+            return user_queryset.filter(id__in=cache[resolved_cache_key]).distinct()
+
+        scoped = filter_users_by_management_role(
+            user=self.user,
+            role_code=role_code,
+            queryset=user_queryset,
+        ).distinct()
+        if cache_key:
+            cache[resolved_cache_key] = tuple(scoped.values_list('id', flat=True))
+            return user_queryset.filter(id__in=cache[resolved_cache_key]).distinct()
+        return scoped
+
+    def get_scoped_learning_members(self) -> QuerySet:
+        learners = User.objects.filter(
+            is_active=True,
+            roles__code='STUDENT',
+        ).exclude(is_superuser=True).distinct()
+        return self.get_role_scoped_user_queryset(learners, cache_key='learning_members')
 
 
 def authorize(

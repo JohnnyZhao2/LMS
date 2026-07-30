@@ -235,33 +235,32 @@ class UserManagementService(BaseService):
         if not roles_to_add and not roles_to_remove:
             return user
 
-        with transaction.atomic():
-            if roles_to_remove:
-                UserRole.objects.filter(
+        if roles_to_remove:
+            UserRole.objects.filter(
+                user_id=user.id,
+                role__code__in=list(roles_to_remove)
+            ).delete()
+        roles_by_code = {
+            role.code: role
+            for role in Role.objects.filter(code__in=list(roles_to_add))
+        }
+        missing_role_codes = sorted(roles_to_add - set(roles_by_code))
+        if missing_role_codes:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f"角色不存在：{'、'.join(missing_role_codes)}",
+            )
+        for role_code in roles_to_add:
+            if not user.roles.filter(code=role_code).exists():
+                UserRole.objects.create(
                     user_id=user.id,
-                    role__code__in=list(roles_to_remove)
-                ).delete()
-            roles_by_code = {
-                role.code: role
-                for role in Role.objects.filter(code__in=list(roles_to_add))
-            }
-            missing_role_codes = sorted(roles_to_add - set(roles_by_code))
-            if missing_role_codes:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f"角色不存在：{'、'.join(missing_role_codes)}",
+                    role_id=roles_by_code[role_code].id,
+                    assigned_by_id=assigned_by.id
                 )
-            for role_code in roles_to_add:
-                if not user.roles.filter(code=role_code).exists():
-                    UserRole.objects.create(
-                        user_id=user.id,
-                        role_id=roles_by_code[role_code].id,
-                        assigned_by_id=assigned_by.id
-                    )
-            if had_management_role and not will_have_management_role:
-                from apps.authorization.models import UserPermission
+        if had_management_role and not will_have_management_role:
+            from apps.authorization.models import UserPermission
 
-                UserPermission.objects.filter(user_id=user.id).delete()
+            UserPermission.objects.filter(user_id=user.id).delete()
         # Refresh user from database
         user.refresh_from_db()
 

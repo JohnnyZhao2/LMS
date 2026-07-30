@@ -3,7 +3,11 @@ from typing import Optional
 from django.db import transaction
 
 from apps.activity_logs.registry import register_operation_log_action
-from apps.authorization.roles import AUTH_ROLE_CODES, resolve_current_role
+from apps.authorization.roles import (
+    AUTH_ROLE_CODES,
+    filter_users_by_management_role,
+    resolve_current_role,
+)
 from apps.users.models import User
 from core.audit import audit_operation
 from core.exceptions import BusinessError, ErrorCodes
@@ -14,7 +18,6 @@ from .constants import (
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
 from .models import Permission, UserPermission
-from .scoped_queryset import filter_users_by_management_role
 
 
 register_operation_log_action(
