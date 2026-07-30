@@ -63,8 +63,6 @@ class AuthorizationSpec:
     module: Optional[str] = None
     permissions: tuple[PermissionDefinition, ...] = ()
     system_managed_codes: tuple[str, ...] = ()
-    role_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    role_system_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
     scope_rules: tuple[DefaultScopeRuleDefinition, ...] = ()
     resource_authorization_handlers: tuple[ResourceAuthorizationHandler, ...] = ()
     scope_filter_handlers: tuple[ScopeFilterHandler, ...] = ()
@@ -129,15 +127,11 @@ def crud_authorization_spec(
     prefix: str,
     label: str,
     *,
-    view_roles: tuple[str, ...] = (),
-    full_roles: tuple[str, ...] = (),
-    extra_role_defaults: Optional[dict[str, tuple[str, ...]]] = None,
     names: Optional[dict[str, str]] = None,
     descriptions: Optional[dict[str, str]] = None,
     kwargs_by_action: Optional[dict[str, dict[str, Any]]] = None,
     **kwargs: Any,
 ) -> AuthorizationSpec:
-    full_role_codes = crud_codes(prefix)
     return AuthorizationSpec(
         key=key,
         module=module,
@@ -148,11 +142,6 @@ def crud_authorization_spec(
             descriptions=descriptions,
             kwargs_by_action=kwargs_by_action,
         ),
-        role_defaults={
-            **{role: (f'{prefix}.view',) for role in view_roles},
-            **{role: full_role_codes for role in full_roles},
-            **(extra_role_defaults or {}),
-        },
         **kwargs,
     )
 
@@ -176,18 +165,6 @@ def discover_authorization_spec_modules() -> tuple[str, ...]:
             continue
         module_paths.append(f'{app_module_path}.authorization')
     return tuple(module_paths)
-
-
-def _merge_sequence_map(specs: Iterable[AuthorizationSpec], attr_name: str) -> dict[str, list[str]]:
-    merged: dict[str, list[str]] = {}
-    for spec in specs:
-        values = getattr(spec, attr_name)
-        for key, codes in values.items():
-            bucket = merged.setdefault(key, [])
-            for code in codes:
-                if code not in bucket:
-                    bucket.append(code)
-    return merged
 
 
 def _append_unique(target: list[str], value: str) -> None:
@@ -278,16 +255,6 @@ def build_system_managed_permission_codes(
             if code not in codes:
                 codes.append(code)
     return codes
-
-
-def build_role_permission_defaults(specs: Optional[Iterable[AuthorizationSpec]] = None) -> dict[str, list[str]]:
-    return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_defaults')
-
-
-def build_role_system_permission_defaults(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> dict[str, list[str]]:
-    return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_system_defaults')
 
 
 def build_permission_scope_rules(

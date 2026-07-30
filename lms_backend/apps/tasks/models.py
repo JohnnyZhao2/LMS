@@ -17,13 +17,12 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
     created_role = models.CharField(
         max_length=20,
         choices=[
-            ('ADMIN', '管理员'),
+            ('GLOBAL', '全局'),
             ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('TEAM_MANAGER', '团队经理'),
+            ('DEPT', '室组'),
             ('STUDENT', '学员'),
         ],
-        default='ADMIN',
+        default='GLOBAL',
         db_index=True,
         verbose_name='创建时角色',
     )

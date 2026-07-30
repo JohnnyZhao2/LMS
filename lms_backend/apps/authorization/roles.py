@@ -5,8 +5,16 @@ from typing import Iterable, Optional
 
 SUPER_ADMIN_ROLE = 'SUPER_ADMIN'
 SUPER_ADMIN_ROLE_NAME = '超管'
-ADMIN_LIKE_ROLES = {'ADMIN', SUPER_ADMIN_ROLE}
-LEARNING_POOL_EXCLUDED_ROLE_CODES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+STUDENT_ROLE = 'STUDENT'
+MENTOR_ROLE = 'MENTOR'
+DEPT_ROLE = 'DEPT'
+GLOBAL_ROLE = 'GLOBAL'
+
+# 授权系统业务角色：仅按作用范围区分
+AUTH_ROLE_CODES = frozenset({MENTOR_ROLE, DEPT_ROLE, GLOBAL_ROLE})
+ADMIN_LIKE_ROLES = {GLOBAL_ROLE, SUPER_ADMIN_ROLE}
+# 学习人员池排除：室组/全局管理者不作为被指派学员
+LEARNING_POOL_EXCLUDED_ROLE_CODES = [DEPT_ROLE, GLOBAL_ROLE]
 
 
 def is_super_admin(user) -> bool:
@@ -21,6 +29,10 @@ def is_admin_like_role(role_code: Optional[str]) -> bool:
     return role_code in ADMIN_LIKE_ROLES
 
 
+def is_auth_role(role_code: Optional[str]) -> bool:
+    return role_code in AUTH_ROLE_CODES
+
+
 def serialize_user_roles(user) -> list[dict[str, str]]:
     if user.is_superuser:
         return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
@@ -32,15 +44,15 @@ def get_default_role(role_codes: Iterable[str]) -> str:
     if SUPER_ADMIN_ROLE in normalized_codes:
         return SUPER_ADMIN_ROLE
 
-    if 'STUDENT' in normalized_codes:
-        return 'STUDENT'
+    if STUDENT_ROLE in normalized_codes:
+        return STUDENT_ROLE
 
     from apps.users.models import Role
 
     for role_code in Role.ROLE_PRIORITY_ORDER:
-        if role_code != 'STUDENT' and role_code in normalized_codes:
+        if role_code != STUDENT_ROLE and role_code in normalized_codes:
             return role_code
-    return 'STUDENT'
+    return STUDENT_ROLE
 
 
 def resolve_current_role(user, requested_role: Optional[str] = None) -> Optional[str]:
@@ -63,3 +75,38 @@ def resolve_current_role(user, requested_role: Optional[str] = None) -> Optional
 
 def get_current_role(user):
     return resolve_current_role(user)
+
+
+def is_student_workspace(request) -> bool:
+    """当前请求是否处于学员工作台（当前角色为 STUDENT）。"""
+    return resolve_current_role(getattr(request, 'user', None)) == STUDENT_ROLE
+
+
+def enforce_student_workspace(request, *, error_message: Optional[str] = None) -> None:
+    """学员工作台门禁：非 STUDENT 角色直接拒绝。"""
+    if is_student_workspace(request):
+        return
+    from core.exceptions import BusinessError, ErrorCodes
+
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message or '只有学员角色可以访问',
+    )
+
+
+def enforce_current_roles(
+    request,
+    allowed_roles: Iterable[str],
+    *,
+    error_message: Optional[str] = None,
+) -> None:
+    """工作台角色门禁：当前角色不在允许集合则拒绝（不走权限点）。"""
+    current_role = resolve_current_role(getattr(request, 'user', None))
+    if current_role and current_role in set(allowed_roles):
+        return
+    from core.exceptions import BusinessError, ErrorCodes
+
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message or '当前角色无权访问',
+    )

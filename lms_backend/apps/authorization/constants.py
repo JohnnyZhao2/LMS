@@ -6,14 +6,13 @@ from .registry import (
     build_permission_implication_map,
     build_permission_scope_rules,
     build_resource_authorization_handlers,
-    build_role_permission_defaults,
-    build_role_system_permission_defaults,
     build_scope_group_rules,
     build_scope_filter_handlers,
     build_scope_aware_permission_codes,
     build_system_managed_permission_codes,
     load_authorization_specs,
 )
+from .roles import GLOBAL_ROLE
 
 
 AUTHORIZATION_SPECS = load_authorization_specs()
@@ -27,11 +26,9 @@ PERMISSION_SCOPE_GROUP_KEY_MAP = {
 REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
 
 SYSTEM_MANAGED_PERMISSION_CODES = sorted(build_system_managed_permission_codes(AUTHORIZATION_SPECS))
-ROLE_SYSTEM_PERMISSION_DEFAULTS = build_role_system_permission_defaults(AUTHORIZATION_SPECS)
-ROLE_PERMISSION_DEFAULTS = build_role_permission_defaults(AUTHORIZATION_SPECS)
 
 CONFIG_PERMISSION_MODULE = 'config'
-CONFIG_PERMISSION_MANAGEABLE_ROLE = 'ADMIN'
+CONFIG_PERMISSION_MANAGEABLE_ROLE = GLOBAL_ROLE
 CONFIG_MODULE_PERMISSION_CODES = frozenset(
     item['code']
     for item in PERMISSION_CATALOG

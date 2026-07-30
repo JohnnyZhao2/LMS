@@ -48,7 +48,7 @@ _OPERATION_ACTION_SUMMARIES = {
     'delete_spot_check': '{actor} 删除了 {target} 的抽查记录',
     'manual_grade': '{actor} 批改了答卷',
     'batch_grade': '{actor} 批量评分',
-    'replace_role_permissions': '{actor} 更新了角色模板《{target}》的权限',
+    # remove replace_role_permissions line - delete it
     'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
     'delete_user_permission_override': '{actor} 删除了 {target} 的权限覆盖',
     'merge_tags': '{actor} 合并了标签《{target}》',

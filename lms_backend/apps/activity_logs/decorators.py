@@ -16,10 +16,9 @@ from .registry import (
 
 
 ROLE_LABELS = {
-    'ADMIN': '管理员',
+    'GLOBAL': '全局',
     'MENTOR': '导师',
-    'DEPT_MANAGER': '室经理',
-    'TEAM_MANAGER': '团队经理',
+    'DEPT': '室组',
     'STUDENT': '学员',
     'SUPER_ADMIN': '超管',
 }

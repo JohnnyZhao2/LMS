@@ -28,7 +28,7 @@ class Permission(TimestampMixin, models.Model):
 
 
 class RolePermission(TimestampMixin, models.Model):
-    """Role permission overrides relative to code defaults."""
+    """角色权限绝对授予记录。"""
 
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions', verbose_name='角色')
     permission = models.ForeignKey(
@@ -42,13 +42,13 @@ class RolePermission(TimestampMixin, models.Model):
         choices=EFFECT_CHOICES,
         default=EFFECT_ALLOW,
         db_index=True,
-        verbose_name='覆盖效果',
+        verbose_name='效果',
     )
 
     class Meta:
         db_table = 'lms_role_permission'
-        verbose_name = '角色权限覆盖'
-        verbose_name_plural = '角色权限覆盖'
+        verbose_name = '角色权限'
+        verbose_name_plural = '角色权限'
         unique_together = ['role', 'permission']
         ordering = ['role__code', 'effect', 'permission__code']
 

@@ -507,9 +507,9 @@ const UserFormContent: React.FC<{
                         "absolute -right-3 -bottom-5 transition-all duration-700",
                         active ? cn("opacity-[0.2] scale-110", colorConfig.mutedTextClass) : "opacity-[0.3] scale-100 text-slate-200"
                       )}>
-                        {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
-                          role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
-                            role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
+                        {role.code === 'GLOBAL' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
+                          role.code === 'DEPT' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
+                            role.code === 'MENTOR' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
                               <User className="w-24 h-24" strokeWidth={0.5} />}
                       </div>
 
@@ -522,10 +522,10 @@ const UserFormContent: React.FC<{
                           "text-[10px] font-bold transition-all duration-300 opacity-60",
                           active ? colorConfig.mutedTextClass : "text-slate-300"
                         )}>
-                          {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? '全系统最高管理权限' :
-                            role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
-                              role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
-                                '职能岗位权限'}
+                          {role.code === 'GLOBAL' || role.code === 'SUPER_ADMIN' ? '全平台范围' :
+                            role.code === 'DEPT' ? '本室范围' :
+                              role.code === 'MENTOR' ? '名下学员范围' :
+                                '学习执行'}
                         </p>
                       </div>
                     </div>

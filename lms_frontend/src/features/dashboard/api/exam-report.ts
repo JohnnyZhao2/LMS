@@ -8,7 +8,7 @@ import type {
   ExamReportResponse,
 } from '@/types/dashboard';
 
-const EXAM_REPORT_ROLES = new Set(['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN']);
+const EXAM_REPORT_ROLES = new Set(['MENTOR', 'DEPT', 'GLOBAL', 'SUPER_ADMIN']);
 
 const buildExamReportQueryString = (
   filters: ExamReportFiltersState,

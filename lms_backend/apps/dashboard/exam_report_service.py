@@ -11,6 +11,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from apps.authorization.engine import authorize, scope_filter
+from apps.authorization.roles import is_admin_like_role, resolve_current_role
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.users.models import User
@@ -260,8 +261,8 @@ class ExamReportService(BaseService):
     def _accessible_students(self):
         """按 task.analytics.view 取学员范围。
 
-        有分析权限：走 scope_filter（导师/室经理各自范围，管理员 ALL）。
-        无分析权限：仅 dashboard.admin.view 可回退全员；导师/室经理返回空集，避免越权。
+        有分析权限：走 scope_filter（导师/室组各自范围，全局 ALL）。
+        无分析权限：全局/超管回退全员；其余角色返回空集。
         """
         base = User.objects.filter(
             is_active=True,
@@ -275,7 +276,7 @@ class ExamReportService(BaseService):
                 base_queryset=base,
                 resource_model=User,
             )
-        if authorize('dashboard.admin.view', self.request).allowed:
+        if is_admin_like_role(resolve_current_role(self.request.user)):
             return base
         return base.none()
 

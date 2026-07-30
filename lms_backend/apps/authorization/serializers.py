@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 from rest_framework import serializers
 
+from apps.authorization.roles import AUTH_ROLE_CODES
 from apps.users.models import Role
 
 from .constants import (
@@ -16,7 +17,7 @@ from .constants import (
 from .models import Permission, UserPermissionOverride
 
 
-NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'STUDENT']
+AUTH_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] in AUTH_ROLE_CODES]
 
 
 class StrictSerializer(serializers.Serializer):
@@ -78,16 +79,13 @@ class RoleScopeGroupSerializer(serializers.Serializer):
     )
 
 
-class RolePermissionSerializer(serializers.Serializer):
-    role_code = serializers.ChoiceField(choices=Role.ROLE_CHOICES)
+class RoleCapabilitySerializer(serializers.Serializer):
+    role_code = serializers.ChoiceField(choices=AUTH_ROLE_CHOICES)
     permission_codes = serializers.ListField(
         child=serializers.CharField(),
         allow_empty=True,
-        help_text='角色权限编码列表',
+        help_text='角色固定能力编码列表',
     )
-
-
-class RolePermissionTemplateSerializer(RolePermissionSerializer):
     default_scope_types = serializers.ListField(
         child=serializers.ChoiceField(choices=SCOPE_CHOICES),
         allow_empty=True,
@@ -100,7 +98,7 @@ class UserPermissionOverrideCreateSerializer(StrictSerializer):
     permission_code = serializers.CharField(help_text='权限编码')
     effect = serializers.ChoiceField(choices=EFFECT_CHOICES, help_text='覆盖效果')
     applies_to_role = serializers.ChoiceField(
-        choices=NON_STUDENT_ROLE_CHOICES,
+        choices=AUTH_ROLE_CHOICES,
         required=False,
         allow_null=True,
         help_text='仅对某个激活角色生效（可选）',

@@ -6,6 +6,7 @@ from apps.activity_logs.decorators import log_operation
 from django.db.models import Exists, OuterRef, Q, QuerySet
 from django.utils import timezone
 
+from apps.authorization.roles import enforce_student_workspace
 from apps.submissions.models import Submission
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
@@ -31,6 +32,7 @@ def extract_knowledge_preview(knowledge, max_length: int = 160) -> str:
 
 class StudentTaskService(BaseService):
     def get_student_assignment(self, task_id: int) -> TaskAssignment:
+        enforce_student_workspace(self.request, error_message='只有学员可以访问任务执行')
         assignment = assignment_detail_queryset().filter(
             task_id=task_id,
             assignee_id=self.user.id,
@@ -53,6 +55,7 @@ class StudentTaskService(BaseService):
         assignment: TaskAssignment,
         task_knowledge_id: int,
     ) -> KnowledgeLearningProgress:
+        enforce_student_workspace(self.request, error_message='只有学员可以完成知识学习')
         sync_assignment_overdue_status(assignment)
         if assignment.status == 'COMPLETED':
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已完成')
@@ -148,6 +151,7 @@ class StudentTaskService(BaseService):
         status_filter: str = None,
         search: str = None,
     ) -> QuerySet:
+        enforce_student_workspace(self.request, error_message='只有学员可以访问任务列表')
         qs = assignment_list_queryset().filter(assignee_id=self.user.id)
         if status_filter:
             if status_filter not in STUDENT_TASK_LIST_STATUSES:

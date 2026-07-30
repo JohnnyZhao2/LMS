@@ -73,32 +73,28 @@ class Department(TimestampMixin, models.Model):
 class Role(TimestampMixin, models.Model):
     """
     角色模型
+
     系统预定义角色:
-    - STUDENT: 学员（默认角色；可与管理角色共存）
-    - MENTOR: 导师
-    - DEPT_MANAGER: 室经理
-    - ADMIN: 管理员（能力叠加角色，可与学员共存）
-    - TEAM_MANAGER: 团队经理
+    - STUDENT: 学员（学习工作台身份，不参与授权配置）
+    - MENTOR: 导师（授权角色，名下学员范围）
+    - DEPT: 室组（授权角色，本室范围，可多人）
+    - GLOBAL: 全局（授权角色，全平台范围）
     """
     ROLE_CHOICES = [
         ('STUDENT', '学员'),
         ('MENTOR', '导师'),
-        ('DEPT_MANAGER', '室经理'),
-        ('ADMIN', '管理员'),
-        ('TEAM_MANAGER', '团队经理'),
+        ('DEPT', '室组'),
+        ('GLOBAL', '全局'),
     ]
-    # 角色优先级顺序（从高到低）
-    # 用于确定用户的默认角色
     ROLE_PRIORITY_ORDER = [
-        'ADMIN',
-        'DEPT_MANAGER',
+        'GLOBAL',
+        'DEPT',
         'MENTOR',
-        'TEAM_MANAGER',
         'STUDENT',
     ]
     code = models.CharField(
-        max_length=20, 
-        unique=True, 
+        max_length=20,
+        unique=True,
         choices=ROLE_CHOICES,
         verbose_name='角色代码'
     )
@@ -142,8 +138,8 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
         return self.roles.filter(code=role_code).exists()
     @property
     def is_admin(self) -> bool:
-        """是否为管理员"""
-        return self.is_superuser or self.has_role('ADMIN')
+        """是否为全局管理者"""
+        return self.is_superuser or self.has_role('GLOBAL')
     @cached_property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""

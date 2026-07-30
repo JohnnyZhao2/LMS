@@ -5,14 +5,12 @@ from apps.authorization.registry import (
     ScopeFilterHandler,
     crud_codes,
     crud_permissions,
-    perm,
     scope_rules,
 )
 from apps.authorization.roles import is_admin_like_role
 from apps.spot_checks.models import SpotCheck
 from apps.users.models import User
 
-MANAGER_DEFAULT_PERMISSIONS = crud_codes('spot_check')
 SPOT_CHECK_SCOPE_SUMMARY = '学员范围'
 
 
@@ -33,7 +31,7 @@ def _authorize_spot_check(engine, permission_code, *, resource=None, context=Non
             return conditional_allow('spot_check.create', constraint='student_scope')
 
         current_role = engine.get_current_role()
-        if current_role == 'DEPT_MANAGER' and not getattr(engine.user, 'department_id', None):
+        if current_role == 'DEPT' and not getattr(engine.user, 'department_id', None):
             return conditional_deny(
                 'spot_check.create',
                 message='您未分配部门，无法创建抽查记录',
@@ -44,26 +42,11 @@ def _authorize_spot_check(engine, permission_code, *, resource=None, context=Non
             'spot_check.create',
             message={
                 'MENTOR': '只能为名下学员创建抽查记录',
-                'DEPT_MANAGER': '只能为本室学员创建抽查记录',
+                'DEPT': '只能为本室学员创建抽查记录',
             }.get(current_role, error_message or '无权创建抽查记录'),
             reason='scope_denied',
             constraint='student_scope',
         )
-
-    if permission_code == 'spot_check.submit':
-        base_decision = engine.base_permission_decision('spot_check.submit', error_message=error_message)
-        if not base_decision.allowed:
-            return base_decision
-        if not isinstance(resource, SpotCheck):
-            return base_decision
-        if resource.student_id != getattr(engine.user, 'id', None):
-            return conditional_deny(
-                'spot_check.submit',
-                message=error_message or '只能提交自己的抽查',
-                reason='resource_constraint',
-                constraint='spot_check_self',
-            )
-        return conditional_allow('spot_check.submit', constraint='spot_check_self')
 
     if not isinstance(resource, SpotCheck):
         return None
@@ -89,15 +72,6 @@ def _authorize_spot_check(engine, permission_code, *, resource=None, context=Non
         return base_decision
 
     if permission_code == 'spot_check.view':
-        if engine.get_current_role() == 'STUDENT':
-            if resource.student_id == getattr(engine.user, 'id', None):
-                return conditional_allow(permission_code, constraint='spot_check_self')
-            return conditional_deny(
-                permission_code,
-                message=error_message or '无权访问该抽查记录',
-                reason='scope_denied',
-                constraint='spot_check_self',
-            )
         if engine.get_scoped_learning_members('spot_check.view').filter(pk=resource.student_id).exists():
             return conditional_allow(permission_code, constraint='student_scope')
         return conditional_deny(
@@ -121,8 +95,6 @@ def _authorize_spot_check(engine, permission_code, *, resource=None, context=Non
 
 
 def _filter_spot_check_queryset(engine, *, queryset, context=None):
-    if engine.get_current_role() == 'STUDENT':
-        return queryset.filter(student_id=getattr(engine.user, 'id', None))
     accessible_students = engine.get_scoped_learning_members('spot_check.view')
     return queryset.filter(student_id__in=accessible_students.values('id'))
 
@@ -140,21 +112,10 @@ AUTHORIZATION_SPECS = (
                     'create': {'scope_group_key': 'spot_check_student_scope', 'implies': ('spot_check.view',)},
                 },
             ),
-            perm(
-                'spot_check.submit',
-                '提交抽查',
-                '学员填写并提交自己的抽查',
-                implies=('spot_check.view',),
-            ),
         ),
-        role_defaults={
-            'MENTOR': MANAGER_DEFAULT_PERMISSIONS,
-            'DEPT_MANAGER': MANAGER_DEFAULT_PERMISSIONS,
-            'STUDENT': ('spot_check.view', 'spot_check.submit'),
-        },
         scope_rules=(
-            *scope_rules('spot_check.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', STUDENT='SELF'),
-            *scope_rules('spot_check.create', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT'),
+            *scope_rules('spot_check.view', MENTOR='MENTEES', DEPT='DEPARTMENT'),
+            *scope_rules('spot_check.create', MENTOR='MENTEES', DEPT='DEPARTMENT'),
         ),
         resource_authorization_handlers=(
             ResourceAuthorizationHandler(
@@ -164,7 +125,6 @@ AUTHORIZATION_SPECS = (
                     'spot_check.create',
                     'spot_check.update',
                     'spot_check.delete',
-                    'spot_check.submit',
                 ),
                 authorize=_authorize_spot_check,
                 constraint_summaries={
@@ -172,7 +132,6 @@ AUTHORIZATION_SPECS = (
                     'spot_check.create': SPOT_CHECK_SCOPE_SUMMARY,
                     'spot_check.update': '仅自己创建且可见',
                     'spot_check.delete': '仅自己创建且可见',
-                    'spot_check.submit': '仅本人待填写记录',
                 },
             ),
         ),
@@ -188,10 +147,8 @@ AUTHORIZATION_SPECS = (
                 key='spot_checks.scope_filter.students_view',
                 permission_code='spot_check.view',
                 resource_model=User,
-                filter_queryset=lambda engine, *, queryset, context=None: (
-                    queryset.filter(pk=engine.user.id)
-                    if engine.get_current_role() == 'STUDENT'
-                    else engine.get_scoped_learning_members('spot_check.view')
+                filter_queryset=lambda engine, *, queryset, context=None: engine.get_scoped_learning_members(
+                    'spot_check.view'
                 ),
                 constraint_summary=SPOT_CHECK_SCOPE_SUMMARY,
             ),
@@ -199,7 +156,9 @@ AUTHORIZATION_SPECS = (
                 key='spot_checks.scope_filter.students_create',
                 permission_code='spot_check.create',
                 resource_model=User,
-                filter_queryset=lambda engine, *, queryset, context=None: engine.get_scoped_learning_members('spot_check.create'),
+                filter_queryset=lambda engine, *, queryset, context=None: engine.get_scoped_learning_members(
+                    'spot_check.create'
+                ),
                 constraint_summary=SPOT_CHECK_SCOPE_SUMMARY,
             ),
         ),

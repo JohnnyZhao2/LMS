@@ -5,7 +5,7 @@ import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { AdminDashboard } from '@/types/dashboard';
 
 /**
- * 获取管理员仪表盘数据
+ * 获取全局角色仪表盘数据
  */
 export const useAdminDashboard = () => {
   const currentRole = useCurrentRole();
@@ -13,7 +13,7 @@ export const useAdminDashboard = () => {
   return useQuery({
     queryKey: queryKeys.dashboards.admin(currentRole),
     queryFn: () => apiClient.get<AdminDashboard>('/dashboard/admin/'),
-    enabled: currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN',
+    enabled: currentRole === 'GLOBAL' || currentRole === 'SUPER_ADMIN',
     staleTime: 0,
     refetchOnMount: 'always',
   });

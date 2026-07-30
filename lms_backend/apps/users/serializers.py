@@ -148,15 +148,9 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='导师ID（可选）'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('STUDENT', '学员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=Role.ROLE_CHOICES),
         required=False,
-        help_text='最终角色代码列表；学员可与一个非学员系统角色叠加，也可移除；不传时默认学员；超管账号禁止分配业务角色'
+        help_text='最终角色代码列表；学员可与一个授权角色叠加，也可移除；不传时默认学员；超管账号禁止分配业务角色'
     )
 
     class Meta:
@@ -201,15 +195,9 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='工号'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('STUDENT', '学员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=Role.ROLE_CHOICES),
         required=False,
-        help_text='最终角色代码列表；学员可与一个非学员系统角色叠加，也可移除；超管账号禁止分配业务角色'
+        help_text='最终角色代码列表；学员可与一个授权角色叠加，也可移除；超管账号禁止分配业务角色'
     )
 
     class Meta:
@@ -231,15 +219,9 @@ class AssignRolesSerializer(serializers.Serializer):
     Serializer for assigning roles to a user.
     """
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('STUDENT', '学员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=Role.ROLE_CHOICES),
         required=True,
-        help_text='最终角色代码列表；学员可与一个非学员系统角色叠加，也可移除；超管账号禁止分配业务角色'
+        help_text='最终角色代码列表；学员可与一个授权角色叠加，也可移除；超管账号禁止分配业务角色'
     )
 class AssignMentorSerializer(serializers.Serializer):
     """

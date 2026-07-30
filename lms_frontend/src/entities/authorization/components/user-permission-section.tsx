@@ -4,7 +4,7 @@ import {
   useCreateUserPermissionOverride,
   usePermissionCatalog,
   useRevokeUserPermissionOverride,
-  useRolePermissionTemplates,
+  useRoleCapabilities,
   useUserPermissionOverrides,
 } from '@/entities/authorization/api/authorization';
 import type { PermissionOverrideScope } from '@/types/authorization';
@@ -21,7 +21,6 @@ import { mapPermissionOverrideEntry } from './user-permission-section.helpers';
 import type { PermissionOverrideEntry } from './user-permission-section.types';
 import { useUserPermissionOverrideState } from './use-user-permission-override-state';
 import {
-  ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
   USER_PERMISSION_ACCESS_PERMISSIONS,
   USER_PERMISSION_UPDATE_PERMISSION,
 } from '@/entities/authorization/constants/access';
@@ -42,7 +41,6 @@ export function UserPermissionSection({
   const { hasCapability, refreshUser } = useAuth();
   const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
   const canManageUserAuthorization = hasCapability(USER_PERMISSION_UPDATE_PERMISSION);
-  const canViewRoleTemplate = ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS.some(hasCapability);
 
   const shouldLoadUserOverrides = Boolean(userId) && canViewUserAuthorization;
   const { data: permissionCatalog = [] } = usePermissionCatalog(
@@ -69,30 +67,30 @@ export function UserPermissionSection({
   ), [isSuperuserAccount, selectedRoleCode, selectedRoleCodes]);
   const hasConfigurablePermissionRoles = previewRoleCodes.length > 0;
 
-  const roleTemplateQueries = useRolePermissionTemplates(
+  const roleCapabilityQueries = useRoleCapabilities(
     previewRoleCodes,
-    canViewUserAuthorization && canViewRoleTemplate,
+    canViewUserAuthorization,
   );
 
-  const roleTemplatePermissionCodeMap = useMemo(() => {
-    const templateMap = new Map<RoleCode, string[]>();
+  const roleCapabilityPermissionCodeMap = useMemo(() => {
+    const capabilityMap = new Map<RoleCode, string[]>();
     previewRoleCodes.forEach((roleCode, index) => {
-      templateMap.set(roleCode, roleTemplateQueries[index]?.data?.permission_codes ?? []);
+      capabilityMap.set(roleCode, roleCapabilityQueries[index]?.data?.permission_codes ?? []);
     });
-    return templateMap;
-  }, [previewRoleCodes, roleTemplateQueries]);
+    return capabilityMap;
+  }, [previewRoleCodes, roleCapabilityQueries]);
 
-  const roleTemplateScopeGroupMap = useMemo(() => {
+  const roleCapabilityScopeGroupMap = useMemo(() => {
     const scopeGroupMap = new Map<RoleCode, Map<string, PermissionOverrideScope[]>>();
     previewRoleCodes.forEach((roleCode, index) => {
       const groupMap = new Map<string, PermissionOverrideScope[]>();
-      (roleTemplateQueries[index]?.data?.scope_groups ?? []).forEach((scopeGroup) => {
+      (roleCapabilityQueries[index]?.data?.scope_groups ?? []).forEach((scopeGroup) => {
         groupMap.set(scopeGroup.key, scopeGroup.default_scope_types);
       });
       scopeGroupMap.set(roleCode, groupMap);
     });
     return scopeGroupMap;
-  }, [previewRoleCodes, roleTemplateQueries]);
+  }, [previewRoleCodes, roleCapabilityQueries]);
 
   const normalizedSelectedPermissionRole = useMemo<RoleCode>(
     () => previewRoleCodes[0] ?? 'MENTOR',
@@ -108,12 +106,10 @@ export function UserPermissionSection({
       .map(mapPermissionOverrideEntry);
   }, [shouldLoadUserOverrides, userOverrides]);
 
-  const roleTemplatePermissionCodes = useMemo(() => {
-    if (!canViewRoleTemplate) {
-      return new Set<string>();
-    }
-    return new Set(roleTemplatePermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []);
-  }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
+  const roleCapabilityPermissionCodes = useMemo(
+    () => new Set(roleCapabilityPermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []),
+    [normalizedSelectedPermissionRole, roleCapabilityPermissionCodeMap],
+  );
 
   const permissionSections = useMemo(
     () => buildPermissionModuleSections(permissionCatalog),
@@ -129,7 +125,7 @@ export function UserPermissionSection({
       ));
       const scopeGroups = scopeGroupKeys.map((scopeGroupKey) => {
         const selectedRoleDefaultScopeTypes = normalizeScopeTypes(
-          roleTemplateScopeGroupMap.get(normalizedSelectedPermissionRole)?.get(scopeGroupKey)
+          roleCapabilityScopeGroupMap.get(normalizedSelectedPermissionRole)?.get(scopeGroupKey)
             ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
             ?? [],
         );
@@ -149,7 +145,7 @@ export function UserPermissionSection({
   ), [
     normalizedSelectedPermissionRole,
     permissionSections,
-    roleTemplateScopeGroupMap,
+    roleCapabilityScopeGroupMap,
   ]);
 
   const { getPermissionState, handlePermissionToggle, isPermissionSaving } = useUserPermissionOverrideState({
@@ -157,7 +153,7 @@ export function UserPermissionSection({
     canManageOverride: canManageUserAuthorization,
     normalizedSelectedPermissionRole,
     permissionCatalog,
-    roleTemplatePermissionCodes,
+    roleCapabilityPermissionCodes,
     userOverrides: userPermissionOverrides,
     createOverride: createUserOverride.mutateAsync,
     revokeOverride: revokeUserOverride.mutateAsync,
@@ -175,7 +171,7 @@ export function UserPermissionSection({
         <EmptyState
           icon={KeyRound}
           title="当前仅学员角色"
-          description="请在上方用户信息右侧选择一个扩展角色后，再进行权限配置。"
+          description="请先在左侧为该用户分配管理角色，再进行权限配置。"
           className="py-0"
         />
       </div>
@@ -185,14 +181,6 @@ export function UserPermissionSection({
   return (
     <div>
       <div className="mt-6 space-y-6">
-        {!canViewRoleTemplate && (
-          <div className="px-1">
-            <p className="text-[11px] text-slate-400">
-              当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
-            </p>
-          </div>
-        )}
-
         <div className="relative">
           <UserPermissionModuleList
             getPermissionState={getPermissionState}

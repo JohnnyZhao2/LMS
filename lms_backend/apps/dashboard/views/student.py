@@ -7,7 +7,7 @@ Implements:
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.roles import enforce_student_workspace
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
     StudentDashboardSerializer,
@@ -37,11 +37,7 @@ class StudentDashboardView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request):
-        enforce(
-            'dashboard.student.view',
-            request,
-            error_message='只有学员可以访问此仪表盘',
-        )
+        enforce_student_workspace(request, error_message='只有学员可以访问此仪表盘')
         user = request.user
         task_limit = parse_int_query_param(
             request=request,
@@ -82,11 +78,7 @@ class TaskParticipantsView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request, task_id: int):
-        enforce(
-            'dashboard.student.view',
-            request,
-            error_message='只有学员可以访问此接口',
-        )
+        enforce_student_workspace(request, error_message='只有学员可以访问此接口')
         user = request.user
         participants = self.service.get_task_participants(user, task_id)
         return list_response(PeerRankingSerializer(participants, many=True).data)

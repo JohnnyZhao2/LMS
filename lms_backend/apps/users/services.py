@@ -197,10 +197,9 @@ class UserManagementService(BaseService):
         Raises:
             BusinessError: If user not found or role constraints violated
         Properties:
-        - 非 STUDENT 系统角色单选（最多一个）
-        - STUDENT 可与非 STUDENT 系统角色叠加，也可被移除
-        - 每个部门只能有一个室经理
-        - 全局只能有一个团队经理
+        - 授权角色（MENTOR/DEPT/GLOBAL）互斥，最多一个
+        - STUDENT 可与一个授权角色叠加，也可被移除
+        - 超管账号禁止分配业务角色
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')

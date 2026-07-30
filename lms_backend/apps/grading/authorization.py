@@ -19,9 +19,5 @@ AUTHORIZATION_SPECS = (
                 implies=('grading.view',),
             ),
         ),
-        role_defaults={
-            'MENTOR': ('grading.view', 'grading.score'),
-            'DEPT_MANAGER': ('grading.view', 'grading.score'),
-        },
     ),
 )

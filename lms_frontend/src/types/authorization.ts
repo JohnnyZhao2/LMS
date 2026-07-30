@@ -18,9 +18,10 @@ export interface RoleScopeGroup {
   default_scope_types: PermissionOverrideScope[];
 }
 
-export type PermissionCatalogView = 'role_template' | 'user_authorization';
+export type PermissionCatalogView = 'user_authorization';
 
-export interface RolePermissionTemplate {
+/** 角色固定能力（只读，代码声明） */
+export interface RoleCapability {
   role_code: RoleCode;
   permission_codes: string[];
   default_scope_types: PermissionOverrideScope[];

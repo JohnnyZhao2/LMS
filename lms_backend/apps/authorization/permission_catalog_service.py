@@ -2,7 +2,9 @@ from typing import Optional
 
 from django.db import transaction
 
-from .constants import PERMISSION_CATALOG, ROLE_PERMISSION_DEFAULTS
+from apps.authorization.roles import STUDENT_ROLE
+
+from .constants import PERMISSION_CATALOG
 from .models import Permission, RolePermission
 from .selectors import list_permissions
 
@@ -31,13 +33,16 @@ class PermissionCatalogServiceMixin:
         Permission.objects.exclude(code__in=[item['code'] for item in PERMISSION_CATALOG]).delete()
 
     @staticmethod
+    def _clear_legacy_role_permission_rows() -> None:
+        """角色能力已改为代码声明，清理历史 RolePermission / 学员残留。"""
+        RolePermission.objects.filter(role__code=STUDENT_ROLE).delete()
+        RolePermission.objects.all().delete()
+
+    @staticmethod
     @transaction.atomic
-    def ensure_defaults(
-        *,
-        sync_role_templates: bool = False,
-        overwrite_existing_role_templates: bool = False,
-    ) -> None:
+    def ensure_defaults() -> None:
+        from apps.users.role_constraints import repair_conflicting_auth_roles
+
         PermissionCatalogServiceMixin.sync_permission_catalog()
-        if sync_role_templates:
-            if overwrite_existing_role_templates:
-                RolePermission.objects.filter(role__code__in=ROLE_PERMISSION_DEFAULTS.keys()).delete()
+        PermissionCatalogServiceMixin._clear_legacy_role_permission_rows()
+        repair_conflicting_auth_roles()

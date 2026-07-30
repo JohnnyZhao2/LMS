@@ -14,7 +14,7 @@ import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialo
 import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
 
 const ASSIGNEE_ROLE_LABELS = new Map([
-  ['DEPT_MANAGER', '室经理'],
+  ['DEPT', '室组'],
 ]);
 
 export const TaskForm: React.FC = () => {

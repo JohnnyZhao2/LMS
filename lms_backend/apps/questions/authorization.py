@@ -11,7 +11,7 @@ from .models import Question
 
 
 QUESTION_OWNER_CONSTRAINT = 'question_owner'
-QUESTION_OWNER_SUMMARY = '仅自己创建，管理员全局'
+QUESTION_OWNER_SUMMARY = '仅自己创建，全局角色全部'
 QUESTION_RESOURCE_SCOPE_GROUP = 'question_resource_scope'
 QUESTION_SCOPED_ACTIONS = ('view', 'update', 'delete')
 QUESTION_SCOPED_PERMISSION_CODES = tuple(f'question.{action}' for action in QUESTION_SCOPED_ACTIONS)
@@ -49,7 +49,6 @@ AUTHORIZATION_SPECS = (
         'question',
         'question',
         '题目',
-        full_roles=('MENTOR', 'DEPT_MANAGER', 'ADMIN'),
         kwargs_by_action={
             action: {
                 'scope_group_key': QUESTION_RESOURCE_SCOPE_GROUP,
@@ -62,8 +61,8 @@ AUTHORIZATION_SPECS = (
             for rule in scope_rules(
                 permission_code,
                 MENTOR='SELF',
-                DEPT_MANAGER='SELF',
-                ADMIN='ALL',
+                DEPT='SELF',
+                GLOBAL='ALL',
             )
         ),
         resource_authorization_handlers=(

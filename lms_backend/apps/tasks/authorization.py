@@ -1,17 +1,14 @@
-from django.db.models import Q
-
 from apps.authorization.decisions import conditional_allow, conditional_deny
 from apps.authorization.owner_scope import filter_queryset_by_owner_scope, is_owner_in_scope
 from apps.authorization.registry import (
     AuthorizationSpec,
     ResourceAuthorizationHandler,
     ScopeFilterHandler,
-    crud_codes,
     crud_permissions,
     scope_rules,
     perm,
 )
-from apps.tasks.models import Task, TaskAssignment
+from apps.tasks.models import Task
 from apps.users.models import User
 
 
@@ -19,8 +16,6 @@ TASK_RESOURCE_SCOPE_GROUP = 'task_resource_scope'
 TASK_ASSIGNMENT_SCOPE_GROUP = 'task_assignment_scope'
 TASK_RESOURCE_SCOPE_SUMMARY = '任务可见范围'
 TASK_ASSIGNMENT_SCOPE_SUMMARY = '指派人员范围'
-TASK_MANAGER_CODES = (*crud_codes('task'), 'task.assign', 'task.analytics.view')
-TASK_ADMIN_CODES = (*crud_codes('task'), 'task.assign')
 TASK_ASSIGNEE_ROLE_CODES = ('STUDENT',)
 
 
@@ -50,13 +45,7 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
         return conditional_allow(permission_code, constraint='task_visibility')
 
     if permission_code == 'task.view':
-        if (
-            is_owner_in_scope(engine, 'task.view', resource.created_by_id)
-            or (
-                engine.get_current_role() == 'STUDENT'
-                and resource.assignments.filter(assignee=engine.user).exists()
-            )
-        ):
+        if is_owner_in_scope(engine, 'task.view', resource.created_by_id):
             return conditional_allow(permission_code, constraint='task_visibility')
         return conditional_deny(
             permission_code,
@@ -79,12 +68,7 @@ def _authorize_task_resource(engine, permission_code, *, resource=None, context=
 
 
 def _filter_task_queryset(engine, *, queryset, context=None):
-    scoped_owner_tasks = filter_queryset_by_owner_scope(engine, 'task.view', queryset)
-    if engine.get_current_role() != 'STUDENT':
-        return scoped_owner_tasks
-
-    assigned_task_ids = TaskAssignment.objects.filter(assignee=engine.user).values_list('task_id', flat=True)
-    return queryset.filter(Q(id__in=scoped_owner_tasks.values('id')) | Q(id__in=assigned_task_ids))
+    return filter_queryset_by_owner_scope(engine, 'task.view', queryset)
 
 
 def _task_assignee_queryset():
@@ -145,24 +129,17 @@ AUTHORIZATION_SPECS = (
                 implies=('task.view',),
             ),
         ),
-        role_defaults={
-            'STUDENT': ('task.view',),
-            'MENTOR': TASK_MANAGER_CODES,
-            'DEPT_MANAGER': TASK_MANAGER_CODES,
-            'ADMIN': TASK_ADMIN_CODES,
-        },
         scope_rules=(
             *scope_rules(
                 'task.view',
-                STUDENT='SELF',
                 MENTOR='SELF',
-                DEPT_MANAGER='SELF',
-                ADMIN='ALL',
+                DEPT='SELF',
+                GLOBAL='ALL',
             ),
-            *scope_rules('task.update', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
-            *scope_rules('task.delete', MENTOR='SELF', DEPT_MANAGER='SELF', ADMIN='ALL'),
-            *scope_rules('task.assign', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
-            *scope_rules('task.analytics.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
+            *scope_rules('task.update', MENTOR='SELF', DEPT='SELF', GLOBAL='ALL'),
+            *scope_rules('task.delete', MENTOR='SELF', DEPT='SELF', GLOBAL='ALL'),
+            *scope_rules('task.assign', MENTOR='MENTEES', DEPT='DEPARTMENT', GLOBAL='ALL'),
+            *scope_rules('task.analytics.view', MENTOR='MENTEES', DEPT='DEPARTMENT', GLOBAL='ALL'),
         ),
         resource_authorization_handlers=(
             ResourceAuthorizationHandler(

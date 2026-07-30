@@ -22,7 +22,7 @@ interface UseUserPermissionOverrideStateParams {
   canManageOverride: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   permissionCatalog: PermissionCatalogItem[];
-  roleTemplatePermissionCodes: Set<string>;
+  roleCapabilityPermissionCodes: Set<string>;
   userOverrides: PermissionOverrideEntry[];
   createOverride: (params: {
     userId: number;
@@ -47,7 +47,7 @@ export const useUserPermissionOverrideState = ({
   canManageOverride,
   normalizedSelectedPermissionRole,
   permissionCatalog,
-  roleTemplatePermissionCodes,
+  roleCapabilityPermissionCodes,
   userOverrides,
   createOverride,
   revokeOverride,
@@ -66,7 +66,7 @@ export const useUserPermissionOverrideState = ({
   );
 
   const getPermissionState = useCallback((permissionCode: string): PermissionState => {
-    const fromTemplate = roleTemplatePermissionCodes.has(permissionCode);
+    const fromTemplate = roleCapabilityPermissionCodes.has(permissionCode);
 
     return resolvePermissionState({
       allowOverrides: activeScopeAllowOverrides.get(permissionCode) ?? [],
@@ -78,7 +78,7 @@ export const useUserPermissionOverrideState = ({
     activeScopeAllowOverrides,
     activeScopeDenyOverrides,
     canManageOverride,
-    roleTemplatePermissionCodes,
+    roleCapabilityPermissionCodes,
   ]);
 
   const handlePermissionToggle = useCallback(async (permissionCode: string, nextChecked: boolean) => {

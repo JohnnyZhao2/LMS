@@ -4,19 +4,16 @@ import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { getRoleColor } from '@/lib/role-config';
+import { ROLE_FULL_LABELS } from '@/config/role-constants';
 import type { UserList as UserDetail } from '@/types/common';
 import type { RoleCode } from '@/types/common';
 import { UserPermissionSection } from '@/entities/authorization/components/user-permission-section';
-import { UserRoleAssignmentChips } from '@/entities/authorization/components/user-role-assignment-chips';
 
 interface UserPermissionWorkbenchProps {
   userDetail?: UserDetail;
   selectedRoleCodes: RoleCode[];
   selectedRoleCode?: RoleCode | null;
-  roleNameMap: Map<string, string>;
-  canManageRoles: boolean;
-  isRoleBusy: boolean;
-  onToggleRole: (roleCode: RoleCode) => void;
   isLoading?: boolean;
   emptyDescription: string;
   metaSuffix?: string;
@@ -29,10 +26,6 @@ export function UserPermissionWorkbench({
   userDetail,
   selectedRoleCodes,
   selectedRoleCode,
-  roleNameMap,
-  canManageRoles,
-  isRoleBusy,
-  onToggleRole,
   isLoading = false,
   emptyDescription,
   metaSuffix,
@@ -45,6 +38,10 @@ export function UserPermissionWorkbench({
     userDetail?.department?.name,
     metaSuffix,
   ].filter(Boolean).join(' · ');
+  const roleLabel = selectedRoleCode
+    ? (ROLE_FULL_LABELS[selectedRoleCode] ?? selectedRoleCode)
+    : null;
+  const roleColor = selectedRoleCode ? getRoleColor(selectedRoleCode) : null;
 
   return (
     <Spinner spinning={isLoading} className="min-h-0 flex-1">
@@ -72,13 +69,18 @@ export function UserPermissionWorkbench({
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               {headerActions}
-              <UserRoleAssignmentChips
-                roles={userDetail.roles}
-                roleNameMap={roleNameMap}
-                canManageRoles={canManageRoles}
-                isBusy={isRoleBusy}
-                onToggleRole={onToggleRole}
-              />
+              {roleLabel && roleColor ? (
+                <span
+                  className={cn(
+                    'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
+                    roleColor.bgClass,
+                    roleColor.mutedTextClass,
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', roleColor.iconBgClass ?? 'bg-current')} />
+                  {roleLabel}
+                </span>
+              ) : null}
             </div>
           </div>
 

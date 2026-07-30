@@ -11,6 +11,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.engine import enforce
+from apps.authorization.roles import enforce_student_workspace, is_student_workspace
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
@@ -59,6 +60,13 @@ def _build_knowledge_filters(request):
     return filters, search
 
 
+def _enforce_knowledge_view(request, *, error_message: str = '无权查看知识') -> None:
+    if is_student_workspace(request):
+        enforce_student_workspace(request, error_message=error_message)
+        return
+    enforce('knowledge.view', request, error_message=error_message)
+
+
 class KnowledgeListCreateView(BaseAPIView):
     """
     Knowledge list and create endpoint.
@@ -96,11 +104,11 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
-        enforce('knowledge.view', request, error_message='无权查看知识列表')
+        _enforce_knowledge_view(request)
         return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
-        description='创建新的知识文档（管理员或室经理）',
+        description='创建新的知识文档（全局或室组）',
         request=KnowledgeCreateSerializer,
         responses={
             201: KnowledgeDetailSerializer,
@@ -140,14 +148,14 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, pk):
-        enforce('knowledge.view', request, error_message='无权查看知识详情')
+        _enforce_knowledge_view(request)
         knowledge = self.service.get_by_id(pk)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(serializer.data)
     @extend_schema(
         summary='更新知识文档',
-        description='更新知识文档内容（管理员或室经理）',
+        description='更新知识文档内容（全局或室组）',
         request=KnowledgeUpdateSerializer,
         responses={
             200: KnowledgeDetailSerializer,
@@ -174,7 +182,7 @@ class KnowledgeDetailView(BaseAPIView):
         return success_response(response_serializer.data)
     @extend_schema(
         summary='删除知识文档',
-        description='删除知识文档（管理员或室经理，被任务引用时禁止删除）',
+        description='删除知识文档（全局或室组，被任务引用时禁止删除）',
         responses={
             200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='知识文档被任务引用，无法删除'),
@@ -203,7 +211,7 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, task_knowledge_id):
-        enforce('knowledge.view', request, error_message='无权查看任务知识详情')
+        enforce_student_workspace(request, error_message='无权查看任务知识详情')
         task_knowledge = TaskKnowledge.objects.select_related(
             'task',
             'knowledge',
@@ -245,6 +253,6 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
-        enforce('knowledge.view', request, error_message='无权记录知识阅读')
+        _enforce_knowledge_view(request, error_message='无权记录知识阅读')
         view_count = self.service.increment_view_count(pk)
         return success_response({'view_count': view_count})

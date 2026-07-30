@@ -3,12 +3,13 @@ Role assignment constraints for users.
 """
 from typing import Iterable, Optional, Set
 
+from django.db import transaction
+
+from apps.authorization.roles import AUTH_ROLE_CODES, DEPT_ROLE, GLOBAL_ROLE, MENTOR_ROLE
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Role, User
 
-
-NON_STUDENT_ROLE_CODES = {'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'}
+AUTH_ROLE_PRIORITY = (GLOBAL_ROLE, DEPT_ROLE, MENTOR_ROLE)
 
 
 def validate_role_assignment_constraints(
@@ -20,13 +21,11 @@ def validate_role_assignment_constraints(
     validate_dedicated_roles: bool = True,
 ) -> None:
     """
-    Validate role assignment constraints.
+    校验角色分配约束。
 
-    Rules:
-    - Non-STUDENT business roles are single-select (at most one).
-    - Superuser account is a dedicated role and cannot be assigned business roles.
-    - TEAM_MANAGER is globally unique (active users only).
-    - DEPT_MANAGER is unique per department (active users only).
+    规则:
+    - 授权角色（MENTOR/DEPT/GLOBAL）互斥，最多一个。
+    - 超管账号为专有身份，不能分配业务角色。
     """
     normalized_codes = _normalize_role_codes(role_codes)
     if validate_dedicated_roles:
@@ -35,73 +34,45 @@ def validate_role_assignment_constraints(
             is_superuser=is_superuser,
         )
 
-    _validate_exclusive_role_uniqueness(
-        role_codes=normalized_codes,
-        department_id=department_id,
-        exclude_user_id=exclude_user_id,
-    )
-
 
 def _normalize_role_codes(role_codes: Iterable[str]) -> Set[str]:
     return {code for code in role_codes if code}
 
 
 def _validate_dedicated_role_composition(*, role_codes: Set[str], is_superuser: bool) -> None:
-    non_student_codes = NON_STUDENT_ROLE_CODES.intersection(role_codes)
-    if len(non_student_codes) > 1:
+    auth_role_codes = AUTH_ROLE_CODES.intersection(role_codes)
+    if len(auth_role_codes) > 1:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
-            message='学员以外系统角色最多只能选择一个'
+            message='授权角色最多只能选择一个',
         )
 
     if is_superuser and role_codes:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
-            message='超管账号为专有角色，不允许分配业务角色'
+            message='超管账号为专有角色，不允许分配业务角色',
         )
 
 
-def _validate_exclusive_role_uniqueness(
-    *,
-    role_codes: Set[str],
-    department_id: Optional[int],
-    exclude_user_id: Optional[int],
-) -> None:
-    team_manager_queryset = User.objects.filter(
-        roles__code='TEAM_MANAGER',
-        is_active=True,
+@transaction.atomic
+def repair_conflicting_auth_roles() -> int:
+    """将同时拥有多个授权角色的用户收敛为优先级最高的一个。返回修复用户数。"""
+    from apps.users.models import User, UserRole
+
+    repaired = 0
+    users = (
+        User.objects.filter(roles__code__in=AUTH_ROLE_CODES)
+        .distinct()
+        .prefetch_related('roles')
     )
-    dept_manager_queryset = User.objects.filter(
-        roles__code='DEPT_MANAGER',
-        is_active=True,
-    )
-    if exclude_user_id is not None:
-        team_manager_queryset = team_manager_queryset.exclude(pk=exclude_user_id)
-        dept_manager_queryset = dept_manager_queryset.exclude(pk=exclude_user_id)
-
-    if 'TEAM_MANAGER' in role_codes:
-        existing_team_manager = team_manager_queryset.first()
-        if existing_team_manager:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
-            )
-
-    if 'DEPT_MANAGER' in role_codes:
-        if not department_id:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='用户未分配部门，无法设置为室经理'
-            )
-
-        existing_dept_manager = dept_manager_queryset.filter(
-            department_id=department_id
-        ).first()
-        if existing_dept_manager:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=(
-                    f'部门 {existing_dept_manager.department.name} 已有室经理 '
-                    f'{existing_dept_manager.employee_id}，每个部门只能有一个室经理'
-                )
-            )
+    for user in users:
+        auth_codes = {role.code for role in user.roles.all() if role.code in AUTH_ROLE_CODES}
+        if len(auth_codes) <= 1:
+            continue
+        keep_code = next(code for code in AUTH_ROLE_PRIORITY if code in auth_codes)
+        UserRole.objects.filter(
+            user_id=user.id,
+            role__code__in=AUTH_ROLE_CODES,
+        ).exclude(role__code=keep_code).delete()
+        repaired += 1
+    return repaired

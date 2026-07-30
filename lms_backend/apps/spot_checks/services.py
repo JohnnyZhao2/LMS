@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.activity_logs.decorators import log_operation
 from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.roles import enforce_student_workspace, is_student_workspace
 from apps.users.models import User
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
@@ -56,9 +57,17 @@ class SpotCheckService(BaseService):
         fields = list(dict.fromkeys([*update_fields, 'revision', 'updated_at']))
         spot_check.save(update_fields=fields)
 
+    def _enforce_student_owned(self, spot_check: SpotCheck, *, error_message: str) -> None:
+        enforce_student_workspace(self.request, error_message=error_message)
+        if spot_check.student_id != getattr(self.user, 'id', None):
+            raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
+
     def get_by_id(self, pk: int) -> SpotCheck:
         spot_check = self._base_queryset().filter(pk=pk).first()
         self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
+        if is_student_workspace(self.request):
+            self._enforce_student_owned(spot_check, error_message='无权访问该抽查记录')
+            return spot_check
         enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
         return spot_check
 
@@ -75,7 +84,7 @@ class SpotCheckService(BaseService):
         ordering: str = '-created_at',
         status: Optional[str] = None,
     ) -> QuerySet:
-        enforce('spot_check.view', self.request, error_message='无权查看抽查记录')
+        enforce_student_workspace(self.request, error_message='无权查看抽查记录')
         qs = self._base_queryset().filter(student_id=self.user.id)
         if status:
             qs = qs.filter(status=status)
@@ -142,12 +151,7 @@ class SpotCheckService(BaseService):
     @transaction.atomic
     def submit(self, pk: int, data: dict) -> SpotCheck:
         spot_check = self._lock_by_id(pk)
-        enforce(
-            'spot_check.submit',
-            self.request,
-            resource=spot_check,
-            error_message='无权提交该抽查',
-        )
+        self._enforce_student_owned(spot_check, error_message='无权提交该抽查')
         self._require_revision(spot_check, data)
         if spot_check.status != SpotCheck.STATUS_PENDING:
             raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='当前状态不可提交')

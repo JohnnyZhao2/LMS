@@ -75,7 +75,7 @@ class AssignableUserListView(APIView):
         根据当前用户的角色和数据范围返回可分配的执行人员列表。
         - 管理员：全平台所有可执行任务人员
         - 导师：仅名下可执行任务人员
-        - 室经理：仅本室可执行任务人员
+        - 室组：仅本室可执行任务人员
         ''',
         parameters=[
             OpenApiParameter(name='search', type=str, description='按姓名或工号搜索'),
@@ -239,7 +239,7 @@ class TaskListView(BaseAPIView):
         获取任务列表，根据用户角色返回不同范围的数据：
         - 管理员：全平台所有任务
         - 导师：自己创建的任务
-        - 室经理：自己创建的任务
+        - 室组：自己创建的任务
         - 学员：分配给自己的任务
         ''',
         parameters=[

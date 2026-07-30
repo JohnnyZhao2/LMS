@@ -65,7 +65,7 @@ class QuestionListCreateView(BaseAPIView):
 
     @extend_schema(
         summary='创建题目',
-        description='创建新题目（导师/室经理/管理员）',
+        description='创建新题目（导师/室组/全局）',
         request=QuestionCreateSerializer,
         responses={
             201: QuestionSerializer,

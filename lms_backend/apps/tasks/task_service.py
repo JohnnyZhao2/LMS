@@ -7,7 +7,12 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from apps.authorization.engine import authorize, enforce, scope_filter
-from apps.authorization.roles import SUPER_ADMIN_ROLE, resolve_current_role
+from apps.authorization.roles import (
+    SUPER_ADMIN_ROLE,
+    enforce_student_workspace,
+    is_student_workspace,
+    resolve_current_role,
+)
 from apps.activity_logs.decorators import log_operation
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
@@ -29,7 +34,7 @@ class TaskService(BaseService):
     列表读取尽量走 selectors，权限范围统一走 authorization engine。
     """
 
-    MANAGEMENT_SIDE_ROLES = ['ADMIN', SUPER_ADMIN_ROLE]
+    MANAGEMENT_SIDE_ROLES = ['GLOBAL', SUPER_ADMIN_ROLE]
 
     def get_task_queryset_for_user(self) -> QuerySet:
         qs = task_list_queryset()
@@ -59,6 +64,11 @@ class TaskService(BaseService):
         return task
 
     def check_task_read_permission(self, task: Task) -> bool:
+        if is_student_workspace(self.request):
+            enforce_student_workspace(self.request, error_message='无权访问此任务')
+            if not task.assignments.filter(assignee_id=self.user.id).exists():
+                raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message='无权访问此任务')
+            return True
         enforce('task.view', self.request, resource=task, error_message='无权访问此任务')
         return True
 
@@ -92,7 +102,7 @@ class TaskService(BaseService):
         self._validate_create_payload(knowledge_ids, quiz_ids, assignee_ids)
 
         current_role = resolve_current_role(self.user)
-        created_role = 'ADMIN' if current_role == SUPER_ADMIN_ROLE else (current_role or 'ADMIN')
+        created_role = 'GLOBAL' if current_role == SUPER_ADMIN_ROLE else (current_role or 'GLOBAL')
         task = Task.objects.create(
             title=title,
             description=description,

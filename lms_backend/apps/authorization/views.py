@@ -9,26 +9,24 @@ from core.responses import created_response, list_response, success_response
 
 from .engine import enforce, enforce_any
 from .serializers import (
+    RoleCapabilitySerializer,
     PermissionSerializer,
-    RolePermissionSerializer,
-    RolePermissionTemplateSerializer,
     UserPermissionOverrideCreateSerializer,
     UserPermissionOverrideSerializer,
 )
 from .services import AuthorizationService
 
 
-PERMISSION_CATALOG_VIEW_CHOICES = {'role_template', 'user_authorization'}
-ROLE_PERMISSION_TEMPLATE_ACCESS_CODES = (
-    'role_permission_template.view',
-    'role_permission_template.update',
-)
+PERMISSION_CATALOG_VIEW_CHOICES = {'user_authorization'}
 USER_PERMISSION_ACCESS_CODES = (
     'user.permission.view',
     'user.permission.update',
 )
 PERMISSION_CATALOG_ACCESS_CODES = (
-    *ROLE_PERMISSION_TEMPLATE_ACCESS_CODES,
+    *USER_PERMISSION_ACCESS_CODES,
+    'user.role.assign',
+)
+ROLE_CAPABILITY_ACCESS_CODES = (
     *USER_PERMISSION_ACCESS_CODES,
     'user.role.assign',
 )
@@ -47,7 +45,7 @@ class PermissionCatalogView(BaseAPIView):
             OpenApiParameter(
                 name='view',
                 type=str,
-                description='按消费视图筛选（可选）：role_template 或 user_authorization',
+                description='按消费视图筛选（可选）：user_authorization',
             ),
         ],
         responses={
@@ -67,61 +65,28 @@ class PermissionCatalogView(BaseAPIView):
         return list_response(serializer.data)
 
 
-class RolePermissionView(BaseAPIView):
-    """Role baseline permission management."""
+class RoleCapabilityView(BaseAPIView):
+    """只读：返回代码声明的角色固定能力。"""
 
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='获取角色权限模板',
+        summary='获取角色固定能力',
         responses={
-            200: RolePermissionTemplateSerializer,
+            200: RoleCapabilitySerializer,
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
     )
     def get(self, request, role_code: str):
         enforce_any(
-            ROLE_PERMISSION_TEMPLATE_ACCESS_CODES,
+            ROLE_CAPABILITY_ACCESS_CODES,
             request,
-            error_message='无权查看角色权限模板',
+            error_message='无权查看角色能力',
         )
 
         permission_codes = self.service.get_role_permission_codes(role_code)
-        return success_response(
-            {
-                'role_code': role_code,
-                'permission_codes': permission_codes,
-                'default_scope_types': self.service.get_role_default_scope_types(role_code),
-                'scope_groups': self.service.get_role_scope_groups(role_code),
-            }
-        )
-
-    @extend_schema(
-        summary='替换角色权限模板',
-        request=RolePermissionSerializer,
-        responses={
-            200: RolePermissionTemplateSerializer,
-            400: OpenApiResponse(description='参数错误'),
-            403: OpenApiResponse(description='无权限'),
-        },
-        tags=['授权管理'],
-    )
-    def put(self, request, role_code: str):
-        enforce('role_permission_template.update', request, error_message='无权配置角色权限模板')
-
-        serializer = RolePermissionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        requested_role_code = serializer.validated_data['role_code']
-        if requested_role_code != role_code:
-            raise serializers.ValidationError({'role_code': '路径角色与请求体角色不一致'})
-
-        permission_codes = self.service.replace_role_permissions(
-            role_code=role_code,
-            permission_codes=serializer.validated_data['permission_codes'],
-        )
         return success_response(
             {
                 'role_code': role_code,

@@ -25,14 +25,14 @@ export const queryKeys = {
       module ?? 'ALL',
       view ?? 'ALL',
     ] as const,
-    roleTemplatesRoot: () => ['authorization', 'role-template'] as const,
-    roleTemplate: ({
+    roleCapabilitiesRoot: () => ['authorization', 'role-capabilities'] as const,
+    roleCapabilities: ({
       currentRole,
       roleCode,
     }: {
       currentRole: QueryRole;
       roleCode: string;
-    }) => ['authorization', 'role-template', normalizeRoleKey(currentRole), roleCode] as const,
+    }) => ['authorization', 'role-capabilities', normalizeRoleKey(currentRole), roleCode] as const,
     userOverridesRoot: () => ['authorization', 'user-overrides'] as const,
     userOverrides: ({
       currentRole,

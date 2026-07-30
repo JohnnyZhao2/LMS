@@ -1,4 +1,5 @@
 from apps.authorization.engine import authorize
+from apps.authorization.roles import is_student_workspace
 from apps.spot_checks.models import SpotCheck
 
 
@@ -17,7 +18,8 @@ def get_spot_check_actions_payload(request, spot_check) -> dict[str, bool]:
     can_delete = authorize('spot_check.delete', request, resource=spot_check).allowed
     can_submit = (
         spot_check.status == SpotCheck.STATUS_PENDING
-        and authorize('spot_check.submit', request, resource=spot_check).allowed
+        and is_student_workspace(request)
+        and spot_check.student_id == getattr(request.user, 'id', None)
     )
     can_score = (
         spot_check.status in {SpotCheck.STATUS_SUBMITTED, SpotCheck.STATUS_SCORED}

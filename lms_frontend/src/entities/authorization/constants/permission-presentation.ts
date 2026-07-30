@@ -4,10 +4,6 @@ interface ModulePresentationMeta {
 }
 
 const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
-  dashboard: {
-    label: '仪表盘',
-    order: 5,
-  },
   task: {
     label: '任务管理',
     order: 10,
@@ -47,14 +43,6 @@ const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
   log_management: {
     label: '日志管理',
     order: 85,
-  },
-  submission: {
-    label: '作答流程',
-    order: 90,
-  },
-  profile: {
-    label: '个人中心',
-    order: 100,
   },
 };
 

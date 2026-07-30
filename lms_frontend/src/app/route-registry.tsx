@@ -15,6 +15,7 @@ import { useAuth } from '@/session/auth/auth-context';
 import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
 import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
+import { MANAGER_ROLES, STUDENT_AND_MANAGER_ROLES } from '@/config/role-constants';
 import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
 
 export type PermissionMode = 'all' | 'any';
@@ -62,7 +63,6 @@ export type OrderedMenuItem = {
 
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
 const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
-const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
@@ -99,9 +99,6 @@ export const getWorkspaceDashboardElement = (variant: DashboardVariant): ReactEl
   }
   if (variant === 'mentor') {
     return <MentorDashboard />;
-  }
-  if (variant === 'team_manager') {
-    return <TeamManagerDashboard />;
   }
   return <AdminDashboard />;
 };
@@ -142,6 +139,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'tasks',
     kind: 'business',
     path: 'tasks',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['task.view'],
     showInMenu: true,
     menu: {
@@ -177,6 +175,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'task-detail',
     kind: 'business',
     path: 'tasks/:id',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['task.view'],
     render: () => <TaskDetailRoutePage />,
   },
@@ -197,6 +196,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge',
     kind: 'business',
     path: 'knowledge',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['knowledge.view'],
     showInMenu: true,
     menu: {
@@ -224,6 +224,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge-detail',
     kind: 'business',
     path: 'knowledge/:id',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['knowledge.view'],
     component: KnowledgeCenter,
   },
@@ -304,9 +305,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-checks',
     kind: 'business',
     path: 'spot-checks',
-    // 学员只有 spot_check.view（看自己的），入口在任务中心「抽查」Tab；
-    // 管理端菜单/路由禁止 STUDENT，避免和学员待办入口重复。
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
+    // 学员抽查入口在任务中心 Tab；管理端禁止学员。
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.view'],
     showInMenu: true,
     menu: {
@@ -320,7 +320,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-create',
     kind: 'business',
     path: 'spot-checks/create',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.create'],
     // 发起统一在列表弹窗完成（左侧选人/勾选）
     render: () => <SpotCheckCreateRedirect />,
@@ -329,7 +329,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-edit',
     kind: 'business',
     path: 'spot-checks/:id/edit',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.view', 'spot_check.update'],
     component: SpotCheckForm,
   },
@@ -420,21 +420,21 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'quiz-player',
     kind: 'business',
     path: 'quiz/:id',
-    requiredPermissions: ['submission.answer'],
+    allowedRoles: ['STUDENT'],
     component: QuizPlayer,
   },
   {
     key: 'review-practice',
     kind: 'business',
     path: 'review/practice',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="practice" />,
   },
   {
     key: 'review-exam',
     kind: 'business',
     path: 'review/exam',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="exam" />,
   },
   {

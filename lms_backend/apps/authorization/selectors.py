@@ -22,7 +22,7 @@ def list_permissions(
     )
     if module:
         queryset = queryset.filter(module=module)
-    if catalog_view in {'role_template', 'user_authorization'}:
+    if catalog_view == 'user_authorization':
         queryset = queryset.exclude(module=CONFIG_PERMISSION_MODULE)
     queryset = queryset.exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
     return list(queryset.order_by('module', 'code'))

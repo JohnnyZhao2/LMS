@@ -11,9 +11,8 @@ const PERMISSION_SCOPE_ORDER: PermissionOverrideScope[] = [
 export const DEFAULT_ROLE_SCOPE_TYPES: Record<RoleCode, PermissionOverrideScope[]> = {
   STUDENT: [],
   MENTOR: ['MENTEES'],
-  DEPT_MANAGER: ['DEPARTMENT'],
-  TEAM_MANAGER: ['ALL'],
-  ADMIN: ['ALL'],
+  DEPT: ['DEPARTMENT'],
+  GLOBAL: ['ALL'],
   SUPER_ADMIN: ['ALL'],
 };
 

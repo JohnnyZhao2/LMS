@@ -1,28 +1,29 @@
 """
-Mentor/Department Manager dashboard views.
-Implements:
-- Mentor/Department manager dashboard API
+导师/室组仪表盘视图。
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 
-from .base import MentorScopedDashboardView
+from apps.authorization.roles import DEPT_ROLE, MENTOR_ROLE, SUPER_ADMIN_ROLE
+
+from .base import RoleScopedDashboardView
 
 
 @extend_schema_view(
     get=extend_schema(
-        summary='获取导师/室经理仪表盘数据',
-        description='获取导师或室经理的仪表盘摘要数据（学员数量、任务完成率、平均分等）',
+        summary='获取导师/室组仪表盘数据',
+        description='获取导师或室组角色的仪表盘摘要数据',
         responses={
             200: OpenApiResponse(description='仪表盘数据'),
-            403: OpenApiResponse(description='无权限访问')
+            403: OpenApiResponse(description='无权限访问'),
         },
-        tags=['导师/室经理仪表盘']
+        tags=['导师/室组仪表盘'],
     )
 )
-class MentorDashboardView(MentorScopedDashboardView):
+class MentorDashboardView(RoleScopedDashboardView):
     """
-    导师/室经理仪表盘 API 端点
+    导师/室组仪表盘
     GET /api/dashboard/mentor/
     """
-    permission_code = 'dashboard.mentor.view'
-    permission_error_message = '只有导师、室经理或超管可以访问此仪表盘'
+
+    allowed_roles = (MENTOR_ROLE, DEPT_ROLE, SUPER_ADMIN_ROLE)
+    role_error_message = '只有导师、室组或超管可以访问此仪表盘'

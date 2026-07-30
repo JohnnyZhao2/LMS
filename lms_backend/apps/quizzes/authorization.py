@@ -11,7 +11,7 @@ from .models import Quiz
 
 
 QUIZ_OWNER_CONSTRAINT = 'quiz_owner'
-QUIZ_OWNER_SUMMARY = '仅自己创建，管理员全局'
+QUIZ_OWNER_SUMMARY = '仅自己创建，全局角色全部'
 QUIZ_RESOURCE_SCOPE_GROUP = 'quiz_resource_scope'
 QUIZ_SCOPED_ACTIONS = ('view', 'update', 'delete')
 QUIZ_SCOPED_PERMISSION_CODES = tuple(f'quiz.{action}' for action in QUIZ_SCOPED_ACTIONS)
@@ -49,7 +49,6 @@ AUTHORIZATION_SPECS = (
         'quiz',
         'quiz',
         '试卷',
-        full_roles=('MENTOR', 'DEPT_MANAGER', 'ADMIN'),
         kwargs_by_action={
             action: {
                 'scope_group_key': QUIZ_RESOURCE_SCOPE_GROUP,
@@ -62,8 +61,8 @@ AUTHORIZATION_SPECS = (
             for rule in scope_rules(
                 permission_code,
                 MENTOR='SELF',
-                DEPT_MANAGER='SELF',
-                ADMIN='ALL',
+                DEPT='SELF',
+                GLOBAL='ALL',
             )
         ),
         resource_authorization_handlers=(

@@ -1,7 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { isAllowedDepartmentCode, useUserDetail, useUsers } from '@/entities/user/api/get-users';
 import { useAssignRoles } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
 import {
@@ -9,9 +8,7 @@ import {
   useUserPermissionOverrides,
 } from '@/entities/authorization/api/authorization';
 import { showApiError } from '@/utils/error-handler';
-import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
 import {
-  getNextUserPermissionEditorRoleCode,
   getNextAssignableRoleCodes,
   getManagedRoleCodes,
   isAssignableRoleCode,
@@ -21,30 +18,27 @@ import {
   USER_ROLE_ASSIGN_PERMISSION,
 } from '@/entities/authorization/constants/access';
 
-interface UseRolePermissionTemplateStateParams {
+interface UseAuthorizationWorkbenchStateParams {
   roleCodes: RoleCode[];
-  permissionCatalog: PermissionCatalogItem[];
-  permissionCodesByRole: Partial<Record<RoleCode, string[]>>;
-  savingRoleCodes: RoleCode[];
   initialRoleCode?: RoleCode | null;
   initialSelectedUserId?: number | null;
 }
 
-export function useRolePermissionTemplateState({
+/**
+ * 授权工作台状态：角色成员管理 + 用户例外权限。
+ */
+export function useAuthorizationWorkbenchState({
   roleCodes,
-  permissionCatalog,
-  permissionCodesByRole,
-  savingRoleCodes,
   initialRoleCode = null,
   initialSelectedUserId = null,
-}: UseRolePermissionTemplateStateParams) {
+}: UseAuthorizationWorkbenchStateParams) {
   const { hasCapability, refreshUser } = useAuth();
   const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
   const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
   const [activeRole, setActiveRole] = useState<RoleCode | null>(initialRoleCode);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
-    initialRoleCode && initialRoleCode !== 'STUDENT' ? initialSelectedUserId : null,
+    initialSelectedUserId,
   );
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -57,24 +51,10 @@ export function useRolePermissionTemplateState({
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
     [activeRole, roleCodes],
   );
-  const selectedRolePermissionCodes = useMemo(
-    () => (resolvedActiveRole ? (permissionCodesByRole[resolvedActiveRole] ?? []) : []),
-    [permissionCodesByRole, resolvedActiveRole],
-  );
-  const selectedRolePermissionCodeSet = useMemo(
-    () => new Set(selectedRolePermissionCodes),
-    [selectedRolePermissionCodes],
-  );
-  const permissionSections = useMemo(
-    () => buildPermissionModuleSections(permissionCatalog),
-    [permissionCatalog],
-  );
-  const isSavingCurrentRole = resolvedActiveRole ? savingRoleCodes.includes(resolvedActiveRole) : false;
   const { data: allVisibleUsers = [], isLoading: isLoadingMembers } = useUsers(
-    {},
+    { isActive: true },
     { enabled: Boolean(resolvedActiveRole) && (canManageRoleMembers || canViewUserAuthorization) },
   );
-  const { data: roles = [] } = useRoles();
   const {
     data: selectedUserDetail,
     isLoading: isLoadingSelectedUser,
@@ -85,10 +65,6 @@ export function useRolePermissionTemplateState({
     refetch: refetchSelectedUserPermissionOverrides,
   } = useUserPermissionOverrides(selectedUserId, Boolean(selectedUserId));
 
-  const roleNameMap = useMemo(
-    () => new Map(roles.map((role) => [role.code, role.name])),
-    [roles],
-  );
   const roleMembers = useMemo(
     () => allVisibleUsers
       .filter((user) => user.roles.some((role) => role.code === resolvedActiveRole))
@@ -124,35 +100,12 @@ export function useRolePermissionTemplateState({
     [membersByRole, resolvedActiveRole, roleMembers],
   );
   const candidateUsers = useMemo(
-    () => {
-      const hasActiveTeamManager = allVisibleUsers.some((user) => (
-        user.is_active && user.roles.some((role) => role.code === 'TEAM_MANAGER')
-      ));
-      const occupiedDeptManagerDepartmentIds = new Set(
-        allVisibleUsers
-          .filter((user) => (
-            user.is_active
-            && user.roles.some((role) => role.code === 'DEPT_MANAGER')
-            && isAllowedDepartmentCode(user.department?.code)
-          ))
-          .map((user) => user.department?.id)
-          .filter((departmentId): departmentId is number => Boolean(departmentId)),
-      );
-
-      return allVisibleUsers
-        .filter((user) => !user.is_superuser)
-        .filter((user) => !user.roles.some((role) => role.code === resolvedActiveRole))
-        .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
-        .filter((user) => isAllowedDepartmentCode(user.department?.code))
-        .filter((user) => {
-          if (resolvedActiveRole === 'TEAM_MANAGER') return !hasActiveTeamManager;
-          if (resolvedActiveRole === 'DEPT_MANAGER') {
-            return Boolean(user.department?.id) && !occupiedDeptManagerDepartmentIds.has(user.department.id);
-          }
-          return true;
-        })
-        .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN'));
-    },
+    () => allVisibleUsers
+      .filter((user) => !user.is_superuser)
+      .filter((user) => !user.roles.some((role) => role.code === resolvedActiveRole))
+      .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
+      .filter((user) => isAllowedDepartmentCode(user.department?.code))
+      .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
     [allVisibleUsers, resolvedActiveRole],
   );
 
@@ -186,10 +139,6 @@ export function useRolePermissionTemplateState({
   }, [initialRoleCode, roleCodes]);
 
   useEffect(() => {
-    if (initialRoleCode === 'STUDENT') {
-      setSelectedUserId(null);
-      return;
-    }
     setSelectedUserId(initialSelectedUserId ?? null);
   }, [initialRoleCode, initialSelectedUserId]);
 
@@ -214,7 +163,8 @@ export function useRolePermissionTemplateState({
     if (!canManageRoleMembers || !resolvedActiveRole) {
       return;
     }
-    const nextRoles = getManagedRoleCodes(user.roles).filter((roleCode) => roleCode !== resolvedActiveRole);
+    // 从授权角色组移除：清掉全部授权角色，仅保留学员身份（顺带修复脏的多授权角色数据）
+    const nextRoles = getManagedRoleCodes(user.roles).filter((roleCode) => roleCode === 'STUDENT');
     setMutatingUserId(user.id);
     try {
       await assignRoles.mutateAsync({
@@ -240,40 +190,6 @@ export function useRolePermissionTemplateState({
     setSelectedUserId((current) => (
       current === user.id && resolvedActiveRole === roleCode ? null : user.id
     ));
-  };
-
-  const handleUserRoleToggle = async (roleCode: RoleCode) => {
-    if (!selectedUserDetail) {
-      return;
-    }
-    const currentRoleCodes = getManagedRoleCodes(selectedUserDetail.roles);
-    const nextRoles = getNextAssignableRoleCodes(currentRoleCodes, roleCode);
-    if (
-      nextRoles.length === currentRoleCodes.length
-      && nextRoles.every((code) => currentRoleCodes.includes(code))
-    ) {
-      return;
-    }
-
-    try {
-      await assignRoles.mutateAsync({
-        id: selectedUserDetail.id,
-        roles: nextRoles,
-      });
-      const nextEditorRoleCode = getNextUserPermissionEditorRoleCode({
-        currentRoleCode: resolvedActiveRole,
-        nextRoleCodes: nextRoles,
-        toggledRoleCode: roleCode,
-      });
-      if (nextEditorRoleCode) {
-        setActiveRole(nextEditorRoleCode);
-        setSelectedUserId(selectedUserDetail.id);
-      } else {
-        setSelectedUserId(null);
-      }
-    } catch (error) {
-      showApiError(error);
-    }
   };
 
   const handleResetCurrentRoleOverrides = async () => {
@@ -313,21 +229,15 @@ export function useRolePermissionTemplateState({
     handleResetCurrentRoleOverrides,
     handleSelectMember,
     handleSelectRole,
-    handleUserRoleToggle,
     isAssigningRoles: assignRoles.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
     isResettingOverrides,
-    isSavingCurrentRole,
     isViewingUserOverrides: Boolean(selectedUserId),
     memberSearch,
     mutatingUserId,
-    permissionSections,
     resetDialogOpen,
     resolvedActiveRole,
-    roleNameMap,
-    selectedRolePermissionCodes,
-    selectedRolePermissionCodeSet,
     selectedUserDetail,
     selectedUserId,
     selectedUserRoleCodes,

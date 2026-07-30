@@ -50,13 +50,10 @@ AUTHORIZATION_SPECS = (
             perm(
                 code='user.avatar.update',
                 name='修改他人头像',
-                description='管理员修改指定用户头像',
+                description='全局角色修改指定用户头像',
             ),
         ),
-        role_defaults={
-            'ADMIN': ('user.avatar.update',),
-        },
-        scope_rules=scope_rules('user.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
+        scope_rules=scope_rules('user.view', MENTOR='MENTEES', DEPT='DEPARTMENT', GLOBAL='ALL'),
         scope_filter_handlers=(
             ScopeFilterHandler(
                 key='users.scope_filter.user_view',
@@ -66,17 +63,5 @@ AUTHORIZATION_SPECS = (
                 constraint_summary='角色范围',
             ),
         ),
-    ),
-    AuthorizationSpec(
-        key='users.profile_permissions',
-        module='profile',
-        permissions=(
-            perm(code='profile.student.view', name='查看学员个人中心', description='查看学员个人中心'),
-            perm(code='profile.student.update', name='更新学员个人资料', description='更新学员个人资料'),
-        ),
-        system_managed_codes=('profile.student.view', 'profile.student.update'),
-        role_system_defaults={
-            'STUDENT': ('profile.student.view', 'profile.student.update'),
-        },
     ),
 )

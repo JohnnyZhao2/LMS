@@ -1,17 +1,14 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
-import {
-  invalidateAfterAuthorizationOverrideMutation,
-  invalidateAfterRoleTemplateMutation,
-} from '@/lib/cache-invalidation';
+import { invalidateAfterAuthorizationOverrideMutation } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type {
   CreateUserPermissionOverrideRequest,
   PermissionCatalogItem,
   PermissionCatalogView,
-  RolePermissionTemplate,
+  RoleCapability,
   UserPermissionOverride,
 } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
@@ -19,11 +16,6 @@ import type { RoleCode } from '@/types/common';
 interface PermissionCatalogQuery {
   module?: string;
   view?: PermissionCatalogView;
-}
-
-interface ReplaceRolePermissionPayload {
-  roleCode: RoleCode;
-  permissionCodes: string[];
 }
 
 interface CreateUserOverridePayload {
@@ -49,28 +41,18 @@ export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled
   });
 };
 
-export const useRolePermissionTemplates = (roleCodes: RoleCode[], enabled = true) => {
+/**
+ * 读取角色固定能力（只读）。
+ */
+export const useRoleCapabilities = (roleCodes: RoleCode[], enabled = true) => {
   const currentRole = useCurrentRole();
 
   return useQueries({
     queries: roleCodes.map((roleCode) => ({
-      queryKey: queryKeys.authorization.roleTemplate({ currentRole, roleCode }),
-      queryFn: () => apiClient.get<RolePermissionTemplate>(`/authorization/roles/${roleCode}/permissions/`),
+      queryKey: queryKeys.authorization.roleCapabilities({ currentRole, roleCode }),
+      queryFn: () => apiClient.get<RoleCapability>(`/authorization/roles/${roleCode}/permissions/`),
       enabled: currentRole !== null && enabled,
     })),
-  });
-};
-
-export const useReplaceRolePermissionTemplate = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ roleCode, permissionCodes }: ReplaceRolePermissionPayload) =>
-      apiClient.put<RolePermissionTemplate>(`/authorization/roles/${roleCode}/permissions/`, {
-        role_code: roleCode,
-        permission_codes: permissionCodes,
-      }),
-    onSuccess: () => invalidateAfterRoleTemplateMutation(queryClient),
   });
 };
 

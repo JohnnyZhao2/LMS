@@ -24,7 +24,7 @@ import { ExamReportPanel } from './exam-report-panel';
 
 
 /**
- * 导师/室经理仪表盘组件
+ * 导师/室组仪表盘组件
  */
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();

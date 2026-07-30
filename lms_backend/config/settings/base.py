@@ -191,11 +191,10 @@ SPECTACULAR_SETTINGS = {
 - **统计分析** - 仪表盘
 - **通知服务** - 任务通知、截止提醒
 ## 角色权限
-- **学员 (STUDENT)** - 执行任务、查看知识
+- **学员 (STUDENT)** - 学习任务、查看知识
 - **导师 (MENTOR)** - 管理名下学员、创建任务
-- **室经理 (DEPT_MANAGER)** - 管理本室人员
-- **管理员 (ADMIN)** - 全平台管理
-- **团队经理 (TEAM_MANAGER)** - 知识查看
+- **室组 (DEPT)** - 管理本室人员与内容
+- **全局 (GLOBAL)** - 全平台管理
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -209,7 +208,7 @@ SPECTACULAR_SETTINGS = {
         # 认证与用户
         {'name': '认证', 'description': '用户登录、登出、角色切换'},
         {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
-        {'name': '授权管理', 'description': '角色权限模板与用户级权限覆盖'},
+        {'name': '授权管理', 'description': '用户角色分配与用户级权限覆盖'},
         # 内容管理
         {'name': '知识管理', 'description': '知识库管理、分类管理'},
         {'name': '题库管理', 'description': '题目管理、批量导入'},
@@ -229,7 +228,7 @@ SPECTACULAR_SETTINGS = {
         {'name': '学员任务中心', 'description': '学员任务列表和筛选'},
         {'name': '学员个人中心', 'description': '个人信息、历史成绩、错题本'},
         # 管理端
-        {'name': '导师/室经理仪表盘', 'description': '导师和室经理的统计数据'},
+        {'name': '导师/室组仪表盘', 'description': '导师和室组的统计数据'},
         # 通知
         {'name': '通知', 'description': '通知列表、已读标记'},
     ],

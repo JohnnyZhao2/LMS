@@ -11,13 +11,13 @@ from apps.users.models import Department, Role
 
 
 class Command(BaseCommand):
-    help = '初始化系统基础数据（部门、角色、权限）'
+    help = '初始化系统基础数据（部门、角色、权限目录）'
 
     def handle(self, *args, **options):
         with transaction.atomic():
             self.create_departments()
             self.create_roles()
-            AuthorizationService.ensure_defaults(sync_role_templates=True)
+            AuthorizationService.ensure_defaults()
         self.stdout.write(self.style.SUCCESS('✅ 初始化数据完成！'))
 
     def create_departments(self):
@@ -35,13 +35,12 @@ class Command(BaseCommand):
             self.stdout.write(f"  部门 {dept.name}: {status}")
 
     def create_roles(self):
-        """创建角色"""
+        """创建四角色"""
         roles = [
-            {'code': 'STUDENT', 'name': '学员', 'description': '系统默认学习角色（可与管理角色共存）'},
-            {'code': 'MENTOR', 'name': '导师', 'description': '可以指导学员'},
-            {'code': 'DEPT_MANAGER', 'name': '室经理', 'description': '管理本室成员'},
-            {'code': 'TEAM_MANAGER', 'name': '团队经理', 'description': '管理整个团队'},
-            {'code': 'ADMIN', 'name': '管理员', 'description': '系统管理员，拥有所有权限'},
+            {'code': 'STUDENT', 'name': '学员', 'description': '学习工作台身份（可与管理角色共存）'},
+            {'code': 'MENTOR', 'name': '导师', 'description': '名下学员范围'},
+            {'code': 'DEPT', 'name': '室组', 'description': '本室范围，可多人'},
+            {'code': 'GLOBAL', 'name': '全局', 'description': '全平台管理'},
         ]
         for role_data in roles:
             role, created = Role.objects.get_or_create(

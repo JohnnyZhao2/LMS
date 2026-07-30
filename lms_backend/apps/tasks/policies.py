@@ -1,4 +1,5 @@
 from apps.authorization.engine import authorize, scope_filter
+from apps.authorization.roles import is_student_workspace
 from apps.users.models import User
 from core.exceptions import BusinessError, ErrorCodes
 
@@ -14,6 +15,14 @@ DEFAULT_TASK_ACTIONS = {
 def get_task_actions_payload(request, task) -> dict[str, bool]:
     if request is None:
         return dict(DEFAULT_TASK_ACTIONS)
+    if is_student_workspace(request):
+        can_view = task.assignments.filter(assignee_id=getattr(request.user, 'id', None)).exists()
+        return {
+            'view': can_view,
+            'update': False,
+            'delete': False,
+            'analytics': False,
+        }
     return {
         'view': authorize('task.view', request, resource=task).allowed,
         'update': authorize('task.update', request, resource=task).allowed,

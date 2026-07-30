@@ -1,31 +1,31 @@
 """
-Admin dashboard views.
-Implements:
-- Admin dashboard API
+全局仪表盘视图。
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 
+from apps.authorization.roles import GLOBAL_ROLE, SUPER_ADMIN_ROLE
 from apps.dashboard.services import AdminDashboardService
 
-from .base import MentorScopedDashboardView
+from .base import RoleScopedDashboardView
 
 
 @extend_schema_view(
     get=extend_schema(
-        summary='获取管理员仪表盘数据',
-        description='获取管理员系统概览数据',
+        summary='获取全局仪表盘数据',
+        description='获取全局角色系统概览数据',
         responses={
             200: OpenApiResponse(description='仪表盘数据'),
-            403: OpenApiResponse(description='无权限访问')
+            403: OpenApiResponse(description='无权限访问'),
         },
-        tags=['管理员仪表盘']
+        tags=['全局仪表盘'],
     )
 )
-class AdminDashboardView(MentorScopedDashboardView):
+class AdminDashboardView(RoleScopedDashboardView):
     """
-    管理员仪表盘 API 端点
+    全局仪表盘
     GET /api/dashboard/admin/
     """
-    permission_code = 'dashboard.admin.view'
-    permission_error_message = '只有管理员或超管可以访问此仪表盘'
+
+    allowed_roles = (GLOBAL_ROLE, SUPER_ADMIN_ROLE)
+    role_error_message = '只有全局角色或超管可以访问此仪表盘'
     service_class = AdminDashboardService
