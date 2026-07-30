@@ -6,12 +6,6 @@ import type { PermissionState } from './user-permission-section.types';
 interface UserPermissionModuleSectionItem {
   module: string;
   permissions: PermissionCatalogItem[];
-  scopeGroups: UserPermissionScopeGroupItem[];
-}
-
-interface UserPermissionScopeGroupItem {
-  key: string;
-  scopeSummary: string;
 }
 
 interface UserPermissionModuleListProps {
@@ -22,7 +16,7 @@ interface UserPermissionModuleListProps {
 }
 
 /**
- * 按模块展示权限开关，旁侧只读展示角色绑定的作用范围/数据范围。
+ * 按模块展示权限开关。
  */
 export function UserPermissionModuleList({
   getPermissionState,
@@ -30,30 +24,9 @@ export function UserPermissionModuleList({
   isPermissionSaving,
   moduleSections,
 }: UserPermissionModuleListProps) {
-  const getScopeGroupLabel = (scopeGroupKey: string) => (
-    scopeGroupKey.endsWith('_resource_scope') ? '数据范围' : '作用范围'
-  );
-
   return (
     <PermissionModuleSections
-      sections={moduleSections.map((section) => ({
-        module: section.module,
-        permissions: section.permissions,
-        sectionAction: section.scopeGroups.length > 0 ? (
-          <div className="flex w-full flex-wrap items-center justify-start gap-2 lg:justify-end">
-            {section.scopeGroups.map((scopeGroup) => (
-              <div key={scopeGroup.key} className="flex min-w-[160px] items-center gap-2">
-                <span className="shrink-0 text-[11px] font-bold text-slate-500">
-                  {getScopeGroupLabel(scopeGroup.key)}
-                </span>
-                <span className="min-w-0 truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600">
-                  {scopeGroup.scopeSummary}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : null,
-      }))}
+      sections={moduleSections}
       renderPermissionCard={(permission) => {
         const permissionState = getPermissionState(permission.code);
         const disabled = Boolean(

@@ -5,7 +5,6 @@ import type { PermissionCatalogItem } from '@/types/authorization';
 interface PermissionModuleSectionItem {
   module: string;
   permissions: PermissionCatalogItem[];
-  sectionAction?: ReactNode;
 }
 
 interface PermissionModuleSectionsProps {
@@ -37,17 +36,10 @@ export const PermissionModuleSections: React.FC<PermissionModuleSectionsProps> =
             key={section.module}
             className="border-b border-border/60 pb-8 last:border-b-0 last:pb-0"
           >
-            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {modulePresentation.label}
-                </h3>
-              </div>
-              {section.sectionAction ? (
-                <div className="w-full lg:w-auto">
-                  {section.sectionAction}
-                </div>
-              ) : null}
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-foreground">
+                {modulePresentation.label}
+              </h3>
             </div>
 
             {section.permissions.length > 0 ? (

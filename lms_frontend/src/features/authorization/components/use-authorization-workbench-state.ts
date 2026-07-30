@@ -3,10 +3,6 @@ import type { RoleCode, UserList } from '@/types/common';
 import { isAllowedDepartmentCode, useUserDetail, useUsers } from '@/entities/user/api/get-users';
 import { useAssignRoles } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
-import {
-  useRevokeUserPermissionOverride,
-  useUserPermissionOverrides,
-} from '@/entities/authorization/api/authorization';
 import { showApiError } from '@/utils/error-handler';
 import {
   getNextAssignableRoleCodes,
@@ -25,14 +21,14 @@ interface UseAuthorizationWorkbenchStateParams {
 }
 
 /**
- * 授权工作台状态：角色成员管理 + 用户例外权限。
+ * 授权工作台状态：角色成员管理 + 用户权限配置。
  */
 export function useAuthorizationWorkbenchState({
   roleCodes,
   initialRoleCode = null,
   initialSelectedUserId = null,
 }: UseAuthorizationWorkbenchStateParams) {
-  const { hasCapability, refreshUser } = useAuth();
+  const { hasCapability } = useAuth();
   const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
   const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
   const [activeRole, setActiveRole] = useState<RoleCode | null>(initialRoleCode);
@@ -41,11 +37,8 @@ export function useAuthorizationWorkbenchState({
     initialSelectedUserId,
   );
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [isResettingOverrides, setIsResettingOverrides] = useState(false);
   const deferredMemberSearch = useDeferredValue(memberSearch);
   const assignRoles = useAssignRoles();
-  const revokeUserOverride = useRevokeUserPermissionOverride();
 
   const resolvedActiveRole = useMemo(
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
@@ -58,12 +51,7 @@ export function useAuthorizationWorkbenchState({
   const {
     data: selectedUserDetail,
     isLoading: isLoadingSelectedUser,
-    refetch: refetchSelectedUserDetail,
   } = useUserDetail(selectedUserId ?? 0);
-  const {
-    data: selectedUserPermissionOverrides = [],
-    refetch: refetchSelectedUserPermissionOverrides,
-  } = useUserPermissionOverrides(selectedUserId, Boolean(selectedUserId));
 
   const roleMembers = useMemo(
     () => allVisibleUsers
@@ -113,13 +101,6 @@ export function useAuthorizationWorkbenchState({
     () => selectedUserDetail?.roles.map((role) => role.code as RoleCode) ?? [],
     [selectedUserDetail],
   );
-  const currentRolePermissionOverrides = useMemo(
-    () => selectedUserPermissionOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserPermissionOverrides],
-  );
-  const canResetCurrentRoleOverrides = currentRolePermissionOverrides.length > 0;
 
   useEffect(() => {
     if (!selectedUserDetail || !resolvedActiveRole) {
@@ -192,56 +173,25 @@ export function useAuthorizationWorkbenchState({
     ));
   };
 
-  const handleResetCurrentRoleOverrides = async () => {
-    if (!selectedUserId || isResettingOverrides || !canResetCurrentRoleOverrides) {
-      setResetDialogOpen(false);
-      return;
-    }
-
-    setIsResettingOverrides(true);
-    try {
-      await Promise.all(
-        currentRolePermissionOverrides.map((override) => (
-          revokeUserOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-      );
-      await refreshUser();
-      await Promise.all([
-        refetchSelectedUserDetail(),
-        refetchSelectedUserPermissionOverrides(),
-      ]);
-      setResetDialogOpen(false);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setIsResettingOverrides(false);
-    }
-  };
-
   return {
     canManageRoleMembers,
     canViewUserAuthorization,
     candidateUsers,
-    canResetCurrentRoleOverrides,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
-    handleResetCurrentRoleOverrides,
     handleSelectMember,
     handleSelectRole,
     isAssigningRoles: assignRoles.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isResettingOverrides,
     isViewingUserOverrides: Boolean(selectedUserId),
     memberSearch,
     mutatingUserId,
-    resetDialogOpen,
     resolvedActiveRole,
     selectedUserDetail,
     selectedUserId,
     selectedUserRoleCodes,
     setMemberSearch,
-    setResetDialogOpen,
   };
 }

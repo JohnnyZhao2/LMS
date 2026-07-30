@@ -7,7 +7,6 @@ import {
   useRoleCapabilities,
   useUserPermissionOverrides,
 } from '@/entities/authorization/api/authorization';
-import type { PermissionOverrideScope } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { KeyRound } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -15,7 +14,6 @@ import {
   buildPermissionModuleSections,
 } from '@/entities/authorization/utils/permission-sections';
 
-import { DEFAULT_ROLE_SCOPE_TYPES, formatScopeSummary, normalizeScopeTypes } from './user-form.utils';
 import { UserPermissionModuleList } from './user-permission-module-list';
 import { mapPermissionOverrideEntry } from './user-permission-section.helpers';
 import type { PermissionOverrideEntry } from './user-permission-section.types';
@@ -80,18 +78,6 @@ export function UserPermissionSection({
     return capabilityMap;
   }, [previewRoleCodes, roleCapabilityQueries]);
 
-  const roleCapabilityScopeGroupMap = useMemo(() => {
-    const scopeGroupMap = new Map<RoleCode, Map<string, PermissionOverrideScope[]>>();
-    previewRoleCodes.forEach((roleCode, index) => {
-      const groupMap = new Map<string, PermissionOverrideScope[]>();
-      (roleCapabilityQueries[index]?.data?.scope_groups ?? []).forEach((scopeGroup) => {
-        groupMap.set(scopeGroup.key, scopeGroup.default_scope_types);
-      });
-      scopeGroupMap.set(roleCode, groupMap);
-    });
-    return scopeGroupMap;
-  }, [previewRoleCodes, roleCapabilityQueries]);
-
   const normalizedSelectedPermissionRole = useMemo<RoleCode>(
     () => previewRoleCodes[0] ?? 'MENTOR',
     [previewRoleCodes],
@@ -111,42 +97,10 @@ export function UserPermissionSection({
     [normalizedSelectedPermissionRole, roleCapabilityPermissionCodeMap],
   );
 
-  const permissionSections = useMemo(
+  const moduleSections = useMemo(
     () => buildPermissionModuleSections(permissionCatalog),
     [permissionCatalog],
   );
-
-  const moduleSections = useMemo(() => (
-    permissionSections.map(({ module, permissions }) => {
-      const scopeGroupKeys = Array.from(new Set(
-        permissions
-          .map((permission) => permission.scope_group_key)
-          .filter((scopeGroupKey): scopeGroupKey is string => Boolean(scopeGroupKey)),
-      ));
-      const scopeGroups = scopeGroupKeys.map((scopeGroupKey) => {
-        const selectedRoleDefaultScopeTypes = normalizeScopeTypes(
-          roleCapabilityScopeGroupMap.get(normalizedSelectedPermissionRole)?.get(scopeGroupKey)
-            ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
-            ?? [],
-        );
-
-        return {
-          key: scopeGroupKey,
-          scopeSummary: formatScopeSummary(selectedRoleDefaultScopeTypes),
-        };
-      });
-
-      return {
-        module,
-        permissions,
-        scopeGroups,
-      };
-    })
-  ), [
-    normalizedSelectedPermissionRole,
-    permissionSections,
-    roleCapabilityScopeGroupMap,
-  ]);
 
   const { getPermissionState, handlePermissionToggle, isPermissionSaving } = useUserPermissionOverrideState({
     userId,
