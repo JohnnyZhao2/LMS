@@ -63,7 +63,6 @@ def _filter_members(engine, *, queryset):
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='tasks.permissions',
         module='task',
         permissions=(
             *crud_permissions(

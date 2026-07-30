@@ -14,11 +14,6 @@ GLOBAL_ROLE = 'GLOBAL'
 
 # 授权系统业务角色：仅按作用范围区分
 AUTH_ROLE_CODES = frozenset({MENTOR_ROLE, DEPT_ROLE, GLOBAL_ROLE})
-ROLE_MEMBER_SCOPE = {
-    MENTOR_ROLE: 'MENTEES',
-    DEPT_ROLE: 'DEPARTMENT',
-    GLOBAL_ROLE: 'ALL',
-}
 
 
 def is_super_admin(user) -> bool:
@@ -27,10 +22,6 @@ def is_super_admin(user) -> bool:
         and getattr(user, 'is_authenticated', False)
         and getattr(user, 'is_superuser', False)
     )
-
-
-def is_auth_role(role_code: Optional[str]) -> bool:
-    return role_code in AUTH_ROLE_CODES
 
 
 def serialize_user_roles(user) -> list[dict[str, str]]:
@@ -86,10 +77,6 @@ def filter_users_by_management_role(*, user, role_code: str, queryset: QuerySet)
     if role_code == GLOBAL_ROLE:
         return queryset
     return queryset.none()
-
-
-def get_current_role(user):
-    return resolve_current_role(user)
 
 
 def is_student_workspace(request) -> bool:

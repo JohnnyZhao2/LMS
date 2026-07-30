@@ -11,7 +11,7 @@ import { AUTH_ROLES } from '@/config/role-constants';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/session/auth/auth-context';
-import type { RoleCode, UserList } from '@/types/common';
+import type { UserList } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 import type { PermissionCatalogItem } from '../api/authorization-api';
 import {
@@ -76,7 +76,6 @@ interface PermissionToggleCardProps {
   permission: PermissionCatalogItem;
   checked: boolean;
   disabled?: boolean;
-  isSaving?: boolean;
   onToggle: (nextChecked: boolean) => void | Promise<void>;
 }
 
@@ -84,7 +83,6 @@ const PermissionToggleCard = ({
   permission,
   checked,
   disabled = false,
-  isSaving = false,
   onToggle,
 }: PermissionToggleCardProps) => {
   const helperText = permission.constraint_summary || (
@@ -139,7 +137,7 @@ const PermissionToggleCard = ({
         <div className="flex shrink-0 items-center gap-2 pt-0.5">
           <ToggleSwitch
             checked={checked}
-            disabled={disabled || isSaving}
+            disabled={disabled}
             onCheckedChange={(nextChecked) => { void onToggle(nextChecked); }}
           />
         </div>
@@ -151,13 +149,11 @@ const PermissionToggleCard = ({
 interface PermissionModuleSectionsProps {
   sections: PermissionModuleSection[];
   renderPermissionCard: (permission: PermissionCatalogItem) => ReactNode;
-  emptyText?: string;
 }
 
 const PermissionModuleSections = ({
   sections,
   renderPermissionCard,
-  emptyText = '当前模块暂无可配置权限',
 }: PermissionModuleSectionsProps) => {
   if (sections.length === 0) {
     return (
@@ -183,15 +179,9 @@ const PermissionModuleSections = ({
               </h3>
             </div>
 
-            {section.permissions.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {section.permissions.map((permission) => renderPermissionCard(permission))}
-              </div>
-            ) : (
-              <div className="py-12 text-center text-sm font-medium text-slate-400">
-                {emptyText}
-              </div>
-            )}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {section.permissions.map((permission) => renderPermissionCard(permission))}
+            </div>
           </section>
         );
       })}
@@ -218,7 +208,6 @@ const PermissionEmptyState = ({
 
 interface UserPermissionPanelProps {
   userDetail?: UserList;
-  selectedRoleCodes: RoleCode[];
   isLoading?: boolean;
 }
 
@@ -227,7 +216,6 @@ interface UserPermissionPanelProps {
  */
 export function UserPermissionPanel({
   userDetail,
-  selectedRoleCodes,
   isLoading = false,
 }: UserPermissionPanelProps) {
   const { hasCapability, refreshUser, user } = useAuth();
@@ -235,7 +223,7 @@ export function UserPermissionPanel({
   const canView = hasCapability(USER_PERMISSION_VIEW_PERMISSION);
   const canManage = hasCapability(USER_PERMISSION_UPDATE_PERMISSION);
   const hasManagementRole = !userDetail?.is_superuser
-    && selectedRoleCodes.some((roleCode) => AUTH_ROLES.includes(roleCode));
+    && Boolean(userDetail?.roles.some((role) => AUTH_ROLES.includes(role.code)));
   const shouldLoad = Boolean(userDetail?.id) && canView && hasManagementRole;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({}, canView);
@@ -323,7 +311,6 @@ export function UserPermissionPanel({
                       permission={permission}
                       checked={checkedPermissionCodes.has(permission.code)}
                       disabled={!canManage || savingPermissionCode !== null}
-                      isSaving={savingPermissionCode === permission.code}
                       onToggle={(nextChecked) => handleToggle(permission.code, nextChecked)}
                     />
                   )}

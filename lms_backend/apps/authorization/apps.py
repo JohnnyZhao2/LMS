@@ -8,7 +8,10 @@ class AuthorizationConfig(AppConfig):
     verbose_name = '授权管理'
 
     def ready(self):
-        from .bootstrap import sync_authorization_defaults
+        from apps.authorization.services import AuthorizationService
+
+        def sync_authorization_defaults(**kwargs):
+            AuthorizationService.ensure_defaults()
 
         post_migrate.connect(
             sync_authorization_defaults,

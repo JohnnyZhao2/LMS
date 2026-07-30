@@ -24,7 +24,6 @@ def _authorize(engine, permission_code, *, resource=None, error_message=None):
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='grading.permissions',
         module='grading',
         permissions=(
             perm(

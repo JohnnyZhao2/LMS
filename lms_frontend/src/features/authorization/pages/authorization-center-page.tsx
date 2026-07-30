@@ -90,11 +90,6 @@ export const AuthorizationCenterPage: React.FC = () => {
     [allVisibleUsers],
   );
 
-  const selectedUserRoleCodes = useMemo(
-    () => selectedUserDetail?.roles.map((role) => role.code as RoleCode) ?? [],
-    [selectedUserDetail],
-  );
-
   useEffect(() => {
     if (!selectedUserDetail || !resolvedActiveRole) {
       return;
@@ -195,7 +190,6 @@ export const AuthorizationCenterPage: React.FC = () => {
                   {selectedUserId ? (
                     <UserPermissionPanel
                       userDetail={selectedUserDetail}
-                      selectedRoleCodes={selectedUserRoleCodes}
                       isLoading={isLoadingSelectedUser}
                     />
                   ) : (

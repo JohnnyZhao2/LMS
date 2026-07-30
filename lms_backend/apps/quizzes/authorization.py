@@ -28,7 +28,6 @@ def _authorize(engine, permission_code, *, resource=None, error_message=None):
 
 AUTHORIZATION_SPECS = (
     crud_authorization_spec(
-        'quizzes.permissions',
         'quiz',
         'quiz',
         '试卷',

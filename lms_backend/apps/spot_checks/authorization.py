@@ -65,7 +65,6 @@ def _filter_students(engine, *, queryset):
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='spot_checks.permissions',
         module='spot_check',
         permissions=crud_permissions('spot_check', '抽查'),
         resource_authorization_handlers=(

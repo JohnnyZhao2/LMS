@@ -35,7 +35,6 @@ class ScopeFilterHandler:
 
 @dataclass(frozen=True)
 class AuthorizationSpec:
-    key: str
     module: Optional[str] = None
     permissions: tuple[PermissionDefinition, ...] = ()
     system_managed_codes: tuple[str, ...] = ()
@@ -88,7 +87,6 @@ def crud_codes(prefix: str) -> tuple[str, ...]:
 
 
 def crud_authorization_spec(
-    key: str,
     module: str,
     prefix: str,
     label: str,
@@ -98,7 +96,6 @@ def crud_authorization_spec(
     **kwargs: Any,
 ) -> AuthorizationSpec:
     return AuthorizationSpec(
-        key=key,
         module=module,
         permissions=crud_permissions(
             prefix,

@@ -42,7 +42,6 @@ def _authorize_user(engine, permission_code, *, resource=None, error_message=Non
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='users.permissions',
         module='user',
         permissions=(
             *crud_permissions(
