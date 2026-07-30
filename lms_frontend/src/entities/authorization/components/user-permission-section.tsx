@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { KeyRound } from 'lucide-react';
 
 import { EmptyState } from '@/components/ui/empty-state';
+import { AUTH_ROLES } from '@/config/role-constants';
 import {
   useGrantUserPermission,
   usePermissionCatalog,
@@ -17,15 +18,14 @@ import { useAuth } from '@/session/auth/auth-context';
 import type { RoleCode } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 
-import { UserPermissionModuleList } from './user-permission-module-list';
+import { PermissionModuleSections } from './permission-module-sections';
+import { PermissionToggleCard } from './permission-toggle-card';
 
 interface UserPermissionSectionProps {
   userId?: number;
   selectedRoleCodes: RoleCode[];
   isSuperuserAccount: boolean;
 }
-
-const MANAGEMENT_ROLES = new Set<RoleCode>(['MENTOR', 'DEPT', 'GLOBAL']);
 
 export function UserPermissionSection({
   userId,
@@ -37,7 +37,7 @@ export function UserPermissionSection({
   const canView = hasCapability(USER_PERMISSION_VIEW_PERMISSION);
   const canManage = hasCapability(USER_PERMISSION_UPDATE_PERMISSION);
   const hasManagementRole = !isSuperuserAccount
-    && selectedRoleCodes.some((roleCode) => MANAGEMENT_ROLES.has(roleCode));
+    && selectedRoleCodes.some((roleCode) => AUTH_ROLES.includes(roleCode));
   const shouldLoad = Boolean(userId) && canView && hasManagementRole;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({}, canView);
@@ -94,12 +94,18 @@ export function UserPermissionSection({
 
   return (
     <div className="mt-6">
-      <UserPermissionModuleList
-        checkedPermissionCodes={checkedPermissionCodes}
-        canManage={canManage}
-        savingPermissionCode={savingPermissionCode}
-        moduleSections={moduleSections}
-        onToggle={handleToggle}
+      <PermissionModuleSections
+        sections={moduleSections}
+        renderPermissionCard={(permission) => (
+          <PermissionToggleCard
+            key={permission.code}
+            permission={permission}
+            checked={checkedPermissionCodes.has(permission.code)}
+            disabled={!canManage || savingPermissionCode !== null}
+            isSaving={savingPermissionCode === permission.code}
+            onToggle={(nextChecked) => handleToggle(permission.code, nextChecked)}
+          />
+        )}
       />
     </div>
   );

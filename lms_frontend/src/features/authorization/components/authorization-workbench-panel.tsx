@@ -20,7 +20,7 @@ export const AuthorizationWorkbenchPanel: React.FC<AuthorizationWorkbenchPanelPr
   const {
     canManageRoleMembers,
     canViewUserAuthorization,
-    candidateUsers,
+    candidatesByRole,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
@@ -53,12 +53,12 @@ export const AuthorizationWorkbenchPanel: React.FC<AuthorizationWorkbenchPanelPr
             search={memberSearch}
             onSearchChange={setMemberSearch}
             membersByRole={groupedMembersByRole}
-            candidateUsers={candidateUsers}
+            candidatesByRole={candidatesByRole}
             isLoading={isLoadingMembers}
             canManageMembers={canManageRoleMembers}
             isMutating={isAssigningRoles}
             mutatingUserId={mutatingUserId}
-            onAddMember={(user) => void handleAssignRole(user)}
+            onAddMember={(roleCode, user) => void handleAssignRole(roleCode, user)}
             onRemoveMember={(user) => void handleRemoveRole(user)}
             selectedMemberId={selectedUserId}
             canSelectMember={canViewUserAuthorization}
@@ -71,7 +71,6 @@ export const AuthorizationWorkbenchPanel: React.FC<AuthorizationWorkbenchPanelPr
                 <UserPermissionWorkbench
                   userDetail={selectedUserDetail}
                   selectedRoleCodes={selectedUserRoleCodes}
-                  selectedRoleCode={resolvedActiveRole}
                   isLoading={isLoadingSelectedUser}
                   emptyDescription="请选择一个角色成员开始配置权限。"
                   headerClassName="border-b-0 px-0 py-0 pb-4"

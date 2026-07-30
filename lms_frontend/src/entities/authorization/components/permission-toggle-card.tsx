@@ -3,9 +3,7 @@ import { cn } from '@/lib/utils';
 import type { PermissionCatalogItem } from '@/types/authorization';
 
 interface PermissionToggleCardProps {
-  permission?: PermissionCatalogItem;
-  title?: string;
-  helperText?: string;
+  permission: PermissionCatalogItem;
   checked: boolean;
   disabled?: boolean;
   isSaving?: boolean;
@@ -14,20 +12,15 @@ interface PermissionToggleCardProps {
 
 export const PermissionToggleCard: React.FC<PermissionToggleCardProps> = ({
   permission,
-  title,
-  helperText,
   checked,
   disabled = false,
   isSaving = false,
   onToggle,
 }) => {
-  const resolvedTitle = title || permission?.name || '';
-  const resolvedHelperText = helperText ?? (
-    permission?.constraint_summary || (
-      permission?.description && permission.description !== permission.name
-        ? permission.description
-        : ''
-    )
+  const helperText = permission.constraint_summary || (
+    permission.description && permission.description !== permission.name
+      ? permission.description
+      : ''
   );
 
   const handleToggle = () => {
@@ -62,13 +55,13 @@ export const PermissionToggleCard: React.FC<PermissionToggleCardProps> = ({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="min-w-0">
             <p className="line-clamp-1 text-sm font-semibold leading-6 text-slate-800">
-              {resolvedTitle}
+              {permission.name}
             </p>
           </div>
           <div className="h-5 min-w-0">
-            {resolvedHelperText ? (
+            {helperText ? (
               <p className="line-clamp-1 text-[12px] leading-5 text-slate-400">
-                {resolvedHelperText}
+                {helperText}
               </p>
             ) : null}
           </div>

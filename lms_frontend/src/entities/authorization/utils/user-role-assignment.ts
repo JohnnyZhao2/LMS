@@ -15,6 +15,13 @@ export function getManagedRoleCodes(roles: RoleLike[]): RoleCode[] {
     .filter(isAssignableRoleCode);
 }
 
+/**
+ * 去掉全部授权角色，仅保留学员。
+ */
+export function withoutAuthRoles(roleCodes: RoleCode[]): RoleCode[] {
+  return roleCodes.filter((code) => code === 'STUDENT');
+}
+
 export function getNextAssignableRoleCodes(currentRoleCodes: RoleCode[], roleCode: RoleCode): RoleCode[] {
   const currentAssignableRoleCodes = currentRoleCodes.filter(isAssignableRoleCode);
   if (roleCode === 'STUDENT') {
@@ -23,10 +30,9 @@ export function getNextAssignableRoleCodes(currentRoleCodes: RoleCode[], roleCod
       : ['STUDENT', ...currentAssignableRoleCodes.filter((code) => code !== 'STUDENT')];
   }
 
-  const studentRoleCodes = currentAssignableRoleCodes.filter((code) => code === 'STUDENT');
   // 授权角色互斥：点掉任一授权角色时清空全部授权角色，避免脏数据残留
   if (currentAssignableRoleCodes.includes(roleCode)) {
-    return [...studentRoleCodes];
+    return withoutAuthRoles(currentAssignableRoleCodes);
   }
-  return [...studentRoleCodes, roleCode];
+  return [...withoutAuthRoles(currentAssignableRoleCodes), roleCode];
 }

@@ -4,7 +4,6 @@ import { ROLE_FULL_LABELS } from '@/config/role-constants';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SearchInput } from '@/components/ui/search-input';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { RoleCode, UserList } from '@/types/common';
 import { cn } from '@/lib/utils';
@@ -15,12 +14,12 @@ interface RoleMemberPanelProps {
   search: string;
   onSearchChange: (value: string) => void;
   membersByRole: Partial<Record<RoleCode, UserList[]>>;
-  candidateUsers: UserList[];
+  candidatesByRole: Partial<Record<RoleCode, UserList[]>>;
   isLoading: boolean;
   canManageMembers: boolean;
   isMutating: boolean;
   mutatingUserId?: number | null;
-  onAddMember: (user: UserList) => void | Promise<void>;
+  onAddMember: (roleCode: RoleCode, user: UserList) => void | Promise<void>;
   onRemoveMember: (user: UserList) => void | Promise<void>;
   selectedMemberId?: number | null;
   onSelectRole: (roleCode: RoleCode) => void;
@@ -28,7 +27,10 @@ interface RoleMemberPanelProps {
   canSelectMember?: boolean;
 }
 
-const renderMemberCard = ({
+/**
+ * 角色分组成员卡片。
+ */
+const MemberCard = ({
   member,
   selectedMemberId,
   canSelectMember,
@@ -50,7 +52,6 @@ const renderMemberCard = ({
   muted?: boolean;
 }) => (
   <div
-    key={member.id}
     role={canSelectMember ? 'button' : undefined}
     tabIndex={canSelectMember ? 0 : undefined}
     onClick={() => {
@@ -117,25 +118,23 @@ const renderMemberCard = ({
   </div>
 );
 
-export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
-  roleCodes,
-  activeRole,
-  search,
-  onSearchChange,
-  membersByRole,
+/**
+ * 分组标题旁的添加成员 Popover。
+ */
+const RoleSectionAddButton = ({
+  roleCode,
   candidateUsers,
-  isLoading,
   canManageMembers,
   isMutating,
-  mutatingUserId,
   onAddMember,
-  onRemoveMember,
-  selectedMemberId,
-  onSelectRole,
-  onSelectMember,
-  canSelectMember = false,
+}: {
+  roleCode: RoleCode;
+  candidateUsers: UserList[];
+  canManageMembers: boolean;
+  isMutating: boolean;
+  onAddMember: (roleCode: RoleCode, user: UserList) => void | Promise<void>;
 }) => {
-  const [addOpen, setAddOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [addSearch, setAddSearch] = useState('');
   const filteredCandidateUsers = useMemo(() => {
     const keyword = addSearch.trim().toLowerCase();
@@ -147,93 +146,125 @@ export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
       || user.employee_id.toLowerCase().includes(keyword)
     ));
   }, [addSearch, candidateUsers]);
+  const roleLabel = ROLE_FULL_LABELS[roleCode] ?? roleCode;
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setAddSearch('');
+        }
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={!canManageMembers || isMutating}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`添加到${roleLabel}`}
+          className={cn(
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted opacity-0 transition-opacity duration-150',
+            'hover:bg-muted/60 hover:text-foreground',
+            'group-hover/section:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+            open && 'opacity-100',
+            (!canManageMembers || isMutating) && 'opacity-0',
+          )}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[320px] rounded-xl border border-slate-200/90 bg-white/98 p-0 shadow-[0_18px_44px_rgba(15,23,42,0.16),0_4px_14px_rgba(15,23,42,0.08)] ring-1 ring-slate-950/5 backdrop-blur-sm"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="border-b border-border/60 px-3 py-3">
+          <p className="text-sm font-semibold text-foreground">
+            添加到{roleLabel}
+          </p>
+          <SearchInput
+            value={addSearch}
+            onChange={setAddSearch}
+            placeholder="搜索姓名、工号"
+            className="mt-3"
+            inputClassName="h-9 rounded-lg text-[12px]"
+          />
+        </div>
+
+        <ScrollContainer className="max-h-[320px] overflow-y-auto overflow-x-hidden px-2 py-2">
+          {filteredCandidateUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-3 py-10 text-center">
+              <UserPlus className="h-4 w-4 text-slate-300" />
+              <p className="text-[12px] text-text-muted">没有可添加的用户</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {filteredCandidateUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  disabled={isMutating}
+                  onClick={() => {
+                    void onAddMember(roleCode, user);
+                    setOpen(false);
+                    setAddSearch('');
+                  }}
+                  className="flex min-h-[66px] w-full items-center gap-2 rounded-xl border border-border/70 bg-white px-2 py-2 text-left transition-colors duration-200 hover:bg-muted/35 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <UserAvatar
+                    avatarKey={user.avatar_key}
+                    name={user.username}
+                    size="sm"
+                    className="h-6.5 w-6.5 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-medium leading-5 text-foreground">
+                      {user.username}
+                    </p>
+                    <p className="truncate text-[10.5px] leading-4 text-text-muted">
+                      {user.department?.name ?? '未分配部门'}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ScrollContainer>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
+  roleCodes,
+  activeRole,
+  search,
+  onSearchChange,
+  membersByRole,
+  candidatesByRole,
+  isLoading,
+  canManageMembers,
+  isMutating,
+  mutatingUserId,
+  onAddMember,
+  onRemoveMember,
+  selectedMemberId,
+  onSelectRole,
+  onSelectMember,
+  canSelectMember = false,
+}) => {
   const activeMembers = membersByRole[activeRole] ?? [];
 
   return (
     <aside className="flex min-h-0 flex-col border-b border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,0.96))] xl:border-b-0 xl:border-r">
       <div className="border-b border-border/60 px-3.5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">角色成员</h3>
-            {!canManageMembers ? (
-              <p className="mt-1 text-[11px] leading-5 text-text-muted">当前账号仅可查看，不能调整成员。</p>
-            ) : null}
-          </div>
-
-          <Popover open={addOpen} onOpenChange={setAddOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!canManageMembers || isMutating}
-                className="h-8 px-3 text-[12px]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                添加
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={10}
-              className="w-[320px] rounded-xl border border-slate-200/90 bg-white/98 p-0 shadow-[0_18px_44px_rgba(15,23,42,0.16),0_4px_14px_rgba(15,23,42,0.08)] ring-1 ring-slate-950/5 backdrop-blur-sm"
-            >
-              <div className="border-b border-border/60 px-3 py-3">
-                <p className="text-sm font-semibold text-foreground">
-                  添加到{ROLE_FULL_LABELS[activeRole] ?? activeRole}
-                </p>
-                <SearchInput
-                  value={addSearch}
-                  onChange={setAddSearch}
-                  placeholder="搜索姓名、工号"
-                  className="mt-3"
-                  inputClassName="h-9 rounded-lg text-[12px]"
-                />
-              </div>
-
-              <ScrollContainer className="max-h-[320px] overflow-y-auto overflow-x-hidden px-2 py-2">
-                {filteredCandidateUsers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 px-3 py-10 text-center">
-                    <UserPlus className="h-4 w-4 text-slate-300" />
-                    <p className="text-[12px] text-text-muted">没有可添加的用户</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {filteredCandidateUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        disabled={isMutating}
-                        onClick={() => {
-                          void onAddMember(user);
-                          setAddOpen(false);
-                          setAddSearch('');
-                        }}
-                        className="flex min-h-[66px] w-full items-center gap-2 rounded-xl border border-border/70 bg-white px-2 py-2 text-left transition-colors duration-200 hover:bg-muted/35 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <UserAvatar
-                          avatarKey={user.avatar_key}
-                          name={user.username}
-                          size="sm"
-                          className="h-6.5 w-6.5 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12px] font-medium leading-5 text-foreground">
-                            {user.username}
-                          </p>
-                          <p className="truncate text-[10.5px] leading-4 text-text-muted">
-                            {user.department?.name ?? '未分配部门'}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </ScrollContainer>
-            </PopoverContent>
-          </Popover>
-        </div>
-
+        <h3 className="text-sm font-semibold text-foreground">角色成员</h3>
+        {!canManageMembers ? (
+          <p className="mt-1 text-[11px] leading-5 text-text-muted">当前账号仅可查看，不能调整成员。</p>
+        ) : null}
         <SearchInput
           value={search}
           onChange={onSearchChange}
@@ -250,28 +281,20 @@ export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
             加载成员中...
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-7">
             {roleCodes.map((roleCode) => {
               const isActiveSection = roleCode === activeRole;
               const members = membersByRole[roleCode] ?? [];
               const previewMembers = isActiveSection ? members : members.slice(0, 4);
 
               return (
-                <section
-                  key={roleCode}
-                  className={cn(
-                    'rounded-2xl border px-3 py-3 transition-colors',
-                    isActiveSection
-                      ? 'border-primary/25 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
-                      : 'border-border/60 bg-slate-50/55',
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onSelectRole(roleCode)}
-                    className="mb-3 flex w-full items-center justify-between gap-3 text-left"
-                  >
-                    <div className="min-w-0">
+                <section key={roleCode} className="group/section">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectRole(roleCode)}
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <h4 className={cn(
                         'text-sm font-semibold',
                         isActiveSection ? 'text-foreground' : 'text-slate-500',
@@ -279,16 +302,17 @@ export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
                       >
                         {ROLE_FULL_LABELS[roleCode] ?? roleCode}
                       </h4>
-                      <p className="mt-1 text-[11px] leading-5 text-text-muted">
-                        {`${members.length} 人${!isActiveSection && members.length > 4 ? ' · 仅展示前 4 人' : ''}`}
-                      </p>
-                    </div>
-                    {isActiveSection ? (
-                      <span className="rounded-full bg-primary/[0.08] px-2.5 py-1 text-[11px] font-medium text-primary">
-                        {selectedMemberId ? '当前' : '模板'}
-                      </span>
+                    </button>
+                    {canManageMembers ? (
+                      <RoleSectionAddButton
+                        roleCode={roleCode}
+                        candidateUsers={candidatesByRole[roleCode] ?? []}
+                        canManageMembers={canManageMembers}
+                        isMutating={isMutating}
+                        onAddMember={onAddMember}
+                      />
                     ) : null}
-                  </button>
+                  </div>
 
                   {previewMembers.length === 0 ? (
                     <div className="flex items-center gap-2 rounded-xl border border-dashed border-border/70 px-3 py-5 text-[12px] text-text-muted">
@@ -297,19 +321,22 @@ export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      {previewMembers.map((member) => renderMemberCard({
-                        member,
-                        selectedMemberId,
-                        canSelectMember,
-                        canManageMembers: isActiveSection && canManageMembers,
-                        isMutating,
-                        mutatingUserId,
-                        onSelectMember: onSelectMember
-                          ? (targetMember) => onSelectMember(roleCode, targetMember)
-                          : undefined,
-                        onRemoveMember,
-                        muted: !isActiveSection,
-                      }))}
+                      {previewMembers.map((member) => (
+                        <MemberCard
+                          key={member.id}
+                          member={member}
+                          selectedMemberId={selectedMemberId}
+                          canSelectMember={canSelectMember}
+                          canManageMembers={isActiveSection && canManageMembers}
+                          isMutating={isMutating}
+                          mutatingUserId={mutatingUserId}
+                          onSelectMember={onSelectMember
+                            ? (targetMember) => onSelectMember(roleCode, targetMember)
+                            : undefined}
+                          onRemoveMember={onRemoveMember}
+                          muted={!isActiveSection}
+                        />
+                      ))}
                     </div>
                   )}
                 </section>
