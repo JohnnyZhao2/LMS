@@ -18,9 +18,9 @@ interface PermissionCatalogQuery {
   module?: string;
 }
 
-interface UserPermissionMutationPayload {
+interface UpdateUserPermissionsPayload {
   userId: number;
-  permissionCode: string;
+  permissionCodes: string[];
 }
 
 /**
@@ -39,19 +39,11 @@ export function getUserPermissions(userId: number) {
 }
 
 /**
- * 授予用户单项权限。
+ * 更新用户权限集合。
  */
-export function grantUserPermission({ userId, permissionCode }: UserPermissionMutationPayload) {
+export function updateUserPermissions({ userId, permissionCodes }: UpdateUserPermissionsPayload) {
   return apiClient.put<UserPermissions>(
-    `/authorization/users/${userId}/permissions/${permissionCode}/`,
-  );
-}
-
-/**
- * 撤销用户单项权限。
- */
-export function revokeUserPermission({ userId, permissionCode }: UserPermissionMutationPayload) {
-  return apiClient.delete<UserPermissions>(
-    `/authorization/users/${userId}/permissions/${permissionCode}/`,
+    `/authorization/users/${userId}/permissions/`,
+    { permission_codes: permissionCodes },
   );
 }

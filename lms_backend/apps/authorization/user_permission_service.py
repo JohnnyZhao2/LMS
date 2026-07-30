@@ -14,6 +14,7 @@ from core.exceptions import BusinessError, ErrorCodes
 
 from .constants import (
     PERMISSION_CATALOG,
+    PERMISSION_DEPENDENCIES,
     REGISTERED_PERMISSION_CODES,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
@@ -22,15 +23,9 @@ from .models import Permission, UserPermission
 
 register_operation_log_action(
     'authorization',
-    'grant_user_permission',
+    'update_user_permission',
     group='用户授权',
-    label='授予用户权限',
-)
-register_operation_log_action(
-    'authorization',
-    'revoke_user_permission',
-    group='用户授权',
-    label='撤销用户权限',
+    label='更新用户权限',
 )
 
 
@@ -128,54 +123,89 @@ class UserPermissionServiceMixin:
 
     def get_user_permission_codes(self, user_id: int) -> list[str]:
         target = self._get_target_management_user(user_id)
-        return sorted(self._permission_codes_for(target))
+        return sorted(self._permission_codes_for(target) - SYSTEM_MANAGED_PERMISSION_CODES)
 
-    def _get_configurable_permission(self, permission_code: str) -> Permission:
-        if permission_code not in REGISTERED_PERMISSION_CODES:
+    def _validate_permission_dependencies(self, permission_codes: set[str]) -> None:
+        missing = []
+        for code in sorted(permission_codes):
+            required = PERMISSION_DEPENDENCIES.get(code)
+            if not required:
+                continue
+            unmet = sorted(required - permission_codes)
+            if unmet:
+                missing.append(f'{code} 依赖 {", ".join(unmet)}')
+        if missing:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message=f'权限 {permission_code} 未注册',
+                message=f'权限依赖不满足：{"；".join(missing)}',
             )
-        if permission_code in SYSTEM_MANAGED_PERMISSION_CODES:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'权限 {permission_code} 为系统保留权限',
-            )
-        return self.validate_not_none(
-            Permission.objects.filter(code=permission_code, is_active=True).first(),
-            f'权限 {permission_code} 不存在',
-        )
 
     @transaction.atomic
-    def grant_user_permission(self, *, user_id: int, permission_code: str) -> list[str]:
+    def update_user_permissions(
+        self,
+        *,
+        user_id: int,
+        permission_codes: list[str],
+    ) -> list[str]:
         target = self._get_target_management_user(user_id)
-        permission = self._get_configurable_permission(permission_code)
-        UserPermission.objects.get_or_create(user=target, permission=permission)
+        desired = set(permission_codes)
+
+        unknown = desired - REGISTERED_PERMISSION_CODES
+        if unknown:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'权限未注册：{", ".join(sorted(unknown))}',
+            )
+
+        system_managed = desired & SYSTEM_MANAGED_PERMISSION_CODES
+        if system_managed:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'权限为系统保留权限：{", ".join(sorted(system_managed))}',
+            )
+
+        self._validate_permission_dependencies(desired)
+
+        current = self._permission_codes_for(target)
+        current_configurable = current - SYSTEM_MANAGED_PERMISSION_CODES
+        to_add = desired - current_configurable
+        to_remove = current_configurable - desired
+
+        if to_add:
+            permissions = {
+                permission.code: permission
+                for permission in Permission.objects.filter(
+                    code__in=to_add,
+                    is_active=True,
+                )
+            }
+            missing_active = to_add - set(permissions)
+            if missing_active:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'权限不存在或未启用：{", ".join(sorted(missing_active))}',
+                )
+            UserPermission.objects.bulk_create([
+                UserPermission(user=target, permission=permissions[code])
+                for code in sorted(to_add)
+            ])
+
+        if to_remove:
+            UserPermission.objects.filter(
+                user=target,
+                permission__code__in=to_remove,
+            ).delete()
+
         self._invalidate_permission_cache(target.id)
         audit_operation(
             operator=self.user,
             operation_type='authorization',
-            action='grant_user_permission',
-            description=f'授予权限：{permission.code}',
+            action='update_user_permission',
+            description=(
+                f'更新权限：新增 {len(to_add)}，移除 {len(to_remove)}'
+            ),
             target_type='user',
             target_id=str(target.id),
             target_title=target.username,
         )
-        return self.get_user_permission_codes(target.id)
-
-    @transaction.atomic
-    def revoke_user_permission(self, *, user_id: int, permission_code: str) -> list[str]:
-        target = self._get_target_management_user(user_id)
-        permission = self._get_configurable_permission(permission_code)
-        UserPermission.objects.filter(user=target, permission=permission).delete()
-        self._invalidate_permission_cache(target.id)
-        audit_operation(
-            operator=self.user,
-            operation_type='authorization',
-            action='revoke_user_permission',
-            description=f'撤销权限：{permission.code}',
-            target_type='user',
-            target_id=str(target.id),
-            target_title=target.username,
-        )
-        return self.get_user_permission_codes(target.id)
+        return sorted(desired)

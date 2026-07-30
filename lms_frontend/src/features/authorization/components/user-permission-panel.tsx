@@ -15,9 +15,8 @@ import type { RoleCode, UserList } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 import type { PermissionCatalogItem } from '../api/authorization-api';
 import {
-  useGrantUserPermission,
   usePermissionCatalog,
-  useRevokeUserPermission,
+  useUpdateUserPermissions,
   useUserPermissions,
 } from '../api/authorization-queries';
 
@@ -241,8 +240,7 @@ export function UserPermissionPanel({
 
   const { data: permissionCatalog = [] } = usePermissionCatalog({}, canView);
   const { data: userPermissions } = useUserPermissions(userDetail?.id ?? null, shouldLoad);
-  const grantPermission = useGrantUserPermission();
-  const revokePermission = useRevokeUserPermission();
+  const updatePermissions = useUpdateUserPermissions();
   const checkedPermissionCodes = useMemo(
     () => new Set(userPermissions?.permission_codes ?? []),
     [userPermissions],
@@ -263,12 +261,16 @@ export function UserPermissionPanel({
     }
     setSavingPermissionCode(permissionCode);
     try {
-      const payload = { userId: userDetail.id, permissionCode };
+      const nextCodes = new Set(checkedPermissionCodes);
       if (nextChecked) {
-        await grantPermission.mutateAsync(payload);
+        nextCodes.add(permissionCode);
       } else {
-        await revokePermission.mutateAsync(payload);
+        nextCodes.delete(permissionCode);
       }
+      await updatePermissions.mutateAsync({
+        userId: userDetail.id,
+        permissionCodes: Array.from(nextCodes),
+      });
       if (user?.id === userDetail.id) {
         await refreshUser();
       }

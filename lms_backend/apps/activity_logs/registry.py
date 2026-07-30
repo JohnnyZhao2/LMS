@@ -17,6 +17,7 @@ _DECLARATION_MODULES = (
     'apps.spot_checks.services',
     'apps.tags.services',
     'apps.grading.views',
+    'apps.authorization.user_permission_service',
 )
 
 _LOG_ACTION_INDEX: dict[str, dict] = {}

@@ -3,8 +3,7 @@ import { useCurrentRole } from '@/session/hooks/use-current-role';
 import {
   getPermissionCatalog,
   getUserPermissions,
-  grantUserPermission,
-  revokeUserPermission,
+  updateUserPermissions,
 } from './authorization-api';
 
 type QueryRole = string | null | undefined;
@@ -55,25 +54,11 @@ export const useUserPermissions = (userId: number | null, enabled = true) => {
   });
 };
 
-export const useGrantUserPermission = () => {
+export const useUpdateUserPermissions = () => {
   const queryClient = useQueryClient();
   const currentRole = useCurrentRole();
   return useMutation({
-    mutationFn: grantUserPermission,
-    onSuccess: (data, { userId }) => {
-      queryClient.setQueryData(
-        authorizationKeys.userPermissions({ currentRole, userId }),
-        data,
-      );
-    },
-  });
-};
-
-export const useRevokeUserPermission = () => {
-  const queryClient = useQueryClient();
-  const currentRole = useCurrentRole();
-  return useMutation({
-    mutationFn: revokeUserPermission,
+    mutationFn: updateUserPermissions,
     onSuccess: (data, { userId }) => {
       queryClient.setQueryData(
         authorizationKeys.userPermissions({ currentRole, userId }),

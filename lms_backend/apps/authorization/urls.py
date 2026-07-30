@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import PermissionCatalogView, UserPermissionDetailView, UserPermissionsView
+from .views import PermissionCatalogView, UserPermissionsView
 
 
 urlpatterns = [
@@ -9,10 +9,5 @@ urlpatterns = [
         'users/<int:user_id>/permissions/',
         UserPermissionsView.as_view(),
         name='authorization-user-permissions',
-    ),
-    path(
-        'users/<int:user_id>/permissions/<str:permission_code>/',
-        UserPermissionDetailView.as_view(),
-        name='authorization-user-permission-detail',
     ),
 ]

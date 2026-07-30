@@ -47,34 +47,18 @@ class UserPermissionsView(BaseAPIView):
         codes = self.service.get_user_permission_codes(user_id)
         return success_response({'permission_codes': codes})
 
-
-class UserPermissionDetailView(BaseAPIView):
-    permission_classes = [IsAuthenticated]
-    service_class = AuthorizationService
-
     @extend_schema(
-        summary='授予用户权限',
-        request=None,
+        summary='更新用户权限',
+        request=UserPermissionsSerializer,
         responses={200: UserPermissionsSerializer, 403: OpenApiResponse(description='无权限')},
         tags=['授权管理'],
     )
-    def put(self, request, user_id: int, permission_code: str):
+    def put(self, request, user_id: int):
         enforce('user.permission.update', request, error_message='无权更新用户权限')
-        codes = self.service.grant_user_permission(
+        serializer = UserPermissionsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        codes = self.service.update_user_permissions(
             user_id=user_id,
-            permission_code=permission_code,
-        )
-        return success_response({'permission_codes': codes})
-
-    @extend_schema(
-        summary='撤销用户权限',
-        responses={200: UserPermissionsSerializer, 403: OpenApiResponse(description='无权限')},
-        tags=['授权管理'],
-    )
-    def delete(self, request, user_id: int, permission_code: str):
-        enforce('user.permission.update', request, error_message='无权更新用户权限')
-        codes = self.service.revoke_user_permission(
-            user_id=user_id,
-            permission_code=permission_code,
+            permission_codes=serializer.validated_data['permission_codes'],
         )
         return success_response({'permission_codes': codes})
