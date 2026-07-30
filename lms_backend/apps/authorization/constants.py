@@ -43,28 +43,13 @@ SCOPE_ALL = 'ALL'
 SCOPE_SELF = 'SELF'
 SCOPE_MENTEES = 'MENTEES'
 SCOPE_DEPARTMENT = 'DEPARTMENT'
-SCOPE_EXPLICIT_USERS = 'EXPLICIT_USERS'
 
 SCOPE_CHOICES = [
     (SCOPE_ALL, '全部对象'),
     (SCOPE_SELF, '本人数据'),
     (SCOPE_MENTEES, '仅名下学员'),
     (SCOPE_DEPARTMENT, '仅同部门'),
-    (SCOPE_EXPLICIT_USERS, '指定用户'),
 ]
-
-DEFAULT_SCOPE_GROUP_ALLOWED_SCOPE_TYPES = tuple(scope_code for scope_code, _ in SCOPE_CHOICES)
-
-
-def _resolve_allowed_scope_types(catalog_item: dict) -> tuple[str, ...]:
-    configured_scope_types = tuple(catalog_item.get('allowed_scope_types') or ())
-    return configured_scope_types or DEFAULT_SCOPE_GROUP_ALLOWED_SCOPE_TYPES
-
-
-PERMISSION_ALLOWED_SCOPE_TYPES_MAP = {
-    item['code']: _resolve_allowed_scope_types(item)
-    for item in PERMISSION_CATALOG
-}
 
 
 def _build_scope_groups() -> dict:
@@ -74,16 +59,12 @@ def _build_scope_groups() -> dict:
         if not scope_group_key:
             continue
 
-        allowed_scope_types = PERMISSION_ALLOWED_SCOPE_TYPES_MAP[item['code']]
         scope_group = scope_groups.setdefault(
             scope_group_key,
             {
                 'permission_codes': [],
-                'available_scope_types': allowed_scope_types,
             },
         )
-        if tuple(scope_group['available_scope_types']) != tuple(allowed_scope_types):
-            raise ValueError(f'范围组 {scope_group_key} 的可选范围配置不一致')
         scope_group['permission_codes'].append(item['code'])
     return scope_groups
 

@@ -1,14 +1,12 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { isAllowedDepartmentCode, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
 import { useAssignRoles } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
 import {
   useRevokeUserPermissionOverride,
-  useRevokeUserScopeGroupOverride,
   useUserPermissionOverrides,
-  useUserScopeGroupOverrides,
 } from '@/entities/authorization/api/authorization';
 import { showApiError } from '@/utils/error-handler';
 import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
@@ -48,14 +46,12 @@ export function useRolePermissionTemplateState({
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
     initialRoleCode && initialRoleCode !== 'STUDENT' ? initialSelectedUserId : null,
   );
-  const [workbenchElement, setWorkbenchElement] = useState<HTMLDivElement | null>(null);
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [isResettingOverrides, setIsResettingOverrides] = useState(false);
   const deferredMemberSearch = useDeferredValue(memberSearch);
   const assignRoles = useAssignRoles();
   const revokeUserOverride = useRevokeUserPermissionOverride();
-  const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
 
   const resolvedActiveRole = useMemo(
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
@@ -78,7 +74,6 @@ export function useRolePermissionTemplateState({
     {},
     { enabled: Boolean(resolvedActiveRole) && (canManageRoleMembers || canViewUserAuthorization) },
   );
-  const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
   const {
     data: selectedUserDetail,
@@ -89,10 +84,6 @@ export function useRolePermissionTemplateState({
     data: selectedUserPermissionOverrides = [],
     refetch: refetchSelectedUserPermissionOverrides,
   } = useUserPermissionOverrides(selectedUserId, Boolean(selectedUserId));
-  const {
-    data: selectedUserScopeGroupOverrides = [],
-    refetch: refetchSelectedUserScopeGroupOverrides,
-  } = useUserScopeGroupOverrides(selectedUserId, Boolean(selectedUserId));
 
   const roleNameMap = useMemo(
     () => new Map(roles.map((role) => [role.code, role.name])),
@@ -175,13 +166,7 @@ export function useRolePermissionTemplateState({
     )),
     [resolvedActiveRole, selectedUserPermissionOverrides],
   );
-  const currentRoleScopeOverrides = useMemo(
-    () => selectedUserScopeGroupOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserScopeGroupOverrides],
-  );
-  const canResetCurrentRoleOverrides = currentRolePermissionOverrides.length > 0 || currentRoleScopeOverrides.length > 0;
+  const canResetCurrentRoleOverrides = currentRolePermissionOverrides.length > 0;
 
   useEffect(() => {
     if (!selectedUserDetail || !resolvedActiveRole) {
@@ -299,19 +284,15 @@ export function useRolePermissionTemplateState({
 
     setIsResettingOverrides(true);
     try {
-      await Promise.all([
-        ...currentRolePermissionOverrides.map((override) => (
+      await Promise.all(
+        currentRolePermissionOverrides.map((override) => (
           revokeUserOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
         )),
-        ...currentRoleScopeOverrides.map((override) => (
-          revokeUserScopeGroupOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-      ]);
+      );
       await refreshUser();
       await Promise.all([
         refetchSelectedUserDetail(),
         refetchSelectedUserPermissionOverrides(),
-        refetchSelectedUserScopeGroupOverrides(),
       ]);
       setResetDialogOpen(false);
     } catch (error) {
@@ -326,7 +307,6 @@ export function useRolePermissionTemplateState({
     canViewUserAuthorization,
     candidateUsers,
     canResetCurrentRoleOverrides,
-    departments,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
@@ -353,7 +333,5 @@ export function useRolePermissionTemplateState({
     selectedUserRoleCodes,
     setMemberSearch,
     setResetDialogOpen,
-    setWorkbenchElement,
-    workbenchElement,
   };
 }

@@ -6,11 +6,10 @@ from django.db.models import Q
 
 from .constants import (
     CONFIG_PERMISSION_MODULE,
-    PERMISSION_SCOPE_GROUPS,
     REGISTERED_PERMISSION_CODES,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
-from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
+from .models import Permission, UserPermissionOverride
 
 
 def list_permissions(
@@ -51,35 +50,6 @@ def list_active_user_overrides(
 
     if permission_code:
         queryset = queryset.filter(permission__code=permission_code)
-
-    return list(queryset.order_by('-created_at', '-id'))
-
-
-def list_active_scope_group_overrides(
-    *,
-    user_id: int,
-    current_role: Optional[str],
-    scope_group_key: Optional[str] = None,
-) -> List[UserScopeGroupOverride]:
-    if current_role in {'STUDENT', 'SUPER_ADMIN'}:
-        return []
-
-    queryset = UserScopeGroupOverride.objects.select_related('user').filter(
-        user_id=user_id,
-    ).exclude(
-        applies_to_role='STUDENT',
-    )
-
-    if current_role:
-        queryset = queryset.filter(
-            Q(applies_to_role__isnull=True) | Q(applies_to_role='') | Q(applies_to_role=current_role)
-        )
-
-    if scope_group_key:
-        queryset = queryset.filter(scope_group_key=scope_group_key)
-        scope_group = PERMISSION_SCOPE_GROUPS.get(scope_group_key)
-        if scope_group:
-            queryset = queryset.filter(scope_type__in=scope_group['available_scope_types'])
 
     return list(queryset.order_by('-created_at', '-id'))
 

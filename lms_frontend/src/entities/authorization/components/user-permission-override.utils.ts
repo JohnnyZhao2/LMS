@@ -1,6 +1,5 @@
 import type {
   CreateUserPermissionOverrideRequest,
-  PermissionOverrideScope,
 } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 
@@ -9,27 +8,15 @@ import type { PermissionOverrideEntry } from './user-permission-section.types';
 
 const getToggleBlockedReason = ({
   canManageOverride,
-  hasSelectedExplicitUsers,
-  hasSelectedScopes,
-  isScopeAware,
   needsCreate,
   needsRevoke,
   nextChecked,
 }: {
   canManageOverride: boolean;
-  hasSelectedExplicitUsers: boolean;
-  hasSelectedScopes: boolean;
-  isScopeAware: boolean;
   needsCreate: boolean;
   needsRevoke: boolean;
   nextChecked: boolean;
 }): string | null => {
-  if (isScopeAware && !hasSelectedScopes) {
-    return '请先选择扩展范围';
-  }
-  if (isScopeAware && !hasSelectedExplicitUsers) {
-    return '请选择至少一个指定用户';
-  }
   if (needsRevoke && !canManageOverride) {
     return nextChecked ? '当前账号没有撤销权限，无法启用该权限' : '当前账号没有撤销权限，无法禁用该权限';
   }
@@ -64,22 +51,12 @@ export const resolvePermissionState = ({
   canManageOverride,
   denyOverrides,
   fromTemplate,
-  isScopeAware,
-  selectedPermissionScopes,
-  selectedScopeUserIds,
 }: {
   allowOverrides: PermissionOverrideEntry[];
   canManageOverride: boolean;
   denyOverrides: PermissionOverrideEntry[];
   fromTemplate: boolean;
-  isScopeAware: boolean;
-  selectedPermissionScopes: PermissionOverrideScope[];
-  selectedScopeUserIds: number[];
 }): PermissionState => {
-  const hasSelectedScopes = selectedPermissionScopes.length > 0;
-  const hasSelectedExplicitUsers = (
-    !selectedPermissionScopes.includes('EXPLICIT_USERS') || selectedScopeUserIds.length > 0
-  );
   const needsCreateToEnable = !fromTemplate && allowOverrides.length === 0;
   const needsCreateToDisable = fromTemplate;
   const needsRevokeToEnable = denyOverrides.length > 0;
@@ -94,18 +71,12 @@ export const resolvePermissionState = ({
     checked,
     enableBlockedReason: getToggleBlockedReason({
       nextChecked: true,
-      isScopeAware,
-      hasSelectedScopes: isScopeAware ? hasSelectedScopes : true,
-      hasSelectedExplicitUsers,
       needsCreate: needsCreateToEnable,
       needsRevoke: needsRevokeToEnable,
       canManageOverride,
     }),
     disableBlockedReason: getToggleBlockedReason({
       nextChecked: false,
-      isScopeAware,
-      hasSelectedScopes: isScopeAware ? hasSelectedScopes : true,
-      hasSelectedExplicitUsers,
       needsCreate: needsCreateToDisable,
       needsRevoke: needsRevokeToDisable,
       canManageOverride,

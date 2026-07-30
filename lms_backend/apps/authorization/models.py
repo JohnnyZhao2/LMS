@@ -5,7 +5,7 @@ from django.db import models
 from apps.users.models import Role, User
 from core.mixins import TimestampMixin
 
-from .constants import EFFECT_ALLOW, EFFECT_CHOICES, SCOPE_ALL, SCOPE_CHOICES
+from .constants import EFFECT_ALLOW, EFFECT_CHOICES
 
 
 class Permission(TimestampMixin, models.Model):
@@ -108,53 +108,3 @@ class UserPermissionOverride(TimestampMixin, models.Model):
     def __str__(self):
         role = self.applies_to_role or 'ALL_ROLES'
         return f'{self.user_id}:{role}:{self.effect}:{self.permission.code}'
-
-
-class UserScopeGroupOverride(TimestampMixin, models.Model):
-    """Current user-level scope group allow/deny override."""
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='scope_group_overrides',
-        verbose_name='目标用户',
-    )
-    scope_group_key = models.CharField(max_length=100, db_index=True, verbose_name='范围组键')
-    effect = models.CharField(max_length=10, choices=EFFECT_CHOICES, db_index=True, verbose_name='覆盖效果')
-    applies_to_role = models.CharField(
-        max_length=20,
-        choices=Role.ROLE_CHOICES,
-        null=True,
-        blank=True,
-        db_index=True,
-        verbose_name='生效角色',
-    )
-    scope_type = models.CharField(
-        max_length=20,
-        choices=SCOPE_CHOICES,
-        default=SCOPE_ALL,
-        verbose_name='作用域类型',
-    )
-    scope_user_ids = models.JSONField(default=list, blank=True, verbose_name='指定用户ID列表')
-    granted_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='granted_scope_group_overrides',
-        verbose_name='授权人',
-    )
-
-    class Meta:
-        db_table = 'lms_user_scope_group_override'
-        verbose_name = '用户范围组覆盖'
-        verbose_name_plural = '用户范围组覆盖'
-        ordering = ['-created_at', '-id']
-        indexes = [
-            models.Index(fields=['user', 'scope_group_key'], name='user_scope_group_u_g_idx'),
-            models.Index(fields=['user', 'applies_to_role'], name='user_scope_group_u_r_idx'),
-        ]
-
-    def __str__(self):
-        role = self.applies_to_role or 'ALL_ROLES'
-        return f'{self.user_id}:{role}:{self.effect}:{self.scope_group_key}:{self.scope_type}'

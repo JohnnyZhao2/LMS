@@ -41,14 +41,6 @@ export const queryKeys = {
       currentRole: QueryRole;
       userId: number | null;
     }) => ['authorization', 'user-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
-    userScopeGroupOverridesRoot: () => ['authorization', 'user-scope-group-overrides'] as const,
-    userScopeGroupOverrides: ({
-      currentRole,
-      userId,
-    }: {
-      currentRole: QueryRole;
-      userId: number | null;
-    }) => ['authorization', 'user-scope-group-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
   },
   dashboards: {
     admin: (currentRole: QueryRole) => ['admin-dashboard', normalizeRoleKey(currentRole)] as const,

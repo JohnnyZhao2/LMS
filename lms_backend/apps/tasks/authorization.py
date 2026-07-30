@@ -121,15 +121,12 @@ AUTHORIZATION_SPECS = (
                 kwargs_by_action={
                     'view': {
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
                     },
                     'update': {
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
                     },
                     'delete': {
                         'scope_group_key': TASK_RESOURCE_SCOPE_GROUP,
-                        'allowed_scope_types': ('SELF', 'ALL'),
                     },
                 },
             ),

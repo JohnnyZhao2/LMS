@@ -51,8 +51,6 @@ _OPERATION_ACTION_SUMMARIES = {
     'replace_role_permissions': '{actor} 更新了角色模板《{target}》的权限',
     'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
     'delete_user_permission_override': '{actor} 删除了 {target} 的权限覆盖',
-    'create_user_scope_group_override': '{actor} 新增了 {target} 的范围组覆盖',
-    'delete_user_scope_group_override': '{actor} 删除了 {target} 的范围组覆盖',
     'merge_tags': '{actor} 合并了标签《{target}》',
     'reorder_spaces': '{actor} 调整了空间标签顺序',
     'start_quiz': '{actor} 开始答题《{target}》',

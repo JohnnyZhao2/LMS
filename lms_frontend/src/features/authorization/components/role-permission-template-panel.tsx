@@ -41,7 +41,6 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     canViewUserAuthorization,
     candidateUsers,
     canResetCurrentRoleOverrides,
-    departments,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
@@ -68,8 +67,6 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     selectedUserRoleCodes,
     setMemberSearch,
     setResetDialogOpen,
-    setWorkbenchElement,
-    workbenchElement,
   } = useRolePermissionTemplateState({
     roleCodes,
     permissionCatalog,
@@ -106,7 +103,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
             onSelectRole={handleSelectRole}
             onSelectMember={handleSelectMember}
           />
-          <div ref={setWorkbenchElement} className="flex min-h-0 flex-col">
+          <div className="flex min-h-0 flex-col">
             {!isViewingUserOverrides ? (
               <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
                 <>
@@ -124,10 +121,8 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
               {isViewingUserOverrides ? (
                 <UserPermissionWorkbench
                   userDetail={selectedUserDetail}
-                  departments={departments}
                   selectedRoleCodes={selectedUserRoleCodes}
                   selectedRoleCode={resolvedActiveRole}
-                  dialogContentElement={workbenchElement}
                   roleNameMap={roleNameMap}
                   canManageRoles={canManageRoleMembers}
                   isRoleBusy={isAssigningRoles}
@@ -191,7 +186,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
         open={resetDialogOpen}
         onOpenChange={setResetDialogOpen}
         title="重置当前角色授权？"
-        description={`将撤销该用户在“${ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}”角色下的全部例外权限与范围配置，并恢复为角色模板继承。`}
+        description={`将撤销该用户在“${ROLE_FULL_LABELS[resolvedActiveRole] ?? resolvedActiveRole}”角色下的全部例外权限，并恢复为角色模板继承。`}
         confirmText="确认重置"
         cancelText="取消"
         confirmVariant="destructive"

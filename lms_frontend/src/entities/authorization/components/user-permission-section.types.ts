@@ -1,4 +1,4 @@
-import type { PermissionOverrideEffect, PermissionOverrideScope } from '@/types/authorization';
+import type { PermissionOverrideEffect } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 
 export interface PermissionOverrideEntry {
@@ -6,20 +6,6 @@ export interface PermissionOverrideEntry {
   permissionCode: string;
   effect: PermissionOverrideEffect;
   appliesToRole: RoleCode | null;
-}
-
-export interface ScopeGroupOverrideEntry {
-  id: number;
-  scopeGroupKey: string;
-  effect: PermissionOverrideEffect;
-  appliesToRole: RoleCode | null;
-  scopeType: PermissionOverrideScope;
-  scopeUserIds: number[];
-}
-
-export interface ScopeFilterOption {
-  value: string;
-  label: string;
 }
 
 export interface PermissionState {

@@ -96,7 +96,7 @@ export const UserForm: React.FC<UserFormProps> = ({
           {isEdit ? '编辑用户档案' : '新建用户档案'}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          配置用户基础信息、导师归属与系统角色。
+          配置用户基础信息、导师归属与系统角色（范围由角色决定）。
         </DialogDescription>
         {open && (
           <UserFormContent

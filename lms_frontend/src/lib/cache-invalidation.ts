@@ -20,7 +20,6 @@ export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClien
 export const invalidateAfterAuthorizationOverrideMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
   ]);
 
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
@@ -62,7 +61,6 @@ export const invalidateAfterRoleTemplateMutation = (queryClient: QueryClient) =>
     queryKeys.authorization.permissionCatalogRoot(),
     queryKeys.authorization.roleTemplatesRoot(),
     queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
   ]);
 
 export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>

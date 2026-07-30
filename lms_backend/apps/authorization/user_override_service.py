@@ -13,15 +13,13 @@ from .constants import (
     EFFECT_DENY,
     PERMISSION_CATALOG,
     PERMISSION_SCOPE_GROUP_KEY_MAP,
-    PERMISSION_SCOPE_GROUPS,
     REGISTERED_PERMISSION_CODES,
     SCOPE_ALL,
     SCOPE_AWARE_PERMISSION_CODES,
-    SCOPE_EXPLICIT_USERS,
     SCOPE_GROUP_RULES,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
-from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
+from .models import Permission, UserPermissionOverride
 from .permission_implications import get_permission_covering_codes, permission_code_set_covers
 
 
@@ -80,55 +78,30 @@ class UserOverrideServiceMixin:
             if rule['scope_group_key'] == scope_group_key and rule['role_code'] == resolved_role
         ]
 
-    def _get_scope_group_effective_scope_state(
+    def _get_scope_group_effective_scope_types(
         self,
         *,
         scope_group_key: str,
         acting_user: Optional[User] = None,
         current_role: Optional[str] = None,
-    ) -> tuple[set[str], set[int]]:
+    ) -> set[str]:
+        """返回角色绑定的范围类型（无用户级覆盖）。"""
         base_user = acting_user or self.user
         if not base_user or not base_user.is_authenticated:
-            return set(), set()
+            return set()
         if base_user.is_superuser:
-            return {SCOPE_ALL}, set()
+            return {SCOPE_ALL}
 
         resolved_role = self._resolve_role(current_role)
         if not resolved_role:
-            return set(), set()
+            return set()
 
-        default_scope_types = set(
+        return set(
             self._get_scope_group_scope_types(
                 scope_group_key=scope_group_key,
                 current_role=resolved_role,
             )
         )
-        broad_allow_scope_types: set[str] = set()
-        broad_deny_scope_types: set[str] = set()
-        explicit_allow_user_ids: set[int] = set()
-        explicit_deny_user_ids: set[int] = set()
-
-        overrides = self._list_active_scope_group_overrides_cached(
-            user_id=base_user.id,
-            current_role=resolved_role,
-            scope_group_key=scope_group_key,
-        )
-        for override in overrides:
-            if override.effect == EFFECT_DENY:
-                if override.scope_type == SCOPE_EXPLICIT_USERS:
-                    explicit_deny_user_ids |= set(override.scope_user_ids or [])
-                else:
-                    broad_deny_scope_types.add(override.scope_type)
-                continue
-
-            if override.scope_type == SCOPE_EXPLICIT_USERS:
-                explicit_allow_user_ids |= set(override.scope_user_ids or [])
-            else:
-                broad_allow_scope_types.add(override.scope_type)
-
-        broad_allowed_scopes = (default_scope_types - broad_deny_scope_types) | broad_allow_scope_types
-        explicit_allowed_user_ids = explicit_allow_user_ids - explicit_deny_user_ids
-        return broad_allowed_scopes, explicit_allowed_user_ids
 
     def _is_scope_capability_granted(
         self,
@@ -157,12 +130,13 @@ class UserOverrideServiceMixin:
         if not scope_group_key:
             return True
 
-        broad_allowed_scopes, explicit_allowed_user_ids = self._get_scope_group_effective_scope_state(
-            scope_group_key=scope_group_key,
-            acting_user=base_user,
-            current_role=resolved_role,
+        return bool(
+            self._get_scope_group_effective_scope_types(
+                scope_group_key=scope_group_key,
+                acting_user=base_user,
+                current_role=resolved_role,
+            )
         )
-        return bool(broad_allowed_scopes or explicit_allowed_user_ids)
 
     def is_capability_granted(
         self,
@@ -359,128 +333,6 @@ class UserOverrideServiceMixin:
                 'granted_by': self.user,
             },
         )
-        return override
-
-    def list_user_scope_group_overrides(
-        self,
-        *,
-        user_id: int,
-    ) -> List[UserScopeGroupOverride]:
-        queryset = UserScopeGroupOverride.objects.select_related('granted_by').filter(user_id=user_id)
-        overrides = list(queryset.order_by('-created_at', '-id'))
-        return [
-            override
-            for override in overrides
-            if (
-                override.scope_group_key in PERMISSION_SCOPE_GROUPS
-                and override.scope_type in PERMISSION_SCOPE_GROUPS[override.scope_group_key]['available_scope_types']
-            )
-        ]
-
-    @transaction.atomic
-    @log_operation(
-        'authorization',
-        'create_user_scope_group_override',
-        '范围组：{scope_group_key}；效果：{effect_label}；范围：{scope_type_label}',
-        target_type='user',
-        target_title_template='{result.user.username}',
-        group='用户授权',
-        label='新增用户范围组覆盖',
-    )
-    def create_user_scope_group_override(
-        self,
-        *,
-        user_id: int,
-        scope_group_key: str,
-        effect: str,
-        applies_to_role: Optional[str],
-        scope_type: str,
-        scope_user_ids: Optional[List[int]] = None,
-    ) -> UserScopeGroupOverride:
-        target_user = self.validate_not_none(
-            User.objects.filter(pk=user_id).first(),
-            f'用户 {user_id} 不存在',
-        )
-        if target_user.is_superuser:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='超管账号为专有角色，不支持配置范围组覆盖',
-            )
-        if scope_group_key not in PERMISSION_SCOPE_GROUPS:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'范围组 {scope_group_key} 不存在',
-            )
-        available_scope_types = set(PERMISSION_SCOPE_GROUPS[scope_group_key]['available_scope_types'])
-        if scope_type not in available_scope_types:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'范围组 {scope_group_key} 不支持 {scope_type} 范围',
-            )
-
-        normalized_applies_to_role = applies_to_role or None
-        if normalized_applies_to_role == 'STUDENT':
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='学员角色为固定工作台角色，不支持配置范围组覆盖',
-            )
-
-        normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
-        if scope_type == SCOPE_EXPLICIT_USERS:
-            if not normalized_scope_user_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='指定用户范围必须至少选择一个用户',
-                )
-            valid_scope_user_ids = set(
-                User.objects.filter(id__in=normalized_scope_user_ids, is_active=True).values_list('id', flat=True)
-            )
-            invalid_scope_user_ids = sorted(set(normalized_scope_user_ids) - valid_scope_user_ids)
-            if invalid_scope_user_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'指定用户不存在或已停用: {invalid_scope_user_ids}',
-                )
-        elif normalized_scope_user_ids:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='仅当范围为指定用户时才允许传 scope_user_ids',
-            )
-
-        override, _ = UserScopeGroupOverride.objects.update_or_create(
-            user=target_user,
-            scope_group_key=scope_group_key,
-            effect=effect,
-            applies_to_role=normalized_applies_to_role,
-            scope_type=scope_type,
-            defaults={
-                'scope_user_ids': normalized_scope_user_ids,
-                'granted_by': self.user,
-            },
-        )
-        return override
-
-    @transaction.atomic
-    @log_operation(
-        'authorization',
-        'delete_user_scope_group_override',
-        '范围组：{result.scope_group_key}',
-        target_type='user',
-        target_title_template='{result.user.username}',
-        group='用户授权',
-        label='删除用户范围组覆盖',
-    )
-    def delete_user_scope_group_override(
-        self,
-        *,
-        user_id: int,
-        override_id: int,
-    ) -> UserScopeGroupOverride:
-        override = self.validate_not_none(
-            UserScopeGroupOverride.objects.select_related('user').filter(id=override_id, user_id=user_id).first(),
-            '范围组覆盖规则不存在',
-        )
-        UserScopeGroupOverride.objects.filter(pk=override.pk).delete()
         return override
 
     @transaction.atomic

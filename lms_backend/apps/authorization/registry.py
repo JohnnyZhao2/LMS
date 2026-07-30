@@ -22,7 +22,6 @@ class PermissionDefinition:
     name: str
     description: str
     scope_group_key: Optional[str] = None
-    allowed_scope_types: Optional[tuple[str, ...]] = None
     implies: tuple[str, ...] = ()
 
 
@@ -224,7 +223,6 @@ def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None
                     'module': spec.module,
                     'description': permission.description,
                     'scope_group_key': permission.scope_group_key,
-                    'allowed_scope_types': list(permission.allowed_scope_types or ()),
                     'implies': [],
                 }
             )

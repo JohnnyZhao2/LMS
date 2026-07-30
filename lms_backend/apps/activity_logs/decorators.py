@@ -34,7 +34,6 @@ SCOPE_TYPE_LABELS = {
     'SELF': '本人',
     'MENTEES': '我的学员',
     'DEPARTMENT': '本部门',
-    'EXPLICIT_USERS': '指定用户',
 }
 
 SUBMISSION_STATUS_DETAILS = {

@@ -4,17 +4,15 @@ import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import type { Department, UserList as UserDetail } from '@/types/common';
+import type { UserList as UserDetail } from '@/types/common';
 import type { RoleCode } from '@/types/common';
 import { UserPermissionSection } from '@/entities/authorization/components/user-permission-section';
 import { UserRoleAssignmentChips } from '@/entities/authorization/components/user-role-assignment-chips';
 
 interface UserPermissionWorkbenchProps {
   userDetail?: UserDetail;
-  departments: Department[];
   selectedRoleCodes: RoleCode[];
   selectedRoleCode?: RoleCode | null;
-  dialogContentElement: HTMLDivElement | null;
   roleNameMap: Map<string, string>;
   canManageRoles: boolean;
   isRoleBusy: boolean;
@@ -29,10 +27,8 @@ interface UserPermissionWorkbenchProps {
 
 export function UserPermissionWorkbench({
   userDetail,
-  departments,
   selectedRoleCodes,
   selectedRoleCode,
-  dialogContentElement,
   roleNameMap,
   canManageRoles,
   isRoleBusy,
@@ -90,13 +86,9 @@ export function UserPermissionWorkbench({
             <UserPermissionSection
               key={userDetail.id}
               userId={userDetail.id}
-              userDetail={userDetail}
-              departments={departments}
               selectedRoleCodes={selectedRoleCodes}
               selectedRoleCode={selectedRoleCode}
-              departmentId={userDetail.department?.id}
               isSuperuserAccount={Boolean(userDetail.is_superuser)}
-              dialogContentElement={dialogContentElement}
             />
           </div>
         </div>

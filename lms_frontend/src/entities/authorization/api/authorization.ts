@@ -9,12 +9,10 @@ import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type {
   CreateUserPermissionOverrideRequest,
-  CreateUserScopeGroupOverrideRequest,
   PermissionCatalogItem,
   PermissionCatalogView,
   RolePermissionTemplate,
   UserPermissionOverride,
-  UserScopeGroupOverride,
 } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 
@@ -36,11 +34,6 @@ interface CreateUserOverridePayload {
 interface RevokeUserOverridePayload {
   userId: number;
   overrideId: number;
-}
-
-interface CreateUserScopeGroupOverridePayload {
-  userId: number;
-  data: CreateUserScopeGroupOverrideRequest;
 }
 
 export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled = true) => {
@@ -98,23 +91,6 @@ export const useUserPermissionOverrides = (
   });
 };
 
-export const useUserScopeGroupOverrides = (
-  userId: number | null,
-  enabled = true,
-) => {
-  const currentRole = useCurrentRole();
-  return useQuery({
-    queryKey: queryKeys.authorization.userScopeGroupOverrides({ currentRole, userId }),
-    queryFn: () => {
-      if (!userId) {
-        return Promise.resolve([] as UserScopeGroupOverride[]);
-      }
-      return apiClient.get<UserScopeGroupOverride[]>(`/authorization/users/${userId}/scope-group-overrides/`);
-    },
-    enabled: currentRole !== null && !!userId && enabled,
-  });
-};
-
 export const useCreateUserPermissionOverride = () => {
   const queryClient = useQueryClient();
 
@@ -132,28 +108,6 @@ export const useRevokeUserPermissionOverride = () => {
     mutationFn: ({ userId, overrideId }: RevokeUserOverridePayload) =>
       apiClient.delete<UserPermissionOverride>(
         `/authorization/users/${userId}/overrides/${overrideId}/`,
-      ),
-    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
-  });
-};
-
-export const useCreateUserScopeGroupOverride = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ userId, data }: CreateUserScopeGroupOverridePayload) =>
-      apiClient.post<UserScopeGroupOverride>(`/authorization/users/${userId}/scope-group-overrides/`, data),
-    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
-  });
-};
-
-export const useRevokeUserScopeGroupOverride = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ userId, overrideId }: RevokeUserOverridePayload) =>
-      apiClient.delete<UserScopeGroupOverride>(
-        `/authorization/users/${userId}/scope-group-overrides/${overrideId}/`,
       ),
     onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
   });

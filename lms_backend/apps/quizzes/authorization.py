@@ -53,7 +53,6 @@ AUTHORIZATION_SPECS = (
         kwargs_by_action={
             action: {
                 'scope_group_key': QUIZ_RESOURCE_SCOPE_GROUP,
-                'allowed_scope_types': ('SELF', 'ALL'),
             }
             for action in QUIZ_SCOPED_ACTIONS
         },
