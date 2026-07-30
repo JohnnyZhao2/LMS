@@ -90,6 +90,25 @@ class AuthorizationService(BaseService):
         if cache is not None:
             cache.pop(user_id, None)
 
+    def _allowed_permission_codes(
+        self,
+        user: Optional[User],
+        *,
+        current_role: Optional[str] = None,
+    ) -> set[str]:
+        """一次性计算用户当前角色下允许的权限集合。"""
+        if not user or not user.is_authenticated:
+            return set()
+        if user.is_superuser:
+            return set(REGISTERED_PERMISSION_CODES)
+        role_code = current_role or resolve_current_role(user)
+        if role_code not in AUTH_ROLE_CODES:
+            return set()
+        management_roles = set(user.role_codes) & AUTH_ROLE_CODES
+        if management_roles != {role_code}:
+            return set()
+        return self._permission_codes_for(user)
+
     def has_permission(
         self,
         permission_code: str,
@@ -98,17 +117,10 @@ class AuthorizationService(BaseService):
         current_role: Optional[str] = None,
     ) -> bool:
         user = acting_user or self.user
-        if not user or not user.is_authenticated:
-            return False
-        if user.is_superuser:
-            return True
-        role_code = current_role or resolve_current_role(user)
-        if role_code not in AUTH_ROLE_CODES:
-            return False
-        management_roles = set(user.roles.filter(code__in=AUTH_ROLE_CODES).values_list('code', flat=True))
-        if management_roles != {role_code}:
-            return False
-        return permission_code in self._permission_codes_for(user)
+        return permission_code in self._allowed_permission_codes(
+            user,
+            current_role=current_role,
+        )
 
     def get_capability_map(
         self,
@@ -117,16 +129,13 @@ class AuthorizationService(BaseService):
         user: Optional[User] = None,
     ) -> dict[str, dict]:
         acting_user = user or self.user
-        codes = {item['code'] for item in PERMISSION_CATALOG}
+        allowed_codes = self._allowed_permission_codes(
+            acting_user,
+            current_role=current_role,
+        )
         return {
-            code: {
-                'allowed': self.has_permission(
-                    code,
-                    acting_user=acting_user,
-                    current_role=current_role,
-                )
-            }
-            for code in sorted(codes)
+            code: {'allowed': code in allowed_codes}
+            for code in sorted(REGISTERED_PERMISSION_CODES)
         }
 
     def _get_target_management_user(self, user_id: int) -> User:
