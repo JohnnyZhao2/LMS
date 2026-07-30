@@ -212,12 +212,14 @@ export const queryKeys = {
       currentRole,
       studentId,
       batchId,
+      status,
       page,
       pageSize,
     }: {
       currentRole: QueryRole;
       studentId?: number;
       batchId?: string;
+      status?: string;
       page: number;
       pageSize: number;
     }) => [
@@ -225,6 +227,7 @@ export const queryKeys = {
       normalizeRoleKey(currentRole),
       studentId ?? 'ALL',
       batchId ?? 'ALL',
+      status ?? 'all',
       page,
       pageSize,
     ] as const,

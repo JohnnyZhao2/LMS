@@ -13,7 +13,7 @@ import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
 import { useSpotChecks, useSpotCheckStudents } from '../api/get-spot-checks';
 import { SpotCheckForm } from './spot-check-form';
-import { SpotCheckRecordList } from './spot-check-record-list';
+import { SpotCheckRecordList, type SpotCheckStatusFilter } from './spot-check-record-list';
 import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from './spot-check-student-panel';
 
 const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepartmentFilter) => {
@@ -32,6 +32,7 @@ export const SpotCheckList: React.FC = () => {
   const [checkedStudentIds, setCheckedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<SpotCheckDepartmentFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<SpotCheckStatusFilter>('SUBMITTED');
   const [paginationByStudent, setPaginationByStudent] = useState<Record<number, { page: number; pageSize: number }>>(
     {},
   );
@@ -56,7 +57,7 @@ export const SpotCheckList: React.FC = () => {
       : selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)
         ? selectedStudentId
         : filteredStudents[0].id;
-  // 勾选只保留当前筛选可见的学员
+  /** 勾选只保留当前筛选可见的学员 */
   const visibleCheckedStudentIds = checkedStudentIds.filter((id) => filteredStudentIdSet.has(id));
 
   const { page, pageSize } = resolvedSelectedStudentId
@@ -68,6 +69,7 @@ export const SpotCheckList: React.FC = () => {
     pageSize,
     role: currentRole,
     studentId: resolvedSelectedStudentId ?? undefined,
+    status: statusFilter,
     enabled: resolvedSelectedStudentId !== null,
   });
 
@@ -115,7 +117,7 @@ export const SpotCheckList: React.FC = () => {
     setCheckedStudentIds(filteredStudents.map((student) => student.id));
   };
 
-  /** 发起对象：仅勾选的学员（悬浮 + 有勾选才出现） */
+  /** 发起对象：仅勾选的学员 */
   const createTargetStudentIds = visibleCheckedStudentIds;
 
   const updatePagination = (next: { page?: number; pageSize?: number }) => {
@@ -129,6 +131,21 @@ export const SpotCheckList: React.FC = () => {
         pageSize: next.pageSize ?? pageSize,
       },
     }));
+  };
+
+  const handleStatusFilterChange = (value: SpotCheckStatusFilter) => {
+    startTransition(() => {
+      setStatusFilter(value);
+      if (resolvedSelectedStudentId) {
+        setPaginationByStudent((prev) => ({
+          ...prev,
+          [resolvedSelectedStudentId]: {
+            page: 1,
+            pageSize,
+          },
+        }));
+      }
+    });
   };
 
   return (
@@ -150,8 +167,6 @@ export const SpotCheckList: React.FC = () => {
               onSelectStudent={handleSelectStudent}
               onToggleCheckStudent={handleToggleCheckStudent}
               onToggleCheckAll={handleToggleCheckAll}
-              canCreateSpotCheck={canCreateSpotCheck}
-              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
               departmentFilter={departmentFilter}
               onDepartmentFilterChange={(value) => {
                 startTransition(() => {
@@ -167,6 +182,8 @@ export const SpotCheckList: React.FC = () => {
               totalCount={recordsData?.count ?? 0}
               page={page}
               pageSize={pageSize}
+              statusFilter={statusFilter}
+              onStatusFilterChange={handleStatusFilterChange}
               isLoading={recordsLoading}
               onEditRecord={setEditingRecord}
               onDeleteRecord={setDeleteTarget}
@@ -174,6 +191,9 @@ export const SpotCheckList: React.FC = () => {
               onPageSizeChange={(nextPageSize) => {
                 updatePagination({ page: 1, pageSize: nextPageSize });
               }}
+              canCreateSpotCheck={canCreateSpotCheck}
+              checkedCount={visibleCheckedStudentIds.length}
+              onCreateSpotCheck={() => setIsCreateDialogOpen(true)}
             />
           </PageSplit>
         </PageWorkbench>

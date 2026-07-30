@@ -12,6 +12,7 @@ interface GetSpotChecksParams {
   role?: RoleCode | null;
   studentId?: number;
   batchId?: string | null;
+  status?: string;
   enabled?: boolean;
 }
 
@@ -25,14 +26,16 @@ interface GetSpotCheckStudentsParams {
  */
 export const useSpotChecks = (params: GetSpotChecksParams = {}) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, role, studentId, batchId, enabled = true } = params;
+  const { page = 1, pageSize = 20, role, studentId, batchId, status, enabled = true } = params;
   const resolvedRole = role ?? currentRole;
-  
+  const resolvedStatus = status && status !== 'all' ? status : undefined;
+
   return useQuery({
     queryKey: queryKeys.spotChecks.list({
       currentRole: resolvedRole,
       studentId,
       batchId: batchId ?? undefined,
+      status: resolvedStatus,
       page,
       pageSize,
     }),
@@ -41,6 +44,7 @@ export const useSpotChecks = (params: GetSpotChecksParams = {}) => {
         ...buildPaginationParams(page, pageSize),
         student_id: studentId,
         batch_id: batchId || undefined,
+        status: resolvedStatus,
       });
       return apiClient.get<PaginatedResponse<SpotCheck>>(`/spot-checks/${queryString}`);
     },

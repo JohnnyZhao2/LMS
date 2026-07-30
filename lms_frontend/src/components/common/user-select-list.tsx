@@ -108,7 +108,12 @@ function renderTrailing(
         type="button"
         aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
         aria-pressed={checked}
-        className="flex shrink-0 items-center justify-center rounded-md p-1 hover:bg-primary/5"
+        className={cn(
+          'flex shrink-0 items-center justify-center rounded-md p-1 transition-opacity duration-150 hover:bg-primary/5',
+          checked
+            ? 'opacity-100'
+            : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-visible:pointer-events-auto group-focus-visible:opacity-100',
+        )}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

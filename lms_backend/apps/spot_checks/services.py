@@ -75,9 +75,10 @@ class SpotCheckService(BaseService):
         self,
         student_id: Optional[int] = None,
         batch_id: Optional[UUID] = None,
+        status: Optional[str] = None,
         ordering: str = '-created_at',
     ) -> QuerySet:
-        return self._get_queryset_for_user(student_id, batch_id, ordering)
+        return self._get_queryset_for_user(student_id, batch_id, ordering, status=status)
 
     def get_mine(
         self,
@@ -262,6 +263,7 @@ class SpotCheckService(BaseService):
         student_id: Optional[int] = None,
         batch_id: Optional[UUID] = None,
         ordering: str = '-created_at',
+        status: Optional[str] = None,
     ) -> QuerySet:
         qs = self._base_queryset()
         qs = scope_filter('spot_check.view', self.request, base_queryset=qs)
@@ -269,6 +271,8 @@ class SpotCheckService(BaseService):
             qs = qs.filter(student_id=student_id)
         if batch_id:
             qs = qs.filter(batch_id=batch_id)
+        if status:
+            qs = qs.filter(status=status)
         if ordering:
             qs = qs.order_by(ordering)
         return qs

@@ -1,11 +1,9 @@
-import { Plus, Search, Users } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 
 import { UserSelectList } from '@/components/common/user-select-list';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CircleButton } from '@/components/ui/circle-button';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { SpotCheckStudent } from '@/types/spot-check';
 
@@ -23,8 +21,6 @@ interface SpotCheckStudentPanelProps {
   onToggleCheckStudent: (studentId: number) => void;
   /** true=全选当前列表，false=清空勾选 */
   onToggleCheckAll: (selectAll: boolean) => void;
-  canCreateSpotCheck?: boolean;
-  onCreateSpotCheck?: () => void;
   departmentFilter: SpotCheckDepartmentFilter;
   onDepartmentFilterChange: (value: SpotCheckDepartmentFilter) => void;
   isLoading: boolean;
@@ -39,8 +35,6 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   onSelectStudent,
   onToggleCheckStudent,
   onToggleCheckAll,
-  canCreateSpotCheck = false,
-  onCreateSpotCheck,
   departmentFilter,
   onDepartmentFilterChange,
   isLoading,
@@ -58,7 +52,6 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   const checkedCount = checkedStudentIds.length;
   const isAllChecked = total > 0 && checkedCount === total;
   const isPartialChecked = checkedCount > 0 && checkedCount < total;
-  const showCreateFab = canCreateSpotCheck && checkedCount > 0 && !!onCreateSpotCheck;
 
   return (
     <aside className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
@@ -83,7 +76,6 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
             className="w-full [&>div]:w-full [&>div]:grid [&>div]:grid-cols-3 [&_button]:px-0"
           />
 
-          {/* 搜索 + 全选/清空 + 有勾选时显示发起 */}
           <div className="flex items-center gap-1.5">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
@@ -111,16 +103,6 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
                 {checkedCount}/{total}
               </span>
             </label>
-            {showCreateFab ? (
-              <Tooltip title={`向 ${checkedCount} 人发起`}>
-                <CircleButton
-                  onClick={onCreateSpotCheck}
-                  label="发起抽查"
-                  className="h-7 w-7 shrink-0 bg-primary-600 text-white shadow-none hover:translate-y-0 hover:bg-primary-700 hover:shadow-none"
-                  icon={<Plus className="h-3.5 w-3.5" strokeWidth={2.5} />}
-                />
-              </Tooltip>
-            ) : null}
           </div>
         </div>
       </div>

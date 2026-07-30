@@ -42,6 +42,7 @@ class SpotCheckListCreateView(BaseAPIView):
         parameters=[
             OpenApiParameter(name='student_id', type=int, description='按学员ID筛选'),
             OpenApiParameter(name='batch_id', type=str, description='按批次标识筛选'),
+            OpenApiParameter(name='status', type=str, description='状态筛选：PENDING/SUBMITTED/SCORED'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
@@ -65,9 +66,17 @@ class SpotCheckListCreateView(BaseAPIView):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='batch_id 格式无效',
                 ) from exc
+        status = (request.query_params.get('status') or '').strip().upper() or None
+        if status and status not in {
+            SpotCheck.STATUS_PENDING,
+            SpotCheck.STATUS_SUBMITTED,
+            SpotCheck.STATUS_SCORED,
+        }:
+            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='status 无效')
         spot_checks = self.service.get_list(
             student_id=student_id,
             batch_id=batch_id,
+            status=status,
             ordering='-created_at',
         )
         paginator = self.pagination_class()
