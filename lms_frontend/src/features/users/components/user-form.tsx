@@ -27,11 +27,11 @@ import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
 import { useAuth } from '@/session/auth/auth-context';
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/permission-constants';
 import {
   getNextAssignableRoleCodes,
   isAssignableRoleCode,
-} from '@/entities/authorization/utils/user-role-assignment';
+} from '@/entities/user/utils/user-role-assignment';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';

@@ -8,29 +8,6 @@ export const queryKeys = {
     list: (params: unknown) => ['activity-logs', params] as const,
     policies: () => ['activity-log-policies'] as const,
   },
-  authorization: {
-    permissionCatalogRoot: () => ['authorization', 'permission-catalog'] as const,
-    permissionCatalog: ({
-      currentRole,
-      module,
-    }: {
-      currentRole: QueryRole;
-      module?: string;
-    }) => [
-      'authorization',
-      'permission-catalog',
-      normalizeRoleKey(currentRole),
-      module ?? 'ALL',
-    ] as const,
-    userPermissionsRoot: () => ['authorization', 'user-permissions'] as const,
-    userPermissions: ({
-      currentRole,
-      userId,
-    }: {
-      currentRole: QueryRole;
-      userId: number | null;
-    }) => ['authorization', 'user-permissions', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
-  },
   dashboards: {
     admin: (currentRole: QueryRole) => ['admin-dashboard', normalizeRoleKey(currentRole)] as const,
     mentor: (currentRole: QueryRole) => ['mentor-dashboard', normalizeRoleKey(currentRole)] as const,

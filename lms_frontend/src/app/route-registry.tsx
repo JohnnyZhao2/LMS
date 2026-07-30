@@ -14,7 +14,7 @@ import { PageFillShell, PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
 import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
-import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
+import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/permission-constants';
 import { MANAGER_ROLES, STUDENT_AND_MANAGER_ROLES } from '@/config/role-constants';
 import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
 

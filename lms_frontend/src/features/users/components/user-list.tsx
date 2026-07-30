@@ -41,7 +41,7 @@ import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/permission-constants';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()

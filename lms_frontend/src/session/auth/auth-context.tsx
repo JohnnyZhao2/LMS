@@ -9,13 +9,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { apiClient } from '@/lib/api-client';
 import type {
   AuthSessionPayload,
+  CapabilityMap,
   ChangeOwnPasswordRequest,
   ChangeOwnPasswordResponse,
   LoginRequest,
   LoginResponse,
   SwitchRoleResponse,
 } from '@/types/auth';
-import type { CapabilityMap } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
 import { tokenStorage } from '@/lib/token-storage';
 
