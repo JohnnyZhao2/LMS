@@ -8,6 +8,7 @@ import {
   getNextAssignableRoleCodes,
   getManagedRoleCodes,
   isAssignableRoleCode,
+  withoutAuthRoles,
 } from '@/entities/authorization/utils/user-role-assignment';
 import {
   USER_PERMISSION_VIEW_PERMISSION,
@@ -53,48 +54,37 @@ export function useAuthorizationWorkbenchState({
     isLoading: isLoadingSelectedUser,
   } = useUserDetail(selectedUserId ?? 0);
 
-  const roleMembers = useMemo(
-    () => allVisibleUsers
-      .filter((user) => user.roles.some((role) => role.code === resolvedActiveRole))
-      .filter((user) => {
-        const keyword = deferredMemberSearch.trim().toLowerCase();
-        if (!keyword) {
-          return true;
-        }
-        return (
-          user.username.toLowerCase().includes(keyword)
-          || user.employee_id.toLowerCase().includes(keyword)
-        );
-      })
-      .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
-    [allVisibleUsers, deferredMemberSearch, resolvedActiveRole],
-  );
-  const membersByRole = useMemo(
-    () => Object.fromEntries(
+  const groupedMembersByRole = useMemo(() => {
+    const keyword = deferredMemberSearch.trim().toLowerCase();
+    const byUsername = (left: UserList, right: UserList) =>
+      left.username.localeCompare(right.username, 'zh-Hans-CN');
+    const matchesSearch = (user: UserList) => !keyword
+      || user.username.toLowerCase().includes(keyword)
+      || user.employee_id.toLowerCase().includes(keyword);
+
+    return Object.fromEntries(
       roleCodes.map((roleCode) => [
         roleCode,
         allVisibleUsers
           .filter((user) => user.roles.some((role) => role.code === roleCode))
+          .filter((user) => roleCode !== resolvedActiveRole || matchesSearch(user))
+          .sort(byUsername),
+      ]),
+    ) as Partial<Record<RoleCode, UserList[]>>;
+  }, [allVisibleUsers, deferredMemberSearch, resolvedActiveRole, roleCodes]);
+  const candidatesByRole = useMemo(
+    () => Object.fromEntries(
+      roleCodes.map((roleCode) => [
+        roleCode,
+        allVisibleUsers
+          .filter((user) => !user.is_superuser)
+          .filter((user) => !user.roles.some((role) => role.code === roleCode))
+          .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
+          .filter((user) => isAllowedDepartmentCode(user.department?.code))
           .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
       ]),
     ) as Partial<Record<RoleCode, UserList[]>>,
     [allVisibleUsers, roleCodes],
-  );
-  const groupedMembersByRole = useMemo(
-    () => (resolvedActiveRole ? {
-      ...membersByRole,
-      [resolvedActiveRole]: roleMembers,
-    } : membersByRole),
-    [membersByRole, resolvedActiveRole, roleMembers],
-  );
-  const candidateUsers = useMemo(
-    () => allVisibleUsers
-      .filter((user) => !user.is_superuser)
-      .filter((user) => !user.roles.some((role) => role.code === resolvedActiveRole))
-      .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
-      .filter((user) => isAllowedDepartmentCode(user.department?.code))
-      .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
-    [allVisibleUsers, resolvedActiveRole],
   );
 
   const selectedUserRoleCodes = useMemo(
@@ -123,16 +113,18 @@ export function useAuthorizationWorkbenchState({
     setSelectedUserId(initialSelectedUserId ?? null);
   }, [initialRoleCode, initialSelectedUserId]);
 
-  const handleAssignRole = async (user: UserList) => {
-    if (!canManageRoleMembers || !resolvedActiveRole) {
+  const handleAssignRole = async (roleCode: RoleCode, user: UserList) => {
+    if (!canManageRoleMembers || !roleCodes.includes(roleCode)) {
       return;
     }
     setMutatingUserId(user.id);
     try {
       await assignRoles.mutateAsync({
         id: user.id,
-        roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), resolvedActiveRole),
+        roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), roleCode),
       });
+      setActiveRole(roleCode);
+      setMemberSearch('');
     } catch (error) {
       showApiError(error);
     } finally {
@@ -144,13 +136,11 @@ export function useAuthorizationWorkbenchState({
     if (!canManageRoleMembers || !resolvedActiveRole) {
       return;
     }
-    // 从授权角色组移除：清掉全部授权角色，仅保留学员身份（顺带修复脏的多授权角色数据）
-    const nextRoles = getManagedRoleCodes(user.roles).filter((roleCode) => roleCode === 'STUDENT');
     setMutatingUserId(user.id);
     try {
       await assignRoles.mutateAsync({
         id: user.id,
-        roles: nextRoles,
+        roles: withoutAuthRoles(getManagedRoleCodes(user.roles)),
       });
     } catch (error) {
       showApiError(error);
@@ -176,7 +166,7 @@ export function useAuthorizationWorkbenchState({
   return {
     canManageRoleMembers,
     canViewUserAuthorization,
-    candidateUsers,
+    candidatesByRole,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
