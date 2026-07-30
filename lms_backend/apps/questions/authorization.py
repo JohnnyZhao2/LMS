@@ -16,9 +16,6 @@ OWNER_SUMMARY = '仅自己创建'
 def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Question):
         return None
-    base = engine.base_permission_decision(permission_code, error_message=error_message)
-    if not base.allowed:
-        return base
     if is_owned_by_user(resource, engine.user):
         return conditional_allow(permission_code, constraint='resource_owner')
     return conditional_deny(

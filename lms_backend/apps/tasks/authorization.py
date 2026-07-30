@@ -24,9 +24,6 @@ MEMBER_SUMMARY = '按当前角色人员范围'
 def _authorize_task(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Task):
         return None
-    base = engine.base_permission_decision(permission_code, error_message=error_message)
-    if not base.allowed:
-        return base
     if is_owned_by_user(resource, engine.user):
         return conditional_allow(permission_code, constraint='resource_owner')
     return conditional_deny(
@@ -46,9 +43,6 @@ def _authorize_task_analytics(
 ):
     if not isinstance(resource, Task):
         return None
-    base = engine.base_permission_decision(permission_code, error_message=error_message)
-    if not base.allowed:
-        return base
     if resource.assignments.filter(
         assignee_id__in=engine.get_scoped_learning_members().values('id')
     ).exists():

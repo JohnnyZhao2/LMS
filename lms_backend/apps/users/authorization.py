@@ -28,9 +28,6 @@ def _filter_viewable_users(engine, *, queryset):
 def _authorize_user(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, User):
         return None
-    base = engine.base_permission_decision(permission_code, error_message=error_message)
-    if not base.allowed:
-        return base
     if engine.get_role_scoped_user_queryset(
         User.objects.filter(pk=resource.pk)
     ).exists():

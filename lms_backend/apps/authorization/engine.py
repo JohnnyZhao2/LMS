@@ -109,21 +109,28 @@ class AuthorizationEngine(BaseService):
             if cached_decision is not None:
                 return cached_decision
 
-        decision = None
-        # 优先执行模块声明的资源级约束；未声明约束的权限退回纯能力开关。
-        for handler in RESOURCE_AUTHORIZATION_HANDLERS:
-            if permission_code not in handler.permission_codes:
-                continue
-            decision = handler.authorize(
-                self,
-                permission_code,
-                resource=resource,
-                error_message=error_message,
-            )
-            if decision is not None:
-                break
-        if decision is None:
-            decision = self.base_permission_decision(permission_code, error_message=error_message)
+        # 权限点判断只在 Engine 做一次；业务 Handler 只回答资源范围。
+        base = self.base_permission_decision(
+            permission_code,
+            error_message=error_message,
+        )
+        if not base.allowed or resource is None:
+            decision = base
+        else:
+            decision = None
+            for handler in RESOURCE_AUTHORIZATION_HANDLERS:
+                if permission_code not in handler.permission_codes:
+                    continue
+                decision = handler.authorize(
+                    self,
+                    permission_code,
+                    resource=resource,
+                    error_message=error_message,
+                )
+                if decision is not None:
+                    break
+            if decision is None:
+                decision = base
 
         if decision_cache_key is not None:
             self._get_request_cache()['resource_decisions'][decision_cache_key] = decision

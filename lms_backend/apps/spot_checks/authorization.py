@@ -29,13 +29,10 @@ def _resolve_student(permission_code, resource):
 
 def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if permission_code == 'spot_check.create':
-        if resource is not None and not isinstance(resource, User):
+        if not isinstance(resource, User):
             return None
     elif not isinstance(resource, SpotCheck):
         return None
-    base = engine.base_permission_decision(permission_code, error_message=error_message)
-    if not base.allowed:
-        return base
     student = _resolve_student(permission_code, resource)
     if student is None:
         return conditional_allow(permission_code, constraint='member_scope')
