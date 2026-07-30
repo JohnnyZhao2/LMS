@@ -7,7 +7,7 @@ GRADING_CODES = ('grading.view', 'grading.score')
 MEMBER_SUMMARY = '按当前角色人员范围'
 
 
-def _authorize(engine, permission_code, *, resource=None, context=None, error_message=None):
+def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Task):
         return None
     base = engine.base_permission_decision(permission_code, error_message=error_message)

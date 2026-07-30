@@ -21,7 +21,7 @@ OWNER_SUMMARY = '仅自己创建'
 MEMBER_SUMMARY = '按当前角色人员范围'
 
 
-def _authorize_task(engine, permission_code, *, resource=None, context=None, error_message=None):
+def _authorize_task(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Task):
         return None
     base = engine.base_permission_decision(permission_code, error_message=error_message)
@@ -42,7 +42,6 @@ def _authorize_task_analytics(
     permission_code,
     *,
     resource=None,
-    context=None,
     error_message=None,
 ):
     if not isinstance(resource, Task):
@@ -62,7 +61,7 @@ def _authorize_task_analytics(
     )
 
 
-def _filter_members(engine, *, queryset, context=None):
+def _filter_members(engine, *, queryset):
     return queryset.filter(
         id__in=engine.get_scoped_learning_members().values('id'),
     )
@@ -102,7 +101,7 @@ AUTHORIZATION_SPECS = (
                 key='tasks.view.owner',
                 permission_code='task.view',
                 resource_model=Task,
-                filter_queryset=lambda engine, *, queryset, context=None: filter_owned_queryset(
+                filter_queryset=lambda engine, *, queryset: filter_owned_queryset(
                     queryset, engine.user
                 ),
                 constraint_summary=OWNER_SUMMARY,

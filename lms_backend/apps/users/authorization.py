@@ -21,11 +21,11 @@ USER_SCOPE_CODES = (
 MEMBER_SUMMARY = '按当前角色人员范围'
 
 
-def _filter_viewable_users(engine, *, queryset, context=None):
+def _filter_viewable_users(engine, *, queryset):
     return engine.get_role_scoped_user_queryset(queryset.distinct(), cache_key='viewable_users')
 
 
-def _authorize_user(engine, permission_code, *, resource=None, context=None, error_message=None):
+def _authorize_user(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, User):
         return None
     base = engine.base_permission_decision(permission_code, error_message=error_message)

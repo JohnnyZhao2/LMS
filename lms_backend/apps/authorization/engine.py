@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any, Optional, Type
 
 from django.db.models import QuerySet
@@ -74,12 +74,10 @@ class AuthorizationEngine(BaseService):
         self,
         permission_code: str,
         resource: Optional[Any],
-        context: dict[str, Any],
         error_message: Optional[str],
     ) -> Optional[tuple[Any, ...]]:
-        frozen_context = self._freeze_cache_value(context)
         if resource is None:
-            return ('__global__', permission_code, frozen_context, error_message or '')
+            return ('__global__', permission_code, error_message or '')
         resource_id = getattr(resource, 'pk', None)
         if resource_id is None:
             return None
@@ -87,21 +85,8 @@ class AuthorizationEngine(BaseService):
             resource.__class__.__name__,
             resource_id,
             permission_code,
-            frozen_context,
             error_message or '',
         )
-
-    def _freeze_cache_value(self, value: Any) -> Any:
-        if isinstance(value, Mapping):
-            return tuple(sorted((key, self._freeze_cache_value(item)) for key, item in value.items()))
-        if isinstance(value, set):
-            return tuple(sorted(self._freeze_cache_value(item) for item in value))
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-            return tuple(self._freeze_cache_value(item) for item in value)
-        resource_id = getattr(value, 'pk', None)
-        if resource_id is not None:
-            return (value.__class__.__name__, resource_id)
-        return value
 
     # ------------------------------------------------------------------
     # 基础权限判断 / 资源权限判断
@@ -112,14 +97,11 @@ class AuthorizationEngine(BaseService):
         permission_code: str,
         *,
         resource: Optional[Any] = None,
-        context: Optional[dict[str, Any]] = None,
         error_message: Optional[str] = None,
     ) -> AuthorizationDecision:
-        context = context or {}
         decision_cache_key = self._get_resource_decision_cache_key(
             permission_code,
             resource,
-            context,
             error_message,
         )
         if decision_cache_key is not None:
@@ -136,7 +118,6 @@ class AuthorizationEngine(BaseService):
                 self,
                 permission_code,
                 resource=resource,
-                context=context,
                 error_message=error_message,
             )
             if decision is not None:
@@ -153,13 +134,11 @@ class AuthorizationEngine(BaseService):
         permission_code: str,
         *,
         resource: Optional[Any] = None,
-        context: Optional[dict[str, Any]] = None,
         error_message: Optional[str] = None,
     ) -> AuthorizationDecision:
         decision = self.authorize(
             permission_code,
             resource=resource,
-            context=context,
             error_message=error_message,
         )
         if decision.allowed:
@@ -174,7 +153,6 @@ class AuthorizationEngine(BaseService):
         permission_codes: Sequence[str],
         *,
         resource: Optional[Any] = None,
-        context: Optional[dict[str, Any]] = None,
         error_message: Optional[str] = None,
     ) -> AuthorizationDecision:
         if not permission_codes:
@@ -184,7 +162,6 @@ class AuthorizationEngine(BaseService):
             decision = self.authorize(
                 permission_code,
                 resource=resource,
-                context=context,
                 error_message=error_message,
             )
             if decision.allowed:
@@ -201,13 +178,11 @@ class AuthorizationEngine(BaseService):
         permission_codes: Sequence[str],
         *,
         resource: Optional[Any] = None,
-        context: Optional[dict[str, Any]] = None,
         error_message: Optional[str] = None,
     ) -> AuthorizationDecision:
         decision = self.authorize_any(
             permission_codes,
             resource=resource,
-            context=context,
             error_message=error_message,
         )
         if decision.allowed:
@@ -250,7 +225,6 @@ class AuthorizationEngine(BaseService):
         *,
         resource_model: Optional[Type[Any]] = None,
         base_queryset: Optional[QuerySet] = None,
-        context: Optional[dict[str, Any]] = None,
     ) -> QuerySet:
         queryset = base_queryset
         model = resource_model or (queryset.model if queryset is not None else None)
@@ -264,7 +238,7 @@ class AuthorizationEngine(BaseService):
 
         for handler in SCOPE_FILTER_HANDLERS:
             if handler.permission_code == permission_code and handler.resource_model is model:
-                return handler.filter_queryset(self, queryset=queryset, context=context or {})
+                return handler.filter_queryset(self, queryset=queryset)
         return queryset
 
     def get_role_scoped_user_queryset(
@@ -307,7 +281,6 @@ def authorize(
     request,
     *,
     resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
     error_message: Optional[str] = None,
 ) -> AuthorizationDecision:
     """返回权限判定结果，不抛异常。
@@ -317,7 +290,6 @@ def authorize(
     return AuthorizationEngine(request).authorize(
         permission_code,
         resource=resource,
-        context=context,
         error_message=error_message,
     )
 
@@ -327,7 +299,6 @@ def enforce(
     request,
     *,
     resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
     error_message: Optional[str] = None,
 ) -> AuthorizationDecision:
     """强制校验权限，失败时抛出业务异常。
@@ -337,7 +308,6 @@ def enforce(
     return AuthorizationEngine(request).enforce(
         permission_code,
         resource=resource,
-        context=context,
         error_message=error_message,
     )
 
@@ -347,14 +317,12 @@ def authorize_any(
     request,
     *,
     resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
     error_message: Optional[str] = None,
 ) -> AuthorizationDecision:
     """任一权限通过即可返回允许结果。"""
     return AuthorizationEngine(request).authorize_any(
         permission_codes,
         resource=resource,
-        context=context,
         error_message=error_message,
     )
 
@@ -364,14 +332,12 @@ def enforce_any(
     request,
     *,
     resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
     error_message: Optional[str] = None,
 ) -> AuthorizationDecision:
     """强制校验一组权限，只要其中一个通过即可。"""
     return AuthorizationEngine(request).enforce_any(
         permission_codes,
         resource=resource,
-        context=context,
         error_message=error_message,
     )
 
@@ -382,7 +348,6 @@ def scope_filter(
     *,
     resource_model: Optional[Type[Any]] = None,
     base_queryset: Optional[QuerySet] = None,
-    context: Optional[dict[str, Any]] = None,
 ) -> QuerySet:
     """按当前用户权限范围过滤列表查询。
 
@@ -393,7 +358,6 @@ def scope_filter(
         permission_code,
         resource_model=resource_model,
         base_queryset=base_queryset,
-        context=context,
     )
 
 

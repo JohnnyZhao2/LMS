@@ -13,7 +13,7 @@ KNOWLEDGE_CODES = ('knowledge.view', 'knowledge.update', 'knowledge.delete')
 OWNER_SUMMARY = '仅自己创建'
 
 
-def _authorize(engine, permission_code, *, resource=None, context=None, error_message=None):
+def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Knowledge):
         return None
     base = engine.base_permission_decision(permission_code, error_message=error_message)
@@ -48,7 +48,7 @@ AUTHORIZATION_SPECS = (
                 key='knowledge.view.owner',
                 permission_code='knowledge.view',
                 resource_model=Knowledge,
-                filter_queryset=lambda engine, *, queryset, context=None: filter_owned_queryset(
+                filter_queryset=lambda engine, *, queryset: filter_owned_queryset(
                     queryset, engine.user
                 ),
                 constraint_summary=OWNER_SUMMARY,

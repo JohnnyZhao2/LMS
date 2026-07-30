@@ -18,23 +18,25 @@ SPOT_CHECK_CODES = (
 MEMBER_SUMMARY = '按当前角色人员范围'
 
 
-def _resolve_student(resource, context):
+def _resolve_student(permission_code, resource):
+    """创建权限识别 User，其他权限从 SpotCheck 取学员。"""
+    if permission_code == 'spot_check.create':
+        return resource if isinstance(resource, User) else None
     if isinstance(resource, SpotCheck):
         return resource.student
-    student = (context or {}).get('student') or (context or {}).get('target_user')
-    student_id = (context or {}).get('student_id') or (context or {}).get('target_user_id')
-    if student is None and student_id:
-        student = User.objects.filter(pk=student_id).first()
-    return student
+    return None
 
 
-def _authorize(engine, permission_code, *, resource=None, context=None, error_message=None):
-    if permission_code != 'spot_check.create' and not isinstance(resource, SpotCheck):
+def _authorize(engine, permission_code, *, resource=None, error_message=None):
+    if permission_code == 'spot_check.create':
+        if resource is not None and not isinstance(resource, User):
+            return None
+    elif not isinstance(resource, SpotCheck):
         return None
     base = engine.base_permission_decision(permission_code, error_message=error_message)
     if not base.allowed:
         return base
-    student = _resolve_student(resource, context)
+    student = _resolve_student(permission_code, resource)
     if student is None:
         return conditional_allow(permission_code, constraint='member_scope')
     if engine.get_scoped_learning_members().filter(pk=student.pk).exists():
@@ -47,13 +49,13 @@ def _authorize(engine, permission_code, *, resource=None, context=None, error_me
     )
 
 
-def _filter_records(engine, *, queryset, context=None):
+def _filter_records(engine, *, queryset):
     return queryset.filter(
         student_id__in=engine.get_scoped_learning_members().values('id')
     )
 
 
-def _filter_students(engine, *, queryset, context=None):
+def _filter_students(engine, *, queryset):
     return engine.get_role_scoped_user_queryset(
         queryset.filter(
             is_active=True,

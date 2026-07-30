@@ -403,5 +403,5 @@ class SpotCheckService(BaseService):
         enforce(
             'spot_check.create',
             self.request,
-            context={'student': student},
+            resource=student,
         )
