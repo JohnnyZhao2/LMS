@@ -12,9 +12,11 @@ GLOBAL_ROLE = 'GLOBAL'
 
 # 授权系统业务角色：仅按作用范围区分
 AUTH_ROLE_CODES = frozenset({MENTOR_ROLE, DEPT_ROLE, GLOBAL_ROLE})
-ADMIN_LIKE_ROLES = {GLOBAL_ROLE, SUPER_ADMIN_ROLE}
-# 学习人员池排除：室组/全局管理者不作为被指派学员
-LEARNING_POOL_EXCLUDED_ROLE_CODES = [DEPT_ROLE, GLOBAL_ROLE]
+ROLE_MEMBER_SCOPE = {
+    MENTOR_ROLE: 'MENTEES',
+    DEPT_ROLE: 'DEPARTMENT',
+    GLOBAL_ROLE: 'ALL',
+}
 
 
 def is_super_admin(user) -> bool:
@@ -23,10 +25,6 @@ def is_super_admin(user) -> bool:
         and getattr(user, 'is_authenticated', False)
         and getattr(user, 'is_superuser', False)
     )
-
-
-def is_admin_like_role(role_code: Optional[str]) -> bool:
-    return role_code in ADMIN_LIKE_ROLES
 
 
 def is_auth_role(role_code: Optional[str]) -> bool:

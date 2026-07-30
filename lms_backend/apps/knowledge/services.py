@@ -7,6 +7,7 @@ import re
 from typing import Optional, Tuple
 
 from apps.activity_logs.decorators import log_content_action
+from apps.authorization.engine import enforce
 from django.db import transaction
 from django.utils.html import escape, strip_tags
 
@@ -103,6 +104,7 @@ class KnowledgeService(BaseService):
     )
     def update(self, pk: int, data: dict) -> Knowledge:
         knowledge = self.get_by_id(pk)
+        enforce('knowledge.update', self.request, resource=knowledge, error_message='无权更新知识文档')
         self._validate_knowledge_data(data=data, fallback_content=knowledge.content)
 
         current_tag_ids = list(knowledge.tags.values_list('id', flat=True))
@@ -139,6 +141,7 @@ class KnowledgeService(BaseService):
     )
     def delete(self, pk: int) -> Knowledge:
         knowledge = self.get_by_id(pk)
+        enforce('knowledge.delete', self.request, resource=knowledge, error_message='无权删除知识文档')
         revisions = list(knowledge.revisions.all())
         knowledge.delete()
         KnowledgeRevision.objects.filter(

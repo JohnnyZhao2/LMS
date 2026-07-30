@@ -10,7 +10,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import enforce, scope_filter
 from apps.authorization.roles import enforce_student_workspace, is_student_workspace
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
@@ -82,6 +82,12 @@ class KnowledgeListCreateView(BaseAPIView):
             filters=filters,
             search=search
         )
+        if not is_student_workspace(request):
+            knowledge_queryset = scope_filter(
+                'knowledge.view',
+                request,
+                base_queryset=knowledge_queryset,
+            )
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(knowledge_queryset, request)
@@ -150,6 +156,8 @@ class KnowledgeDetailView(BaseAPIView):
     def get(self, request, pk):
         _enforce_knowledge_view(request)
         knowledge = self.service.get_by_id(pk)
+        if not is_student_workspace(request):
+            enforce('knowledge.view', request, resource=knowledge, error_message='无权访问该知识文档')
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(serializer.data)
@@ -254,5 +262,8 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
     )
     def post(self, request, pk):
         _enforce_knowledge_view(request, error_message='无权记录知识阅读')
+        if not is_student_workspace(request):
+            knowledge = self.service.get_by_id(pk)
+            enforce('knowledge.view', request, resource=knowledge, error_message='无权记录知识阅读')
         view_count = self.service.increment_view_count(pk)
         return success_response({'view_count': view_count})

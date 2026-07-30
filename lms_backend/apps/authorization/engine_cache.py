@@ -14,7 +14,6 @@ class AuthorizationEngineCacheMixin:
                 'base_permission_decisions': {},
                 'resource_decisions': {},
                 'scoped_user_ids': {},
-                'default_scope_types': {},
             }
             setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
         return cache
@@ -24,7 +23,9 @@ class AuthorizationEngineCacheMixin:
         permission_code: str,
         error_message: Optional[str],
     ) -> Optional[AuthorizationDecision]:
-        return self._get_request_cache()['base_permission_decisions'].get((permission_code, error_message or ''))
+        return self._get_request_cache()['base_permission_decisions'].get(
+            (permission_code, error_message or '')
+        )
 
     def _set_cached_base_permission_decision(
         self,
@@ -32,7 +33,9 @@ class AuthorizationEngineCacheMixin:
         error_message: Optional[str],
         decision: AuthorizationDecision,
     ) -> AuthorizationDecision:
-        self._get_request_cache()['base_permission_decisions'][(permission_code, error_message or '')] = decision
+        self._get_request_cache()['base_permission_decisions'][
+            (permission_code, error_message or '')
+        ] = decision
         return decision
 
     def _get_resource_decision_cache_key(
@@ -48,7 +51,13 @@ class AuthorizationEngineCacheMixin:
         resource_id = getattr(resource, 'pk', None)
         if resource_id is None:
             return None
-        return (resource.__class__.__name__, resource_id, permission_code, frozen_context, error_message or '')
+        return (
+            resource.__class__.__name__,
+            resource_id,
+            permission_code,
+            frozen_context,
+            error_message or '',
+        )
 
     def _freeze_cache_value(self, value: Any) -> Any:
         if isinstance(value, Mapping):

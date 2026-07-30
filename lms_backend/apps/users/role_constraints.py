@@ -3,13 +3,8 @@ Role assignment constraints for users.
 """
 from typing import Iterable, Optional, Set
 
-from django.db import transaction
-
-from apps.authorization.roles import AUTH_ROLE_CODES, DEPT_ROLE, GLOBAL_ROLE, MENTOR_ROLE
+from apps.authorization.roles import AUTH_ROLE_CODES
 from core.exceptions import BusinessError, ErrorCodes
-
-
-AUTH_ROLE_PRIORITY = (GLOBAL_ROLE, DEPT_ROLE, MENTOR_ROLE)
 
 
 def validate_role_assignment_constraints(
@@ -52,27 +47,3 @@ def _validate_dedicated_role_composition(*, role_codes: Set[str], is_superuser: 
             code=ErrorCodes.VALIDATION_ERROR,
             message='超管账号为专有角色，不允许分配业务角色',
         )
-
-
-@transaction.atomic
-def repair_conflicting_auth_roles() -> int:
-    """将同时拥有多个授权角色的用户收敛为优先级最高的一个。返回修复用户数。"""
-    from apps.users.models import User, UserRole
-
-    repaired = 0
-    users = (
-        User.objects.filter(roles__code__in=AUTH_ROLE_CODES)
-        .distinct()
-        .prefetch_related('roles')
-    )
-    for user in users:
-        auth_codes = {role.code for role in user.roles.all() if role.code in AUTH_ROLE_CODES}
-        if len(auth_codes) <= 1:
-            continue
-        keep_code = next(code for code in AUTH_ROLE_PRIORITY if code in auth_codes)
-        UserRole.objects.filter(
-            user_id=user.id,
-            role__code__in=AUTH_ROLE_CODES,
-        ).exclude(role__code=keep_code).delete()
-        repaired += 1
-    return repaired

@@ -1,96 +1,76 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
-import { invalidateAfterAuthorizationOverrideMutation } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type {
-  CreateUserPermissionOverrideRequest,
   PermissionCatalogItem,
-  PermissionCatalogView,
-  RoleCapability,
-  UserPermissionOverride,
+  UserPermissions,
 } from '@/types/authorization';
-import type { RoleCode } from '@/types/common';
 
 interface PermissionCatalogQuery {
   module?: string;
-  view?: PermissionCatalogView;
 }
 
-interface CreateUserOverridePayload {
+interface UserPermissionMutationPayload {
   userId: number;
-  data: CreateUserPermissionOverrideRequest;
-}
-
-interface RevokeUserOverridePayload {
-  userId: number;
-  overrideId: number;
+  permissionCode: string;
 }
 
 export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled = true) => {
   const currentRole = useCurrentRole();
-  const { module, view } = query;
+  const { module } = query;
   return useQuery({
-    queryKey: queryKeys.authorization.permissionCatalog({ currentRole, module, view }),
+    queryKey: queryKeys.authorization.permissionCatalog({ currentRole, module }),
     queryFn: () => {
-      const queryString = buildQueryString({ module, view });
+      const queryString = buildQueryString({ module });
       return apiClient.get<PermissionCatalogItem[]>(`/authorization/permissions/${queryString}`);
     },
     enabled: currentRole !== null && enabled,
   });
 };
 
-/**
- * 读取角色固定能力（只读）。
- */
-export const useRoleCapabilities = (roleCodes: RoleCode[], enabled = true) => {
-  const currentRole = useCurrentRole();
-
-  return useQueries({
-    queries: roleCodes.map((roleCode) => ({
-      queryKey: queryKeys.authorization.roleCapabilities({ currentRole, roleCode }),
-      queryFn: () => apiClient.get<RoleCapability>(`/authorization/roles/${roleCode}/permissions/`),
-      enabled: currentRole !== null && enabled,
-    })),
-  });
-};
-
-export const useUserPermissionOverrides = (
-  userId: number | null,
-  enabled = true,
-) => {
+export const useUserPermissions = (userId: number | null, enabled = true) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.authorization.userOverrides({ currentRole, userId }),
-    queryFn: () => {
-      if (!userId) {
-        return Promise.resolve([] as UserPermissionOverride[]);
-      }
-      return apiClient.get<UserPermissionOverride[]>(`/authorization/users/${userId}/overrides/`);
-    },
-    enabled: currentRole !== null && !!userId && enabled,
+    queryKey: queryKeys.authorization.userPermissions({ currentRole, userId }),
+    queryFn: () => apiClient.get<UserPermissions>(
+      `/authorization/users/${userId}/permissions/`,
+    ),
+    enabled: currentRole !== null && userId !== null && enabled,
   });
 };
 
-export const useCreateUserPermissionOverride = () => {
+export const useGrantUserPermission = () => {
   const queryClient = useQueryClient();
-
+  const currentRole = useCurrentRole();
   return useMutation({
-    mutationFn: ({ userId, data }: CreateUserOverridePayload) =>
-      apiClient.post<UserPermissionOverride>(`/authorization/users/${userId}/overrides/`, data),
-    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
-  });
-};
-
-export const useRevokeUserPermissionOverride = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ userId, overrideId }: RevokeUserOverridePayload) =>
-      apiClient.delete<UserPermissionOverride>(
-        `/authorization/users/${userId}/overrides/${overrideId}/`,
+    mutationFn: ({ userId, permissionCode }: UserPermissionMutationPayload) =>
+      apiClient.put<UserPermissions>(
+        `/authorization/users/${userId}/permissions/${permissionCode}/`,
       ),
-    onSuccess: () => invalidateAfterAuthorizationOverrideMutation(queryClient),
+    onSuccess: (data, { userId }) => {
+      queryClient.setQueryData(
+        queryKeys.authorization.userPermissions({ currentRole, userId }),
+        data,
+      );
+    },
+  });
+};
+
+export const useRevokeUserPermission = () => {
+  const queryClient = useQueryClient();
+  const currentRole = useCurrentRole();
+  return useMutation({
+    mutationFn: ({ userId, permissionCode }: UserPermissionMutationPayload) =>
+      apiClient.delete<UserPermissions>(
+        `/authorization/users/${userId}/permissions/${permissionCode}/`,
+      ),
+    onSuccess: (data, { userId }) => {
+      queryClient.setQueryData(
+        queryKeys.authorization.userPermissions({ currentRole, userId }),
+        data,
+      );
+    },
   });
 };

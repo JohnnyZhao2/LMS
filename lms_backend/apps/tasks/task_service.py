@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from django.db import transaction
 from django.db.models import QuerySet
 
-from apps.authorization.engine import authorize, enforce, scope_filter
+from apps.authorization.engine import enforce, scope_filter
 from apps.authorization.roles import (
     SUPER_ADMIN_ROLE,
     enforce_student_workspace,
@@ -34,29 +34,9 @@ class TaskService(BaseService):
     列表读取尽量走 selectors，权限范围统一走 authorization engine。
     """
 
-    MANAGEMENT_SIDE_ROLES = ['GLOBAL', SUPER_ADMIN_ROLE]
-
     def get_task_queryset_for_user(self) -> QuerySet:
         qs = task_list_queryset()
         return scope_filter('task.view', self.request, base_queryset=qs)
-
-    def filter_task_queryset_by_creator_side(
-        self,
-        queryset: QuerySet,
-        creator_side: Optional[str],
-    ) -> QuerySet:
-        if not creator_side or creator_side == 'all':
-            return queryset
-        if not authorize('user.view', self.request).allowed:
-            return queryset
-        if creator_side == 'management':
-            return queryset.filter(created_role__in=self.MANAGEMENT_SIDE_ROLES)
-        if creator_side == 'non_management':
-            return queryset.exclude(created_role__in=self.MANAGEMENT_SIDE_ROLES)
-        raise BusinessError(
-            code=ErrorCodes.INVALID_INPUT,
-            message='creator_side 参数无效，仅支持 all、management、non_management',
-        )
 
     def get_task_by_id(self, pk: int) -> Task:
         task = task_detail_queryset().filter(pk=pk).first()
@@ -358,8 +338,8 @@ class TaskService(BaseService):
     def _ensure_valid_resource_ids(self, resource_ids: List[int], resource_model: Any, resource_label: str) -> List[int]:
         normalized_ids = self._dedupe_resource_ids(resource_ids)
         queryset = resource_model.objects.all()
-        if resource_model is Quiz:
-            queryset = scope_filter('quiz.view', self.request, base_queryset=queryset)
+        permission_code = 'quiz.view' if resource_model is Quiz else 'knowledge.view'
+        queryset = scope_filter(permission_code, self.request, base_queryset=queryset)
         is_valid, invalid_ids = self._validate_current_resources(normalized_ids, queryset)
         if not is_valid:
             raise BusinessError(

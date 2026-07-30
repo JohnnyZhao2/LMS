@@ -7,7 +7,7 @@ Implements:
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import enforce, scope_learning_members
 from apps.tasks.selectors import (
     task_analytics_payload,
     task_student_executions,
@@ -41,7 +41,10 @@ class TaskAnalyticsView(BaseAPIView):
             error_message='无权查看任务分析',
         )
 
-        analytics = task_analytics_payload(task.id)
+        assignee_ids = list(
+            scope_learning_members(request).values_list('id', flat=True)
+        )
+        analytics = task_analytics_payload(task.id, assignee_ids)
         serializer = TaskAnalyticsSerializer(analytics)
         return success_response(serializer.data)
 
@@ -69,6 +72,9 @@ class StudentExecutionsView(BaseAPIView):
             error_message='无权查看学员执行情况',
         )
 
-        executions = task_student_executions(task.id)
+        assignee_ids = list(
+            scope_learning_members(request).values_list('id', flat=True)
+        )
+        executions = task_student_executions(task.id, assignee_ids)
         serializer = StudentExecutionSerializer(executions, many=True)
         return list_response(serializer.data)

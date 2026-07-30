@@ -10,7 +10,6 @@ import {
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
-import { useAuth } from "@/session/auth/auth-context"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
@@ -216,21 +215,17 @@ const TaskRiskCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
 
 export const TaskManagement: React.FC = () => {
     const { roleNavigate } = useRoleNavigate()
-    const { hasCapability } = useAuth()
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
-    const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [search, setSearch] = React.useState('')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
-    const canFilterCreatorSide = hasCapability('user.view')
 
     const { data: tasksData, isLoading } = useTaskList({
         page,
         pageSize,
         search,
         taskStatus: statusFilter as 'open' | 'closed' | 'all',
-        creatorSide: canFilterCreatorSide ? creatorSideFilter : 'all',
     })
     const deleteTask = useDeleteTask()
     const columnMeta = React.useMemo<Record<string, ResponsiveColumnMeta>>(() => ({
@@ -242,10 +237,6 @@ export const TaskManagement: React.FC = () => {
         risk: { minWidth: '152px' },
         actions: { minWidth: '136px' },
     }), [])
-
-    React.useEffect(() => {
-        setPage(1)
-    }, [creatorSideFilter])
 
     React.useEffect(() => {
         setPage(1)
@@ -400,18 +391,6 @@ export const TaskManagement: React.FC = () => {
                 {/* 搜索和筛选 */}
                 <div className="mb-1 flex flex-col gap-3 xl:flex-row xl:items-center">
                     <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
-                        {canFilterCreatorSide && (
-                            <SegmentedControl
-                                value={creatorSideFilter}
-                                onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}
-                                options={[
-                                    { label: '全部来源', value: 'all' },
-                                    { label: '管理端', value: 'management' },
-                                    { label: '非管理端', value: 'non_management' },
-                                ]}
-                                className="w-full lg:w-auto lg:shrink-0"
-                            />
-                        )}
                         <SegmentedControl
                             value={statusFilter}
                             onChange={(val: string) => setStatusFilter(val)}

@@ -63,12 +63,16 @@ class SpotCheckService(BaseService):
             raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
 
     def get_by_id(self, pk: int) -> SpotCheck:
-        spot_check = self._base_queryset().filter(pk=pk).first()
-        self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
+        spot_check = self._get_raw_by_id(pk)
         if is_student_workspace(self.request):
             self._enforce_student_owned(spot_check, error_message='无权访问该抽查记录')
             return spot_check
         enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
+        return spot_check
+
+    def _get_raw_by_id(self, pk: int) -> SpotCheck:
+        spot_check = self._base_queryset().filter(pk=pk).first()
+        self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
         return spot_check
 
     def get_list(
@@ -216,7 +220,7 @@ class SpotCheckService(BaseService):
         spot_check.status = SpotCheck.STATUS_SUBMITTED
         spot_check.submitted_at = timezone.now()
         self._bump_revision(spot_check, update_fields=['status', 'submitted_at'])
-        return self.get_by_id(pk)
+        return self._get_raw_by_id(pk)
 
     @log_operation(
         'spot_check',
@@ -241,7 +245,7 @@ class SpotCheckService(BaseService):
         all_scored = all(payload['score'] is not None for payload in items)
         spot_check.status = SpotCheck.STATUS_SCORED if all_scored else SpotCheck.STATUS_SUBMITTED
         self._bump_revision(spot_check, update_fields=['status'])
-        return self.get_by_id(pk)
+        return self._get_raw_by_id(pk)
 
     @log_operation(
         'spot_check',
@@ -253,7 +257,7 @@ class SpotCheckService(BaseService):
         label='删除抽查记录',
     )
     def delete(self, pk: int) -> SpotCheck:
-        spot_check = self.get_by_id(pk)
+        spot_check = self._get_raw_by_id(pk)
         enforce('spot_check.delete', self.request, resource=spot_check, error_message='无权删除抽查记录')
         spot_check.delete()
         return spot_check

@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Count, DecimalField, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 
-from apps.authorization.engine import scope_filter
+from apps.authorization.engine import enforce, scope_filter
 from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.tags.models import Tag
@@ -122,13 +122,20 @@ class QuizService(BaseService):
         super().__init__(request)
         self.question_service = QuestionService(request)
 
-    def get_by_id(self, pk: int) -> Quiz:
-        queryset = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
+    def _get_raw_by_id(self, pk: int) -> Quiz:
+        quiz = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
             'quiz_questions__question_options',
-        )
-        quiz = scope_filter('quiz.view', self.request, base_queryset=queryset).filter(pk=pk).first()
+        ).filter(pk=pk).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
+
+    def get_for_permission(self, pk: int, permission_code: str) -> Quiz:
+        quiz = self._get_raw_by_id(pk)
+        enforce(permission_code, self.request, resource=quiz, error_message='无权操作此试卷')
+        return quiz
+
+    def get_by_id(self, pk: int) -> Quiz:
+        return self.get_for_permission(pk, 'quiz.view')
 
     def get_list(
         self,
@@ -208,7 +215,7 @@ class QuizService(BaseService):
         label='更新试卷',
     )
     def update(self, pk: int, data: dict, questions: List[dict] = None) -> Quiz:
-        quiz = self.get_by_id(pk)
+        quiz = self.get_for_permission(pk, 'quiz.update')
         changed_fields = {
             field: value
             for field, value in data.items()
@@ -233,7 +240,7 @@ class QuizService(BaseService):
         label='删除试卷',
     )
     def delete(self, pk: int) -> Quiz:
-        quiz = self.get_by_id(pk)
+        quiz = self.get_for_permission(pk, 'quiz.delete')
         stale_question_ids = list(quiz.quiz_questions.values_list('id', flat=True))
         stale_revision_ids = list(quiz.revisions.filter(quiz_tasks__isnull=True).values_list('id', flat=True))
         stale_source_question_ids = [

@@ -48,9 +48,8 @@ _OPERATION_ACTION_SUMMARIES = {
     'delete_spot_check': '{actor} 删除了 {target} 的抽查记录',
     'manual_grade': '{actor} 批改了答卷',
     'batch_grade': '{actor} 批量评分',
-    # remove replace_role_permissions line - delete it
-    'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
-    'delete_user_permission_override': '{actor} 删除了 {target} 的权限覆盖',
+    'grant_user_permission': '{actor} 授予了 {target} 权限',
+    'revoke_user_permission': '{actor} 撤销了 {target} 权限',
     'merge_tags': '{actor} 合并了标签《{target}》',
     'reorder_spaces': '{actor} 调整了空间标签顺序',
     'start_quiz': '{actor} 开始答题《{target}》',

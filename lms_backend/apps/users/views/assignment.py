@@ -2,6 +2,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.engine import enforce
+from apps.users.selectors import get_user_by_id
 from apps.users.serializers import AssignMentorSerializer, AssignRolesSerializer, UserDetailSerializer
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
@@ -25,7 +26,12 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.role.assign', request, error_message='无权分配用户角色')
+        enforce(
+            'user.role.assign',
+            request,
+            resource=get_user_by_id(pk),
+            error_message='无权分配该用户角色',
+        )
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(

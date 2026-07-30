@@ -5,6 +5,8 @@ from typing import List, Optional
 
 from apps.activity_logs.decorators import log_user_action
 from apps.activity_logs.registry import register_user_log_action
+from apps.authorization.engine import enforce
+from apps.authorization.roles import AUTH_ROLE_CODES
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
@@ -52,6 +54,7 @@ class UserManagementService(BaseService):
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        enforce('user.activate', self.request, resource=user, error_message='无权停用该用户')
         # 防止停用超级用户（Django 的 is_superuser）
         if user.is_superuser:
             raise BusinessError(
@@ -82,6 +85,7 @@ class UserManagementService(BaseService):
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        enforce('user.activate', self.request, resource=user, error_message='无权启用该用户')
         user.is_active = True
         user.save(update_fields=['is_active'])
         return user
@@ -126,10 +130,12 @@ class UserManagementService(BaseService):
                 role_codes=role_codes,
                 assigned_by=self.user,
             )
+            enforce('user.create', self.request, resource=user, error_message='新用户不在当前管理范围内')
 
         return user
 
     def update_user(self, user: User, validated_data: dict) -> User:
+        enforce('user.update', self.request, resource=user, error_message='无权更新该用户')
         department_id = validated_data.get('department_id')
         username = validated_data.get('username')
         employee_id = validated_data.get('employee_id')
@@ -176,12 +182,14 @@ class UserManagementService(BaseService):
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        enforce('user.delete', self.request, resource=user, error_message='无权删除该用户')
         self._validate_user_can_be_deleted(user)
 
         with transaction.atomic():
             hard_delete_user_business_data(user.id)
             self._delete_user_safely(user)
 
+    @transaction.atomic
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
@@ -201,7 +209,7 @@ class UserManagementService(BaseService):
         - STUDENT 可与一个授权角色叠加，也可被移除
         - 超管账号禁止分配业务角色
         """
-        user = self._get_user(user_id)
+        user = User.objects.select_for_update().filter(pk=user_id).first()
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         if user.is_superuser:
             raise BusinessError(
@@ -219,6 +227,8 @@ class UserManagementService(BaseService):
 
         roles_to_assign = set(role_codes)
         current_role_codes = set(user.roles.values_list('code', flat=True))
+        had_management_role = bool(current_role_codes & AUTH_ROLE_CODES)
+        will_have_management_role = bool(roles_to_assign & AUTH_ROLE_CODES)
         roles_to_remove = current_role_codes - roles_to_assign
         roles_to_add = roles_to_assign - current_role_codes
 
@@ -248,6 +258,10 @@ class UserManagementService(BaseService):
                         role_id=roles_by_code[role_code].id,
                         assigned_by_id=assigned_by.id
                     )
+            if had_management_role and not will_have_management_role:
+                from apps.authorization.models import UserPermission
+
+                UserPermission.objects.filter(user_id=user.id).delete()
         # Refresh user from database
         user.refresh_from_db()
 
@@ -285,6 +299,7 @@ class UserManagementService(BaseService):
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        enforce('user.update', self.request, resource=user, error_message='无权指定该用户导师')
         if mentor_id is None:
             # Remove mentor binding
             user.mentor_id = None
@@ -320,6 +335,13 @@ class UserManagementService(BaseService):
     def update_avatar(self, user_id: int, avatar_key: str) -> User:
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        if user.id != self.user.id:
+            enforce(
+                'user.avatar.update',
+                self.request,
+                resource=user,
+                error_message='无权修改该用户头像',
+            )
 
         normalized_avatar_key = validate_avatar_key(avatar_key)
         if user.avatar_key == normalized_avatar_key:

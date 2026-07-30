@@ -13,34 +13,23 @@ export const queryKeys = {
     permissionCatalog: ({
       currentRole,
       module,
-      view,
     }: {
       currentRole: QueryRole;
       module?: string;
-      view?: string;
     }) => [
       'authorization',
       'permission-catalog',
       normalizeRoleKey(currentRole),
       module ?? 'ALL',
-      view ?? 'ALL',
     ] as const,
-    roleCapabilitiesRoot: () => ['authorization', 'role-capabilities'] as const,
-    roleCapabilities: ({
-      currentRole,
-      roleCode,
-    }: {
-      currentRole: QueryRole;
-      roleCode: string;
-    }) => ['authorization', 'role-capabilities', normalizeRoleKey(currentRole), roleCode] as const,
-    userOverridesRoot: () => ['authorization', 'user-overrides'] as const,
-    userOverrides: ({
+    userPermissionsRoot: () => ['authorization', 'user-permissions'] as const,
+    userPermissions: ({
       currentRole,
       userId,
     }: {
       currentRole: QueryRole;
       userId: number | null;
-    }) => ['authorization', 'user-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
+    }) => ['authorization', 'user-permissions', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
   },
   dashboards: {
     admin: (currentRole: QueryRole) => ['admin-dashboard', normalizeRoleKey(currentRole)] as const,
@@ -318,14 +307,12 @@ export const queryKeys = {
       pageSize,
       search,
       taskStatus,
-      creatorSide,
     }: {
       currentRole: QueryRole;
       page: number;
       pageSize: number;
       search?: string;
       taskStatus?: string;
-      creatorSide?: string;
     }) => [
       'tasks',
       normalizeRoleKey(currentRole),
@@ -333,7 +320,6 @@ export const queryKeys = {
       pageSize,
       search,
       taskStatus,
-      creatorSide,
     ] as const,
     detailRoot: () => ['task-detail'] as const,
     detail: ({

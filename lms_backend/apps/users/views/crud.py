@@ -97,17 +97,7 @@ class UserDetailView(APIView):
     )
     def get(self, request, pk):
         user = self.get_object(pk)
-        enforce('user.view', request, error_message='无权查看用户详情')
-        if not scope_filter(
-            'user.view',
-            request,
-            resource_model=User,
-            base_queryset=User.objects.filter(pk=user.pk),
-        ).exists():
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权查看该用户详情',
-            )
+        enforce('user.view', request, resource=user, error_message='无权查看用户详情')
         return success_response(UserDetailSerializer(user).data)
 
     @extend_schema(
@@ -133,7 +123,12 @@ class UserDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes') is not None:
-            enforce('user.role.assign', request, error_message='无权分配用户角色')
+            enforce(
+                'user.role.assign',
+                request,
+                resource=user,
+                error_message='无权分配该用户角色',
+            )
         user = UserManagementService(request).update_user(user, dict(serializer.validated_data))
         return success_response(UserDetailSerializer(user).data)
 

@@ -17,13 +17,6 @@ export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClien
     queryKeys.activityLogs.policies(),
   ]);
 
-export const invalidateAfterAuthorizationOverrideMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.permissionCatalogRoot(),
-    queryKeys.authorization.roleCapabilitiesRoot(),
-    queryKeys.authorization.userOverridesRoot(),
-  ]);
-
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.grading.answersRoot(),

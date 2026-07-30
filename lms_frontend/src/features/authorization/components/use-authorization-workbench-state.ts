@@ -10,7 +10,7 @@ import {
   isAssignableRoleCode,
 } from '@/entities/authorization/utils/user-role-assignment';
 import {
-  USER_PERMISSION_ACCESS_PERMISSIONS,
+  USER_PERMISSION_VIEW_PERMISSION,
   USER_ROLE_ASSIGN_PERMISSION,
 } from '@/entities/authorization/constants/access';
 
@@ -30,7 +30,7 @@ export function useAuthorizationWorkbenchState({
 }: UseAuthorizationWorkbenchStateParams) {
   const { hasCapability } = useAuth();
   const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
-  const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
+  const canViewUserAuthorization = hasCapability(USER_PERMISSION_VIEW_PERMISSION);
   const [activeRole, setActiveRole] = useState<RoleCode | null>(initialRoleCode);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
@@ -185,7 +185,7 @@ export function useAuthorizationWorkbenchState({
     isAssigningRoles: assignRoles.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isViewingUserOverrides: Boolean(selectedUserId),
+    isViewingUserPermissions: Boolean(selectedUserId),
     memberSearch,
     mutatingUserId,
     resolvedActiveRole,

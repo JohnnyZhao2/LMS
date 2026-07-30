@@ -29,7 +29,7 @@ export const AuthorizationWorkbenchPanel: React.FC<AuthorizationWorkbenchPanelPr
     isAssigningRoles,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isViewingUserOverrides,
+    isViewingUserPermissions,
     memberSearch,
     mutatingUserId,
     resolvedActiveRole,
@@ -67,7 +67,7 @@ export const AuthorizationWorkbenchPanel: React.FC<AuthorizationWorkbenchPanelPr
           />
           <div className="flex min-h-0 flex-col">
             <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
-              {isViewingUserOverrides ? (
+              {isViewingUserPermissions ? (
                 <UserPermissionWorkbench
                   userDetail={selectedUserDetail}
                   selectedRoleCodes={selectedUserRoleCodes}

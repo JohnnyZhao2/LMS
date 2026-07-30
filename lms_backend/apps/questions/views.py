@@ -113,7 +113,7 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理'],
     )
     def patch(self, request, pk):
-        question = self.service.get_by_id(pk)
+        question = self.service.get_for_permission(pk, 'question.update')
         serializer = QuestionUpdateSerializer(instance=question, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated_question = self.service.update(pk=pk, data=serializer.validated_data)

@@ -236,11 +236,7 @@ class TaskListView(BaseAPIView):
     @extend_schema(
         summary='获取任务列表',
         description='''
-        获取任务列表，根据用户角色返回不同范围的数据：
-        - 管理员：全平台所有任务
-        - 导师：自己创建的任务
-        - 室组：自己创建的任务
-        - 学员：分配给自己的任务
+        获取当前用户自己创建的任务列表。
         ''',
         parameters=[
             OpenApiParameter(
@@ -252,11 +248,6 @@ class TaskListView(BaseAPIView):
                 name='search',
                 type=str,
                 description='按任务标题搜索'
-            ),
-            OpenApiParameter(
-                name='creator_side',
-                type=str,
-                description='任务来源筛选（仅管理员有效）：all / management(ADMIN角色创建) / non_management(非ADMIN角色创建)'
             ),
         ],
         responses={200: TaskListSerializer(many=True)},
@@ -270,9 +261,6 @@ class TaskListView(BaseAPIView):
         search = (request.query_params.get('search') or '').strip()
         if search:
             queryset = queryset.filter(title__icontains=search)
-
-        creator_side = request.query_params.get('creator_side')
-        queryset = self.service.filter_task_queryset_by_creator_side(queryset, creator_side)
 
         status = (request.query_params.get('status') or 'all').strip().lower()
         now = timezone.now()

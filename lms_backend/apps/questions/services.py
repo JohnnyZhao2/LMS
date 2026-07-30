@@ -25,9 +25,17 @@ from .selectors import (
 class QuestionService(BaseService):
     """题目应用服务。"""
 
-    def get_by_id(self, pk: int) -> Question:
-        question = self.get_queryset().filter(pk=pk).first()
+    def _get_raw_by_id(self, pk: int) -> Question:
+        question = question_base_queryset().filter(pk=pk).first()
         self.validate_not_none(question, f'题目 {pk} 不存在')
+        return question
+
+    def get_by_id(self, pk: int) -> Question:
+        return self.get_for_permission(pk, 'question.view')
+
+    def get_for_permission(self, pk: int, permission_code: str) -> Question:
+        question = self._get_raw_by_id(pk)
+        enforce(permission_code, self.request, resource=question, error_message='无权操作此题目')
         return question
 
     def get_queryset(
@@ -81,7 +89,7 @@ class QuestionService(BaseService):
         label='更新题目',
     )
     def update(self, pk: int, data: dict) -> Question:
-        question = self.get_by_id(pk)
+        question = self._get_raw_by_id(pk)
         enforce('question.update', self.request, resource=question, error_message='无权编辑此题目')
 
         payload = dict(data)
@@ -138,7 +146,7 @@ class QuestionService(BaseService):
         label='删除题目',
     )
     def delete(self, pk: int) -> Question:
-        question = self.get_by_id(pk)
+        question = self._get_raw_by_id(pk)
         enforce('question.delete', self.request, resource=question, error_message='无权删除此题目')
         question.delete()
         return question

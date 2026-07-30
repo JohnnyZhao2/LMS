@@ -9,7 +9,7 @@ from apps.grading.selectors import (
     get_latest_quiz_answers,
     has_answer_content,
 )
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import enforce, scope_learning_members
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -38,6 +38,13 @@ class GradingBaseView(BaseAPIView):
             error_message=error_message,
         )
         return task
+
+    def _student_ids(self):
+        if not hasattr(self, '_scoped_student_ids'):
+            self._scoped_student_ids = list(
+                scope_learning_members(self.request).values_list('id', flat=True)
+            )
+        return self._scoped_student_ids
 
     def _validate_quiz_in_task(self, task, quiz_id):
         if not task.task_quizzes.filter(id=quiz_id).exists():
@@ -90,6 +97,7 @@ class GradingQuestionsView(GradingBaseView):
                 quiz_id,
                 relation.score,
                 relation.is_objective,
+                student_ids=self._student_ids(),
             )
             results.append({
                 'question_id': relation.id,
@@ -157,6 +165,7 @@ class GradingAnswersView(GradingBaseView):
         answers = list(get_latest_quiz_answers(
             task,
             quiz_id,
+            student_ids=self._student_ids(),
             submission_statuses=answer_statuses,
         ).filter(question_id=question_id).select_related(
             'submission__task_assignment__assignee',
@@ -171,6 +180,7 @@ class GradingAnswersView(GradingBaseView):
             quiz_id,
             relation.score,
             relation.is_objective,
+            student_ids=self._student_ids(),
         )
 
         if relation.is_objective:
@@ -304,7 +314,11 @@ class GradingSubmitView(GradingBaseView):
     def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments):
         """提交评分"""
         grader = self.request.user
-        answer = get_latest_quiz_answers(task, quiz_id).filter(
+        answer = get_latest_quiz_answers(
+            task,
+            quiz_id,
+            student_ids=self._student_ids(),
+        ).filter(
             question_id=question_id,
             submission__task_assignment__assignee_id=student_id,
             submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
@@ -347,12 +361,10 @@ class PendingQuizzesView(GradingBaseView):
         enforce('grading.view', request, error_message='无权访问阅卷中心')
         quiz_type = request.query_params.get('quiz_type')
 
-        tasks = scope_filter(
-            'task.view',
-            request,
-            base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
-                task_quizzes__isnull=False,
-            ),
+        student_ids = self._student_ids()
+        tasks = Task.objects.prefetch_related('task_quizzes__quiz').filter(
+            task_quizzes__isnull=False,
+            assignments__assignee_id__in=student_ids,
         ).distinct().order_by('-created_at')
 
         results = []
@@ -402,6 +414,7 @@ class PendingQuizzesView(GradingBaseView):
         objective_answers = get_latest_quiz_answers(
             task,
             quiz_id,
+            student_ids=self._student_ids(),
             submission_statuses=OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
         ).exclude(question__question_type='SHORT_ANSWER')
         if any(has_answer_content(answer.user_answer) for answer in objective_answers):
@@ -410,12 +423,17 @@ class PendingQuizzesView(GradingBaseView):
         return get_latest_quiz_answers(
             task,
             quiz_id,
+            student_ids=self._student_ids(),
             submission_statuses=REVIEWABLE_SUBMISSION_STATUSES,
         ).filter(question__question_type='SHORT_ANSWER').exists()
 
     def _count_pending_grading(self, task, quiz_id):
         """统计待批阅的主观题答案数量（仅统计最新提交）"""
-        return get_latest_quiz_answers(task, quiz_id).filter(
+        return get_latest_quiz_answers(
+            task,
+            quiz_id,
+            student_ids=self._student_ids(),
+        ).filter(
             submission__status__in=['SUBMITTED', 'GRADING'],
             question__question_type='SHORT_ANSWER',
             graded_by__isnull=True

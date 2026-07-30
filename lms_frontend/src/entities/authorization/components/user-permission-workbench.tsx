@@ -83,7 +83,6 @@ export function UserPermissionWorkbench({
               key={userDetail.id}
               userId={userDetail.id}
               selectedRoleCodes={selectedRoleCodes}
-              selectedRoleCode={selectedRoleCode}
               isSuperuserAccount={Boolean(userDetail.is_superuser)}
             />
           </div>

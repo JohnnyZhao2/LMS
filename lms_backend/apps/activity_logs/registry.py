@@ -16,8 +16,6 @@ _DECLARATION_MODULES = (
     'apps.submissions.services',
     'apps.spot_checks.services',
     'apps.tags.services',
-    'apps.authorization.role_capability_service',
-    'apps.authorization.user_override_service',
     'apps.grading.views',
 )
 
@@ -124,4 +122,3 @@ def get_log_action_def(action_key: str) -> dict:
 def get_log_action_index() -> dict[str, dict]:
     load_declared_log_actions()
     return dict(_LOG_ACTION_INDEX)
-

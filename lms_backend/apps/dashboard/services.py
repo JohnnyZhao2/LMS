@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from django.db.models import QuerySet
 
-from apps.authorization.engine import scope_filter
+from apps.authorization.engine import scope_learning_members
 from core.base_service import BaseService
 from apps.users.models import User
 
@@ -28,9 +28,6 @@ from .selectors import (
     get_urgent_tasks_count,
     get_weekly_active_users_count,
 )
-
-MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE = 'task.analytics.view'
-
 
 def get_dashboard_user_queryset() -> QuerySet:
     return User.objects.filter(
@@ -107,11 +104,7 @@ class MentorDashboardService(BaseService):
         """
         获取导师/室组的完整仪表盘数据
         """
-        students = scope_filter(
-            MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
-            self.request,
-            resource_model=User,
-        )
+        students = scope_learning_members(self.request)
         student_ids = list(students.values_list('id', flat=True))
         return {
             'summary': self._calculate_summary(student_ids),
@@ -160,5 +153,4 @@ class AdminDashboardService(BaseService):
                 'monthly_tasks': get_monthly_tasks_count(),
             }
         }
-
 

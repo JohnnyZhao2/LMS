@@ -10,10 +10,9 @@ from django.db.models import Sum
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from apps.authorization.engine import authorize, scope_filter
-from apps.authorization.roles import is_admin_like_role, resolve_current_role
+from apps.authorization.engine import scope_learning_members
 from apps.submissions.models import Submission
-from apps.tasks.models import Task, TaskAssignment, TaskQuiz
+from apps.tasks.models import TaskAssignment, TaskQuiz
 from apps.users.models import User
 from core.base_service import BaseService
 
@@ -259,46 +258,26 @@ class ExamReportService(BaseService):
         }
 
     def _accessible_students(self):
-        """按 task.analytics.view 取学员范围。
-
-        有分析权限：走 scope_filter（导师/室组各自范围，全局 ALL）。
-        无分析权限：全局/超管回退全员；其余角色返回空集。
-        """
+        """按当前管理角色获取可查看的学员。"""
         base = User.objects.filter(
             is_active=True,
             roles__code='STUDENT',
         ).exclude(is_superuser=True).distinct()
 
-        if authorize('task.analytics.view', self.request).allowed:
-            return scope_filter(
-                'task.analytics.view',
-                self.request,
-                base_queryset=base,
-                resource_model=User,
-            )
-        if is_admin_like_role(resolve_current_role(self.request.user)):
-            return base
-        return base.none()
+        return scope_learning_members(self.request, base_queryset=base)
 
     def _load_exams(self, student_ids: list[int]) -> list[dict[str, Any]]:
         if not student_ids:
             return []
 
-        # 学员被分配的任务 ∩ 当前用户 task.view 可见任务，避免泄露他人创建的不可见任务
         assigned_task_ids = (
             TaskAssignment.objects.filter(assignee_id__in=student_ids)
             .values_list('task_id', flat=True)
             .distinct()
         )
-        visible_task_ids = scope_filter(
-            'task.view',
-            self.request,
-            resource_model=Task,
-            base_queryset=Task.objects.filter(id__in=assigned_task_ids),
-        ).values_list('id', flat=True)
         quizzes = (
             TaskQuiz.objects.filter(
-                task_id__in=visible_task_ids,
+                task_id__in=assigned_task_ids,
                 quiz__quiz_type='EXAM',
             )
             .select_related('task', 'quiz')

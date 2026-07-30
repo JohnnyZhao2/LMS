@@ -131,3 +131,11 @@ def scope_filter(
         base_queryset=base_queryset,
         context=context,
     )
+
+
+def scope_learning_members(request, *, base_queryset: Optional[QuerySet] = None) -> QuerySet:
+    """按当前管理角色过滤学员，不绑定权限点。"""
+    engine = AuthorizationEngine(request)
+    if base_queryset is None:
+        return engine.get_scoped_learning_members()
+    return engine.get_role_scoped_user_queryset(base_queryset)

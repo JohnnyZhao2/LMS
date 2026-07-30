@@ -12,7 +12,6 @@ interface GetTasksParams {
   status?: TaskStatus;
   search?: string;
   taskStatus?: 'open' | 'closed' | 'all';
-  creatorSide?: 'all' | 'management' | 'non_management';
 }
 
 interface UseTasksOptions {
@@ -62,7 +61,7 @@ export const useTaskList = (
   options: UseTasksOptions = {}
 ) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, search = '', taskStatus = 'all', creatorSide = 'all' } = params;
+  const { page = 1, pageSize = 20, search = '', taskStatus = 'all' } = params;
   const { enabled = true } = options;
 
   return useQuery({
@@ -72,14 +71,12 @@ export const useTaskList = (
       pageSize,
       search,
       taskStatus,
-      creatorSide,
     }),
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(search && { search }),
         ...(taskStatus !== 'all' && { status: taskStatus }),
-        ...(creatorSide !== 'all' && { creator_side: creatorSide }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<TaskListItem>>(

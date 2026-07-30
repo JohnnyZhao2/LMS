@@ -150,6 +150,11 @@ def task_resource_options(
             search=search,
             ordering='-updated_at',
         )
+        knowledge_rows = scope_filter(
+            'knowledge.view',
+            request,
+            base_queryset=knowledge_rows,
+        )
         if exclude_document_ids:
             knowledge_rows = knowledge_rows.exclude(id__in=exclude_document_ids)
         knowledge_rows = knowledge_rows.values('id', 'title', 'updated_at', 'space_tag__name')
@@ -212,7 +217,11 @@ def knowledge_progress_queryset(assignment_id: int) -> QuerySet:
     ).order_by('task_knowledge__order')
 
 
-def analytics_assignment_queryset(task_id: int, order_desc: bool = False) -> QuerySet:
+def analytics_assignment_queryset(
+    task_id: int,
+    assignee_ids: Optional[list[int]] = None,
+    order_desc: bool = False,
+) -> QuerySet:
     submissions_prefetch = Prefetch(
         'submissions',
         queryset=Submission.objects.select_related('quiz').filter(status__in=ANALYTICS_SUBMISSION_STATUSES),
@@ -222,12 +231,15 @@ def analytics_assignment_queryset(task_id: int, order_desc: bool = False) -> Que
         'assignee__department',
         'task',
     ).prefetch_related('knowledge_progress', submissions_prefetch)
+    if assignee_ids is not None:
+        queryset = queryset.filter(assignee_id__in=assignee_ids)
     return queryset.order_by('-created_at' if order_desc else 'created_at')
 
 
-def task_submission_score_totals(task_id: int) -> dict:
+def task_submission_score_totals(task_id: int, assignee_ids: list[int]) -> dict:
     totals = Submission.objects.filter(
         task_assignment__task_id=task_id,
+        task_assignment__assignee_id__in=assignee_ids,
         status__in=ACCURACY_SUBMISSION_STATUSES,
     ).aggregate(
         total_score=Sum('total_score'),
@@ -241,17 +253,19 @@ def task_submission_score_totals(task_id: int) -> dict:
     }
 
 
-def task_knowledge_completion_counts(task_id: int) -> dict[int, int]:
+def task_knowledge_completion_counts(task_id: int, assignee_ids: list[int]) -> dict[int, int]:
     rows = KnowledgeLearningProgress.objects.filter(
         task_knowledge__task_id=task_id,
+        assignment__assignee_id__in=assignee_ids,
         is_completed=True,
     ).values('task_knowledge_id').annotate(completed_count=Count('id'))
     return {row['task_knowledge_id']: row['completed_count'] for row in rows}
 
 
-def task_quiz_completion_counts(task_id: int) -> dict[int, int]:
+def task_quiz_completion_counts(task_id: int, assignee_ids: list[int]) -> dict[int, int]:
     rows = Submission.objects.filter(
         task_assignment__task_id=task_id,
+        task_assignment__assignee_id__in=assignee_ids,
         status__in=ANALYTICS_SUBMISSION_STATUSES,
     ).values('task_quiz_id').annotate(
         completed_count=Count('task_assignment_id', distinct=True)
@@ -259,9 +273,10 @@ def task_quiz_completion_counts(task_id: int) -> dict[int, int]:
     return {row['task_quiz_id']: row['completed_count'] for row in rows}
 
 
-def task_highest_score_percentages(task_id: int) -> list[float]:
+def task_highest_score_percentages(task_id: int, assignee_ids: list[int]) -> list[float]:
     rows = Submission.objects.filter(
         task_assignment__task_id=task_id,
+        task_assignment__assignee_id__in=assignee_ids,
         status__in=ACCURACY_SUBMISSION_STATUSES,
         obtained_score__isnull=False,
         total_score__gt=0,
@@ -276,9 +291,10 @@ def task_highest_score_percentages(task_id: int) -> list[float]:
     return list(best_percentages.values())
 
 
-def task_exam_submissions_queryset(task_id: int) -> QuerySet:
+def task_exam_submissions_queryset(task_id: int, assignee_ids: list[int]) -> QuerySet:
     return Submission.objects.filter(
         task_assignment__task_id=task_id,
+        task_assignment__assignee_id__in=assignee_ids,
         quiz__quiz_type='EXAM',
         status__in=ANALYTICS_SUBMISSION_STATUSES,
         obtained_score__isnull=False,
@@ -373,8 +389,8 @@ def task_duration_node_counts(task_id: int) -> dict[str, int]:
     }
 
 
-def task_completion_stats(task_id: int) -> dict[str, Any]:
-    assignments = analytics_assignment_queryset(task_id=task_id)
+def task_completion_stats(task_id: int, assignee_ids: list[int]) -> dict[str, Any]:
+    assignments = analytics_assignment_queryset(task_id=task_id, assignee_ids=assignee_ids)
     total_count = assignments.count()
     completed_count = assignments.filter(status='COMPLETED').count()
     return {
@@ -384,8 +400,15 @@ def task_completion_stats(task_id: int) -> dict[str, Any]:
     }
 
 
-def task_average_completion_minutes(task_id: int, node_counts: dict[str, int]) -> dict[str, Optional[float]]:
-    completed_assignments = analytics_assignment_queryset(task_id=task_id).filter(
+def task_average_completion_minutes(
+    task_id: int,
+    node_counts: dict[str, int],
+    assignee_ids: list[int],
+) -> dict[str, Optional[float]]:
+    completed_assignments = analytics_assignment_queryset(
+        task_id=task_id,
+        assignee_ids=assignee_ids,
+    ).filter(
         status='COMPLETED',
         completed_at__isnull=False,
     )
@@ -414,11 +437,11 @@ def task_average_completion_minutes(task_id: int, node_counts: dict[str, int]) -
     }
 
 
-def task_accuracy_stats(task_id: int) -> dict[str, Any]:
+def task_accuracy_stats(task_id: int, assignee_ids: list[int]) -> dict[str, Any]:
     has_quiz = task_quiz_queryset(task_id).exists()
     percentage = None
     if has_quiz:
-        score_totals = task_submission_score_totals(task_id)
+        score_totals = task_submission_score_totals(task_id, assignee_ids)
         total_score = score_totals['total_score']
         obtained_score = score_totals['obtained_score']
         if score_totals['submission_count'] > 0 and total_score > 0:
@@ -426,19 +449,26 @@ def task_accuracy_stats(task_id: int) -> dict[str, Any]:
     return {'has_quiz': has_quiz, 'percentage': percentage}
 
 
-def task_abnormal_count(task_id: int) -> int:
+def task_abnormal_count(task_id: int, assignee_ids: list[int]) -> int:
     abnormal_ids = {
         assignment.assignee_id
-        for assignment in analytics_assignment_queryset(task_id=task_id).filter(status='COMPLETED')
+        for assignment in analytics_assignment_queryset(
+            task_id=task_id,
+            assignee_ids=assignee_ids,
+        ).filter(status='COMPLETED')
         if is_assignment_abnormal(assignment)
     }
     return len(abnormal_ids)
 
 
-def task_node_progress(task_id: int, total_count: int) -> list[dict[str, Any]]:
+def task_node_progress(
+    task_id: int,
+    total_count: int,
+    assignee_ids: list[int],
+) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
-    knowledge_counts = task_knowledge_completion_counts(task_id)
-    quiz_counts = task_quiz_completion_counts(task_id)
+    knowledge_counts = task_knowledge_completion_counts(task_id, assignee_ids)
+    quiz_counts = task_quiz_completion_counts(task_id, assignee_ids)
 
     for task_knowledge in task_knowledge_queryset(task_id):
         completed = knowledge_counts.get(task_knowledge.id, 0)
@@ -468,12 +498,20 @@ def task_node_progress(task_id: int, total_count: int) -> list[dict[str, Any]]:
     return nodes
 
 
-def task_time_distribution(task_id: int, duration_type: str, node_counts: dict[str, int]) -> list[dict[str, int]]:
+def task_time_distribution(
+    task_id: int,
+    duration_type: str,
+    node_counts: dict[str, int],
+    assignee_ids: list[int],
+) -> list[dict[str, int]]:
     if node_counts[duration_type] == 0:
         return []
 
     distribution = {item[0]: 0 for item in TIME_DISTRIBUTION_RANGES}
-    completed_assignments = analytics_assignment_queryset(task_id=task_id).filter(
+    completed_assignments = analytics_assignment_queryset(
+        task_id=task_id,
+        assignee_ids=assignee_ids,
+    ).filter(
         status='COMPLETED',
         completed_at__isnull=False,
     )
@@ -486,9 +524,9 @@ def task_time_distribution(task_id: int, duration_type: str, node_counts: dict[s
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
-def task_score_distribution(task_id: int) -> list[dict[str, int]]:
+def task_score_distribution(task_id: int, assignee_ids: list[int]) -> list[dict[str, int]]:
     distribution = {item[0]: 0 for item in SCORE_DISTRIBUTION_RANGES}
-    for score in task_highest_score_percentages(task_id):
+    for score in task_highest_score_percentages(task_id, assignee_ids):
         for label, minimum, maximum in SCORE_DISTRIBUTION_RANGES:
             if minimum <= score < maximum:
                 distribution[label] += 1
@@ -496,11 +534,11 @@ def task_score_distribution(task_id: int) -> list[dict[str, int]]:
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
-def task_exam_pass_rate(task_id: int) -> Optional[float]:
+def task_exam_pass_rate(task_id: int, assignee_ids: list[int]) -> Optional[float]:
     has_exam = task_quiz_queryset(task_id).filter(quiz__quiz_type='EXAM').exists()
     if not has_exam:
         return None
-    exam_submissions = task_exam_submissions_queryset(task_id)
+    exam_submissions = task_exam_submissions_queryset(task_id, assignee_ids)
     if not exam_submissions.exists():
         return 0.0
     total_count = exam_submissions.count()
@@ -512,34 +550,44 @@ def task_exam_pass_rate(task_id: int) -> Optional[float]:
     return round(passed_count / total_count * 100, 1) if total_count > 0 else 0.0
 
 
-def task_analytics_payload(task_id: int) -> dict[str, Any]:
-    completion = task_completion_stats(task_id)
-    accuracy = task_accuracy_stats(task_id)
+def task_analytics_payload(task_id: int, assignee_ids: list[int]) -> dict[str, Any]:
+    completion = task_completion_stats(task_id, assignee_ids)
+    accuracy = task_accuracy_stats(task_id, assignee_ids)
     node_counts = task_duration_node_counts(task_id)
-    average_time = task_average_completion_minutes(task_id, node_counts)
+    average_time = task_average_completion_minutes(task_id, node_counts, assignee_ids)
     score_distribution = None
     pass_rate = None
     if accuracy['has_quiz']:
-        score_distribution = task_score_distribution(task_id)
-        pass_rate = task_exam_pass_rate(task_id)
+        score_distribution = task_score_distribution(task_id, assignee_ids)
+        pass_rate = task_exam_pass_rate(task_id, assignee_ids)
     return {
         'completion': completion,
         'average_learning_time': average_time['learning'],
         'average_practice_time': average_time['practice'],
         'average_exam_time': average_time['exam'],
         'accuracy': accuracy,
-        'abnormal_count': task_abnormal_count(task_id),
-        'node_progress': task_node_progress(task_id, completion['total_count']),
-        'learning_time_distribution': task_time_distribution(task_id, 'learning', node_counts),
-        'practice_time_distribution': task_time_distribution(task_id, 'practice', node_counts),
-        'exam_time_distribution': task_time_distribution(task_id, 'exam', node_counts),
+        'abnormal_count': task_abnormal_count(task_id, assignee_ids),
+        'node_progress': task_node_progress(task_id, completion['total_count'], assignee_ids),
+        'learning_time_distribution': task_time_distribution(
+            task_id, 'learning', node_counts, assignee_ids
+        ),
+        'practice_time_distribution': task_time_distribution(
+            task_id, 'practice', node_counts, assignee_ids
+        ),
+        'exam_time_distribution': task_time_distribution(
+            task_id, 'exam', node_counts, assignee_ids
+        ),
         'score_distribution': score_distribution,
         'pass_rate': pass_rate,
     }
 
 
-def task_student_executions(task_id: int) -> list[dict[str, Any]]:
-    assignments = analytics_assignment_queryset(task_id=task_id, order_desc=True)
+def task_student_executions(task_id: int, assignee_ids: list[int]) -> list[dict[str, Any]]:
+    assignments = analytics_assignment_queryset(
+        task_id=task_id,
+        assignee_ids=assignee_ids,
+        order_desc=True,
+    )
     total_nodes = task_knowledge_queryset(task_id).count() + task_quiz_queryset(task_id).count()
     node_counts = task_duration_node_counts(task_id)
     now = timezone.now()

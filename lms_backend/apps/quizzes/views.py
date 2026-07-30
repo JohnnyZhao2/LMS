@@ -103,7 +103,7 @@ class QuizDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         enforce('quiz.update', request, error_message='无权更新试卷')
-        quiz = self.service.get_by_id(pk)
+        quiz = self.service.get_for_permission(pk, 'quiz.update')
         serializer = QuizUpdateSerializer(instance=quiz, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data

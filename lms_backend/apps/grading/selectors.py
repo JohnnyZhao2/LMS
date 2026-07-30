@@ -24,10 +24,17 @@ def _get_latest_submission_subquery(submission_statuses):
     ).order_by('-attempt_number', '-submitted_at', '-id').values('id')[:1]
 
 
-def get_latest_quiz_answers(task, quiz_id, *, submission_statuses=REVIEWABLE_SUBMISSION_STATUSES):
+def get_latest_quiz_answers(
+    task,
+    quiz_id,
+    *,
+    student_ids,
+    submission_statuses=REVIEWABLE_SUBMISSION_STATUSES,
+):
     resolved_statuses = tuple(submission_statuses)
     base_answers = Answer.objects.filter(
         submission__task_assignment__task=task,
+        submission__task_assignment__assignee_id__in=student_ids,
         submission__task_quiz_id=quiz_id,
         submission__status__in=resolved_statuses,
     ).select_related('question').prefetch_related(
@@ -54,7 +61,15 @@ def _is_objective_answer_correct(answer):
     return bool(is_correct)
 
 
-def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objective):
+def calculate_question_pass_rate(
+    task,
+    question_id,
+    quiz_id,
+    max_score,
+    is_objective,
+    *,
+    student_ids,
+):
     submission_statuses = (
         OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES
         if is_objective
@@ -64,6 +79,7 @@ def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objec
         get_latest_quiz_answers(
             task,
             quiz_id,
+            student_ids=student_ids,
             submission_statuses=submission_statuses,
         ).filter(question_id=question_id)
     )
