@@ -13,12 +13,10 @@ def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if resource.assignments.filter(
         assignee_id__in=engine.get_scoped_learning_members().values('id')
     ).exists():
-        return conditional_allow(permission_code, constraint='member_scope')
+        return conditional_allow(permission_code)
     return conditional_deny(
         permission_code,
         message=error_message or '该任务没有当前管理范围内的学员',
-        reason='scope_denied',
-        constraint='member_scope',
     )
 
 

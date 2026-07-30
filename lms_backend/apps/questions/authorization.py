@@ -17,12 +17,10 @@ def _authorize(engine, permission_code, *, resource=None, error_message=None):
     if not isinstance(resource, Question):
         return None
     if is_owned_by_user(resource, engine.user):
-        return conditional_allow(permission_code, constraint='resource_owner')
+        return conditional_allow(permission_code)
     return conditional_deny(
         permission_code,
         message=error_message or '无权操作此题目',
-        reason='resource_constraint',
-        constraint='resource_owner',
     )
 
 

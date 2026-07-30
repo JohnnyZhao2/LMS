@@ -35,14 +35,12 @@ def _authorize(engine, permission_code, *, resource=None, error_message=None):
         return None
     student = _resolve_student(permission_code, resource)
     if student is None:
-        return conditional_allow(permission_code, constraint='member_scope')
+        return conditional_allow(permission_code)
     if engine.get_scoped_learning_members().filter(pk=student.pk).exists():
-        return conditional_allow(permission_code, constraint='member_scope')
+        return conditional_allow(permission_code)
     return conditional_deny(
         permission_code,
         message=error_message or '该学员不在当前管理范围内',
-        reason='scope_denied',
-        constraint='member_scope',
     )
 
 

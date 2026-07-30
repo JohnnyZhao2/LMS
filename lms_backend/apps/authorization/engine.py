@@ -177,7 +177,6 @@ class AuthorizationEngine(BaseService):
         return AuthorizationDecision.deny(
             permission_codes[0],
             message=error_message or f"缺少任一权限: {', '.join(permission_codes)}",
-            reason='permission_denied',
         )
 
     def enforce_any(
@@ -215,7 +214,6 @@ class AuthorizationEngine(BaseService):
             decision = AuthorizationDecision.deny(
                 permission_code,
                 message=error_message or f'缺少权限: {permission_code}',
-                reason='permission_denied',
             )
         return self._set_cached_base_permission_decision(permission_code, error_message, decision)
 

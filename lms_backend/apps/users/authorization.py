@@ -31,12 +31,10 @@ def _authorize_user(engine, permission_code, *, resource=None, error_message=Non
     if engine.get_role_scoped_user_queryset(
         User.objects.filter(pk=resource.pk)
     ).exists():
-        return conditional_allow(permission_code, constraint='member_scope')
+        return conditional_allow(permission_code)
     return conditional_deny(
         permission_code,
         message=error_message or '该用户不在当前管理范围内',
-        reason='scope_denied',
-        constraint='member_scope',
     )
 
 
