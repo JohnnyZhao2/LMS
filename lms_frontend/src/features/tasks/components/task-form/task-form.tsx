@@ -1,25 +1,19 @@
-import { useState } from 'react';
 import { FileText, LayoutList, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { TWO_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
-import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { TaskPipelinePanel } from './task-pipeline-panel';
-import { TaskResourceLibraryPanel } from './task-resource-library-panel';
-import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
-import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
 
 const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT', '室组'],
 ]);
 
 export const TaskForm: React.FC = () => {
-  const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
-  const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
     isEdit,
     taskError,
@@ -27,25 +21,16 @@ export const TaskForm: React.FC = () => {
     setTitle,
     description,
     setDescription,
-    deadline,
-    setDeadline,
+    deadlineDays,
+    setDeadlineDays,
     selectedResources,
-    resourceSearch,
-    setResourceSearch,
-    resourceType,
-    setResourceType,
     selectedUserIds,
     userSearch,
     setUserSearch,
-    setCurrentPage,
-    availableResources,
-    totalResourceCount,
-    resourcePageSize,
-    safeCurrentPage,
-    shouldPaginateResources,
+    excludedDocumentIds,
+    excludedQuizIds,
     filteredUsers,
     isUsersLoading,
-    isLoading,
     isSubmitting,
     canSubmit,
     resourcesDisabled,
@@ -84,29 +69,22 @@ export const TaskForm: React.FC = () => {
   return (
     <EditorPageShell>
       <PageWorkbench className="min-w-0">
-        <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
-          <TaskResourceLibraryPanel
-            availableResources={availableResources}
-            isLoading={isLoading}
-            resourceSearch={resourceSearch}
-            onResourceSearchChange={(value) => {
-              setResourceSearch(value);
-              setCurrentPage(1);
-            }}
-            resourceType={resourceType}
-            onResourceTypeChange={(value) => {
-              setResourceType(value);
-              setCurrentPage(1);
-            }}
-            onResourceAdd={addResource}
-            onDocumentPreview={setPreviewDocumentId}
-            onQuizPreview={setPreviewQuizId}
-            resourcesDisabled={resourcesDisabled}
-            totalResourceCount={totalResourceCount}
-            pageSize={resourcePageSize}
-            safeCurrentPage={safeCurrentPage}
-            showPagination={shouldPaginateResources}
-            onPageChange={setCurrentPage}
+        <div className={TWO_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
+          <TaskConfigurationPanel
+            title={title}
+            onTitleChange={setTitle}
+            deadlineDays={deadlineDays}
+            onDeadlineDaysChange={setDeadlineDays}
+            description={description}
+            onDescriptionChange={setDescription}
+            selectedUserIds={selectedUserIds}
+            userPanelItems={userPanelItems}
+            userSearch={userSearch}
+            onUserSearchChange={setUserSearch}
+            onToggleUser={toggleUser}
+            onToggleUsers={toggleUsers}
+            isUsersLoading={isUsersLoading}
+            canRemoveAssignee={canRemoveAssignee}
           />
 
           <div className="relative min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
@@ -118,8 +96,11 @@ export const TaskForm: React.FC = () => {
             <TaskPipelinePanel
               selectedResources={selectedResources}
               resourcesDisabled={resourcesDisabled}
+              excludeDocumentIds={excludedDocumentIds}
+              excludeQuizIds={excludedQuizIds}
               onDragEnd={handleDragEnd}
               onRemoveResource={removeResource}
+              onAddResource={addResource}
               embedded
             />
 
@@ -134,50 +115,8 @@ export const TaskForm: React.FC = () => {
               </Button>
             ) : null}
           </div>
-
-          <TaskConfigurationPanel
-            title={title}
-            onTitleChange={setTitle}
-            deadline={deadline}
-            onDeadlineChange={setDeadline}
-            description={description}
-            onDescriptionChange={setDescription}
-            selectedUserIds={selectedUserIds}
-            userPanelItems={userPanelItems}
-            userSearch={userSearch}
-            onUserSearchChange={setUserSearch}
-            onToggleUser={toggleUser}
-            onToggleUsers={toggleUsers}
-            isUsersLoading={isUsersLoading}
-            canRemoveAssignee={canRemoveAssignee}
-          />
         </div>
       </PageWorkbench>
-
-      <QuizPreviewDialog
-        open={previewQuizId !== null}
-        quizId={previewQuizId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewQuizId(null);
-          }
-        }}
-        onPrimaryAction={(quizId) => {
-          const target = availableResources.find((resource) => resource.resourceType === 'QUIZ' && resource.id === quizId);
-          if (target) {
-            addResource(target);
-          }
-          setPreviewQuizId(null);
-        }}
-      />
-
-      {previewDocumentId !== null ? (
-        <KnowledgeDetailModal
-          knowledgeId={previewDocumentId}
-          previewOnly
-          onClose={() => setPreviewDocumentId(null)}
-        />
-      ) : null}
     </EditorPageShell>
   );
 };

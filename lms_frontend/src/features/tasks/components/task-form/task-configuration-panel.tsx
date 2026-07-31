@@ -1,16 +1,12 @@
-import { useMemo, useState } from 'react';
-import { BookOpen, Calendar, FileText, PencilLine, UserPlus } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { BookOpen, FileText, PencilLine, UserPlus } from 'lucide-react';
 
-import { MicroLabel } from '@/components/common/micro-label';
 import { UserSelectList, type UserSelectPanelItem } from '@/components/common/user-select-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GHOST_ACCENT_HOVER_CLASSNAME, QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 import {
@@ -21,13 +17,41 @@ import {
   TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
 } from './task-form.constants';
 
-const TASK_CONFIG_FIELD_TEXT_CLASSNAME = 'text-[12px] font-semibold placeholder:text-text-muted/50';
+const TASK_CONFIG_SOFT_FIELD_CLASSNAME = [
+  'h-9 rounded-lg border-0 bg-muted/55 px-3 pr-9 text-[12px] font-semibold shadow-none',
+  'placeholder:text-text-muted/50',
+  'hover:bg-muted/70 focus:border-0 focus:bg-muted/70 focus:shadow-none focus-visible:ring-0',
+].join(' ');
+
+/** 左侧栏内容块统一上下间距 */
+const TASK_CONFIG_STACK_GAP_CLASSNAME = 'space-y-4';
+const TASK_CONFIG_SECTION_GAP_CLASSNAME = 'pt-4';
+
+/**
+ * 右侧图标的背景色输入框。
+ */
+function SoftIconField({
+  icon,
+  children,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {children}
+      <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-text-muted">
+        {icon}
+      </span>
+    </div>
+  );
+}
 
 interface TaskConfigurationPanelProps {
   title: string;
   onTitleChange: (value: string) => void;
-  deadline: Date | undefined;
-  onDeadlineChange: (value: Date | undefined) => void;
+  deadlineDays: number;
+  onDeadlineDaysChange: (value: number) => void;
   description: string;
   onDescriptionChange: (value: string) => void;
   selectedUserIds: number[];
@@ -59,8 +83,8 @@ function matchesDepartmentFilter(
 export function TaskConfigurationPanel({
   title,
   onTitleChange,
-  deadline,
-  onDeadlineChange,
+  deadlineDays,
+  onDeadlineDaysChange,
   description,
   onDescriptionChange,
   selectedUserIds,
@@ -84,56 +108,51 @@ export function TaskConfigurationPanel({
   return (
     <div className={TASK_FORM_PANEL_CLASSNAME}>
       <div className="flex min-h-0 h-full flex-col">
-        <div className="shrink-0 border-b border-border">
+        <div className="shrink-0">
           <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
             <FileText className="h-4 w-4 text-primary-500" />
             <span>任务配置</span>
           </div>
 
-          <div className="space-y-3 px-4 py-3">
-            <div className="space-y-2">
-              <MicroLabel icon={<PencilLine className="h-3.5 w-3.5" />} asLabel>
-                任务标题
-              </MicroLabel>
+          <div className={cn(TASK_CONFIG_STACK_GAP_CLASSNAME, 'px-4 py-4')}>
+            <SoftIconField icon={<PencilLine className="h-3.5 w-3.5" />}>
               <Input
                 value={title}
                 onChange={(event) => onTitleChange(event.target.value)}
-                placeholder="输入任务标题..."
-                className={cn(
-                  'h-9 rounded-lg px-3',
-                  TASK_CONFIG_FIELD_TEXT_CLASSNAME,
-                  QUIET_OUTLINE_FIELD_CLASSNAME,
-                )}
+                placeholder="请输入任务标题..."
+                interactionStyle="minimal"
+                className={TASK_CONFIG_SOFT_FIELD_CLASSNAME}
               />
-            </div>
+            </SoftIconField>
 
-            <div className="space-y-2">
-              <MicroLabel icon={<Calendar className="h-3.5 w-3.5" />} asLabel>
-                截止时间
-              </MicroLabel>
-              <DatePicker
-                date={deadline}
-                onDateChange={onDeadlineChange}
-                placeholder="选择截止日期"
-                className={cn('h-9 rounded-lg px-3', TASK_CONFIG_FIELD_TEXT_CLASSNAME)}
-                hideLeadingIcon
+            <SoftIconField icon={<span className="text-[11px] font-semibold">天</span>}>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={deadlineDays}
+                onChange={(event) => {
+                  const nextValue = Number(event.target.value);
+                  if (!Number.isFinite(nextValue)) {
+                    return;
+                  }
+                  onDeadlineDaysChange(Math.max(1, Math.floor(nextValue)));
+                }}
+                placeholder="7"
+                interactionStyle="minimal"
+                className={TASK_CONFIG_SOFT_FIELD_CLASSNAME}
               />
-            </div>
+            </SoftIconField>
 
-            <div className="space-y-2">
-              <MicroLabel icon={<BookOpen className="h-3.5 w-3.5" />} asLabel>
-                任务描述
-              </MicroLabel>
-              <Textarea
-                className={cn(
-                  'min-h-[100px] rounded-lg border-border/60 bg-white px-3 py-2.5 leading-5 shadow-none',
-                  TASK_CONFIG_FIELD_TEXT_CLASSNAME,
-                )}
-                placeholder="输入任务指引..."
+            <SoftIconField icon={<BookOpen className="h-3.5 w-3.5" />}>
+              <Input
                 value={description}
                 onChange={(event) => onDescriptionChange(event.target.value)}
+                placeholder="请输入任务描述..."
+                interactionStyle="minimal"
+                className={TASK_CONFIG_SOFT_FIELD_CLASSNAME}
               />
-            </div>
+            </SoftIconField>
           </div>
         </div>
 
@@ -141,9 +160,6 @@ export function TaskConfigurationPanel({
           <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
             <UserPlus className="h-4 w-4 text-primary-500" />
             <span>指派人员</span>
-            <Badge variant="secondary" className="ml-auto h-5 border-none bg-muted px-2 font-bold text-text-muted">
-              已选 {selectedUserIds.length}
-            </Badge>
           </div>
 
           {!canRemoveAssignee ? (
@@ -158,7 +174,7 @@ export function TaskConfigurationPanel({
 
           <div className="min-h-0 flex-1 pb-4">
             <div className="flex h-full min-h-0 flex-col">
-              <div className={cn('space-y-2.5 px-4 pb-2', canRemoveAssignee ? 'pt-3' : 'pt-0.5')}>
+              <div className={cn(TASK_CONFIG_STACK_GAP_CLASSNAME, 'px-4', canRemoveAssignee ? 'pt-4' : 'pt-1')}>
                 <SegmentedControl
                   options={[
                     { label: '全部', value: 'all' },
@@ -205,9 +221,9 @@ export function TaskConfigurationPanel({
                 isLoading={isUsersLoading}
                 emptyText="暂无可分配人员"
                 loadingText="加载人员列表..."
-                className="pb-3 pt-1.5"
+                className={cn('pb-3', TASK_CONFIG_SECTION_GAP_CLASSNAME)}
                 listClassName="px-4"
-                itemsClassName="gap-1.5"
+                itemsClassName="gap-2.5"
               />
             </div>
           </div>

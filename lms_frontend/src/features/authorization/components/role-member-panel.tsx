@@ -69,10 +69,8 @@ const MemberCard = ({
       onSelectMember(member);
     }}
     className={cn(
-      'group relative flex min-h-[62px] w-full items-center gap-2 overflow-visible rounded-xl border px-2 py-2',
-      selectedMemberId === member.id
-        ? 'border-primary/50 bg-primary/[0.05] shadow-[inset_0_0_0_1px_rgba(14,165,233,0.16)]'
-        : 'border-border/70 bg-white',
+      'group relative flex min-h-[62px] w-full items-center gap-2 overflow-visible rounded-xl border border-border/70 px-2 py-2',
+      selectedMemberId === member.id ? 'bg-primary/[0.05]' : 'bg-white',
       muted && 'bg-slate-50/80',
       canSelectMember
         ? 'cursor-pointer transition-colors duration-200 hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35'

@@ -1,16 +1,14 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BookOpen, ClipboardList, GripVertical, Trash2, Trophy } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getTaskResourceGroup } from './use-task-form.helpers';
 import type { SelectedResource } from './task-form.types';
 
 interface SortableResourceItemProps {
   item: SelectedResource;
-  indexInGroup: number;
   removeResource: (uid: number) => void;
   disabled?: boolean;
   isOverlay?: boolean;
@@ -18,7 +16,6 @@ interface SortableResourceItemProps {
 
 export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
   item,
-  indexInGroup,
   removeResource,
   disabled = false,
   isOverlay = false,
@@ -34,23 +31,6 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
     zIndex: isDragging && !isOverlay ? 20 : undefined,
   };
 
-  const group = getTaskResourceGroup(item);
-  const config = {
-    DOCUMENT: {
-      icon: BookOpen,
-      iconClassName: 'bg-secondary-50 text-secondary',
-    },
-    PRACTICE: {
-      icon: ClipboardList,
-      iconClassName: 'bg-primary-50 text-primary',
-    },
-    EXAM: {
-      icon: Trophy,
-      iconClassName: 'bg-destructive-50 text-destructive',
-    },
-  }[group];
-  const Icon = config.icon;
-
   return (
     <div
       ref={isOverlay ? undefined : setNodeRef}
@@ -62,9 +42,9 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
     >
       <div
         className={cn(
-          'flex h-[64px] items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
-          !isOverlay && 'hover:border-interaction-border hover:bg-interaction-surface',
-          isOverlay && 'shadow-[0_10px_24px_rgba(15,23,42,0.1)]',
+          'group/card flex h-[76px] items-center gap-2.5 rounded-lg border border-transparent bg-muted/55 p-2.5 text-left',
+          !isOverlay && 'hover:border-interaction-border',
+          isOverlay && 'border-border/70 shadow-[0_10px_24px_rgba(15,23,42,0.1)]',
           item.isMissingSource && 'border-warning-300 bg-warning-50/30',
         )}
       >
@@ -83,14 +63,6 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
           <GripVertical className="h-3.5 w-3.5" />
         </div>
 
-        <div className="w-5 shrink-0 text-center text-[10px] font-medium tabular-nums text-text-muted">
-          {indexInGroup + 1}
-        </div>
-
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-md', config.iconClassName)}>
-          <Icon className="h-4 w-4" />
-        </div>
-
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-semibold text-foreground">{item.title}</div>
           <div className="mt-0.5 truncate text-[10px] font-medium text-text-muted">{item.category || '-'}</div>
@@ -104,7 +76,10 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-destructive-500 hover:bg-destructive-50 hover:text-destructive-600"
+            className={cn(
+              'h-7 w-7 text-destructive-500 opacity-0 transition-opacity hover:bg-destructive-50 hover:text-destructive-600 group-hover/card:opacity-100',
+              isOverlay && 'opacity-0',
+            )}
             disabled={disabled || isOverlay}
             onClick={() => removeResource(item.uid)}
           >

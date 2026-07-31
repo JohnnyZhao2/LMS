@@ -95,6 +95,11 @@ export const getTaskResourceGroup = (resource: Pick<SelectedResource, 'resourceT
   return resource.quizType === 'EXAM' ? 'EXAM' : 'PRACTICE';
 };
 
+/** 将任务节点分组映射为资源选项查询参数（测验/考试靠返回的 quiz_type 前端再筛） */
+export const getTaskResourceGroupQuery = (group: ResourceGroup) => ({
+  resource_type: (group === 'DOCUMENT' ? 'DOCUMENT' : 'QUIZ') as 'DOCUMENT' | 'QUIZ',
+});
+
 export const isTaskResourceCompatibleWithGroup = (
   resource: Pick<SelectedResource, 'resourceType' | 'quizType'>,
   group: ResourceGroup,
