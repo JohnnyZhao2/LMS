@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { AUTH_ROLES } from '@/config/role-constants';
@@ -37,10 +37,8 @@ export const AuthorizationCenterPage: React.FC = () => {
   const initialSelectedUserId = initialUserIdParam ? Number(initialUserIdParam) : null;
 
   const [activeRole, setActiveRole] = useState<RoleCode | null>(initialSelectedRole);
-  const [memberSearch, setMemberSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(initialSelectedUserId);
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
-  const deferredMemberSearch = useDeferredValue(memberSearch);
   const assignRoles = useAssignRoles();
 
   const resolvedActiveRole = useMemo(
@@ -57,23 +55,18 @@ export const AuthorizationCenterPage: React.FC = () => {
   } = useUserDetail(selectedUserId ?? 0);
 
   const groupedMembersByRole = useMemo(() => {
-    const keyword = deferredMemberSearch.trim().toLowerCase();
     const byUsername = (left: UserList, right: UserList) =>
       left.username.localeCompare(right.username, 'zh-Hans-CN');
-    const matchesSearch = (user: UserList) => !keyword
-      || user.username.toLowerCase().includes(keyword)
-      || user.employee_id.toLowerCase().includes(keyword);
 
     return Object.fromEntries(
       AUTH_ROLES.map((roleCode) => [
         roleCode,
         allVisibleUsers
           .filter((user) => user.roles.some((role) => role.code === roleCode))
-          .filter((user) => roleCode !== resolvedActiveRole || matchesSearch(user))
           .sort(byUsername),
       ]),
     ) as Partial<Record<RoleCode, UserList[]>>;
-  }, [allVisibleUsers, deferredMemberSearch, resolvedActiveRole]);
+  }, [allVisibleUsers]);
 
   const candidatesByRole = useMemo(
     () => Object.fromEntries(
@@ -122,7 +115,6 @@ export const AuthorizationCenterPage: React.FC = () => {
         roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), roleCode),
       });
       setActiveRole(roleCode);
-      setMemberSearch('');
     } catch (error) {
       showApiError(error);
     } finally {
@@ -150,12 +142,10 @@ export const AuthorizationCenterPage: React.FC = () => {
   const handleSelectRole = (roleCode: RoleCode) => {
     setActiveRole(roleCode);
     setSelectedUserId(null);
-    setMemberSearch('');
   };
 
   const handleSelectMember = (roleCode: RoleCode, user: UserList) => {
     setActiveRole(roleCode);
-    setMemberSearch('');
     setSelectedUserId((current) => (
       current === user.id && resolvedActiveRole === roleCode ? null : user.id
     ));
@@ -170,8 +160,6 @@ export const AuthorizationCenterPage: React.FC = () => {
               <RoleMemberPanel
                 roleCodes={AUTH_ROLES}
                 activeRole={resolvedActiveRole}
-                search={memberSearch}
-                onSearchChange={setMemberSearch}
                 membersByRole={groupedMembersByRole}
                 candidatesByRole={candidatesByRole}
                 isLoading={isLoadingMembers}

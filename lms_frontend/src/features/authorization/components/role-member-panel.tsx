@@ -11,8 +11,6 @@ import { cn } from '@/lib/utils';
 interface RoleMemberPanelProps {
   roleCodes: RoleCode[];
   activeRole: RoleCode;
-  search: string;
-  onSearchChange: (value: string) => void;
   membersByRole: Partial<Record<RoleCode, UserList[]>>;
   candidatesByRole: Partial<Record<RoleCode, UserList[]>>;
   isLoading: boolean;
@@ -241,8 +239,6 @@ const RoleSectionAddButton = ({
 export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
   roleCodes,
   activeRole,
-  search,
-  onSearchChange,
   membersByRole,
   candidatesByRole,
   isLoading,
@@ -255,102 +251,85 @@ export const RoleMemberPanel: React.FC<RoleMemberPanelProps> = ({
   onSelectRole,
   onSelectMember,
   canSelectMember = false,
-}) => {
-  const activeMembers = membersByRole[activeRole] ?? [];
+}) => (
+  <aside className="flex min-h-0 flex-col border-b border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,0.96))] xl:border-b-0 xl:border-r">
+    <div className="border-b border-border/60 px-3.5 py-4">
+      <h3 className="text-sm font-semibold text-foreground">角色成员</h3>
+      {!canManageMembers ? (
+        <p className="mt-1 text-[11px] leading-5 text-text-muted">当前账号仅可查看，不能调整成员。</p>
+      ) : null}
+    </div>
 
-  return (
-    <aside className="flex min-h-0 flex-col border-b border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,0.96))] xl:border-b-0 xl:border-r">
-      <div className="border-b border-border/60 px-3.5 py-4">
-        <h3 className="text-sm font-semibold text-foreground">角色成员</h3>
-        {!canManageMembers ? (
-          <p className="mt-1 text-[11px] leading-5 text-text-muted">当前账号仅可查看，不能调整成员。</p>
-        ) : null}
-        <SearchInput
-          value={search}
-          onChange={onSearchChange}
-          placeholder={`搜索${ROLE_FULL_LABELS[activeRole] ?? activeRole}成员`}
-          className="mt-3"
-          inputClassName="h-9 rounded-lg text-[12px]"
-        />
-      </div>
+    <ScrollContainer className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3">
+      {isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-8 text-[12px] text-text-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          加载成员中...
+        </div>
+      ) : (
+        <div className="space-y-7">
+          {roleCodes.map((roleCode) => {
+            const isActiveSection = roleCode === activeRole;
+            const members = membersByRole[roleCode] ?? [];
+            const previewMembers = isActiveSection ? members : members.slice(0, 4);
 
-      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-[12px] text-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            加载成员中...
-          </div>
-        ) : (
-          <div className="space-y-7">
-            {roleCodes.map((roleCode) => {
-              const isActiveSection = roleCode === activeRole;
-              const members = membersByRole[roleCode] ?? [];
-              const previewMembers = isActiveSection ? members : members.slice(0, 4);
-
-              return (
-                <section key={roleCode} className="group/section">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelectRole(roleCode)}
-                      className="min-w-0 flex-1 text-left"
+            return (
+              <section key={roleCode} className="group/section">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectRole(roleCode)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <h4 className={cn(
+                      'text-sm font-semibold',
+                      isActiveSection ? 'text-foreground' : 'text-slate-500',
+                    )}
                     >
-                      <h4 className={cn(
-                        'text-sm font-semibold',
-                        isActiveSection ? 'text-foreground' : 'text-slate-500',
-                      )}
-                      >
-                        {ROLE_FULL_LABELS[roleCode] ?? roleCode}
-                      </h4>
-                    </button>
-                    {canManageMembers ? (
-                      <RoleSectionAddButton
-                        roleCode={roleCode}
-                        candidateUsers={candidatesByRole[roleCode] ?? []}
-                        canManageMembers={canManageMembers}
-                        isMutating={isMutating}
-                        onAddMember={onAddMember}
-                      />
-                    ) : null}
+                      {ROLE_FULL_LABELS[roleCode] ?? roleCode}
+                    </h4>
+                  </button>
+                  {canManageMembers ? (
+                    <RoleSectionAddButton
+                      roleCode={roleCode}
+                      candidateUsers={candidatesByRole[roleCode] ?? []}
+                      canManageMembers={canManageMembers}
+                      isMutating={isMutating}
+                      onAddMember={onAddMember}
+                    />
+                  ) : null}
+                </div>
+
+                {previewMembers.length === 0 ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-dashed border-border/70 px-3 py-5 text-[12px] text-text-muted">
+                    <Search className="h-4 w-4 text-slate-300" />
+                    当前没有成员
                   </div>
-
-                  {previewMembers.length === 0 ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-dashed border-border/70 px-3 py-5 text-[12px] text-text-muted">
-                      <Search className="h-4 w-4 text-slate-300" />
-                      当前没有成员
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {previewMembers.map((member) => (
-                        <MemberCard
-                          key={member.id}
-                          member={member}
-                          selectedMemberId={selectedMemberId}
-                          canSelectMember={canSelectMember}
-                          canManageMembers={isActiveSection && canManageMembers}
-                          isMutating={isMutating}
-                          mutatingUserId={mutatingUserId}
-                          onSelectMember={onSelectMember
-                            ? (targetMember) => onSelectMember(roleCode, targetMember)
-                            : undefined}
-                          onRemoveMember={onRemoveMember}
-                          muted={!isActiveSection}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-
-            {activeMembers.length === 0 && search.trim() ? (
-              <div className="rounded-xl border border-dashed border-border/70 px-4 py-4 text-center text-[12px] text-text-muted">
-                当前筛选下没有匹配的{ROLE_FULL_LABELS[activeRole] ?? activeRole}成员。
-              </div>
-            ) : null}
-          </div>
-        )}
-      </ScrollContainer>
-    </aside>
-  );
-};
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {previewMembers.map((member) => (
+                      <MemberCard
+                        key={member.id}
+                        member={member}
+                        selectedMemberId={selectedMemberId}
+                        canSelectMember={canSelectMember}
+                        canManageMembers={isActiveSection && canManageMembers}
+                        isMutating={isMutating}
+                        mutatingUserId={mutatingUserId}
+                        onSelectMember={onSelectMember
+                          ? (targetMember) => onSelectMember(roleCode, targetMember)
+                          : undefined}
+                        onRemoveMember={onRemoveMember}
+                        muted={!isActiveSection}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </ScrollContainer>
+  </aside>
+);
