@@ -10,7 +10,7 @@ class Tag(TimestampMixin, models.Model):
         ('TAG', '知识标签'),
     ]
 
-    name = models.CharField(max_length=100, verbose_name='标签名称')
+    name = models.CharField(max_length=100, unique=True, verbose_name='标签名称')
     color = models.CharField(max_length=7, default='#4A90E2', verbose_name='主题色')
     tag_type = models.CharField(
         max_length=20,
@@ -26,7 +26,6 @@ class Tag(TimestampMixin, models.Model):
         verbose_name = '标签'
         verbose_name_plural = '标签'
         ordering = ['tag_type', 'sort_order', 'name']
-        unique_together = [['name', 'tag_type']]
 
     def clean(self):
         super().clean()
@@ -36,10 +35,6 @@ class Tag(TimestampMixin, models.Model):
             return
         if not self.allow_knowledge and not self.allow_question:
             raise ValidationError('普通标签至少需要适用于知识或题目之一')
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.name} ({self.get_tag_type_display()})'

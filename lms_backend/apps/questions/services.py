@@ -7,7 +7,7 @@ from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
 from apps.authorization.engine import enforce, scope_filter
-from apps.tags.resource_sync import (
+from apps.tags.resource_tags import (
     apply_resource_tag_changes,
     pop_resource_tag_payload,
 )

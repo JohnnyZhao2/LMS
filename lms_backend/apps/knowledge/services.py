@@ -11,7 +11,7 @@ from apps.authorization.engine import enforce
 from django.db import transaction
 from django.utils.html import escape, strip_tags
 
-from apps.tags.resource_sync import (
+from apps.tags.resource_tags import (
     apply_resource_tag_changes,
     build_resource_update_plan,
     pop_resource_tag_payload,

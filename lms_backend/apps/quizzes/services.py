@@ -16,7 +16,7 @@ from apps.authorization.engine import enforce, scope_filter
 from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.tags.models import Tag
-from apps.tags.resource_sync import apply_resource_tag_changes
+from apps.tags.resource_tags import apply_resource_tag_changes
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
