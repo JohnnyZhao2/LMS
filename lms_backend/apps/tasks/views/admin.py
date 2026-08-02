@@ -24,7 +24,7 @@ from apps.tasks.serializers import (
 from apps.tasks.selectors import task_resource_options
 from apps.tasks.task_service import TaskService
 from apps.users.models import User
-from apps.users.serializers import UserListSerializer
+from apps.users.serializers import UserSerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
@@ -80,7 +80,7 @@ class AssignableUserListView(APIView):
             OpenApiParameter(name='search', type=str, description='按姓名或工号搜索'),
             OpenApiParameter(name='department_id', type=int, description='按部门筛选'),
         ],
-        responses={200: UserListSerializer(many=True)},
+        responses={200: UserSerializer(many=True)},
         tags=['任务管理']
     )
     def get(self, request):
@@ -109,7 +109,7 @@ class AssignableUserListView(APIView):
             )
             
         queryset = queryset.order_by('username', 'employee_id')
-        serializer = UserListSerializer(queryset, many=True)
+        serializer = UserSerializer(queryset, many=True)
         return list_response(serializer.data)
 
 

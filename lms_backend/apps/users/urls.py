@@ -1,18 +1,5 @@
 """
 User management URLs.
-Endpoints:
-- GET /api/users/ - List users in authorized scope
-- POST /api/users/ - Create new user (admin only)
-- GET /api/users/{id}/ - Get user details in authorized scope
-- PATCH /api/users/{id}/ - Update user info (admin only)
-- DELETE /api/users/{id}/ - Hard delete resigned user and related data (admin only)
-- POST /api/users/{id}/deactivate/ - Deactivate user (admin only)
-- POST /api/users/{id}/activate/ - Activate user (admin only)
-- POST /api/users/{id}/assign-roles/ - Assign roles to user (admin only)
-- POST /api/users/{id}/assign-mentor/ - Assign mentor to user (admin only)
-- GET /api/users/mentors/ - Get all mentors list (admin only)
-- GET /api/users/roles/ - Get all roles list (admin only)
-- GET /api/users/departments/ - Get all departments list (admin only)
 """
 from django.urls import path
 
@@ -21,9 +8,9 @@ from apps.users.views import (
     MentorsListView,
     RolesListView,
     UserActivateView,
-    UserAvatarUpdateView,
     UserAssignMentorView,
     UserAssignRolesView,
+    UserAvatarUpdateView,
     UserDeactivateView,
     UserDetailView,
     UserListCreateView,
