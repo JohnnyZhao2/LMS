@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from apps.authorization.engine import authorize, scope_filter
 from apps.authorization.roles import is_student_workspace
 from apps.users.models import User
@@ -32,8 +34,12 @@ def get_task_actions_payload(request, task) -> dict[str, bool]:
 
 
 def enforce_assignable_students_scope(assignee_ids: list[int], request) -> None:
+    if not assignee_ids:
+        return
     accessible_ids = set(
-        scope_filter('task.assign', request, resource_model=User).values_list('id', flat=True)
+        scope_filter('task.assign', request, resource_model=User)
+        .filter(id__in=assignee_ids)
+        .values_list('id', flat=True)
     )
     invalid_ids = sorted(set(assignee_ids) - accessible_ids)
     if invalid_ids:

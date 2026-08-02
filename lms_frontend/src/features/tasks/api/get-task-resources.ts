@@ -5,25 +5,28 @@ import { buildQueryString } from '@/lib/api-utils';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { PaginatedResponse } from '@/types/common';
+import type { QuizType } from '@/types/quiz';
 import type { TaskResourceOption } from '@/types/task';
 
 interface UseTaskResourceOptions {
   search?: string;
   page?: number;
   page_size?: number;
-  resource_type?: 'ALL' | 'DOCUMENT' | 'QUIZ';
+  resource_type: 'DOCUMENT' | 'QUIZ';
+  quiz_type?: QuizType;
   exclude_document_ids?: number[];
   exclude_quiz_ids?: number[];
   enabled?: boolean;
 }
 
-export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => {
+export const useTaskResourceOptions = (options: UseTaskResourceOptions) => {
   const currentRole = useCurrentRole();
   const {
     search = '',
     page = 1,
     page_size = 10,
-    resource_type = 'ALL',
+    resource_type,
+    quiz_type,
     exclude_document_ids = [],
     exclude_quiz_ids = [],
     enabled = true,
@@ -35,6 +38,7 @@ export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => 
     queryKey: queryKeys.tasks.resourceOptions({
       currentRole,
       resourceType: resource_type,
+      quizType: quiz_type ?? '',
       search,
       page,
       pageSize: page_size,
@@ -47,6 +51,7 @@ export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => 
         page: String(page),
         page_size: String(page_size),
         ...(search && { search }),
+        ...(quiz_type && { quiz_type }),
         ...(excludeDocumentIds && { exclude_document_ids: excludeDocumentIds }),
         ...(excludeQuizIds && { exclude_quiz_ids: excludeQuizIds }),
       });

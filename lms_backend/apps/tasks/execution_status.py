@@ -1,6 +1,6 @@
-"""Serializer helpers for task execution status fields."""
+"""跨 tasks/dashboard 共用的执行状态 Serializer mixin。"""
 
-from .selectors import assignment_execution_status, assignment_execution_status_display
+from .progress import assignment_execution_status, assignment_execution_status_display
 
 
 class AssignmentExecutionStatusSerializerMixin:

@@ -332,6 +332,7 @@ export const queryKeys = {
     resourceOptions: ({
       currentRole,
       resourceType,
+      quizType,
       search,
       page,
       pageSize,
@@ -340,6 +341,7 @@ export const queryKeys = {
     }: {
       currentRole: QueryRole;
       resourceType: string;
+      quizType: string;
       search: string;
       page: number;
       pageSize: number;
@@ -349,6 +351,7 @@ export const queryKeys = {
       'task-resource-options',
       normalizeRoleKey(currentRole),
       resourceType,
+      quizType,
       search,
       page,
       pageSize,

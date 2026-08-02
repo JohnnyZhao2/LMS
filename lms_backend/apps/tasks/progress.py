@@ -1,9 +1,30 @@
+"""Assignment 进度计算与状态推进。"""
+
 from __future__ import annotations
 
 from typing import Any, Optional
 
+from django.utils import timezone
 
-QUIZ_COMPLETION_STATUSES = ('SUBMITTED', 'GRADING', 'GRADED')
+from apps.submissions.models import Submission
+
+from .models import TaskAssignment
+
+
+QUIZ_COMPLETION_STATUSES = Submission.COMPLETED_STATUSES
+
+TASK_EXECUTION_STATUS_LABELS = {
+    'NOT_STARTED': '未开始',
+    'IN_PROGRESS': '进行中',
+    'PENDING_GRADING': '待批改',
+    'COMPLETED': '已完成',
+    'OVERDUE': '已逾期',
+    'COMPLETED_ABNORMAL': '完成但异常',
+}
+
+ABNORMAL_KNOWLEDGE_MINUTES = 5
+ABNORMAL_PRACTICE_MINUTES = 5
+ABNORMAL_EXAM_MINUTES = 30
 
 
 def build_assignment_progress(
@@ -56,7 +77,6 @@ def build_assignment_progress(
         else completed_quiz_progress['completed']
     )
     completed = completed_knowledge + completed_quizzes
-
     exam_total, practice_total = _count_task_quizzes_by_type(task, task_quiz_items)
 
     return {
@@ -80,8 +100,6 @@ def is_assignment_completed(progress_data: dict[str, Any]) -> bool:
 
 
 def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dict[str, int]]:
-    from apps.submissions.models import Submission
-
     progress_map = {
         assignment_id: {
             'completed': 0,
@@ -119,6 +137,108 @@ def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dic
         }
 
     return progress_map
+
+
+def sync_assignment_overdue_status(assignment) -> bool:
+    if assignment.is_overdue and assignment.status not in ['COMPLETED', 'OVERDUE']:
+        assignment.mark_overdue()
+        return True
+    return False
+
+
+def sync_assignment_completion_status(assignment) -> bool:
+    progress = build_assignment_progress(assignment)
+    if is_assignment_completed(progress):
+        if assignment.status != 'COMPLETED':
+            assignment.mark_completed()
+        return True
+    return False
+
+
+def assignment_has_pending_grading(assignment: TaskAssignment) -> bool:
+    submissions = getattr(assignment, 'all_submissions_for_status', None)
+    if submissions is not None:
+        return any(submission.status == 'GRADING' for submission in submissions)
+    return Submission.objects.filter(task_assignment_id=assignment.id, status='GRADING').exists()
+
+
+def assignment_has_started(assignment: TaskAssignment) -> bool:
+    for progress in assignment.knowledge_progress.all():
+        if progress.started_at or progress.completed_at or progress.is_completed:
+            return True
+    submissions = getattr(assignment, 'all_submissions_for_status', None)
+    if submissions is not None:
+        return len(submissions) > 0
+    return Submission.objects.filter(task_assignment_id=assignment.id).exists()
+
+
+def assignment_execution_status(
+    assignment: TaskAssignment,
+    *,
+    abnormal: bool = False,
+    now=None,
+) -> str:
+    now = now or timezone.now()
+    if assignment.status == 'COMPLETED':
+        return 'COMPLETED_ABNORMAL' if abnormal else 'COMPLETED'
+    if assignment_has_pending_grading(assignment):
+        return 'PENDING_GRADING'
+    if assignment.status == 'OVERDUE' or assignment.task.deadline < now:
+        return 'OVERDUE'
+    if not assignment_has_started(assignment):
+        return 'NOT_STARTED'
+    return 'IN_PROGRESS'
+
+
+def assignment_execution_status_display(status: str) -> str:
+    return TASK_EXECUTION_STATUS_LABELS[status]
+
+
+def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
+    for progress in assignment.knowledge_progress.all():
+        if not progress.is_completed:
+            continue
+        if progress.completed_at and progress.started_at:
+            duration = (progress.completed_at - progress.started_at).total_seconds() / 60
+            if duration < ABNORMAL_KNOWLEDGE_MINUTES:
+                return True
+    for submission in assignment.submissions.all():
+        if submission.submitted_at and submission.started_at:
+            duration = (submission.submitted_at - submission.started_at).total_seconds() / 60
+            threshold = (
+                ABNORMAL_EXAM_MINUTES
+                if submission.quiz.quiz_type == 'EXAM'
+                else ABNORMAL_PRACTICE_MINUTES
+            )
+            if duration < threshold:
+                return True
+    return False
+
+
+def assignment_activity_minutes(assignment: TaskAssignment) -> dict[str, float]:
+    learning_seconds = 0.0
+    practice_seconds = 0.0
+    exam_seconds = 0.0
+    for progress in assignment.knowledge_progress.all():
+        if not progress.is_completed:
+            continue
+        if progress.completed_at and progress.started_at:
+            learning_seconds += max(
+                0.0,
+                (progress.completed_at - progress.started_at).total_seconds(),
+            )
+    for submission in assignment.submissions.all():
+        if submission.submitted_at and submission.started_at:
+            seconds = max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
+            if submission.quiz.quiz_type == 'EXAM':
+                exam_seconds += seconds
+            else:
+                practice_seconds += seconds
+    return {
+        'learning': learning_seconds / 60,
+        'practice': practice_seconds / 60,
+        'exam': exam_seconds / 60,
+    }
 
 
 def _count_task_quizzes_by_type(task, prefetched_task_quizzes) -> tuple[int, int]:

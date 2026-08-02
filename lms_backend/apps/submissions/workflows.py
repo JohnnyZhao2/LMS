@@ -6,7 +6,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from apps.tasks.assignment_workflow import sync_assignment_completion_status
+from apps.tasks.progress import sync_assignment_completion_status
 
 from .models import Submission
 from .scoring import refresh_assignment_score, refresh_submission_obtained_score

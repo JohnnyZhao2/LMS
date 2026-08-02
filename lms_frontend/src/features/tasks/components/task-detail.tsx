@@ -417,12 +417,14 @@ export const TaskDetail: React.FC = () => {
                             const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
                             const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
                             const isCompleted = Boolean(studentQuizItem?.is_completed);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const quizId = studentQuizItem
+                              ? studentQuizItem.task_quiz_id
+                              : (adminQuizItem?.quiz ?? 0);
                             const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名测验';
 
                             return (
                               <TaskNodeCard
-                                key={item.id}
+                                key={item.task_quiz_id}
                                 index={index}
                                 title={title}
                                 meta={getQuizMetaText(item)}
@@ -463,12 +465,14 @@ export const TaskDetail: React.FC = () => {
                             const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
                             const isCompleted = Boolean(studentQuizItem?.is_completed);
                             const isDisabled = Boolean(isStudent && !canStartExam && !isCompleted);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const quizId = studentQuizItem
+                              ? studentQuizItem.task_quiz_id
+                              : (adminQuizItem?.quiz ?? 0);
                             const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名考试';
 
                             return (
                               <TaskNodeCard
-                                key={item.id}
+                                key={item.task_quiz_id}
                                 index={index}
                                 title={title}
                                 meta={getQuizMetaText(item)}

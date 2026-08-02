@@ -9,7 +9,7 @@ def delete_user_related_business_data(user_id: int) -> None:
     from apps.spot_checks.models import SpotCheck
     from apps.submissions.models import Submission
     from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
-    from apps.tasks.task_service import TaskService
+    from apps.tasks.services import TaskService
 
     created_task_ids = list(Task.objects.filter(created_by_id=user_id).values_list('id', flat=True))
     created_quiz_ids = list(Quiz.objects.filter(created_by_id=user_id).values_list('id', flat=True))

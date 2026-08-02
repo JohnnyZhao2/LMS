@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.tasks.models import TaskAssignment
-from apps.tasks.status_serializers import AssignmentExecutionStatusSerializerMixin
+from apps.tasks.execution_status import AssignmentExecutionStatusSerializerMixin
 
 from .selectors import calculate_assignment_progress
 

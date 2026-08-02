@@ -95,10 +95,16 @@ export const getTaskResourceGroup = (resource: Pick<SelectedResource, 'resourceT
   return resource.quizType === 'EXAM' ? 'EXAM' : 'PRACTICE';
 };
 
-/** 将任务节点分组映射为资源选项查询参数（测验/考试靠返回的 quiz_type 前端再筛） */
-export const getTaskResourceGroupQuery = (group: ResourceGroup) => ({
-  resource_type: (group === 'DOCUMENT' ? 'DOCUMENT' : 'QUIZ') as 'DOCUMENT' | 'QUIZ',
-});
+/** 将任务节点分组映射为资源选项查询参数 */
+export const getTaskResourceGroupQuery = (group: ResourceGroup) => {
+  if (group === 'DOCUMENT') {
+    return { resource_type: 'DOCUMENT' as const };
+  }
+  return {
+    resource_type: 'QUIZ' as const,
+    quiz_type: (group === 'EXAM' ? 'EXAM' : 'PRACTICE') as 'EXAM' | 'PRACTICE',
+  };
+};
 
 export const isTaskResourceCompatibleWithGroup = (
   resource: Pick<SelectedResource, 'resourceType' | 'quizType'>,

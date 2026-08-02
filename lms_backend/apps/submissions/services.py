@@ -350,7 +350,7 @@ class SubmissionService(BaseService):
         submission.save(update_fields=['status', 'submitted_at', 'obtained_score'])
         refresh_assignment_score(submission.task_assignment, Submission)
         if submission.status == 'SUBMITTED':
-            from apps.tasks.assignment_workflow import sync_assignment_completion_status
+            from apps.tasks.progress import sync_assignment_completion_status
 
             sync_assignment_completion_status(submission.task_assignment)
         submission.refresh_from_db()

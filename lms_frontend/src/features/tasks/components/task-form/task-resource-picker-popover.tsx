@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BookOpen, FileCheck, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -18,10 +18,9 @@ import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
 
 import { useTaskResourceOptions } from '../../api/get-task-resources';
-import { getTaskResourceGroup, getTaskResourceGroupQuery } from './use-task-form.helpers';
+import { getTaskResourceGroupQuery } from './use-task-form.helpers';
 import { mapTaskResourceOptionToResource, type ResourceGroup, type ResourceItem } from './task-form.types';
 
-const FETCH_SIZE = 100;
 const PAGE_SIZE = 8;
 
 const GROUP_TITLE: Record<ResourceGroup, string> = {
@@ -80,28 +79,22 @@ export function TaskResourcePickerPopover({
 
   const resourceQuery = useTaskResourceOptions({
     search,
-    page: 1,
-    page_size: FETCH_SIZE,
+    page,
+    page_size: PAGE_SIZE,
     resource_type: queryParams.resource_type,
+    quiz_type: 'quiz_type' in queryParams ? queryParams.quiz_type : undefined,
     exclude_document_ids: excludeDocumentIds,
     exclude_quiz_ids: excludeQuizIds,
     enabled: open,
   });
 
-  const filteredResources = useMemo(
-    () => getPaginatedResults<TaskResourceOption>(resourceQuery.data)
-      .map(mapTaskResourceOptionToResource)
-      .filter((resource) => getTaskResourceGroup(resource) === group),
-    [group, resourceQuery.data],
-  );
-
-  const totalCount = filteredResources.length;
+  const resources = getPaginatedResults<TaskResourceOption>(resourceQuery.data)
+    .map(mapTaskResourceOptionToResource);
+  const totalCount = resourceQuery.data && !Array.isArray(resourceQuery.data)
+    ? resourceQuery.data.count
+    : resources.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safeCurrentPage = Math.min(page, totalPages);
-  const resources = filteredResources.slice(
-    (safeCurrentPage - 1) * PAGE_SIZE,
-    safeCurrentPage * PAGE_SIZE,
-  );
 
   return (
     <>
@@ -248,7 +241,7 @@ export function TaskResourcePickerPopover({
           }
         }}
         onPrimaryAction={(quizId) => {
-          const target = filteredResources.find(
+          const target = resources.find(
             (resource) => resource.resourceType === 'QUIZ' && resource.id === quizId,
           );
           if (target) {

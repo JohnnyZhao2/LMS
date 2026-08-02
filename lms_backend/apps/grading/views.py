@@ -17,7 +17,7 @@ from apps.grading.serializers import (
     PendingTaskSerializer,
 )
 from apps.tasks.models import Task, TaskQuiz
-from apps.tasks.task_service import TaskService
+from apps.tasks.services import TaskService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param

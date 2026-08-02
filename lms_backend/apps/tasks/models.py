@@ -5,9 +5,11 @@
 """
 
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from core.mixins import CreatorMixin, TimestampMixin
+
 
 class Task(TimestampMixin, CreatorMixin, models.Model):
     """任务主表，只保存任务元信息和截止时间。"""
@@ -20,7 +22,6 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
             ('GLOBAL', '全局'),
             ('MENTOR', '导师'),
             ('DEPT', '室组'),
-            ('STUDENT', '学员'),
         ],
         default='GLOBAL',
         db_index=True,
@@ -58,46 +59,37 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
         return self.title
 
     @property
-    def quiz_count(self):
-        return self.task_quizzes.count()
-
-    @property
     def knowledge_count(self):
         return self.task_knowledge.count()
 
     @property
-    def exam_count(self):
-        return self.task_quizzes.filter(quiz__quiz_type='EXAM').count()
-
-    @property
-    def practice_count(self):
-        return self.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
+    def quiz_count(self):
+        return self.task_quizzes.count()
 
     @property
     def assignee_count(self):
         return self.assignments.count()
 
     @property
-    def completed_count(self):
-        return self.assignments.filter(status='COMPLETED').count()
-
-    @property
     def has_quiz(self):
-        return self.quiz_count > 0
+        return self.task_quizzes.exists()
 
     @property
     def has_knowledge(self):
-        return self.knowledge_count > 0
+        return self.task_knowledge.exists()
 
     @property
     def has_student_progress(self):
         """判断任务是否已有执行痕迹。
 
-        一旦学员完成知识或产生答卷，任务资源和已分配学员就不能再被破坏性移除。
+        学员开始学习（含未完成）或产生任意答卷后，禁止破坏性移除资源或人员。
         """
         if KnowledgeLearningProgress.objects.filter(
             assignment__task_id=self.id,
-            is_completed=True,
+        ).filter(
+            Q(started_at__isnull=False)
+            | Q(completed_at__isnull=False)
+            | Q(is_completed=True)
         ).exists():
             return True
         from apps.submissions.models import Submission
@@ -159,9 +151,11 @@ class TaskAssignment(TimestampMixin, models.Model):
     def mark_completed(self, score=None):
         self.status = 'COMPLETED'
         self.completed_at = timezone.now()
+        update_fields = ['status', 'completed_at']
         if score is not None:
             self.score = score
-        self.save(update_fields=['status', 'completed_at', 'score'])
+            update_fields.append('score')
+        self.save(update_fields=update_fields)
 
     def mark_overdue(self):
         if self.status != 'COMPLETED':
@@ -173,6 +167,7 @@ class TaskAssignment(TimestampMixin, models.Model):
         if self.status == 'COMPLETED':
             return False
         return timezone.now() > self.task.deadline
+
 
 class TaskKnowledge(TimestampMixin, models.Model):
     """任务与知识快照的关联。
