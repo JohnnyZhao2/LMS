@@ -35,8 +35,12 @@ class Submission(TimestampMixin, models.Model):
 
     #: 进行中
     ACTIVE_STATUS = STATUS_IN_PROGRESS
-    #: 已结束作答（含待评分）
+    #: 已结束作答（含待评分）；阅卷主观题分析/评分取此集合下的最新尝试
     COMPLETED_STATUSES = (STATUS_SUBMITTED, STATUS_GRADING, STATUS_GRADED)
+    #: 阅卷客观题分析：在 COMPLETED 基础上包含答题中最新尝试
+    ANALYTICS_STATUSES = (STATUS_IN_PROGRESS, STATUS_SUBMITTED, STATUS_GRADING, STATUS_GRADED)
+    #: 待人工阅卷的答卷状态
+    PENDING_REVIEW_STATUSES = (STATUS_SUBMITTED, STATUS_GRADING)
     #: 计入 Assignment 最高分
     SCORED_STATUSES = (STATUS_SUBMITTED, STATUS_GRADED)
 

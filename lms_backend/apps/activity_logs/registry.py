@@ -15,7 +15,7 @@ _DECLARATION_MODULES = (
     'apps.submissions.services',
     'apps.spot_checks.services',
     'apps.tags.services',
-    'apps.grading.views',
+    'apps.grading.services',
     'apps.authorization.services',
 )
 
