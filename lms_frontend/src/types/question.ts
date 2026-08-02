@@ -19,7 +19,6 @@ export interface Question {
   is_referenced: boolean;
   is_objective?: boolean;
   is_subjective?: boolean;
-  created_from_quiz_id?: number | null;
   created_by?: number;
   created_by_name?: string;
   updated_by?: number;

@@ -1,8 +1,5 @@
 """题目应用服务。"""
 
-from decimal import Decimal
-from typing import Optional
-
 from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
@@ -12,10 +9,16 @@ from apps.tags.resource_tags import (
     pop_resource_tag_payload,
 )
 from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Question, QuestionOption
-from .question_like import DEFAULT_QUESTION_SCORE
+from .models import Question
+from .payload import (
+    build_merged_question_payload,
+    build_storage_payload,
+    current_model_fields,
+    current_option_definitions,
+    sync_question_options,
+    validate_question_payload,
+)
 from .selectors import (
     apply_question_filters,
     question_base_queryset,
@@ -60,17 +63,17 @@ class QuestionService(BaseService):
     )
     def create(self, data: dict) -> Question:
         payload = dict(data)
-        self.validate_question_payload(payload)
+        validate_question_payload(payload)
         tag_payload = pop_resource_tag_payload(payload, scope='question')
-        question_data, option_defs = self._build_storage_payload(
-            self._build_merged_question_payload(payload)
+        question_data, option_defs = build_storage_payload(
+            build_merged_question_payload(payload)
         )
         question = Question.objects.create(
             **question_data,
             created_by=self.user,
             updated_by=self.user,
         )
-        self._sync_question_options(question, option_defs)
+        sync_question_options(question, option_defs)
         apply_resource_tag_changes(
             question,
             space_tag_id=tag_payload.space_tag_id,
@@ -93,7 +96,7 @@ class QuestionService(BaseService):
         enforce('question.update', self.request, resource=question, error_message='无权编辑此题目')
 
         payload = dict(data)
-        self.validate_question_payload(payload, source=question)
+        validate_question_payload(payload, source=question)
         current_tag_ids = list(question.tags.values_list('id', flat=True))
         tag_payload = pop_resource_tag_payload(
             payload,
@@ -101,11 +104,11 @@ class QuestionService(BaseService):
             default_space_tag_id=question.space_tag_id,
             default_tag_ids=current_tag_ids,
         )
-        merged_payload = self._build_merged_question_payload(payload, source=question)
-        model_fields, option_defs = self._build_storage_payload(merged_payload)
+        merged_payload = build_merged_question_payload(payload, source=question)
+        model_fields, option_defs = build_storage_payload(merged_payload)
 
-        model_changed = model_fields != self._current_model_fields(question)
-        options_changed = option_defs != self._current_option_definitions(question)
+        model_changed = model_fields != current_model_fields(question)
+        options_changed = option_defs != current_option_definitions(question)
         space_changed = (
             tag_payload.space_tag_provided
             and tag_payload.space_tag_id != question.space_tag_id
@@ -124,7 +127,7 @@ class QuestionService(BaseService):
             question.save(update_fields=[*model_fields.keys(), 'updated_by'])
 
         if options_changed:
-            self._sync_question_options(question, option_defs)
+            sync_question_options(question, option_defs)
 
         apply_resource_tag_changes(
             question,
@@ -148,196 +151,3 @@ class QuestionService(BaseService):
         enforce('question.delete', self.request, resource=question, error_message='无权删除此题目')
         question.delete()
         return question
-
-    @classmethod
-    def validate_question_payload(
-        cls,
-        data: dict,
-        *,
-        source: Optional[Question] = None,
-    ) -> None:
-        question_type = data.get('question_type', source.question_type if source else None)
-        options = data.get('options', source.options if source else [])
-        answer = data.get('answer', source.answer if source else None)
-
-        if question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
-            if not options:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='选择题必须设置选项',
-                )
-
-            option_keys = []
-            for opt in options:
-                if not isinstance(opt, dict) or 'key' not in opt or 'value' not in opt:
-                    raise BusinessError(
-                        code=ErrorCodes.VALIDATION_ERROR,
-                        message='选项格式错误，必须包含 key 和 value',
-                    )
-                if not str(opt['value']).strip():
-                    raise BusinessError(
-                        code=ErrorCodes.VALIDATION_ERROR,
-                        message='选项内容不能为空',
-                    )
-                option_keys.append(opt['key'])
-
-            if len(option_keys) != len(set(option_keys)):
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='选项 key 不能重复',
-                )
-
-            if question_type == 'SINGLE_CHOICE':
-                if not isinstance(answer, str):
-                    raise BusinessError(
-                        code=ErrorCodes.VALIDATION_ERROR,
-                        message='单选题答案必须是字符串',
-                    )
-                if answer not in option_keys:
-                    raise BusinessError(
-                        code=ErrorCodes.VALIDATION_ERROR,
-                        message='单选题答案必须是有效的选项',
-                    )
-            else:
-                if not isinstance(answer, list):
-                    raise BusinessError(
-                        code=ErrorCodes.VALIDATION_ERROR,
-                        message='多选题答案必须是列表',
-                    )
-                for ans in answer:
-                    if ans not in option_keys:
-                        raise BusinessError(
-                            code=ErrorCodes.VALIDATION_ERROR,
-                            message=f'多选题答案 {ans} 不是有效的选项',
-                        )
-        elif question_type == 'TRUE_FALSE':
-            if answer not in ['TRUE', 'FALSE']:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='判断题答案必须是 TRUE 或 FALSE',
-                )
-        elif question_type == 'SHORT_ANSWER':
-            if not isinstance(answer, str):
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='简答题答案必须是字符串',
-                )
-
-    def _normalize_score(self, score) -> Decimal:
-        if isinstance(score, Decimal):
-            return score
-        return Decimal(str(score))
-
-    def _build_merged_question_payload(
-        self,
-        data: dict,
-        *,
-        source: Optional[Question] = None,
-    ) -> dict:
-        return {
-            'content': data.get('content', source.content if source else ''),
-            'question_type': data.get('question_type', source.question_type if source else None),
-            'options': data.get('options', source.options if source else []),
-            'answer': data.get('answer', source.answer if source else None),
-            'explanation': data.get('explanation', source.explanation if source else ''),
-            'score': self._normalize_score(
-                data.get('score', source.score if source else DEFAULT_QUESTION_SCORE)
-            ),
-        }
-
-    def _build_storage_payload(self, merged_payload: dict) -> tuple[dict, list[dict]]:
-        question_type = merged_payload['question_type']
-        answer = merged_payload.get('answer')
-        return (
-            {
-                'content': merged_payload['content'],
-                'question_type': question_type,
-                'reference_answer': answer if question_type == 'SHORT_ANSWER' else '',
-                'explanation': merged_payload.get('explanation', ''),
-                'score': self._normalize_score(
-                    merged_payload.get('score', DEFAULT_QUESTION_SCORE)
-                ),
-            },
-            self._build_option_definitions(
-                question_type=question_type,
-                options=merged_payload.get('options', []),
-                answer=answer,
-            ),
-        )
-
-    def _build_option_definitions(
-        self,
-        *,
-        question_type: str,
-        options: list[dict],
-        answer,
-    ) -> list[dict]:
-        """按数组顺序落库；请求里的 key 仅用于绑定 answer，不作为持久化身份。"""
-        if question_type == 'SHORT_ANSWER':
-            return []
-        if question_type == 'TRUE_FALSE':
-            label_map = {
-                opt['key']: opt['value']
-                for opt in options
-                if isinstance(opt, dict) and opt.get('key') in {'TRUE', 'FALSE'}
-            }
-            return [
-                {
-                    'sort_order': 1,
-                    'content': label_map.get('TRUE') or '正确',
-                    'is_correct': answer == 'TRUE',
-                },
-                {
-                    'sort_order': 2,
-                    'content': label_map.get('FALSE') or '错误',
-                    'is_correct': answer == 'FALSE',
-                },
-            ]
-
-        correct_keys = {answer} if question_type == 'SINGLE_CHOICE' else set(answer or [])
-        return [
-            {
-                'sort_order': index + 1,
-                'content': str(option['value']).strip(),
-                'is_correct': option['key'] in correct_keys,
-            }
-            for index, option in enumerate(options)
-        ]
-
-    def _current_model_fields(self, question: Question) -> dict:
-        return {
-            'content': question.content,
-            'question_type': question.question_type,
-            'reference_answer': question.reference_answer,
-            'explanation': question.explanation,
-            'score': self._normalize_score(question.score),
-        }
-
-    def _current_option_definitions(self, question: Question) -> list[dict]:
-        return [
-            {
-                'sort_order': option.sort_order,
-                'content': option.content,
-                'is_correct': option.is_correct,
-            }
-            for option in question._ordered_options()
-        ]
-
-    def _sync_question_options(self, question: Question, option_defs: list[dict]) -> None:
-        question.question_options.all().delete()
-        prefetched_cache = getattr(question, '_prefetched_objects_cache', None)
-        if prefetched_cache is not None:
-            prefetched_cache.pop('question_options', None)
-        if not option_defs:
-            return
-        QuestionOption.objects.bulk_create(
-            [
-                QuestionOption(
-                    question=question,
-                    sort_order=option_def['sort_order'],
-                    content=option_def['content'],
-                    is_correct=option_def['is_correct'],
-                )
-                for option_def in option_defs
-            ]
-        )

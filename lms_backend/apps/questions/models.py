@@ -41,14 +41,6 @@ class Question(TimestampMixin, CreatorMixin, QuestionContentMixin, models.Model)
         verbose_name='题目标签',
         limit_choices_to={'tag_type': 'TAG'},
     )
-    created_from_quiz = models.ForeignKey(
-        'quizzes.Quiz',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_bank_questions',
-        verbose_name='首次沉淀来源试卷',
-    )
 
     class Meta:
         db_table = 'lms_question'

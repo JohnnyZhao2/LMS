@@ -10,10 +10,9 @@ from core.query_params import parse_int_query_param
 from core.responses import created_response, no_content_response, success_response
 
 from .serializers import (
-    QuizCreateSerializer,
     QuizDetailSerializer,
     QuizListSerializer,
-    QuizUpdateSerializer,
+    QuizWriteSerializer,
 )
 from .services import QuizService
 
@@ -52,8 +51,8 @@ class QuizListCreateView(BaseAPIView):
 
     @extend_schema(
         summary='创建试卷',
-        description='创建新试卷，保存时以整份题目列表重建当前试卷',
-        request=QuizCreateSerializer,
+        description='创建新试卷；题目绑定题库题，编辑本卷题目时写时复制',
+        request=QuizWriteSerializer,
         responses={
             201: QuizDetailSerializer,
             400: OpenApiResponse(description='参数错误'),
@@ -63,7 +62,7 @@ class QuizListCreateView(BaseAPIView):
     )
     def post(self, request):
         enforce('quiz.create', request, error_message='无权创建试卷')
-        serializer = QuizCreateSerializer(data=request.data, context={'request': request})
+        serializer = QuizWriteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
         questions = validated_data.pop('questions', [])
@@ -77,7 +76,7 @@ class QuizDetailView(BaseAPIView):
 
     @extend_schema(
         summary='获取试卷详情',
-        description='获取指定试卷的详细信息，包含当前试卷题目副本',
+        description='获取指定试卷详情；题目来自题库当前内容',
         responses={
             200: QuizDetailSerializer,
             404: OpenApiResponse(description='试卷不存在'),
@@ -91,8 +90,8 @@ class QuizDetailView(BaseAPIView):
 
     @extend_schema(
         summary='更新试卷',
-        description='更新试卷信息，保存时以整份题目列表重建当前试卷',
-        request=QuizUpdateSerializer,
+        description='更新试卷；修改已引用题目内容时写时复制为新题，仅影响本卷',
+        request=QuizWriteSerializer,
         responses={
             200: QuizDetailSerializer,
             400: OpenApiResponse(description='参数错误'),
@@ -103,8 +102,7 @@ class QuizDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         enforce('quiz.update', request, error_message='无权更新试卷')
-        quiz = self.service.get_for_permission(pk, 'quiz.update')
-        serializer = QuizUpdateSerializer(instance=quiz, data=request.data, partial=True)
+        serializer = QuizWriteSerializer(data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
         questions = validated_data.pop('questions', None)

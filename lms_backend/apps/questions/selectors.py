@@ -10,7 +10,6 @@ def question_base_queryset() -> QuerySet:
         'created_by',
         'updated_by',
         'space_tag',
-        'created_from_quiz',
     ).prefetch_related(
         Prefetch(
             'question_options',
@@ -18,7 +17,7 @@ def question_base_queryset() -> QuerySet:
         ),
         'tags',
     ).annotate(
-        usage_count=Count('quiz_copies', distinct=True),
+        usage_count=Count('quiz_relations', distinct=True),
     )
 
 
