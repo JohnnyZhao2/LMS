@@ -19,6 +19,41 @@ from .scoring import calculate_submission_score, refresh_assignment_score
 UNSET = object()
 
 
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _start_quiz_event(self, result, args):
+    quiz = result.quiz
+    return {
+        'description': (
+            f'第 {result.attempt_number} 次，'
+            f'{quiz.get_quiz_type_display()}，{_format_score(result.total_score)} 分'
+        ),
+        'target_type': 'quiz',
+        'target_id': str(result.id),
+        'target_title': quiz.title,
+    }
+
+
+def _submit_quiz_event(self, result, args):
+    quiz = result.quiz
+    return {
+        'description': (
+            f'{result.get_status_display()}，'
+            f'{_format_score(result.obtained_score)}/{_format_score(result.total_score)}'
+        ),
+        'target_type': 'quiz',
+        'target_id': str(result.id),
+        'target_title': quiz.title,
+    }
+
+
 class SubmissionService(BaseService):
     """答题、保存答案、提交试卷的业务编排。"""
 
@@ -253,11 +288,9 @@ class SubmissionService(BaseService):
     @log_operation(
         'submission',
         'start_quiz',
-        '第 {attempt_number} 次，{quiz_type_label}，{total_score_text} 分',
-        target_type='quiz',
-        target_title_template='{quiz_title}',
         group='答题/考试',
         label='开始答题',
+        build_event=_start_quiz_event,
     )
     def start_quiz(
         self,
@@ -317,11 +350,9 @@ class SubmissionService(BaseService):
     @log_operation(
         'submission',
         'submit_quiz',
-        '{status_display}，{obtained_score_text}/{total_score_text}',
-        target_type='quiz',
-        target_title_template='{quiz_title}',
         group='答题/考试',
         label='提交答卷',
+        build_event=_submit_quiz_event,
     )
     def submit(self, submission: Submission) -> Submission:
         """提交答卷并刷新成绩、任务完成状态。

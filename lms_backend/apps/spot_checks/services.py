@@ -22,6 +22,65 @@ from .image_utils import normalize_images
 from .models import SpotCheck, SpotCheckItem
 
 
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _user_label(user) -> str:
+    if user is None:
+        return '未知用户'
+    username = getattr(user, 'username', None)
+    employee_id = getattr(user, 'employee_id', None)
+    if username and employee_id:
+        return f'{username}（{employee_id}）'
+    return username or employee_id or '未知用户'
+
+
+def _topic_preview(spot_check: SpotCheck) -> str:
+    topic_summary = str(spot_check.topic_summary or '').strip().replace('\n', ' ')
+    return topic_summary[:24] + ('...' if len(topic_summary) > 24 else '')
+
+
+def _create_spot_check_event(self, result, args):
+    return {
+        'description': '批量发起抽查',
+        'target_type': 'spot_check',
+        'target_title': '批量抽查',
+    }
+
+
+def _submit_spot_check_event(self, result, args):
+    return {
+        'description': _topic_preview(result),
+        'target_type': 'spot_check',
+        'target_id': str(result.id),
+        'target_title': _user_label(result.student),
+    }
+
+
+def _score_spot_check_event(self, result, args):
+    return {
+        'description': f'{_format_score(result.average_score)} 分，{_topic_preview(result)}',
+        'target_type': 'spot_check',
+        'target_id': str(result.id),
+        'target_title': _user_label(result.student),
+    }
+
+
+def _delete_spot_check_event(self, result, args):
+    return {
+        'description': f'{_format_score(result.average_score)} 分',
+        'target_type': 'spot_check',
+        'target_id': str(result.id),
+        'target_title': _user_label(result.student),
+    }
+
+
 class SpotCheckService(BaseService):
     """抽查记录应用服务。"""
 
@@ -104,11 +163,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'create_spot_check',
-        '批量发起抽查',
-        target_type='spot_check',
-        target_title_template='批量抽查',
         group='抽查记录',
         label='发起抽查',
+        build_event=_create_spot_check_event,
     )
     @transaction.atomic
     def batch_create(self, data: dict) -> list[SpotCheck]:
@@ -174,11 +231,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'submit_spot_check',
-        '{topic_summary_preview}',
-        target_type='spot_check',
-        target_title_template='{student_label}',
         group='抽查记录',
         label='提交抽查',
+        build_event=_submit_spot_check_event,
     )
     @transaction.atomic
     def submit(self, pk: int, data: dict) -> SpotCheck:
@@ -218,11 +273,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'score_spot_check',
-        '{average_score_text} 分，{topic_summary_preview}',
-        target_type='spot_check',
-        target_title_template='{student_label}',
         group='抽查记录',
         label='抽查评分',
+        build_event=_score_spot_check_event,
     )
     @transaction.atomic
     def score(self, pk: int, data: dict) -> SpotCheck:
@@ -259,11 +312,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'delete_spot_check',
-        '{average_score_text} 分',
-        target_type='spot_check',
-        target_title_template='{student_label}',
         group='抽查记录',
         label='删除抽查记录',
+        build_event=_delete_spot_check_event,
     )
     def delete(self, pk: int) -> SpotCheck:
         spot_check = self._get_raw_by_id(pk)

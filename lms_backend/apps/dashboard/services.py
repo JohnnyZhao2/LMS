@@ -8,7 +8,6 @@ from django.db.models import Avg, Count, F, FloatField, Prefetch, Q, QuerySet
 from django.db.models.expressions import ExpressionWrapper
 from django.utils import timezone
 
-from apps.activity_logs.models import ActivityLog
 from apps.authorization.engine import scope_learning_members
 from apps.knowledge.models import Knowledge
 from apps.submissions.models import Submission
@@ -99,19 +98,11 @@ def get_weekly_active_users_count(user_ids) -> int:
         tz = timezone.get_current_timezone()
         start_dt = timezone.make_aware(start_dt, tz)
         end_dt = timezone.make_aware(end_dt, tz)
-    return (
-        ActivityLog.objects.filter(
-            category='user',
-            actor_id__in=user_ids,
-            action='login',
-            status='success',
-            created_at__gte=start_dt,
-            created_at__lt=end_dt,
-        )
-        .values('actor_id')
-        .distinct()
-        .count()
-    )
+    return User.objects.filter(
+        id__in=user_ids,
+        last_login__gte=start_dt,
+        last_login__lt=end_dt,
+    ).count()
 
 
 def get_dashboard_user_queryset() -> QuerySet:

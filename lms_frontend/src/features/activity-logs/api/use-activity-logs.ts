@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
-import {
-  invalidateAfterActivityLogDeletion,
-  invalidateAfterActivityLogPolicyMutation,
-} from '@/lib/cache-invalidation';
+import { invalidateAfterActivityLogPolicyMutation } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
 import type {
   ActivityLogListResponse,
@@ -52,18 +49,5 @@ export const useUpdateActivityLogPolicy = () => {
       return apiClient.patch<ActivityLogPolicy>(`/logs/policies/`, payload);
     },
     onSuccess: () => invalidateAfterActivityLogPolicyMutation(queryClient),
-  });
-};
-
-export const useBulkDeleteActivityLogs = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (logItemIds: string[]) => {
-      return apiClient.post<{ deleted_count: number }>(`/logs/items/bulk-delete/`, {
-        item_ids: logItemIds,
-      });
-    },
-    onSuccess: () => invalidateAfterActivityLogDeletion(queryClient),
   });
 };

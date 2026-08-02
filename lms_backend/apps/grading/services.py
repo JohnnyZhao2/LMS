@@ -27,6 +27,39 @@ SUBJECTIVE_PASS_RATIO = Decimal('0.6')
 VALID_QUIZ_TYPES = frozenset(code for code, _ in QUIZ_TYPE_CHOICES)
 
 
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _user_label(user) -> str:
+    if user is None:
+        return '未知用户'
+    username = getattr(user, 'username', None)
+    employee_id = getattr(user, 'employee_id', None)
+    if username and employee_id:
+        return f'{username}（{employee_id}）'
+    return username or employee_id or '未知用户'
+
+
+def _manual_grade_event(self, result, args):
+    submission = result.submission
+    student = submission.task_assignment.assignee
+    return {
+        'description': (
+            f'{_user_label(student)}，'
+            f'{_format_score(args.get("score"))}/{_format_score(result.max_score)} 分'
+        ),
+        'target_type': 'quiz',
+        'target_id': str(result.id),
+        'target_title': submission.quiz.title,
+    }
+
+
 def has_answer_content(user_answer):
     if user_answer is None:
         return False
@@ -248,11 +281,9 @@ class GradingService(BaseService):
     @log_operation(
         'grading',
         'manual_grade',
-        '{student_label}，{score}/{max_score_text} 分',
-        target_type='quiz',
-        target_title_template='{quiz_title}',
         group='阅卷中心',
         label='提交评分',
+        build_event=_manual_grade_event,
     )
     def grade_answer(
         self,

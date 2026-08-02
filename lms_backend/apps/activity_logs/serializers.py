@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from rest_framework import serializers
 
-from .models import ActivityLogPolicy
+from .models import ActivityLog, ActivityLogPolicy
 
 
 LOG_TYPE_CHOICES = (
@@ -19,15 +21,35 @@ class SimpleUserSerializer(serializers.Serializer):
     department_code = serializers.CharField(read_only=True, allow_null=True)
 
 
-class ActivityLogItemSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    category = serializers.ChoiceField(choices=LOG_TYPE_CHOICES)
-    actor = SimpleUserSerializer(allow_null=True)
-    action = serializers.CharField()
-    status = serializers.CharField()
-    summary = serializers.CharField()
-    description = serializers.CharField()
-    created_at = serializers.DateTimeField()
+class ActivityLogItemSerializer(serializers.ModelSerializer):
+    actor = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ActivityLog
+        fields = [
+            'id',
+            'category',
+            'actor',
+            'action',
+            'status',
+            'summary',
+            'description',
+            'created_at',
+        ]
+
+    def get_actor(self, obj: ActivityLog) -> dict | None:
+        actor = obj.actor
+        if actor is None:
+            return None
+        department = getattr(actor, 'department', None)
+        return {
+            'id': actor.id,
+            'employee_id': actor.employee_id,
+            'username': actor.username,
+            'avatar_key': actor.avatar_key,
+            'department_name': getattr(department, 'name', None),
+            'department_code': getattr(department, 'code', None),
+        }
 
 
 class ActivityLogMemberSerializer(serializers.Serializer):
@@ -88,13 +110,3 @@ class ActivityLogPolicySerializer(serializers.ModelSerializer):
 class ActivityLogPolicyUpdateSerializer(serializers.Serializer):
     key = serializers.CharField()
     enabled = serializers.BooleanField()
-
-
-class ActivityLogBulkDeleteSerializer(serializers.Serializer):
-    item_ids = serializers.ListField(
-        child=serializers.CharField(trim_whitespace=True),
-        allow_empty=False,
-    )
-
-    def validate_item_ids(self, value: list[str]) -> list[str]:
-        return list(dict.fromkeys(value))

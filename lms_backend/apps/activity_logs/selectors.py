@@ -1,6 +1,7 @@
 from datetime import datetime, time
 from typing import Any
 
+from django.conf import settings
 from django.db.models import Count, Max, Q, QuerySet
 from django.utils import timezone
 
@@ -93,30 +94,16 @@ def list_activity_log_members(queryset: QuerySet) -> list[dict[str, Any]]:
     ]
 
 
-def serialize_activity_log_item(log: ActivityLog) -> dict[str, Any]:
-    actor = log.actor
-    return {
-        'id': f'{log.category}-{log.id}',
-        'category': log.category,
-        'actor': None if actor is None else {
-            'id': actor.id,
-            'employee_id': actor.employee_id,
-            'username': actor.username,
-            'avatar_key': actor.avatar_key,
-            'department_name': getattr(actor.department, 'name', None),
-            'department_code': getattr(actor.department, 'code', None),
-        },
-        'action': log.action,
-        'status': log.status,
-        'summary': log.summary,
-        'description': log.description,
-        'created_at': log.created_at,
-    }
+def _aware_datetime(target_date, day_time):
+    dt = datetime.combine(target_date, day_time)
+    if settings.USE_TZ:
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
 
 
 def _start_of_day(target_date):
-    return timezone.make_aware(datetime.combine(target_date, time.min))
+    return _aware_datetime(target_date, time.min)
 
 
 def _end_of_day(target_date):
-    return timezone.make_aware(datetime.combine(target_date, time.max))
+    return _aware_datetime(target_date, time.max)

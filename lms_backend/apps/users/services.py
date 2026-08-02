@@ -50,9 +50,12 @@ class UserManagementService(BaseService):
 
     @log_user_action(
         'deactivate',
-        '被操作账号：{result.username}（{result.employee_id}）',
         group='账号管理',
         label='停用账号',
+        build_event=lambda self, result, args: {
+            'user': result,
+            'description': f'被操作账号：{result.username}（{result.employee_id}）',
+        },
     )
     def deactivate_user(self, user_id: int) -> User:
         """
@@ -78,9 +81,12 @@ class UserManagementService(BaseService):
 
     @log_user_action(
         'activate',
-        '被操作账号：{result.username}（{result.employee_id}）',
         group='账号管理',
         label='启用账号',
+        build_event=lambda self, result, args: {
+            'user': result,
+            'description': f'被操作账号：{result.username}（{result.employee_id}）',
+        },
     )
     def activate_user(self, user_id: int) -> User:
         """

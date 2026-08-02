@@ -29,6 +29,24 @@ from apps.tags.resource_tags import (
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
+
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _quiz_log_event(self, result, args):
+    return {
+        'description': (
+            f'{result.get_quiz_type_display()}，'
+            f'{result.question_count} 题，{_format_score(result.total_score)} 分'
+        ),
+    }
+
 from .models import (
     Quiz,
     QuizQuestion,
@@ -218,9 +236,9 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'create',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='创建试卷',
+        build_event=_quiz_log_event,
     )
     def create(self, data: dict, questions: List[dict] = None) -> Quiz:
         payload = dict(data)
@@ -234,9 +252,9 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'update',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='更新试卷',
+        build_event=_quiz_log_event,
     )
     def update(self, pk: int, data: dict, questions: List[dict] = None) -> Quiz:
         quiz = self.get_for_permission(pk, 'quiz.update')
@@ -258,9 +276,9 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'delete',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='删除试卷',
+        build_event=_quiz_log_event,
     )
     def delete(self, pk: int) -> Quiz:
         quiz = self.get_for_permission(pk, 'quiz.delete')

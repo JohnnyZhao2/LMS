@@ -1,5 +1,4 @@
 from django.apps import AppConfig
-from django.db.models.signals import post_migrate
 
 
 class ActivityLogsConfig(AppConfig):
@@ -9,13 +8,7 @@ class ActivityLogsConfig(AppConfig):
 
     def ready(self):
         from .audit import register_activity_log_audit_publisher
-        from .bootstrap import sync_activity_log_policies
         from .registry import load_declared_log_actions
 
         load_declared_log_actions()
         register_activity_log_audit_publisher()
-        post_migrate.connect(
-            sync_activity_log_policies,
-            sender=self,
-            dispatch_uid='apps.activity_logs.sync_activity_log_policies',
-        )

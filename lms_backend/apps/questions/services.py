@@ -25,6 +25,60 @@ from .selectors import (
 )
 
 
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _content_preview(question: Question) -> str:
+    content_text = str(question.content or '').strip().replace('\n', ' ')
+    return content_text[:24] + ('...' if len(content_text) > 24 else '')
+
+
+def _question_identity(question: Question) -> str:
+    preview = _content_preview(question)
+    if preview:
+        return f'题目#{question.id}（{preview}）'
+    return f'题目#{question.id}'
+
+
+def _question_update_summary(data: dict) -> str:
+    if not isinstance(data, dict):
+        return '更新了题目信息'
+
+    field_labels = {
+        'content': '题干',
+        'question_type': '题型',
+        'options': '选项',
+        'answer': '答案',
+        'explanation': '解析',
+        'score': '分值',
+        'space_tag_id': '所属空间',
+    }
+    changed_fields = [field_labels[key] for key in field_labels if key in data]
+    if 'tag_ids' in data:
+        changed_fields.append(f'标签（{len(data.get("tag_ids") or [])} 个）')
+    if not changed_fields:
+        return '更新了题目信息'
+    return f'更新了{"、".join(changed_fields)}'
+
+
+def _question_score_event(self, result, args):
+    return {
+        'description': f'{result.get_question_type_display()}，{_format_score(result.score)} 分',
+    }
+
+
+def _question_update_event(self, result, args):
+    return {
+        'description': f'{_question_identity(result)}，{_question_update_summary(args.get("data") or {})}',
+    }
+
+
 class QuestionService(BaseService):
     """题目应用服务。"""
 
@@ -57,9 +111,9 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'create',
-        '{question_type_label}，{score_text} 分',
         group='题目',
         label='创建题目',
+        build_event=_question_score_event,
     )
     def create(self, data: dict) -> Question:
         payload = dict(data)
@@ -87,9 +141,9 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'update',
-        '{question_identity}，{question_update_summary}',
         group='题目',
         label='更新题目',
+        build_event=_question_update_event,
     )
     def update(self, pk: int, data: dict) -> Question:
         question = self._get_raw_by_id(pk)
@@ -142,9 +196,9 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'delete',
-        '{question_type_label}，{score_text} 分',
         group='题目',
         label='删除题目',
+        build_event=_question_score_event,
     )
     def delete(self, pk: int) -> Question:
         question = self._get_raw_by_id(pk)

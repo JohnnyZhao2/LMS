@@ -50,6 +50,74 @@ STUDENT_TASK_LIST_STATUSES = set(TASK_EXECUTION_STATUS_LABELS) - {'COMPLETED_ABN
 ORDER_OFFSET = 100_000
 
 
+def _format_datetime(value) -> str:
+    if value is None or not hasattr(value, 'strftime'):
+        return ''
+    return value.strftime('%Y-%m-%d %H:%M')
+
+
+def _task_update_summary(args: dict) -> str:
+    parts = []
+    if 'title' in args:
+        parts.append('任务标题')
+    if 'description' in args:
+        parts.append('任务说明')
+    if 'deadline' in args:
+        parts.append(f'截止时间调整为 {_format_datetime(args.get("deadline"))}')
+    if args.get('knowledge_ids') is not None:
+        parts.append(f'关联知识调整为 {len(args["knowledge_ids"])} 篇')
+    if args.get('quiz_ids') is not None:
+        parts.append(f'关联试卷调整为 {len(args["quiz_ids"])} 份')
+    if args.get('assignee_ids') is not None:
+        parts.append(f'分配学员调整为 {len(args["assignee_ids"])} 名')
+    return '；'.join(parts) if parts else '任务配置已调整'
+
+
+def _create_task_event(self, result, args):
+    return {
+        'description': (
+            f'截止 {_format_datetime(args.get("deadline"))}，'
+            f'{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，'
+            f'{result.assignee_count} 名人员'
+        ),
+        'target_type': 'task',
+        'target_id': str(result.id),
+        'target_title': args.get('title') or result.title,
+    }
+
+
+def _update_task_event(self, result, args):
+    return {
+        'description': _task_update_summary(args),
+        'target_type': 'task',
+        'target_id': str(result.id),
+        'target_title': result.title,
+    }
+
+
+def _delete_task_event(self, result, args):
+    return {
+        'description': (
+            f'{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，'
+            f'{result.assignee_count} 名人员'
+        ),
+        'target_type': 'task',
+        'target_id': str(result.id),
+        'target_title': result.title,
+    }
+
+
+def _complete_knowledge_event(self, result, args):
+    assignment = args['assignment']
+    knowledge_title = result.task_knowledge.knowledge.title
+    return {
+        'description': f'任务：{assignment.task.title}',
+        'target_type': 'knowledge',
+        'target_id': str(result.id),
+        'target_title': knowledge_title,
+    }
+
+
 class TaskService(BaseService):
     """任务发布、编辑、删除。"""
 
@@ -75,11 +143,9 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'create_and_assign',
-        '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名人员',
-        target_type='task',
-        target_title_template='{title}',
         group='任务管理',
         label='创建并分配任务',
+        build_event=_create_task_event,
     )
     def create_task(
         self,
@@ -129,11 +195,9 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'update_task',
-        '{task_update_summary}',
-        target_type='task',
-        target_title_template='{task.title}',
         group='任务管理',
         label='更新任务',
+        build_event=_update_task_event,
     )
     def update_task(
         self,
@@ -207,11 +271,9 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'delete_task',
-        '{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名人员',
-        target_type='task',
-        target_title_template='{result.title}',
         group='任务管理',
         label='删除任务',
+        build_event=_delete_task_event,
     )
     def delete_task(self, pk: int) -> SimpleNamespace:
         task = self.get_task_by_id(pk)
@@ -483,11 +545,9 @@ class StudentTaskService(BaseService):
     @log_operation(
         'learning',
         'complete_knowledge',
-        '任务：{task_title}',
-        target_type='knowledge',
-        target_title_template='{result.task_knowledge.knowledge.title}',
         group='学习进度',
         label='完成学习',
+        build_event=_complete_knowledge_event,
     )
     def complete_knowledge_learning(
         self,

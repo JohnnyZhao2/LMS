@@ -18,7 +18,7 @@ from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import enforce
 from apps.authorization.roles import resolve_current_role, serialize_user_roles
 from apps.authorization.services import AuthorizationService
-from apps.users.models import User
+from apps.users.models import Role, User
 from apps.users.selectors import get_user_by_employee_id, get_user_by_id
 from apps.users.serializers import UserInfoSerializer
 from core.audit import audit_user_action
@@ -29,6 +29,16 @@ register_user_log_action('login', group='认证', label='登录成功')
 register_user_log_action('login_failed', group='认证', label='登录失败')
 register_user_log_action('logout', group='认证', label='登出')
 register_user_log_action('password_change', group='账号管理', label='修改密码')
+
+_ROLE_LABELS = dict(Role.ROLE_CHOICES)
+
+
+def _switch_role_event(self, result, args):
+    role_code = args['role_code']
+    return {
+        'user': args['user'],
+        'description': f'当前角色：{_ROLE_LABELS.get(role_code, role_code)}',
+    }
 
 
 class AuthenticationService(BaseService):
@@ -220,9 +230,9 @@ class AuthenticationService(BaseService):
 
     @log_user_action(
         'switch_role',
-        '当前角色：{role_label}',
         group='认证',
         label='切换角色',
+        build_event=_switch_role_event,
     )
     def switch_role(self, user: User, role_code: str) -> dict[str, Any]:
         active_user = self._validate_active_user(get_user_by_id(user.id))

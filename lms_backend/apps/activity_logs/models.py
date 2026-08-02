@@ -26,7 +26,6 @@ class ActivityLogPolicy(models.Model):
         ordering = ['category', 'group', 'label']
         indexes = [
             models.Index(fields=['category', 'group'], name='activity_log_policy_cg_idx'),
-            models.Index(fields=['key'], name='activity_log_policy_key_idx'),
         ]
 
     def __str__(self):

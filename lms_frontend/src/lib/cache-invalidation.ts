@@ -7,11 +7,6 @@ const invalidateMany = (
   keys: readonly QueryKey[],
 ) => Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 
-export const invalidateAfterActivityLogDeletion = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.activityLogs.all(),
-  ]);
-
 export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.activityLogs.policies(),

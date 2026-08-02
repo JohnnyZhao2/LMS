@@ -105,7 +105,6 @@ class KnowledgeService(BaseService):
     @log_content_action(
         'knowledge',
         'create',
-        '',
         group='知识文档',
         label='创建知识文档',
     )
@@ -129,7 +128,6 @@ class KnowledgeService(BaseService):
     @log_content_action(
         'knowledge',
         'update',
-        '',
         group='知识文档',
         label='更新知识文档',
     )
@@ -167,7 +165,6 @@ class KnowledgeService(BaseService):
     @log_content_action(
         'knowledge',
         'delete',
-        '',
         group='知识文档',
         label='删除知识文档',
     )

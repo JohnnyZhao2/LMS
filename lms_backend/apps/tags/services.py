@@ -14,6 +14,23 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Tag
 
 
+def _tag_type_event(self, result, args):
+    return {'description': result.get_tag_type_display()}
+
+
+def _reorder_spaces_event(self, result, args):
+    return {'description': f'{len(args.get("ordered_tag_ids") or [])} 个空间标签'}
+
+
+def _merge_tags_event(self, result, args):
+    return {
+        'description': f'{len(args.get("source_tag_ids") or [])} 个标签合并为《{result.name}》',
+        'target_type': 'tag',
+        'target_id': str(result.id),
+        'target_title': result.name,
+    }
+
+
 class TagService(BaseService):
     def list(self, *, tag_type=None, search=None, applicable_to=None, limit=50):
         queryset = Tag.objects.all()
@@ -33,9 +50,9 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'create',
-        '{tag_type_label}',
         group='标签管理',
         label='创建标签',
+        build_event=_tag_type_event,
     )
     def create(self, data: dict) -> Tag:
         current_module = data.pop('current_module', None)
@@ -78,9 +95,9 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'update',
-        '{tag_type_label}',
         group='标签管理',
         label='更新标签',
+        build_event=_tag_type_event,
     )
     def update(self, pk: int, data: dict) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
@@ -134,9 +151,9 @@ class TagService(BaseService):
     @log_operation(
         'tag_management',
         'reorder_spaces',
-        '{ordered_tag_count} 个空间标签',
         group='标签管理',
         label='调整空间标签顺序',
+        build_event=_reorder_spaces_event,
     )
     def reorder_spaces(self, ordered_tag_ids: list[int]) -> None:
         if not ordered_tag_ids:
@@ -170,11 +187,9 @@ class TagService(BaseService):
     @log_operation(
         'tag_management',
         'merge_tags',
-        '{source_tag_count} 个标签合并为《{result.name}》',
-        target_type='tag',
-        target_title_template='{result.name}',
         group='标签管理',
         label='合并标签',
+        build_event=_merge_tags_event,
     )
     def merge(self, source_tag_ids: list[int], merged_name: str) -> Tag:
         normalized_source_ids = [tag_id for tag_id in source_tag_ids if tag_id]
@@ -241,9 +256,9 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'delete',
-        '{tag_type_label}',
         group='标签管理',
         label='删除标签',
+        build_event=_tag_type_event,
     )
     def delete(self, pk: int) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
