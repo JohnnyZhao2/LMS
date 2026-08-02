@@ -1,10 +1,12 @@
 """
 抽查记录视图
 """
+from __future__ import annotations
+
 from uuid import UUID
 
 from django.db.models import Count, Q
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.engine import enforce, scope_filter
@@ -15,12 +17,12 @@ from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import (
     created_response,
-    list_response,
     no_content_response,
     success_response,
 )
 
 from .models import SpotCheck
+from .policies import get_spot_check_list_capabilities
 from .serializers import (
     SpotCheckCreateSerializer,
     SpotCheckDetailSerializer,
@@ -30,6 +32,21 @@ from .serializers import (
     SpotCheckSubmitSerializer,
 )
 from .services import SpotCheckService
+
+
+def _parse_status(request) -> str | None:
+    status = (request.query_params.get('status') or '').strip().upper() or None
+    if status and status not in {
+        SpotCheck.STATUS_PENDING,
+        SpotCheck.STATUS_SUBMITTED,
+        SpotCheck.STATUS_SCORED,
+    }:
+        raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='status 无效')
+    return status
+
+
+def _attach_list_capabilities(request) -> None:
+    request._spot_check_list_capabilities = get_spot_check_list_capabilities(request)
 
 
 class SpotCheckListCreateView(BaseAPIView):
@@ -66,13 +83,7 @@ class SpotCheckListCreateView(BaseAPIView):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='batch_id 格式无效',
                 ) from exc
-        status = (request.query_params.get('status') or '').strip().upper() or None
-        if status and status not in {
-            SpotCheck.STATUS_PENDING,
-            SpotCheck.STATUS_SUBMITTED,
-            SpotCheck.STATUS_SCORED,
-        }:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='status 无效')
+        status = _parse_status(request)
         spot_checks = self.service.get_list(
             student_id=student_id,
             batch_id=batch_id,
@@ -81,6 +92,7 @@ class SpotCheckListCreateView(BaseAPIView):
         )
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(spot_checks, request)
+        _attach_list_capabilities(request)
         serializer = SpotCheckListSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
@@ -117,27 +129,26 @@ class SpotCheckMineView(BaseAPIView):
         tags=['抽查管理'],
     )
     def get(self, request):
-        status = (request.query_params.get('status') or '').strip().upper() or None
-        if status and status not in {
-            SpotCheck.STATUS_PENDING,
-            SpotCheck.STATUS_SUBMITTED,
-            SpotCheck.STATUS_SCORED,
-        }:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='status 无效')
+        status = _parse_status(request)
         spot_checks = self.service.get_mine(ordering='-created_at', status=status)
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(spot_checks, request)
+        _attach_list_capabilities(request)
         serializer = SpotCheckListSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
 
 class SpotCheckStudentListView(BaseAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
 
     @extend_schema(
         summary='获取可查看抽查的学员列表',
         parameters=[
             OpenApiParameter(name='search', type=str, description='按学员姓名或工号搜索'),
+            OpenApiParameter(name='department', type=str, description='室组筛选：room1/room2'),
+            OpenApiParameter(name='page', type=int, description='页码'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
         responses={200: SpotCheckStudentSerializer(many=True)},
         tags=['抽查管理'],
@@ -167,9 +178,22 @@ class SpotCheckStudentListView(BaseAPIView):
             queryset = queryset.filter(
                 Q(username__icontains=search) | Q(employee_id__icontains=search)
             )
+        department = (request.query_params.get('department') or '').strip().lower()
+        if department == 'room1':
+            queryset = queryset.filter(
+                Q(department__name__icontains='一室') | Q(department__name__icontains='1室')
+            )
+        elif department == 'room2':
+            queryset = queryset.filter(
+                Q(department__name__icontains='二室') | Q(department__name__icontains='2室')
+            )
+        elif department and department != 'all':
+            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='department 无效')
         queryset = queryset.order_by('username', 'employee_id')
-        serializer = SpotCheckStudentSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = SpotCheckStudentSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class SpotCheckDetailView(BaseAPIView):

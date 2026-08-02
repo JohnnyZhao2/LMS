@@ -19,6 +19,10 @@ interface GetSpotChecksParams {
 interface GetSpotCheckStudentsParams {
   role?: RoleCode | null;
   search?: string;
+  /** room1 / room2；空或 all 表示不限 */
+  department?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 /**
@@ -87,17 +91,25 @@ export const useSpotCheckBatchPeers = (batchId: string | null | undefined) => {
  */
 export const useSpotCheckStudents = (params: GetSpotCheckStudentsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { role, search } = params;
+  const { role, search, department, page = 1, pageSize = 50 } = params;
   const resolvedRole = role ?? currentRole;
+  const resolvedDepartment = department && department !== 'all' ? department : undefined;
 
   return useQuery({
     queryKey: queryKeys.spotChecks.students({
       currentRole: resolvedRole,
       search,
+      department: resolvedDepartment,
+      page,
+      pageSize,
     }),
     queryFn: () => {
-      const queryString = buildQueryString({ search });
-      return apiClient.get<SpotCheckStudent[]>(`/spot-checks/students/${queryString}`);
+      const queryString = buildQueryString({
+        ...buildPaginationParams(page, pageSize),
+        search,
+        department: resolvedDepartment,
+      });
+      return apiClient.get<PaginatedResponse<SpotCheckStudent>>(`/spot-checks/students/${queryString}`);
     },
     enabled: resolvedRole !== null,
   });

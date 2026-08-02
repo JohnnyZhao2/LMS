@@ -1,22 +1,36 @@
-"""
-Serializers for dashboard module.
-Implements serializers for:
-- Student dashboard
-- Mentor/Department manager dashboard
-"""
+"""Dashboard serializers。"""
+
 from rest_framework import serializers
 
-from apps.knowledge.serializers import KnowledgeListSerializer
-from apps.tasks.models import TaskAssignment
 from apps.tasks.execution_status import AssignmentExecutionStatusSerializerMixin
+from apps.tasks.models import TaskAssignment
+from apps.tasks.progress import build_assignment_progress
 
-from .selectors import calculate_assignment_progress
+
+class KnowledgeCardSerializer(serializers.Serializer):
+    """仪表盘知识卡片摘要，不含正文与相关链接。"""
+
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True)
+    content_preview = serializers.CharField(read_only=True)
+    view_count = serializers.IntegerField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    space_tag = serializers.SerializerMethodField()
+
+    def get_space_tag(self, obj):
+        space_tag = getattr(obj, 'space_tag', None)
+        if not space_tag:
+            return None
+        return {
+            'id': space_tag.id,
+            'name': space_tag.name,
+            'tag_type': 'SPACE',
+        }
 
 
 class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
-    """
-    学员任务序列化器（包含进行中和已完成）
-    """
+    """学员任务序列化器。"""
+
     task_id = serializers.IntegerField(source='task.id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
@@ -31,16 +45,20 @@ class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializer
         fields = [
             'id', 'task_id', 'task_title',
             'deadline', 'created_by_name', 'status', 'status_display',
-            'progress', 'score', 'completed_at', 'created_at'
+            'progress', 'score', 'completed_at', 'created_at',
         ]
 
     def get_progress(self, obj):
-        """计算任务进度"""
-        return calculate_assignment_progress(obj)
+        quiz_progress_map = self.context.get('quiz_progress_map') or {}
+        return build_assignment_progress(
+            obj,
+            quiz_progress=quiz_progress_map.get(obj.id),
+        )
 
 
 class StudentStatsSerializer(serializers.Serializer):
-    """学员统计数据序列化器"""
+    """学员统计数据序列化器。"""
+
     in_progress_count = serializers.IntegerField()
     urgent_count = serializers.IntegerField()
     completion_rate = serializers.FloatField()
@@ -51,7 +69,8 @@ class StudentStatsSerializer(serializers.Serializer):
 
 
 class PeerRankingSerializer(serializers.Serializer):
-    """同伴排名序列化器"""
+    """同伴排名序列化器。"""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
     progress = serializers.FloatField()
@@ -60,12 +79,11 @@ class PeerRankingSerializer(serializers.Serializer):
 
 
 class StudentDashboardSerializer(serializers.Serializer):
-    """
-    Serializer for student dashboard data.
-    """
+    """学员仪表盘数据。"""
+
     stats = StudentStatsSerializer(read_only=True)
     tasks = StudentTaskSerializer(many=True, read_only=True)
-    latest_knowledge = KnowledgeListSerializer(many=True, read_only=True)
+    latest_knowledge = KnowledgeCardSerializer(many=True, read_only=True)
 
 
 class ExamReportFilterSerializer(serializers.Serializer):

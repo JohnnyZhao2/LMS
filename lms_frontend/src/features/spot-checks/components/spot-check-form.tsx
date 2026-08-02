@@ -229,7 +229,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
   const { data: peerList = [] } = useSpotCheckBatchPeers(canSwitchPeers ? spotCheckDetail?.batch_id : null);
 
   const baseItems = isEdit
-    ? (spotCheckDetail ? normalizeItems(spotCheckDetail.items) : [])
+    ? (spotCheckDetail ? normalizeItems(spotCheckDetail.items ?? []) : [])
     : [createEmptyItem()];
   const items = draftItems ?? baseItems;
   const averageScore = averageScoreOf(items);

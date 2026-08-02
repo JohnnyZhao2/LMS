@@ -13,8 +13,7 @@ export interface LatestKnowledge {
   id: number;
   title: string;
   space_tag?: SimpleTag | null;
-  content: string;
-  content_preview?: string;
+  content_preview: string;
   view_count: number;
   updated_at: string;
 }

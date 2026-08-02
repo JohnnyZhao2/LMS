@@ -42,7 +42,8 @@ export interface SpotCheck {
   topic_count: number;
   topic_summary: string;
   average_score: string | null;
-  items: SpotCheckItem[];
+  /** 仅详情接口返回；列表已去掉 items */
+  items?: SpotCheckItem[];
   actions: SpotCheckActions;
   created_at: string;
   updated_at: string;

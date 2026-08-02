@@ -9,7 +9,6 @@ from apps.authorization.engine import enforce
 from apps.dashboard.exam_report_service import ExamReportService
 from apps.dashboard.serializers import ExamReportExportQuerySerializer, ExamReportQuerySerializer
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
 from core.responses import success_response
 
 class ExamReportBaseView(BaseAPIView):
@@ -69,10 +68,7 @@ class ExamReportExportView(ExamReportBaseView):
         self._enforce_access()
         filters = self._parse_filters(ExamReportExportQuerySerializer)
         template = filters.pop('template')
-        try:
-            content = self.service.export_report(filters, template)
-        except ValueError as exc:
-            raise BusinessError(code=ErrorCodes.INVALID_INPUT, message=str(exc)) from exc
+        content = self.service.export_report(filters, template)
 
         filename = f"exam_report_{timezone.now().strftime('%Y%m%d%H%M%S')}.xlsx"
         response = HttpResponse(

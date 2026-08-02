@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
-import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
+import type { SpotCheck } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
 import { useSpotChecks, useSpotCheckStudents } from '../api/get-spot-checks';
@@ -16,21 +16,11 @@ import { SpotCheckForm } from './spot-check-form';
 import { SpotCheckRecordList, type SpotCheckStatusFilter } from './spot-check-record-list';
 import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from './spot-check-student-panel';
 
-const matchDepartmentFilter = (student: SpotCheckStudent, filter: SpotCheckDepartmentFilter) => {
-  if (filter === 'all') {
-    return true;
-  }
-  const departmentName = student.department_name?.trim() ?? '';
-  if (filter === 'room1') {
-    return departmentName.includes('一室') || departmentName.includes('1室');
-  }
-  return departmentName.includes('二室') || departmentName.includes('2室');
-};
-
 export const SpotCheckList: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [checkedStudentIds, setCheckedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [studentPage, setStudentPage] = useState(1);
   const [departmentFilter, setDepartmentFilter] = useState<SpotCheckDepartmentFilter>('all');
   const [statusFilter, setStatusFilter] = useState<SpotCheckStatusFilter>('SUBMITTED');
   const [paginationByStudent, setPaginationByStudent] = useState<Record<number, { page: number; pageSize: number }>>(
@@ -44,21 +34,25 @@ export const SpotCheckList: React.FC = () => {
   const deferredStudentSearch = useDeferredValue(studentSearch.trim());
   const { hasCapability } = useAuth();
   const deleteSpotCheck = useDeleteSpotCheck();
+  const studentPageSize = 50;
 
-  const { data: students = [], isLoading: studentsLoading } = useSpotCheckStudents({
+  const { data: studentsData, isLoading: studentsLoading } = useSpotCheckStudents({
     role: currentRole,
     search: deferredStudentSearch || undefined,
+    department: departmentFilter,
+    page: studentPage,
+    pageSize: studentPageSize,
   });
-  const filteredStudents = students.filter((student) => matchDepartmentFilter(student, departmentFilter));
-  const filteredStudentIdSet = new Set(filteredStudents.map((student) => student.id));
+  const students = studentsData?.results ?? [];
+  const studentIdSet = new Set(students.map((student) => student.id));
   const resolvedSelectedStudentId =
-    filteredStudents.length === 0
+    students.length === 0
       ? null
-      : selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)
+      : selectedStudentId !== null && students.some((student) => student.id === selectedStudentId)
         ? selectedStudentId
-        : filteredStudents[0].id;
-  /** 勾选只保留当前筛选可见的学员 */
-  const visibleCheckedStudentIds = checkedStudentIds.filter((id) => filteredStudentIdSet.has(id));
+        : students[0].id;
+  /** 勾选只保留当前页可见的学员 */
+  const visibleCheckedStudentIds = checkedStudentIds.filter((id) => studentIdSet.has(id));
 
   const { page, pageSize } = resolvedSelectedStudentId
     ? (paginationByStudent[resolvedSelectedStudentId] ?? { page: 1, pageSize: 20 })
@@ -73,7 +67,7 @@ export const SpotCheckList: React.FC = () => {
     enabled: resolvedSelectedStudentId !== null,
   });
 
-  const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
+  const selectedStudent = students.find((student) => student.id === resolvedSelectedStudentId) ?? null;
   const records = recordsData?.results ?? [];
 
   const canCreateSpotCheck = hasCapability('spot_check.create');
@@ -114,7 +108,7 @@ export const SpotCheckList: React.FC = () => {
       setCheckedStudentIds([]);
       return;
     }
-    setCheckedStudentIds(filteredStudents.map((student) => student.id));
+    setCheckedStudentIds(students.map((student) => student.id));
   };
 
   /** 发起对象：仅勾选的学员 */
@@ -159,11 +153,14 @@ export const SpotCheckList: React.FC = () => {
         <PageWorkbench>
           <PageSplit className="min-h-0 flex-1 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
             <SpotCheckStudentPanel
-              students={filteredStudents}
+              students={students}
               selectedStudentId={resolvedSelectedStudentId}
               checkedStudentIds={visibleCheckedStudentIds}
               searchValue={studentSearch}
-              onSearchChange={setStudentSearch}
+              onSearchChange={(value) => {
+                setStudentSearch(value);
+                setStudentPage(1);
+              }}
               onSelectStudent={handleSelectStudent}
               onToggleCheckStudent={handleToggleCheckStudent}
               onToggleCheckAll={handleToggleCheckAll}
@@ -171,9 +168,14 @@ export const SpotCheckList: React.FC = () => {
               onDepartmentFilterChange={(value) => {
                 startTransition(() => {
                   setDepartmentFilter(value);
+                  setStudentPage(1);
                 });
               }}
               isLoading={studentsLoading}
+              totalCount={studentsData?.count ?? 0}
+              page={studentPage}
+              pageSize={studentPageSize}
+              onPageChange={setStudentPage}
             />
 
             <SpotCheckRecordList

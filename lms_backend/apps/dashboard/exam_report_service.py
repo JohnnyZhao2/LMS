@@ -15,13 +15,9 @@ from apps.submissions.models import Submission
 from apps.tasks.models import TaskAssignment, TaskQuiz
 from apps.users.models import User
 from core.base_service import BaseService
+from core.exceptions import BusinessError, ErrorCodes
 
-SUBMISSION_STATUS_LABELS = {
-    'IN_PROGRESS': '答题中',
-    'SUBMITTED': '已提交',
-    'GRADING': '待评分',
-    'GRADED': '已评分',
-}
+SUBMISSION_STATUS_LABELS = dict(Submission.STATUS_CHOICES)
 
 PASS_PASSED = '及格'
 PASS_FAILED = '不及格'
@@ -30,6 +26,7 @@ PASS_ABSENT = '未参加'
 
 # 无排名时排序用，保证未出分排在最后
 _RANK_SORT_MISSING = 10**9
+EXPORT_MAX_RECORDS = 5000
 
 
 class ExamReportService(BaseService):
@@ -109,6 +106,17 @@ class ExamReportService(BaseService):
 
     def export_report(self, filters: dict[str, Any], template: str) -> bytes:
         ctx = self._load_context(filters)
+        export_size = (
+            len(ctx['eligible_student_ids'])
+            if template == 'student_summary'
+            else ctx['summary_record_count']
+        )
+        if export_size > EXPORT_MAX_RECORDS:
+            raise BusinessError(
+                ErrorCodes.INVALID_INPUT,
+                f'导出数据超过上限（{EXPORT_MAX_RECORDS}），请缩小筛选范围',
+            )
+
         workbook = Workbook()
         workbook.remove(workbook.active)
 
@@ -129,7 +137,10 @@ class ExamReportService(BaseService):
             records = self._materialize_records(ctx, ctx['filtered_student_ids'])
             self._write_exam_sheet(workbook, {'records': records})
         else:
-            raise ValueError(f'不支持的导出模板: {template}')
+            raise BusinessError(
+                ErrorCodes.INVALID_INPUT,
+                f'不支持的导出模板: {template}',
+            )
 
         buffer = BytesIO()
         workbook.save(buffer)
@@ -388,7 +399,7 @@ class ExamReportService(BaseService):
             score = float(submission.obtained_score)
         else:
             score = None
-        pass_status = self._resolve_pass_status(score, pass_score, submission.status)
+        pass_status = self._resolve_pass_status(score, pass_score)
         if submission.submitted_at and submission.started_at:
             seconds = max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
             time_spent_minutes = int(seconds / 60)
@@ -400,11 +411,8 @@ class ExamReportService(BaseService):
     def _resolve_pass_status(
         score: Optional[float],
         pass_score: Optional[float],
-        submission_status: str,
     ) -> str:
-        if score is None:
-            return PASS_PENDING
-        if pass_score is None:
+        if score is None or pass_score is None:
             return PASS_PENDING
         return PASS_PASSED if score >= pass_score else PASS_FAILED
 
@@ -558,6 +566,44 @@ class ExamReportService(BaseService):
         ]
         return rows, total
 
+    @staticmethod
+    def _compose_student_summary(
+        student: dict[str, Any],
+        exam_ids: list[int],
+        per_exam: dict[int, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """页面与导出共用的学员汇总行。"""
+        exam_scores: dict[str, Optional[float]] = {str(eid): None for eid in exam_ids}
+        exam_pass: dict[str, str] = {str(eid): PASS_ABSENT for eid in exam_ids}
+        scores: list[float] = []
+        passed_count = 0
+        for exam_id in exam_ids:
+            info = per_exam.get(exam_id)
+            if info is None:
+                continue
+            key = str(exam_id)
+            exam_scores[key] = info['score']
+            exam_pass[key] = info['pass_status']
+            if info['score'] is not None:
+                scores.append(info['score'])
+            if info['pass_status'] == PASS_PASSED:
+                passed_count += 1
+        scored_count = len(scores)
+        return {
+            'student_id': student['id'],
+            'student_name': student['name'],
+            'employee_id': student['employee_id'],
+            'department_name': student['department_name'],
+            'mentor_name': student['mentor_name'],
+            'avatar_key': student['avatar_key'],
+            'scored_count': scored_count,
+            'average_score': round(sum(scores) / scored_count, 1) if scored_count else None,
+            'passed_count': passed_count,
+            'pass_ratio': f'{passed_count}/{scored_count}' if scored_count else '0/0',
+            'exam_scores': exam_scores,
+            'exam_pass': exam_pass,
+        }
+
     def _page_student_rows(
         self,
         ctx: dict[str, Any],
@@ -578,38 +624,13 @@ class ExamReportService(BaseService):
         exam_ids = [exam['id'] for exam in ctx['exams']]
         rows: list[dict[str, Any]] = []
         for sid in page_student_ids:
-            student = ctx['student_map'][sid]
-            exam_scores: dict[str, Optional[float]] = {str(eid): None for eid in exam_ids}
-            exam_pass: dict[str, str] = {str(eid): PASS_ABSENT for eid in exam_ids}
-            scores: list[float] = []
-            passed_count = 0
-            for exam in ctx['exams']:
-                info = ctx['score_info_by_exam'].get(exam['id'], {}).get(sid)
-                if info is None:
-                    continue
-                key = str(exam['id'])
-                exam_scores[key] = info['score']
-                exam_pass[key] = info['pass_status']
-                if info['score'] is not None:
-                    scores.append(info['score'])
-                if info['pass_status'] == PASS_PASSED:
-                    passed_count += 1
-            scored_count = len(scores)
+            per_exam = {
+                exam['id']: info
+                for exam in ctx['exams']
+                if (info := ctx['score_info_by_exam'].get(exam['id'], {}).get(sid)) is not None
+            }
             rows.append(
-                {
-                    'student_id': student['id'],
-                    'student_name': student['name'],
-                    'employee_id': student['employee_id'],
-                    'department_name': student['department_name'],
-                    'mentor_name': student['mentor_name'],
-                    'avatar_key': student['avatar_key'],
-                    'scored_count': scored_count,
-                    'average_score': round(sum(scores) / scored_count, 1) if scored_count else None,
-                    'passed_count': passed_count,
-                    'pass_ratio': f'{passed_count}/{scored_count}' if scored_count else '0/0',
-                    'exam_scores': exam_scores,
-                    'exam_pass': exam_pass,
-                }
+                self._compose_student_summary(ctx['student_map'][sid], exam_ids, per_exam)
             )
         return rows, total
 
@@ -620,43 +641,16 @@ class ExamReportService(BaseService):
         for record in data['records']:
             grouped[record['student_id']].append(record)
 
-        rows: list[dict[str, Any]] = []
+        rows = []
         for student in data['students']:
-            student_records = grouped.get(student['id'], [])
-            exam_scores: dict[str, Optional[float]] = {
-                str(exam_id): None for exam_id in exam_ids
-            }
-            exam_pass: dict[str, str] = {
-                str(exam_id): PASS_ABSENT for exam_id in exam_ids
-            }
-            scores: list[float] = []
-            passed_count = 0
-            for record in student_records:
-                key = str(record['exam_id'])
-                exam_scores[key] = record['score']
-                exam_pass[key] = record['pass_status']
-                if record['score'] is not None:
-                    scores.append(record['score'])
-                if record['pass_status'] == PASS_PASSED:
-                    passed_count += 1
-
-            scored_count = len(scores)
-            rows.append(
-                {
-                    'student_id': student['id'],
-                    'student_name': student['name'],
-                    'employee_id': student['employee_id'],
-                    'department_name': student['department_name'],
-                    'mentor_name': student['mentor_name'],
-                    'avatar_key': student['avatar_key'],
-                    'scored_count': scored_count,
-                    'average_score': round(sum(scores) / scored_count, 1) if scored_count else None,
-                    'passed_count': passed_count,
-                    'pass_ratio': f'{passed_count}/{scored_count}' if scored_count else '0/0',
-                    'exam_scores': exam_scores,
-                    'exam_pass': exam_pass,
+            per_exam = {
+                record['exam_id']: {
+                    'score': record['score'],
+                    'pass_status': record['pass_status'],
                 }
-            )
+                for record in grouped.get(student['id'], [])
+            }
+            rows.append(self._compose_student_summary(student, exam_ids, per_exam))
 
         rows.sort(key=lambda item: item['employee_id'])
         return rows

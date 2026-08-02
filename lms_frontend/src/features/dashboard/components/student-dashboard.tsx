@@ -173,7 +173,13 @@ export const StudentDashboard: React.FC = () => {
         <StatCard title="进行中" value={stats?.in_progress_count ?? 0} icon={Activity} accentClassName="bg-primary-500" size="sm" />
         <StatCard title="即将截止" value={stats?.urgent_count ?? 0} icon={AlertCircle} accentClassName="bg-rose-500" size="sm" />
         <StatCard title="完成率" value={`${stats?.completion_rate ?? 0}%`} icon={CheckCircle2} accentClassName="bg-emerald-500" size="sm" />
-        <StatCard title="考试均分" value={stats?.exam_avg_score ?? '-'} icon={GraduationCap} accentClassName="bg-amber-500" size="sm" />
+        <StatCard
+          title="考试均分"
+          value={stats?.exam_avg_score != null ? `${stats.exam_avg_score}%` : '-'}
+          icon={GraduationCap}
+          accentClassName="bg-amber-500"
+          size="sm"
+        />
       </div>
 
       <div className="grid min-h-0 gap-4 xl:grid-cols-12 xl:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] xl:overflow-hidden">

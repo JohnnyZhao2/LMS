@@ -157,20 +157,13 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                           </div>
                         </header>
 
-                        <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-                          {record.items.map((item) => (
-                            <section
-                              key={`${record.id}-${item.id ?? item.order ?? item.topic}`}
-                              className="relative min-h-[92px] rounded-xl bg-muted/45 p-3"
-                            >
-                              <h3 className="line-clamp-2 pr-16 text-[16px] font-semibold leading-[1.35] text-foreground">
-                                {item.topic}
-                              </h3>
-                              <div className="absolute bottom-3 right-3">
-                                <SpotCheckStarChip value={item.score} />
-                              </div>
-                            </section>
-                          ))}
+                        <div className="px-4 py-3">
+                          <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+                            {record.topic_summary || '抽查任务'}
+                          </p>
+                          {record.topic_count > 0 ? (
+                            <p className="mt-1 text-[12px] text-text-muted">{record.topic_count} 个主题</p>
+                          ) : null}
                         </div>
                       </article>
                     ))}

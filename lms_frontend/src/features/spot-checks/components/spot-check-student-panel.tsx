@@ -3,6 +3,7 @@ import { Search, Users } from 'lucide-react';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/pagination';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import type { SpotCheckStudent } from '@/types/spot-check';
@@ -24,6 +25,10 @@ interface SpotCheckStudentPanelProps {
   departmentFilter: SpotCheckDepartmentFilter;
   onDepartmentFilterChange: (value: SpotCheckDepartmentFilter) => void;
   isLoading: boolean;
+  totalCount?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
@@ -38,6 +43,10 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   departmentFilter,
   onDepartmentFilterChange,
   isLoading,
+  totalCount,
+  page = 1,
+  pageSize = 50,
+  onPageChange,
 }) => {
   const panelItems = students.map((student) => ({
     id: student.id,
@@ -50,9 +59,11 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   }));
 
   const total = students.length;
+  const serverTotal = totalCount ?? total;
   const checkedCount = checkedStudentIds.length;
   const isAllChecked = total > 0 && checkedCount === total;
   const isPartialChecked = checkedCount > 0 && checkedCount < total;
+  const shouldShowPagination = Boolean(onPageChange) && serverTotal > pageSize;
 
   return (
     <aside className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
@@ -119,9 +130,22 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
         emptyText={searchValue.trim() ? '没有匹配的学员' : '暂无可查看学员'}
         isLoading={isLoading}
         loadingText="加载学员中..."
-        className="max-h-none"
+        className="max-h-none min-h-0 flex-1"
         listClassName="space-y-2"
       />
+
+      {shouldShowPagination && onPageChange ? (
+        <div className="border-t border-border/60 px-3 py-2">
+          <Pagination
+            current={page}
+            total={serverTotal}
+            pageSize={pageSize}
+            onChange={(nextPage) => onPageChange?.(nextPage)}
+            showSizeChanger={false}
+            showTotal={(count, [start, end]) => `${start}-${end}/${count}`}
+          />
+        </div>
+      ) : null}
     </aside>
   );
 };

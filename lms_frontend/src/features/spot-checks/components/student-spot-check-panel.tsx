@@ -71,7 +71,7 @@ const StudentSpotCheckFormBody: React.FC<{
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const items = draftItems ?? (data?.items.map((item) => ({
+  const items = draftItems ?? (data?.items?.map((item) => ({
     id: item.id,
     topic: item.topic,
     instruction: item.instruction ?? '',
@@ -146,7 +146,7 @@ const StudentSpotCheckFormBody: React.FC<{
             <div className="rounded-xl bg-muted/50 px-4 py-3 text-[13px] text-text-muted">
               <p>发起人 {data.checker_name}</p>
             </div>
-            {data.items.map((raw, index) => {
+            {(data.items ?? []).map((raw, index) => {
               const item = items[index] ?? {
                 topic: raw.topic,
                 instruction: raw.instruction ?? '',

@@ -2,12 +2,13 @@
 抽查记录应用服务
 发起(PENDING) → 学员提交(SUBMITTED) → 导师评分(SCORED)
 """
+from __future__ import annotations
+
 import uuid
-from typing import Optional
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 from django.utils import timezone
 
 from apps.activity_logs.decorators import log_operation
@@ -24,12 +25,15 @@ from .models import SpotCheck, SpotCheckItem
 class SpotCheckService(BaseService):
     """抽查记录应用服务。"""
 
-    def _base_queryset(self) -> QuerySet:
+    def _base_queryset(self, *, include_item_details: bool = True) -> QuerySet:
+        item_qs = SpotCheckItem.objects.all()
+        if not include_item_details:
+            item_qs = item_qs.only('id', 'spot_check_id', 'topic', 'score', 'order')
         return SpotCheck.objects.select_related(
             'student',
             'checker',
             'student__department',
-        ).prefetch_related('items')
+        ).prefetch_related(Prefetch('items', queryset=item_qs))
 
     def _lock_by_id(self, pk: int) -> SpotCheck:
         """锁定单行 SpotCheck，串行化 update/submit/score。不联表，避免锁住用户行。"""
@@ -54,7 +58,7 @@ class SpotCheckService(BaseService):
 
     def _bump_revision(self, spot_check: SpotCheck, *, update_fields: list[str]) -> None:
         spot_check.revision = int(spot_check.revision) + 1
-        fields = list(dict.fromkeys([*update_fields, 'revision', 'updated_at']))
+        fields = [*update_fields, 'revision', 'updated_at']
         spot_check.save(update_fields=fields)
 
     def _enforce_student_owned(self, spot_check: SpotCheck, *, error_message: str) -> None:
@@ -77,9 +81,9 @@ class SpotCheckService(BaseService):
 
     def get_list(
         self,
-        student_id: Optional[int] = None,
-        batch_id: Optional[UUID] = None,
-        status: Optional[str] = None,
+        student_id: int | None = None,
+        batch_id: UUID | None = None,
+        status: str | None = None,
         ordering: str = '-created_at',
     ) -> QuerySet:
         return self._get_queryset_for_user(student_id, batch_id, ordering, status=status)
@@ -87,10 +91,10 @@ class SpotCheckService(BaseService):
     def get_mine(
         self,
         ordering: str = '-created_at',
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> QuerySet:
         enforce_student_workspace(self.request, error_message='无权查看抽查记录')
-        qs = self._base_queryset().filter(student_id=self.user.id)
+        qs = self._base_queryset(include_item_details=False).filter(student_id=self.user.id)
         if status:
             qs = qs.filter(status=status)
         if ordering:
@@ -115,34 +119,57 @@ class SpotCheckService(BaseService):
         resolved_students: list[User] = []
         seen_student_ids: set[int] = set()
         for student in students:
-            if isinstance(student, int):
-                student = User.objects.filter(pk=student).first()
-                self.validate_not_none(student, f'学员 {student} 不存在')
             if not isinstance(student, User):
                 raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='无效的学员数据')
             if student.pk in seen_student_ids:
                 continue
             seen_student_ids.add(student.pk)
-            self._validate_student_scope(student)
             resolved_students.append(student)
 
         if not resolved_students:
             raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='至少选择一名学员')
 
-        items = self._normalize_issue_items(data.get('items'))
-        batch_id = uuid.uuid4()
+        student_ids = [student.pk for student in resolved_students]
+        allowed_ids = set(
+            scope_filter('spot_check.create', self.request, resource_model=User)
+            .filter(pk__in=student_ids)
+            .values_list('pk', flat=True)
+        )
+        invalid_ids = sorted(set(student_ids) - allowed_ids)
+        if invalid_ids:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message=f'以下学员不在当前管理范围内: {invalid_ids}',
+            )
 
-        created: list[SpotCheck] = []
-        for student in resolved_students:
-            spot_check = SpotCheck.objects.create(
+        issue_items = self._normalize_issue_items(data.get('items'))
+        batch_id = uuid.uuid4()
+        spot_checks = SpotCheck.objects.bulk_create([
+            SpotCheck(
                 student=student,
                 checker=self.user,
                 status=SpotCheck.STATUS_PENDING,
                 batch_id=batch_id,
             )
-            self._replace_items(spot_check, items, keep_score=False, bump_revision=False)
-            created.append(spot_check)
-        return created
+            for student in resolved_students
+        ])
+
+        SpotCheckItem.objects.bulk_create([
+            SpotCheckItem(
+                spot_check=spot_check,
+                topic=item['topic'],
+                instruction=item['instruction'],
+                content='',
+                images=[],
+                order=index,
+            )
+            for spot_check in spot_checks
+            for index, item in enumerate(issue_items)
+        ])
+
+        return list(
+            self._base_queryset().filter(batch_id=batch_id).order_by('id')
+        )
 
     @log_operation(
         'spot_check',
@@ -159,53 +186,15 @@ class SpotCheckService(BaseService):
         self._enforce_student_owned(spot_check, error_message='无权提交该抽查')
         self._require_revision(spot_check, data)
         if spot_check.status != SpotCheck.STATUS_PENDING:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='当前状态不可提交')
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='当前状态不可提交')
 
-        payload_items = data.get('items') or []
-        existing_by_id = {item.id: item for item in spot_check.items.all()}
-        if not existing_by_id:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='抽查项不存在')
-        if len(payload_items) != len(existing_by_id):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='抽查项已变更，请刷新后重试',
-            )
-
-        payload_ids: list[int] = []
-        for index, payload in enumerate(payload_items, start=1):
-            item_id = payload.get('id')
-            if item_id is None:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项缺少条目 ID',
-                )
-            try:
-                item_id = int(item_id)
-            except (TypeError, ValueError) as exc:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项条目 ID 无效',
-                ) from exc
-            if item_id in payload_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项条目 ID 重复',
-                )
-            if item_id not in existing_by_id:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='抽查项已变更，请刷新后重试',
-                )
-            payload_ids.append(item_id)
-
-        if set(payload_ids) != set(existing_by_id.keys()):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='抽查项已变更，请刷新后重试',
-            )
-
-        for index, payload in enumerate(payload_items, start=1):
-            item = existing_by_id[int(payload['id'])]
+        matched = self._match_items(
+            spot_check,
+            data.get('items') or [],
+            empty_message='请填写抽查项',
+        )
+        updated: list[SpotCheckItem] = []
+        for index, (item, payload) in enumerate(matched, start=1):
             content = str(payload.get('content') or '').strip()
             images = normalize_images(payload.get('images'), field_label=f'第 {index} 项贴图')
             if not content and not images:
@@ -215,7 +204,11 @@ class SpotCheckService(BaseService):
                 )
             item.content = content
             item.images = images
-            item.save(update_fields=['content', 'images'])
+            updated.append(item)
+
+        SpotCheckItem.objects.bulk_update(updated, ['content', 'images'])
+        updated.sort(key=lambda row: (row.order, row.id))
+        spot_check._prefetched_objects_cache = {'items': updated}
 
         spot_check.status = SpotCheck.STATUS_SUBMITTED
         spot_check.submitted_at = timezone.now()
@@ -237,12 +230,28 @@ class SpotCheckService(BaseService):
         enforce('spot_check.update', self.request, resource=spot_check, error_message='无权评分')
         self._require_revision(spot_check, data)
         if spot_check.status not in {SpotCheck.STATUS_SUBMITTED, SpotCheck.STATUS_SCORED}:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='学员提交后才能评分')
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='学员提交后才能评分')
 
-        items = self._normalize_score_items(data.get('items'), spot_check)
-        self._apply_scores(spot_check, items)
+        matched = self._match_items(
+            spot_check,
+            data.get('items') or [],
+            empty_message='请填写评分项',
+        )
+        updated: list[SpotCheckItem] = []
+        for item, payload in matched:
+            score = payload.get('score')
+            if score == '':
+                score = None
+            item.score = score
+            item.comment = str(payload.get('comment') or '').strip()
+            updated.append(item)
+
+        SpotCheckItem.objects.bulk_update(updated, ['score', 'comment'])
+        updated.sort(key=lambda row: (row.order, row.id))
+        spot_check._prefetched_objects_cache = {'items': updated}
+
         # 全部打完才标记已评分，支持逐项即时保存
-        all_scored = all(payload['score'] is not None for payload in items)
+        all_scored = all(item.score is not None for item in updated)
         spot_check.status = SpotCheck.STATUS_SCORED if all_scored else SpotCheck.STATUS_SUBMITTED
         self._bump_revision(spot_check, update_fields=['status'])
         return self._get_raw_by_id(pk)
@@ -264,12 +273,12 @@ class SpotCheckService(BaseService):
 
     def _get_queryset_for_user(
         self,
-        student_id: Optional[int] = None,
-        batch_id: Optional[UUID] = None,
+        student_id: int | None = None,
+        batch_id: UUID | None = None,
         ordering: str = '-created_at',
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> QuerySet:
-        qs = self._base_queryset()
+        qs = self._base_queryset(include_item_details=False)
         qs = scope_filter('spot_check.view', self.request, base_queryset=qs)
         if student_id:
             qs = qs.filter(student_id=student_id)
@@ -281,48 +290,55 @@ class SpotCheckService(BaseService):
             qs = qs.order_by(ordering)
         return qs
 
-    def _replace_items(
+    def _match_items(
         self,
         spot_check: SpotCheck,
-        items: list[dict],
+        payloads: list[dict],
         *,
-        keep_score: bool,
-        bump_revision: bool,
-    ) -> None:
-        spot_check.items.all().delete()
-        created_items = SpotCheckItem.objects.bulk_create([
-            SpotCheckItem(
-                spot_check=spot_check,
-                topic=item['topic'],
-                instruction=item.get('instruction', ''),
-                content=item.get('content', ''),
-                score=item.get('score') if keep_score else None,
-                comment=item.get('comment', '') if keep_score else '',
-                images=item.get('images') or [],
-                order=index,
+        empty_message: str,
+    ) -> list[tuple[SpotCheckItem, dict]]:
+        """校验 payload 与当前 SpotCheckItem 集合完全一致，返回 (item, payload) 对。"""
+        if not payloads:
+            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message=empty_message)
+
+        existing = {item.id: item for item in spot_check.items.all()}
+        if not existing:
+            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='抽查项不存在')
+        if len(payloads) != len(existing):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='抽查项已变更，请刷新后重试',
             )
-            for index, item in enumerate(items)
-        ])
-        spot_check._prefetched_objects_cache = {'items': created_items}
-        if bump_revision:
-            self._bump_revision(spot_check, update_fields=[])
-        else:
-            spot_check.save(update_fields=['updated_at'])
 
-    def _apply_scores(self, spot_check: SpotCheck, items: list[dict]) -> None:
-        existing_by_id = {item.id: item for item in spot_check.items.all()}
-        if len(items) != len(existing_by_id):
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='抽查项数量不匹配')
+        seen_ids: set[int] = set()
+        matched: list[tuple[SpotCheckItem, dict]] = []
+        for index, payload in enumerate(payloads, start=1):
+            item_id = payload.get('id')
+            if item_id is None:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'第 {index} 项缺少条目 ID',
+                )
+            if item_id in seen_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'第 {index} 项条目 ID 重复',
+                )
+            item = existing.get(item_id)
+            if item is None:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='抽查项已变更，请刷新后重试',
+                )
+            seen_ids.add(item_id)
+            matched.append((item, payload))
 
-        updated: list[SpotCheckItem] = []
-        for payload in items:
-            item = existing_by_id[payload['id']]
-            item.score = payload['score']
-            item.comment = payload['comment']
-            item.save(update_fields=['score', 'comment'])
-            updated.append(item)
-        updated.sort(key=lambda row: (row.order, row.id))
-        spot_check._prefetched_objects_cache = {'items': updated}
+        if seen_ids != set(existing.keys()):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='抽查项已变更，请刷新后重试',
+            )
+        return matched
 
     def _normalize_issue_items(self, items_data) -> list[dict]:
         if not items_data:
@@ -340,68 +356,5 @@ class SpotCheckService(BaseService):
             normalized_items.append({
                 'topic': topic,
                 'instruction': instruction,
-                'content': '',
-                'images': [],
             })
         return normalized_items
-
-    def _normalize_score_items(self, items_data, spot_check: SpotCheck) -> list[dict]:
-        if not items_data:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='请填写评分项')
-
-        existing_ids = set(spot_check.items.values_list('id', flat=True))
-        if not existing_ids:
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='抽查项不存在')
-        if len(items_data) != len(existing_ids):
-            raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='抽查项数量不匹配')
-
-        normalized_items = []
-        payload_ids: list[int] = []
-        for index, item in enumerate(items_data, start=1):
-            item_id = item.get('id')
-            if item_id is None:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项缺少条目 ID',
-                )
-            try:
-                item_id = int(item_id)
-            except (TypeError, ValueError) as exc:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项条目 ID 无效',
-                ) from exc
-            if item_id in payload_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'第 {index} 项条目 ID 重复',
-                )
-            if item_id not in existing_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='抽查项已变更，请刷新后重试',
-                )
-            payload_ids.append(item_id)
-
-            score = item.get('score')
-            if score == '':
-                score = None
-            normalized_items.append({
-                'id': item_id,
-                'score': score,
-                'comment': str(item.get('comment') or '').strip(),
-            })
-
-        if set(payload_ids) != existing_ids:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='抽查项已变更，请刷新后重试',
-            )
-        return normalized_items
-
-    def _validate_student_scope(self, student: User) -> None:
-        enforce(
-            'spot_check.create',
-            self.request,
-            resource=student,
-        )

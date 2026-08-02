@@ -2,7 +2,6 @@ import React from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import { richTextToPlainText } from '@/lib/rich-text';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 
@@ -12,7 +11,7 @@ interface KnowledgeItemProps {
 }
 
 export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigate }) => {
-  const previewText = richTextToPlainText(knowledge.content);
+  const previewText = knowledge.content_preview;
 
   return (
     <div

@@ -219,10 +219,23 @@ export const queryKeys = {
     students: ({
       currentRole,
       search,
+      department,
+      page,
+      pageSize,
     }: {
       currentRole: QueryRole;
       search?: string;
-    }) => ['spot-check-students', normalizeRoleKey(currentRole), search ?? ''] as const,
+      department?: string;
+      page: number;
+      pageSize: number;
+    }) => [
+      'spot-check-students',
+      normalizeRoleKey(currentRole),
+      search ?? '',
+      department ?? 'all',
+      page,
+      pageSize,
+    ] as const,
     detailRoot: () => ['spot-check-detail'] as const,
     detail: ({
       currentRole,

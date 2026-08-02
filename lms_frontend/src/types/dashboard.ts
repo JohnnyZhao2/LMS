@@ -12,6 +12,7 @@ interface StudentStats {
   in_progress_count: number;
   urgent_count: number;
   completion_rate: number;
+  /** 考试平均得分率 0–100 */
   exam_avg_score: number | null;
   total_tasks: number;
   completed_count: number;
@@ -72,12 +73,12 @@ export interface MentorDashboard {
 
 export interface MentorDashboardSummary {
   total_students: number;
-  monthly_tasks: number;
   total_tasks: number;
   completed_tasks: number;
   in_progress_tasks: number;
   overdue_tasks: number;
   overall_completion_rate: number;
+  /** 考试平均得分率 0–100 */
   overall_avg_score: number | null;
 }
 

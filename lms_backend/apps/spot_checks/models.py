@@ -2,9 +2,10 @@
 SpotCheck models for LMS.
 抽查：导师批量发起 → 学员填写(可贴图) → 导师评分。
 """
+from __future__ import annotations
+
 import uuid
 from decimal import Decimal, InvalidOperation
-from typing import Optional
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -86,7 +87,7 @@ class SpotCheck(TimestampMixin, models.Model):
         return list(self.items.all())
 
     @staticmethod
-    def _coerce_decimal(value) -> Optional[Decimal]:
+    def _coerce_decimal(value) -> Decimal | None:
         if value in (None, ''):
             return None
         try:
@@ -113,7 +114,7 @@ class SpotCheck(TimestampMixin, models.Model):
         return f"{' / '.join(topics[:3])} 等 {len(topics)} 项"
 
     @property
-    def average_score(self) -> Optional[Decimal]:
+    def average_score(self) -> Decimal | None:
         scores = []
         for item in self._resolved_items():
             score = self._coerce_decimal(getattr(item, 'score', None))
