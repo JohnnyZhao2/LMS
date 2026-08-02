@@ -40,16 +40,6 @@ def _normalize_related_links(related_links):
     return normalized_links
 
 
-def _normalize_knowledge_payload(attrs, *, normalize_missing_title: bool = False):
-    if 'title' in attrs and attrs['title'] is None:
-        attrs['title'] = ''
-    elif normalize_missing_title and attrs.get('title') is None:
-        attrs['title'] = ''
-    if 'related_links' in attrs:
-        attrs['related_links'] = _normalize_related_links(attrs['related_links'])
-    return attrs
-
-
 class KnowledgeListSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     title = serializers.CharField(read_only=True)
@@ -95,29 +85,13 @@ class KnowledgeListSerializer(serializers.Serializer):
 class KnowledgeDetailSerializer(KnowledgeListSerializer):
     tags = serializers.SerializerMethodField()
 
-    class Meta:
-        fields = [
-            'id',
-            'title',
-            'space_tag',
-            'tags',
-            'content',
-            'related_links',
-            'view_count',
-            'content_preview',
-            'created_by_name',
-            'created_at',
-            'updated_by_name',
-            'updated_at',
-        ]
-
     def get_tags(self, obj):
         if hasattr(obj, 'tags'):
             return TagSimpleSerializer(obj.tags.all(), many=True).data
         return getattr(obj, 'tags_json', [])
 
 
-class KnowledgeCreateSerializer(serializers.ModelSerializer):
+class KnowledgeWriteSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
@@ -133,22 +107,10 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         fields = ['title', 'space_tag_id', 'tag_ids', 'related_links', 'content']
 
     def validate(self, attrs):
-        return _normalize_knowledge_payload(attrs, normalize_missing_title=True)
-
-
-class KnowledgeUpdateSerializer(serializers.ModelSerializer):
-    title = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    tag_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False,
-    )
-    related_links = RelatedLinkSerializer(many=True, required=False)
-
-    class Meta:
-        model = Knowledge
-        fields = ['title', 'space_tag_id', 'tag_ids', 'related_links', 'content']
-
-    def validate(self, attrs):
-        return _normalize_knowledge_payload(attrs)
+        if 'title' in attrs and attrs['title'] is None:
+            attrs['title'] = ''
+        elif not self.partial and attrs.get('title') is None:
+            attrs['title'] = ''
+        if 'related_links' in attrs:
+            attrs['related_links'] = _normalize_related_links(attrs['related_links'])
+        return attrs

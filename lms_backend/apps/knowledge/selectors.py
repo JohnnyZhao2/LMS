@@ -1,7 +1,8 @@
 """Knowledge selectors."""
 
+from __future__ import annotations
+
 import re
-from typing import List, Optional
 
 from django.db.models import Q, QuerySet
 
@@ -11,7 +12,7 @@ from .models import Knowledge
 SEARCH_SPLIT_PATTERN = re.compile(r'[\s,，;；、|/]+')
 
 
-def parse_knowledge_search_terms(search: Optional[str]) -> List[str]:
+def parse_knowledge_search_terms(search: str | None) -> list[str]:
     if not search:
         return []
 
@@ -52,13 +53,13 @@ def knowledge_base_queryset() -> QuerySet:
     ).prefetch_related('tags')
 
 
-def get_knowledge_by_id(pk: int) -> Optional[Knowledge]:
+def get_knowledge_by_id(pk: int) -> Knowledge | None:
     return knowledge_base_queryset().filter(pk=pk).first()
 
 
 def get_knowledge_queryset(
-    filters: dict = None,
-    search: str = None,
+    filters: dict | None = None,
+    search: str | None = None,
     ordering: str = '-updated_at',
 ) -> QuerySet:
     qs = knowledge_base_queryset()

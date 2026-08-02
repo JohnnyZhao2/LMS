@@ -1,16 +1,15 @@
-"""Knowledge services."""
+"""Knowledge services: CRUD and immutable revision snapshots."""
+
+from __future__ import annotations
 
 import hashlib
 import json
-import os
-import re
-from typing import Optional, Tuple
+
+from django.db import IntegrityError, transaction
+from django.utils.html import strip_tags
 
 from apps.activity_logs.decorators import log_content_action
 from apps.authorization.engine import enforce
-from django.db import transaction
-from django.utils.html import escape, strip_tags
-
 from apps.tags.resource_tags import (
     apply_resource_tag_changes,
     build_resource_update_plan,
@@ -41,25 +40,57 @@ def build_knowledge_revision_hash(payload: dict) -> str:
     return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
 
 
+@transaction.atomic
 def ensure_knowledge_revision(knowledge: Knowledge, *, actor) -> KnowledgeRevision:
-    payload = build_knowledge_revision_payload(knowledge)
+    """生成任务引用快照；同内容复用，并对源知识行加锁避免版本号竞争。"""
+    locked = (
+        Knowledge.objects.select_for_update()
+        .select_related('space_tag')
+        .prefetch_related('tags')
+        .filter(pk=knowledge.pk)
+        .first()
+    )
+    if locked is None:
+        raise BusinessError(
+            code=ErrorCodes.RESOURCE_NOT_FOUND,
+            message=f'知识文档 {knowledge.pk} 不存在',
+        )
+
+    payload = build_knowledge_revision_payload(locked)
     content_hash = build_knowledge_revision_hash(payload)
-    latest = KnowledgeRevision.objects.filter(source_knowledge=knowledge).order_by('-revision_number').first()
+    latest = (
+        KnowledgeRevision.objects.filter(source_knowledge_id=locked.pk)
+        .order_by('-revision_number')
+        .first()
+    )
     if latest and latest.content_hash == content_hash:
         return latest
 
     next_revision_number = (latest.revision_number if latest else 0) + 1
-    return KnowledgeRevision.objects.create(
-        source_knowledge=knowledge,
-        revision_number=next_revision_number,
-        title=payload['title'],
-        content=payload['content'],
-        related_links=payload['related_links'],
-        space_tag_name=payload['space_tag_name'],
-        tags_json=payload['tags_json'],
-        content_hash=content_hash,
-        created_by=actor,
-    )
+    try:
+        return KnowledgeRevision.objects.create(
+            source_knowledge=locked,
+            revision_number=next_revision_number,
+            title=payload['title'],
+            content=payload['content'],
+            related_links=payload['related_links'],
+            space_tag_name=payload['space_tag_name'],
+            tags_json=payload['tags_json'],
+            content_hash=content_hash,
+            created_by=actor,
+        )
+    except IntegrityError:
+        existing = (
+            KnowledgeRevision.objects.filter(
+                source_knowledge_id=locked.pk,
+                content_hash=content_hash,
+            )
+            .order_by('-revision_number')
+            .first()
+        )
+        if existing:
+            return existing
+        raise
 
 
 class KnowledgeService(BaseService):
@@ -104,6 +135,7 @@ class KnowledgeService(BaseService):
     )
     def update(self, pk: int, data: dict) -> Knowledge:
         knowledge = self.get_by_id(pk)
+        # owner gate：资源所有权
         enforce('knowledge.update', self.request, resource=knowledge, error_message='无权更新知识文档')
         self._validate_knowledge_data(data=data, fallback_content=knowledge.content)
 
@@ -141,11 +173,12 @@ class KnowledgeService(BaseService):
     )
     def delete(self, pk: int) -> Knowledge:
         knowledge = self.get_by_id(pk)
+        # owner gate：资源所有权
         enforce('knowledge.delete', self.request, resource=knowledge, error_message='无权删除知识文档')
-        revisions = list(knowledge.revisions.all())
+        revision_ids = list(knowledge.revisions.values_list('id', flat=True))
         knowledge.delete()
         KnowledgeRevision.objects.filter(
-            id__in=[revision.id for revision in revisions],
+            id__in=revision_ids,
             knowledge_tasks__isnull=True,
         ).delete()
         return knowledge
@@ -156,7 +189,7 @@ class KnowledgeService(BaseService):
     def _validate_knowledge_data(
         self,
         data: dict,
-        fallback_content: Optional[str] = None,
+        fallback_content: str | None = None,
     ) -> None:
         effective_content = data.get('content', fallback_content or '')
         if not strip_tags(str(effective_content)).strip():
@@ -164,221 +197,3 @@ class KnowledgeService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='知识文档必须填写正文内容',
             )
-
-
-class DocumentParserService:
-    """文档解析服务。"""
-
-    SUPPORTED_EXTENSIONS = {'.docx', '.pptx', '.pdf'}
-    MAX_FILE_SIZE = 10 * 1024 * 1024
-    DOCX_HEADING_STYLE_PATTERNS = (
-        re.compile(r'^Heading\s*(\d+)$', re.IGNORECASE),
-        re.compile(r'^标题\s*(\d+)$'),
-    )
-    DOCX_DECIMAL_HEADING_PATTERN = re.compile(r'^\s*(\d+(?:[.．]\d+)+)\s*\S+')
-    INLINE_ORDERED_LIST_PATTERN = re.compile(r'(?<![\d.．])(\d+)[.．、]\s+')
-    DOCX_TITLE_STYLES = {'Title', '标题'}
-    DOCX_SUBTITLE_STYLES = {'Subtitle', '副标题'}
-
-    def parse(self, file) -> Tuple[str, str]:
-        if file.size > self.MAX_FILE_SIZE:
-            raise ValueError(f'文件大小超过限制（最大 {self.MAX_FILE_SIZE // 1024 // 1024}MB）')
-
-        filename = file.name
-        ext = os.path.splitext(filename)[1].lower()
-        if ext not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError(f'不支持的文件格式，仅支持 {", ".join(self.SUPPORTED_EXTENSIONS)}')
-
-        if ext == '.docx':
-            return self._parse_docx(file)
-        if ext == '.pptx':
-            return self._parse_pptx(file)
-        return self._parse_pdf(file)
-
-    def _parse_docx(self, file) -> Tuple[str, str]:
-        from docx import Document
-
-        doc = Document(file)
-        html_parts = []
-        title = None
-
-        for para in doc.paragraphs:
-            text = para.text.strip()
-            if not text:
-                html_parts.append('<p><br></p>')
-                continue
-            style_name = para.style.name if para.style else ''
-            heading_level = self._resolve_docx_heading_level(para, text)
-            if heading_level:
-                if title is None and heading_level == 1:
-                    title = text
-                content_level = self._resolve_docx_content_heading_level(heading_level)
-                html_parts.append(f'<h{content_level}>{escape(text)}</h{content_level}>')
-            elif style_name == 'List Bullet':
-                html_parts.append(f'<ul><li>{escape(text)}</li></ul>')
-            elif style_name == 'List Number':
-                html_parts.append(f'<ol><li>{escape(text)}</li></ol>')
-            else:
-                html_parts.extend(self._render_text_blocks(text))
-
-        content = '\n'.join(html_parts)
-        content = self._merge_consecutive_lists(content)
-        return title or self._extract_title_from_filename(file.name), content
-
-    def _resolve_docx_heading_level(self, para, text: str) -> Optional[int]:
-        style_name = para.style.name if para.style else ''
-
-        numbered_level = self._resolve_docx_numbered_heading_level(text)
-        if numbered_level:
-            return numbered_level
-
-        style_level = self._resolve_docx_style_heading_level(style_name)
-        if style_level:
-            return style_level
-
-        outline_level = self._resolve_docx_outline_level(para)
-        if outline_level:
-            return outline_level
-
-        return None
-
-    def _resolve_docx_numbered_heading_level(self, text: str) -> Optional[int]:
-        level_match = self.DOCX_DECIMAL_HEADING_PATTERN.match(text.strip())
-        if not level_match:
-            return None
-
-        section_number = level_match.group(1).replace('．', '.')
-        return min(section_number.count('.') + 1, 6)
-
-    def _resolve_docx_content_heading_level(self, heading_level: int) -> int:
-        return min(heading_level + 1, 6)
-
-    def _resolve_docx_style_heading_level(self, style_name: str) -> Optional[int]:
-        normalized_style_name = style_name.strip()
-        if normalized_style_name in self.DOCX_TITLE_STYLES:
-            return 1
-        if normalized_style_name in self.DOCX_SUBTITLE_STYLES:
-            return 2
-
-        for pattern in self.DOCX_HEADING_STYLE_PATTERNS:
-            level_match = pattern.match(normalized_style_name)
-            if level_match:
-                return int(level_match.group(1))
-        return None
-
-    def _resolve_docx_outline_level(self, para) -> Optional[int]:
-        direct_level = self._read_docx_outline_level_value(getattr(getattr(para, '_p', None), 'pPr', None))
-        if direct_level:
-            return direct_level
-
-        style_element = getattr(getattr(para, 'style', None), 'element', None)
-        return self._read_docx_outline_level_value(getattr(style_element, 'pPr', None))
-
-    def _read_docx_outline_level_value(self, ppr) -> Optional[int]:
-        outline_level = getattr(ppr, 'outlineLvl', None)
-        if outline_level is None:
-            return None
-
-        raw_value = outline_level.val
-        if isinstance(raw_value, int):
-            return raw_value + 1
-        if isinstance(raw_value, str) and raw_value.isdigit():
-            return int(raw_value) + 1
-        return None
-
-    def _parse_pptx(self, file) -> Tuple[str, str]:
-        from pptx import Presentation
-
-        prs = Presentation(file)
-        html_parts = []
-        title = None
-
-        for i, slide in enumerate(prs.slides, 1):
-            slide_texts = []
-            slide_title = None
-            for shape in slide.shapes:
-                if hasattr(shape, 'text') and shape.text.strip():
-                    text = shape.text.strip()
-                    if slide_title is None:
-                        slide_title = text
-                    else:
-                        slide_texts.append(text)
-            if slide_title:
-                if title is None and i == 1:
-                    title = slide_title
-                html_parts.append(f'<h2>第 {i} 页：{escape(slide_title)}</h2>')
-                for text in slide_texts:
-                    for line in text.split('\n'):
-                        line = line.strip()
-                        if line:
-                            html_parts.extend(self._render_text_blocks(line))
-                        else:
-                            html_parts.append('<p><br></p>')
-
-        content = '\n'.join(html_parts)
-        content = self._merge_consecutive_lists(content)
-        return title or self._extract_title_from_filename(file.name), content
-
-    def _parse_pdf(self, file) -> Tuple[str, str]:
-        import pdfplumber
-
-        html_parts = []
-        title = None
-        with pdfplumber.open(file) as pdf:
-            for i, page in enumerate(pdf.pages, 1):
-                text = page.extract_text()
-                if text:
-                    text = text.strip()
-                    lines = text.split('\n')
-                    if title is None and i == 1 and lines:
-                        title = lines[0].strip()
-                    html_parts.append(f'<h2>第 {i} 页</h2>')
-                    for line in lines:
-                        line = line.strip()
-                        if line:
-                            html_parts.extend(self._render_text_blocks(line))
-                        else:
-                            html_parts.append('<p><br></p>')
-        content = '\n'.join(html_parts)
-        content = self._merge_consecutive_lists(content)
-        return title or self._extract_title_from_filename(file.name), content
-
-    def _render_text_blocks(self, text: str) -> list[str]:
-        inline_list = self._split_inline_ordered_list(text)
-        if not inline_list:
-            return [f'<p>{escape(text)}</p>']
-
-        prefix, items = inline_list
-        blocks = []
-        if prefix:
-            blocks.append(f'<p>{escape(prefix)}</p>')
-        blocks.append('<ol>' + ''.join(f'<li>{escape(item)}</li>' for item in items) + '</ol>')
-        return blocks
-
-    def _split_inline_ordered_list(self, text: str) -> Optional[tuple[str, list[str]]]:
-        matches = list(self.INLINE_ORDERED_LIST_PATTERN.finditer(text))
-        if not matches:
-            return None
-
-        first_match = matches[0]
-        prefix = text[:first_match.start()].strip()
-        if prefix and (first_match.group(1) != '1' or len(matches) == 1):
-            return None
-
-        items = []
-        for index, match in enumerate(matches):
-            next_match = matches[index + 1] if index + 1 < len(matches) else None
-            item = text[match.end():next_match.start() if next_match else len(text)].strip()
-            item = re.sub(r'[;；]\s*$', '', item).strip()
-            if item:
-                items.append(item)
-
-        return (prefix, items) if items else None
-
-    def _merge_consecutive_lists(self, html: str) -> str:
-        html = re.sub(r'</ul>\s*<ul>', '', html)
-        html = re.sub(r'</ol>\s*<ol>', '', html)
-        return html
-
-    def _extract_title_from_filename(self, filename: str) -> str:
-        return os.path.splitext(filename)[0] or '未命名文档'

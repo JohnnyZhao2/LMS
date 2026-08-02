@@ -1,19 +1,16 @@
-"""
-Knowledge URLs.
-API endpoints for knowledge document management.
-"""
+"""Knowledge URLs."""
+
 from django.urls import path
 
+from .document import ParseDocumentView
 from .views import (
     KnowledgeDetailView,
     KnowledgeIncrementViewCountView,
     KnowledgeListCreateView,
     StudentTaskKnowledgeDetailView,
-    ParseDocumentView,
 )
 
 urlpatterns = [
-    # Knowledge endpoints
     path('', KnowledgeListCreateView.as_view(), name='knowledge-list-create'),
     path('parse-document/', ParseDocumentView.as_view(), name='parse-document'),
     path('task/<int:task_knowledge_id>/', StudentTaskKnowledgeDetailView.as_view(), name='student-task-knowledge-detail'),
