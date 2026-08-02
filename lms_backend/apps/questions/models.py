@@ -6,7 +6,7 @@ from apps.tags.models import Tag
 from core.mixins import CreatorMixin, TimestampMixin
 
 from .question_like import (
-    QUESTION_TYPE_CHOICES,
+    QUESTION_TYPE_CHOICES as SHARED_QUESTION_TYPE_CHOICES,
     QuestionContentMixin,
     QuestionOptionContentMixin,
 )
@@ -15,7 +15,7 @@ from .question_like import (
 class Question(TimestampMixin, CreatorMixin, QuestionContentMixin, models.Model):
     """题库中的当前源题。"""
 
-    QUESTION_TYPE_CHOICES = QUESTION_TYPE_CHOICES
+    QUESTION_TYPE_CHOICES = SHARED_QUESTION_TYPE_CHOICES
 
     updated_by = models.ForeignKey(
         'users.User',

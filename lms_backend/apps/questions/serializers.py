@@ -5,7 +5,6 @@ from rest_framework import serializers
 from apps.tags.serializers import TagSimpleSerializer
 
 from .models import Question
-from .question_like import DEFAULT_QUESTION_SCORE
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -49,26 +48,14 @@ class QuestionSerializer(serializers.ModelSerializer):
         return obj.quiz_copies.count()
 
     def get_is_referenced(self, obj) -> bool:
-        annotated_value = getattr(obj, 'is_referenced', None)
-        if annotated_value is not None:
-            return annotated_value
         return self.get_usage_count(obj) > 0
 
 
-class QuestionCreateSerializer(serializers.Serializer):
+class QuestionWriteSerializer(serializers.Serializer):
+    """创建/更新共用写入 Serializer；更新时使用 partial=True。"""
+
     content = serializers.CharField()
     question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES)
-    options = serializers.JSONField(required=False)
-    answer = serializers.JSONField(required=False)
-    explanation = serializers.CharField(required=False, allow_blank=True, default='')
-    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=DEFAULT_QUESTION_SCORE)
-
-
-class QuestionUpdateSerializer(serializers.Serializer):
-    content = serializers.CharField(required=False)
-    question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES, required=False)
     options = serializers.JSONField(required=False)
     answer = serializers.JSONField(required=False)
     explanation = serializers.CharField(required=False, allow_blank=True)
