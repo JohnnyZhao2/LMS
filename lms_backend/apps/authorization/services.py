@@ -35,14 +35,13 @@ register_operation_log_action(
 class AuthorizationService(BaseService):
     """统一授权服务。"""
 
-    REQUEST_CACHE_ATTR = '_authorization_permission_codes'
+    REQUEST_CACHE_ATTR = '_authorization_engine_cache'
 
     def list_permission_catalog(
         self,
         module: Optional[str] = None,
     ):
         queryset = Permission.objects.filter(
-            is_active=True,
             code__in=REGISTERED_PERMISSION_CODES,
         ).exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
         if module:
@@ -50,7 +49,9 @@ class AuthorizationService(BaseService):
         return list(queryset.order_by('module', 'code'))
 
     @staticmethod
+    @transaction.atomic
     def sync_permission_catalog() -> None:
+        """按声明同步权限目录；声明中不存在的目录项会被删除。"""
         for item in PERMISSION_CATALOG:
             Permission.objects.update_or_create(
                 code=item['code'],
@@ -58,28 +59,26 @@ class AuthorizationService(BaseService):
                     'name': item['name'],
                     'module': item['module'],
                     'description': item['description'],
-                    'is_active': True,
                 },
             )
         Permission.objects.exclude(
             code__in=[item['code'] for item in PERMISSION_CATALOG]
         ).delete()
 
-    @staticmethod
-    @transaction.atomic
-    def ensure_defaults() -> None:
-        AuthorizationService.sync_permission_catalog()
-
-    def _permission_codes_for(self, user: User) -> set[str]:
+    def _get_request_cache(self) -> dict:
         cache = getattr(self.request, self.REQUEST_CACHE_ATTR, None)
         if cache is None:
             cache = {}
             setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
+        cache.setdefault('permission_codes', {})
+        return cache
+
+    def _permission_codes_for(self, user: User) -> set[str]:
+        cache = self._get_request_cache()['permission_codes']
         if user.id not in cache:
             cache[user.id] = set(
                 UserPermission.objects.filter(
                     user=user,
-                    permission__is_active=True,
                     permission__code__in=REGISTERED_PERMISSION_CODES,
                 ).values_list('permission__code', flat=True)
             )
@@ -88,7 +87,7 @@ class AuthorizationService(BaseService):
     def _invalidate_permission_cache(self, user_id: int) -> None:
         cache = getattr(self.request, self.REQUEST_CACHE_ATTR, None)
         if cache is not None:
-            cache.pop(user_id, None)
+            cache.get('permission_codes', {}).pop(user_id, None)
 
     def _allowed_permission_codes(
         self,
@@ -221,16 +220,13 @@ class AuthorizationService(BaseService):
         if to_add:
             permissions = {
                 permission.code: permission
-                for permission in Permission.objects.filter(
-                    code__in=to_add,
-                    is_active=True,
-                )
+                for permission in Permission.objects.filter(code__in=to_add)
             }
-            missing_active = to_add - set(permissions)
-            if missing_active:
+            missing = to_add - set(permissions)
+            if missing:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'权限不存在或未启用：{", ".join(sorted(missing_active))}',
+                    message=f'权限不存在：{", ".join(sorted(missing))}',
                 )
             UserPermission.objects.bulk_create([
                 UserPermission(user=target, permission=permissions[code])

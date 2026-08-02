@@ -6,6 +6,8 @@
 /.agent/
 /.codex/
 /.shared/
+/.trae/
+trae/
 
 # IDE 与系统文件
 .vscode/

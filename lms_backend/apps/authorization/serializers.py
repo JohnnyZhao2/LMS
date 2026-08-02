@@ -18,7 +18,6 @@ class PermissionSerializer(serializers.ModelSerializer):
             'module',
             'description',
             'constraint_summary',
-            'is_active',
         ]
 
 

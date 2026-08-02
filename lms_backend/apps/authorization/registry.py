@@ -78,14 +78,6 @@ def crud_permissions(
     )
 
 
-def permission_codes(prefix: str, *actions: str) -> tuple[str, ...]:
-    return tuple(f'{prefix}.{action}' for action in actions)
-
-
-def crud_codes(prefix: str) -> tuple[str, ...]:
-    return permission_codes(prefix, *CRUD_ACTIONS)
-
-
 def crud_authorization_spec(
     module: str,
     prefix: str,

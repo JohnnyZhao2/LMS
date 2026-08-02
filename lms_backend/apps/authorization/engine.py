@@ -29,7 +29,7 @@ class AuthorizationEngine(BaseService):
     多次创建 engine 也能复用已解析的权限、范围和资源判定。
     """
 
-    REQUEST_CACHE_ATTR = '_authorization_engine_cache'
+    REQUEST_CACHE_ATTR = AuthorizationService.REQUEST_CACHE_ATTR
 
     def __init__(self, request):
         super().__init__(request)
@@ -42,12 +42,12 @@ class AuthorizationEngine(BaseService):
     def _get_request_cache(self) -> dict[str, dict[Any, Any]]:
         cache = getattr(self.request, self.REQUEST_CACHE_ATTR, None)
         if cache is None:
-            cache = {
-                'base_permission_decisions': {},
-                'resource_decisions': {},
-                'scoped_user_ids': {},
-            }
+            cache = {}
             setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
+        cache.setdefault('base_permission_decisions', {})
+        cache.setdefault('resource_decisions', {})
+        cache.setdefault('scoped_user_ids', {})
+        cache.setdefault('permission_codes', {})
         return cache
 
     def _get_cached_base_permission_decision(

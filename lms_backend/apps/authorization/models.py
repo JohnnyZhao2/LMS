@@ -13,7 +13,6 @@ class Permission(TimestampMixin, models.Model):
     name = models.CharField(max_length=100, verbose_name='权限名称')
     module = models.CharField(max_length=50, db_index=True, verbose_name='所属模块')
     description = models.TextField(blank=True, default='', verbose_name='权限描述')
-    is_active = models.BooleanField(default=True, db_index=True, verbose_name='是否启用')
 
     class Meta:
         db_table = 'lms_permission'
