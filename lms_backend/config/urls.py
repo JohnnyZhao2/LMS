@@ -25,7 +25,7 @@ urlpatterns = [
     path('api/quizzes/', include('apps.quizzes.urls')),
     path('api/tasks/', include('apps.tasks.urls')),
     path('api/grading/', include('apps.grading.urls')),
-    path('api/submissions/', include('apps.submissions.urls.submissions')),
+    path('api/submissions/', include('apps.submissions.urls')),
     path('api/spot-checks/', include('apps.spot_checks.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/logs/', include('apps.activity_logs.urls')),

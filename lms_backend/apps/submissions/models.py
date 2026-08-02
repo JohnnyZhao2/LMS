@@ -6,7 +6,6 @@
 
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -16,18 +15,30 @@ from core.mixins import TimestampMixin
 class Submission(TimestampMixin, models.Model):
     """一次试卷作答记录。
 
-    关联约束（保存时强制）：
-    - user 必须等于 task_assignment.assignee
-    - task_quiz 必须属于 task_assignment.task
-    - quiz 必须等于 task_quiz.quiz
+    一致性由 SubmissionService 创建时保证：
+    - user == task_assignment.assignee
+    - task_quiz 属于 task_assignment.task
+    - quiz == task_quiz.quiz
     """
 
+    STATUS_IN_PROGRESS = 'IN_PROGRESS'
+    STATUS_SUBMITTED = 'SUBMITTED'
+    STATUS_GRADING = 'GRADING'
+    STATUS_GRADED = 'GRADED'
+
     STATUS_CHOICES = [
-        ('IN_PROGRESS', '答题中'),
-        ('SUBMITTED', '已提交'),
-        ('GRADING', '待评分'),
-        ('GRADED', '已评分'),
+        (STATUS_IN_PROGRESS, '答题中'),
+        (STATUS_SUBMITTED, '已提交'),
+        (STATUS_GRADING, '待评分'),
+        (STATUS_GRADED, '已评分'),
     ]
+
+    #: 进行中
+    ACTIVE_STATUS = STATUS_IN_PROGRESS
+    #: 已结束作答（含待评分）
+    COMPLETED_STATUSES = (STATUS_SUBMITTED, STATUS_GRADING, STATUS_GRADED)
+    #: 计入 Assignment 最高分
+    SCORED_STATUSES = (STATUS_SUBMITTED, STATUS_GRADED)
 
     task_assignment = models.ForeignKey(
         'tasks.TaskAssignment',
@@ -57,7 +68,7 @@ class Submission(TimestampMixin, models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='IN_PROGRESS',
+        default=STATUS_IN_PROGRESS,
         verbose_name='状态',
     )
     total_score = models.DecimalField(
@@ -75,11 +86,6 @@ class Submission(TimestampMixin, models.Model):
     )
     started_at = models.DateTimeField(auto_now_add=True, verbose_name='开始时间')
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='提交时间')
-    remaining_seconds = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='剩余时间（秒）',
-    )
 
     class Meta:
         db_table = 'lms_submission'
@@ -96,39 +102,6 @@ class Submission(TimestampMixin, models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)'
-
-    def clean(self):
-        super().clean()
-        errors = {}
-        if not self.task_assignment_id:
-            errors['task_assignment'] = '任务分配不能为空'
-        if not self.task_quiz_id:
-            errors['task_quiz'] = '任务试卷不能为空'
-        if not self.quiz_id:
-            errors['quiz'] = '试卷快照不能为空'
-        if not self.user_id:
-            errors['user'] = '答题用户不能为空'
-        if errors:
-            raise ValidationError(errors)
-
-        assignment = self.task_assignment
-        task_quiz = self.task_quiz
-        if self.user_id != assignment.assignee_id:
-            errors['user'] = '答题用户必须与任务被分配人一致'
-        if task_quiz.task_id != assignment.task_id:
-            errors['task_quiz'] = '任务试卷必须属于同一任务'
-        if self.quiz_id != task_quiz.quiz_id:
-            errors['quiz'] = '试卷快照必须与任务试卷绑定的快照一致'
-        if errors:
-            raise ValidationError(errors)
-
-    def save(self, *args, **kwargs):
-        if not self.pk and not self.total_score:
-            if not self.quiz_id:
-                raise ValidationError({'quiz': '试卷快照不能为空'})
-            self.total_score = self.quiz.total_score
-        self.full_clean()
-        super().save(*args, **kwargs)
 
     @property
     def task(self):
@@ -162,19 +135,25 @@ class Submission(TimestampMixin, models.Model):
         return self.obtained_score >= self.quiz.pass_score
 
     def get_reference_remaining_seconds(self):
-        """返回考试计时的参考剩余秒数。
-
-        保存答案时会记录 `remaining_seconds`，重新进入考试时再扣除离线期间耗时。
-        """
-        if self.quiz.quiz_type != 'EXAM':
+        """考试墙钟倒计时参考剩余秒数：duration - (now - started_at)。"""
+        if self.quiz.quiz_type != 'EXAM' or not self.quiz.duration:
             return None
-        base_seconds = self.remaining_seconds
-        if base_seconds is None:
-            if not self.quiz.duration:
-                return None
-            base_seconds = self.quiz.duration * 60
         elapsed_seconds = max(0, int((timezone.now() - self.started_at).total_seconds()))
-        return max(base_seconds - elapsed_seconds, 0)
+        return max(self.quiz.duration * 60 - elapsed_seconds, 0)
+
+    def should_reveal_answers(self) -> bool:
+        """是否向学员暴露正确答案与解析。
+
+        - 答题中：否
+        - 练习：提交后即可
+        - 考试：任务截止后
+        """
+        if self.status == self.STATUS_IN_PROGRESS:
+            return False
+        if self.quiz.quiz_type != 'EXAM':
+            return True
+        return timezone.now() > self.task_assignment.task.deadline
+
 
 class Answer(TimestampMixin, models.Model):
     """单题作答记录。
@@ -302,7 +281,13 @@ class Answer(TimestampMixin, models.Model):
         self.obtained_score = score
         self.comment = comment
         self.is_correct = self.obtained_score == self.max_score
-        self.save()
+        self.save(update_fields=[
+            'graded_by',
+            'graded_at',
+            'obtained_score',
+            'comment',
+            'is_correct',
+        ])
 
 
 class AnswerSelection(TimestampMixin, models.Model):

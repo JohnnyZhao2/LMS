@@ -1,11 +1,6 @@
-"""
-Submissions URLs.
-Implements URL routing for:
-- submission lifecycle
-"""
 from django.urls import path
 
-from ..views import (
+from .views import (
     ResultView,
     SaveAnswerView,
     StartQuizView,

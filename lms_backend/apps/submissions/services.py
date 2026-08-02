@@ -13,7 +13,7 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Answer, AnswerSelection, Submission
-from .scoring import calculate_submission_obtained_score, refresh_assignment_score
+from .scoring import calculate_submission_score, refresh_assignment_score
 
 # 区分“调用方未传字段”和“调用方传了空值”的哨兵对象。
 UNSET = object()
@@ -49,7 +49,7 @@ class SubmissionService(BaseService):
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             task_quiz_id=task_quiz_id,
-            status='IN_PROGRESS',
+            status=Submission.STATUS_IN_PROGRESS,
         ).first()
 
     def get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
@@ -59,7 +59,7 @@ class SubmissionService(BaseService):
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             task_quiz_id=task_quiz_id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
+            status__in=Submission.COMPLETED_STATUSES,
         ).first()
 
     def _next_attempt_number(self, task_assignment_id: int, task_quiz_id: int) -> int:
@@ -182,8 +182,6 @@ class SubmissionService(BaseService):
         ).first()
         if not assignment:
             raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='任务不存在或未分配给您')
-        if not assignment.task.has_quiz:
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='此任务不包含试卷')
         task_quiz = TaskQuiz.objects.select_related('quiz').filter(
             id=quiz_id,
             task_id=assignment.task_id,
@@ -193,6 +191,7 @@ class SubmissionService(BaseService):
         return assignment, task_quiz, task_quiz.quiz
 
     def check_exam_constraints(self, assignment: TaskAssignment, quiz_id: int) -> Optional[Submission]:
+        """考试开卷约束：任务截止后禁止新开卷；已提交过则不可再答。"""
         now = timezone.now()
         if now > assignment.task.deadline:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已结束')
@@ -230,7 +229,7 @@ class SubmissionService(BaseService):
         else:
             in_progress = self.get_in_progress(task_assignment_id=assignment.id, quiz_id=quiz_id)
         if in_progress:
-            return in_progress, False
+            return self.get_submission_by_id(in_progress.id, user=user), False
         try:
             # 内层 savepoint：唯一约束冲突时不污染外层事务，可回退为 resume
             with transaction.atomic():
@@ -246,9 +245,9 @@ class SubmissionService(BaseService):
                 task_quiz_id=task_quiz.id,
             )
             if in_progress:
-                return in_progress, False
+                return self.get_submission_by_id(in_progress.id, user=user), False
             raise
-        return submission, True
+        return self.get_submission_by_id(submission.id, user=user), True
 
     @transaction.atomic
     @log_operation(
@@ -272,7 +271,6 @@ class SubmissionService(BaseService):
         quiz = task_quiz.quiz
         total_score = quiz.total_score
         attempt_number = 1 if is_exam else self._next_attempt_number(assignment.id, task_quiz.id)
-        remaining_seconds = quiz.duration * 60 if is_exam and quiz.duration else None
         questions = quiz.quiz_questions.order_by('order').values_list('id', flat=True)
         # 每道快照题先生成空 Answer，后续保存答案只更新这批固定记录。
         answers_data = [{'question_id': question_id} for question_id in questions]
@@ -284,7 +282,6 @@ class SubmissionService(BaseService):
             user=user,
             attempt_number=attempt_number,
             total_score=total_score,
-            remaining_seconds=remaining_seconds,
         )
         return submission
 
@@ -296,7 +293,7 @@ class SubmissionService(BaseService):
         user_answer: Any = UNSET,
         is_marked: bool = UNSET,
     ) -> Answer:
-        if submission.status != 'IN_PROGRESS':
+        if submission.status != Submission.STATUS_IN_PROGRESS:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='当前答卷不可继续作答')
         answer = self._get_answer_by_submission_and_question(submission.id, question_id)
         self.validate_not_none(answer, '题目不在此答卷中')
@@ -327,31 +324,34 @@ class SubmissionService(BaseService):
         label='提交答卷',
     )
     def submit(self, submission: Submission) -> Submission:
-        """提交答卷并刷新成绩、任务完成状态。"""
-        if submission.status != 'IN_PROGRESS':
+        """提交答卷并刷新成绩、任务完成状态。
+
+        考试：任务截止后仍允许提交已开始的答卷，submitted_at 截断为 deadline。
+        参考时间仅用于倒计时提示，不强制交卷。
+        """
+        if submission.status != Submission.STATUS_IN_PROGRESS:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='该答卷已提交')
 
+        now = timezone.now()
         task = submission.task_assignment.task
-        if submission.quiz.quiz_type == 'EXAM':
-            if timezone.now() > task.deadline:
-                submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
-                submission.submitted_at = task.deadline
-            else:
-                submission.submitted_at = timezone.now()
-                submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
-        else:
-            submission.submitted_at = timezone.now()
-            submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
+        is_exam = submission.quiz.quiz_type == 'EXAM'
+        submitted_at = min(now, task.deadline) if is_exam else now
+        status = (
+            Submission.STATUS_GRADING
+            if submission.has_subjective_questions
+            else Submission.STATUS_SUBMITTED
+        )
 
         for answer in self._list_objective_answers(submission.id):
             answer.auto_grade()
 
-        submission.obtained_score = calculate_submission_obtained_score(submission)
+        submission.status = status
+        submission.submitted_at = submitted_at
+        submission.obtained_score = calculate_submission_score(submission)
         submission.save(update_fields=['status', 'submitted_at', 'obtained_score'])
-        refresh_assignment_score(submission.task_assignment, Submission)
-        if submission.status == 'SUBMITTED':
+        refresh_assignment_score(submission.task_assignment)
+        if submission.status == Submission.STATUS_SUBMITTED:
             from apps.tasks.progress import sync_assignment_completion_status
 
             sync_assignment_completion_status(submission.task_assignment)
-        submission.refresh_from_db()
         return submission

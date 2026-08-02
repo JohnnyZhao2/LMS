@@ -1,9 +1,5 @@
-"""
-Common views for submissions.
-Implements unified interfaces and common functionality:
-- Unified quiz interface (StartQuizView, SubmitView)
-- Save answer during quiz
-"""
+"""学员答题接口：开始/恢复、保存答案、提交、查看结果。"""
+
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -13,24 +9,22 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
 
-from ..serializers import (
+from .models import Submission
+from .serializers import (
     SaveAnswerSerializer,
     StartQuizSerializer,
     SubmissionDetailSerializer,
 )
-from ..services import SubmissionService, UNSET
-
-
-def enforce_student_submission_role(request) -> None:
-    enforce_student_workspace(request, error_message='只有学员角色可以进行答题和查看结果')
+from .services import SubmissionService, UNSET
 
 
 class StartQuizView(APIView):
+    """开始或恢复答题。
+
+    - PRACTICE: 允许多次提交
+    - EXAM: 只能提交一次；任务截止后禁止新开卷，已开始可继续作答并提交
     """
-    统一的开始答题接口，根据 quiz_type 自动判断行为。
-    - PRACTICE: 允许多次提交，任务完成后仍可继续
-    - EXAM: 只能提交一次，展示参考时间倒计时
-    """
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -38,7 +32,7 @@ class StartQuizView(APIView):
         description='''
         开始答题。根据试卷类型自动判断行为：
         - PRACTICE: 允许多次提交
-        - EXAM: 只能提交一次，参考时间仅用于倒计时提示
+        - EXAM: 只能提交一次；参考时间仅用于倒计时提示；任务截止后不可新开卷
         ''',
         request=StartQuizSerializer,
         responses={
@@ -47,13 +41,13 @@ class StartQuizView(APIView):
             400: OpenApiResponse(description='参数错误'),
             404: OpenApiResponse(description='任务或试卷不存在'),
         },
-        tags=['答题']
+        tags=['答题'],
     )
     def post(self, request):
-        enforce_student_submission_role(request)
+        enforce_student_workspace(request, error_message='只有学员角色可以进行答题和查看结果')
         serializer = StartQuizSerializer(
             data=request.data,
-            context={'request': request}
+            context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
         service = SubmissionService(request)
@@ -69,28 +63,31 @@ class StartQuizView(APIView):
 
 
 class SubmitView(BaseAPIView):
+    """提交答卷。
+
+    考试在任务截止后仍允许提交已开始的答卷；参考时间不强制交卷。
     """
-    统一的提交答卷接口，根据 quiz_type 自动判断行为。
-    """
+
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
 
     @extend_schema(
         summary='提交答卷',
         description='''
-        提交答卷。根据试卷类型自动判断：
+        提交答卷：
         - PRACTICE: 可多次提交
-        - EXAM: 自动评分，不会因参考时间超时而强制交卷
+        - EXAM: 任务截止后仍可提交已开始的答卷，submitted_at 不超过 deadline；
+          参考时间不强制交卷；正确答案在任务截止后才返回
         ''',
         responses={
             200: SubmissionDetailSerializer,
             400: OpenApiResponse(description='参数错误'),
             404: OpenApiResponse(description='答题记录不存在'),
         },
-        tags=['答题']
+        tags=['答题'],
     )
     def post(self, request, pk):
-        enforce_student_submission_role(request)
+        enforce_student_workspace(request, error_message='只有学员角色可以进行答题和查看结果')
         submission = self.service.get_submission_by_id(pk, user=request.user)
         submission = self.service.submit(submission)
         response_serializer = SubmissionDetailSerializer(submission)
@@ -98,60 +95,63 @@ class SubmitView(BaseAPIView):
 
 
 class ResultView(BaseAPIView):
-    """统一的结果查看接口。"""
+    """查看已提交答卷结果。
+
+    练习提交后即可看到正确答案；考试仅在任务截止后返回正确答案与解析。
+    """
 
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
 
     @extend_schema(
         summary='查看答题结果',
-        description='查看已提交答卷的结果，适用于测验和考试。',
+        description='''
+        查看已提交答卷的结果。
+        - PRACTICE: 提交后返回正确答案与解析
+        - EXAM: 任务截止后才返回正确答案与解析
+        ''',
         responses={
             200: SubmissionDetailSerializer,
             400: OpenApiResponse(description='答卷尚未提交'),
             404: OpenApiResponse(description='答题记录不存在'),
         },
-        tags=['答题']
+        tags=['答题'],
     )
     def get(self, request, pk):
-        enforce_student_submission_role(request)
+        enforce_student_workspace(request, error_message='只有学员角色可以进行答题和查看结果')
         submission = self.service.get_submission_by_id(pk, user=request.user)
-        if submission.status == 'IN_PROGRESS':
+        if submission.status == Submission.STATUS_IN_PROGRESS:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message='答卷尚未提交'
+                message='答卷尚未提交',
             )
         response_serializer = SubmissionDetailSerializer(submission)
         return success_response(response_serializer.data)
 
 
 class SaveAnswerView(BaseAPIView):
-    """
-    Save an answer during practice/exam.
-    """
+    """答题过程中保存单题答案。"""
+
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
 
     @extend_schema(
         summary='保存答案',
-        description='''
-        保存单个题目的答案。
-        可以在答题过程中多次调用此接口保存答案。
-        ''',
+        description='保存单个题目的答案，可在答题过程中多次调用。',
         request=SaveAnswerSerializer,
         responses={
             200: OpenApiResponse(description='保存成功'),
             400: OpenApiResponse(description='参数错误'),
             404: OpenApiResponse(description='答题记录不存在'),
         },
-        tags=['测验答题', '考试答题']
+        tags=['答题'],
     )
     def post(self, request, pk):
-        enforce_student_submission_role(request)
+        enforce_student_workspace(request, error_message='只有学员角色可以进行答题和查看结果')
         submission = self.service.get_submission_by_id(pk, user=request.user)
         serializer = SaveAnswerSerializer(
             data=request.data,
-            context={'request': request, 'submission': submission}
+            context={'request': request, 'submission': submission},
         )
         serializer.is_valid(raise_exception=True)
         answer = self.service.save_answer(
@@ -166,5 +166,5 @@ class SaveAnswerView(BaseAPIView):
                 'user_answer': answer.user_answer,
                 'is_marked': answer.is_marked,
             },
-            message='保存成功'
+            message='保存成功',
         )

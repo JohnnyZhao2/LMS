@@ -41,6 +41,13 @@ class AnswerSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['is_correct', 'obtained_score', 'graded_by', 'graded_at', 'comment']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get('reveal_answers'):
+            data.pop('correct_answer', None)
+            data.pop('explanation', None)
+        return data
+
 
 class SubmissionDetailSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
@@ -86,6 +93,10 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
 
     def get_remaining_seconds(self, obj):
         return obj.get_reference_remaining_seconds()
+
+    def to_representation(self, instance):
+        self.context['reveal_answers'] = instance.should_reveal_answers()
+        return super().to_representation(instance)
 
 
 class SaveAnswerSerializer(serializers.Serializer):
