@@ -17,7 +17,7 @@ from apps.tasks.serializers import (
 from apps.tasks.student_task_service import StudentTaskService
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
-from core.responses import paginated_response, success_response
+from core.responses import success_response
 
 
 class StudentAssignmentListView(BaseAPIView):
@@ -52,7 +52,7 @@ class StudentAssignmentListView(BaseAPIView):
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = StudentAssignmentListSerializer(page, many=True)
-        return paginated_response(page, serializer.data, paginator)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class StudentTaskDetailView(BaseAPIView):

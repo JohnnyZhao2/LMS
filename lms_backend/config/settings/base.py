@@ -16,28 +16,21 @@ if SETTINGS_MODULE.endswith('.development'):
 elif SETTINGS_MODULE.endswith('.production'):
     APP_ENV = 'production'
     ENV_FILE = BASE_DIR / '.env.production'
-elif SETTINGS_MODULE.endswith('.test'):
-    APP_ENV = 'test'
-    ENV_FILE = None
 else:
     raise ValueError(
         'Unsupported DJANGO_SETTINGS_MODULE '
-        f'"{SETTINGS_MODULE}". Expected development, production, or test settings.'
+        f'"{SETTINGS_MODULE}". Expected development or production settings.'
     )
 
-if ENV_FILE is not None:
-    if not ENV_FILE.exists():
-        raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
-    load_dotenv(ENV_FILE, override=True)
+if not ENV_FILE.exists():
+    raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
+load_dotenv(ENV_FILE, override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 secret_key = os.getenv('SECRET_KEY')
-if APP_ENV == 'test':
-    SECRET_KEY = 'django-test-secret-key'
-else:
-    if not secret_key:
-        raise ValueError(f'SECRET_KEY must be set in {ENV_FILE}')
-    SECRET_KEY = secret_key
+if not secret_key:
+    raise ValueError(f'SECRET_KEY must be set in {ENV_FILE}')
+SECRET_KEY = secret_key
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
