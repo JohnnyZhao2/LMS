@@ -52,10 +52,15 @@ def build_choice_payload(
 def test_knowledge_save_updates_current_only_and_keeps_old_snapshot_frozen():
     user = UserFactory()
     service = KnowledgeService(build_request(user))
-    knowledge = service.create({'title': '知识 A', 'content': '<p>旧内容</p>', 'tag_ids': []})
+    knowledge = service.create({
+        'title': '知识 A',
+        'content': '旧步骤',
+        'external_doc_url': 'https://example.com/doc-a',
+        'tag_ids': [],
+    })
     revision = ensure_knowledge_revision(knowledge, actor=user)
 
-    updated = service.update(knowledge.id, {'title': '知识 A 新版', 'content': '<p>新内容</p>'})
+    updated = service.update(knowledge.id, {'title': '知识 A 新版', 'content': '新步骤'})
 
     revision.refresh_from_db()
     updated.refresh_from_db()
@@ -65,32 +70,43 @@ def test_knowledge_save_updates_current_only_and_keeps_old_snapshot_frozen():
     assert KnowledgeRevision.objects.count() == 1
     assert updated.title == '知识 A 新版'
     assert revision.title == '知识 A'
-    assert revision.content == '<p>旧内容</p>'
+    assert revision.content == '旧步骤'
+    assert revision.external_doc_url == 'https://example.com/doc-a'
 
 
 @pytest.mark.django_db
 def test_ensure_knowledge_revision_reuses_same_snapshot_until_content_changes():
     user = UserFactory()
     service = KnowledgeService(build_request(user))
-    knowledge = service.create({'title': '知识 A', 'content': '<p>内容</p>', 'tag_ids': []})
+    knowledge = service.create({
+        'title': '知识 A',
+        'content': '步骤',
+        'external_doc_url': 'https://example.com/doc-a',
+        'tag_ids': [],
+    })
 
     revision_1 = ensure_knowledge_revision(knowledge, actor=user)
     same_revision = ensure_knowledge_revision(knowledge, actor=user)
-    updated = service.update(knowledge.id, {'content': '<p>内容已更新</p>'})
+    updated = service.update(knowledge.id, {'content': '步骤已更新'})
     revision_2 = ensure_knowledge_revision(updated, actor=user)
 
     assert same_revision.id == revision_1.id
     assert revision_2.id != revision_1.id
     assert revision_2.revision_number == 2
-    assert revision_1.content == '<p>内容</p>'
-    assert revision_2.content == '<p>内容已更新</p>'
+    assert revision_1.content == '步骤'
+    assert revision_2.content == '步骤已更新'
 
 
 @pytest.mark.django_db
 def test_delete_knowledge_removes_unbound_snapshots():
     user = UserFactory()
     service = KnowledgeService(build_request(user))
-    knowledge = service.create({'title': '知识 A', 'content': '<p>内容</p>', 'tag_ids': []})
+    knowledge = service.create({
+        'title': '知识 A',
+        'content': '步骤',
+        'external_doc_url': 'https://example.com/doc-a',
+        'tag_ids': [],
+    })
     revision = ensure_knowledge_revision(knowledge, actor=user)
 
     service.delete(knowledge.id)
@@ -103,7 +119,12 @@ def test_delete_knowledge_removes_unbound_snapshots():
 def test_delete_knowledge_keeps_task_bound_snapshot():
     user = UserFactory()
     service = KnowledgeService(build_request(user))
-    knowledge = service.create({'title': '知识 A', 'content': '<p>内容</p>', 'tag_ids': []})
+    knowledge = service.create({
+        'title': '知识 A',
+        'content': '步骤',
+        'external_doc_url': 'https://example.com/doc-a',
+        'tag_ids': [],
+    })
     revision = ensure_knowledge_revision(knowledge, actor=user)
     task = TaskFactory(created_by=user, updated_by=user)
     TaskKnowledgeFactory(task=task, knowledge=revision, source_knowledge=knowledge)

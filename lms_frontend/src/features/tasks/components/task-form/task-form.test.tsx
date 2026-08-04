@@ -50,7 +50,7 @@ vi.mock('@/entities/quiz/components/quiz-preview-dialog', () => ({
   ),
 }));
 
-vi.mock('@/entities/knowledge/components/knowledge-detail-modal', () => ({
+vi.mock('@/features/knowledge/components/modals/knowledge-detail-modal', () => ({
   KnowledgeDetailModal: ({
     knowledgeId,
     onClose,

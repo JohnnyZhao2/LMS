@@ -14,7 +14,7 @@ import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-l
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
 import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
-import { KnowledgeDetailModal } from '@/entities/knowledge/components/knowledge-detail-modal';
+import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 
 const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT_MANAGER', '室经理'],

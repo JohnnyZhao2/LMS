@@ -5,6 +5,7 @@ from typing import List
 from apps.activity_logs.decorators import log_operation
 from django.db.models import Exists, OuterRef, Q, QuerySet
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from apps.submissions.models import Submission
 from core.base_service import BaseService
@@ -25,8 +26,9 @@ STUDENT_TASK_LIST_STATUSES = set(TASK_EXECUTION_STATUS_LABELS) - {'COMPLETED_ABN
 
 
 def extract_knowledge_preview(knowledge, max_length: int = 160) -> str:
-    text = getattr(knowledge, 'content_preview', '') or ''
-    return text[:max_length] if text else ''
+    """任务侧纯文本预览。"""
+    text = ' '.join(strip_tags(getattr(knowledge, 'content', '') or '').split())
+    return f'{text[:max_length]}...' if len(text) > max_length else text
 
 
 class StudentTaskService(BaseService):

@@ -1,12 +1,14 @@
 import type { ReactNode, RefObject } from 'react';
-import { Calendar, Check, Eye, Edit, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
+import { Calendar, Check, Eye, Link as LinkIcon, Plus, Trash2, User, X } from 'lucide-react';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { TagAssignmentSection } from '@/entities/tag/components/tag-assignment-section';
 import { RelatedLinksEditor } from '../shared/related-links-editor';
+import { StepsEditor } from '../shared/steps-editor';
 import { getRelatedLinkDisplayText } from '../../utils/related-links';
 import type { KnowledgeDetail as KnowledgeDetailType, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import dayjs from '@/lib/dayjs';
+import { sanitizeStepsHtml } from '../../utils/content-utils';
 
 type KnowledgeRelatedLinksSectionProps = {
   activeRelatedLinks: RelatedLink[];
@@ -47,7 +49,6 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
                 onAddRelatedLink();
                 return;
               }
-
               onOpenRelatedLinksEditor(activeRelatedLinks.length === 0);
             }}
             className="kg-ghost-icon-btn krl-add-btn"
@@ -60,18 +61,14 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
 
       {canUpdateKnowledge && editingLinks ? (
         <RelatedLinksEditor
-          variant="detail"
           links={activeRelatedLinks}
           onChange={onRelatedLinkChange}
-          onAdd={onAddRelatedLink}
           onRemove={onRemoveRelatedLink}
           onSubmit={onRelatedLinksBlur}
-          emptyLabel="添加相关链接"
-          showColumnLabels
           titlePlaceholder="链接名称"
-          urlPlaceholder="https://example.com"
+          urlPlaceholder="https://..."
         />
-      ) : (
+      ) : activeRelatedLinks.length > 0 ? (
         <div className="kd-links-list">
           {activeRelatedLinks.map((link, index) => (
             <a
@@ -87,17 +84,8 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
               </span>
             </a>
           ))}
-          {canUpdateKnowledge && activeRelatedLinks.length === 0 && (
-            <button
-              type="button"
-              className="kd-links-empty"
-              onClick={() => onOpenRelatedLinksEditor(true)}
-            >
-              添加相关链接
-            </button>
-          )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -105,6 +93,9 @@ const KnowledgeRelatedLinksSection: React.FC<KnowledgeRelatedLinksSectionProps> 
 interface KnowledgeDetailSidePanelProps {
   knowledge: KnowledgeDetailType;
   activeTitle: string;
+  activeContent: string;
+  activeExternalDocUrl: string;
+  showStepsInSidebar?: boolean;
   activeTags: SimpleTag[];
   activeRelatedLinks: RelatedLink[];
   activeSpaceTagId: number | null;
@@ -115,14 +106,15 @@ interface KnowledgeDetailSidePanelProps {
   shouldShowSystemTagsSection: boolean;
   showTagInput: boolean;
   showSpaceTags: boolean;
-  editing: boolean;
-  hasContentChanges: boolean;
+  editingMeta: boolean;
+  hasMetaChanges: boolean;
   editingLinks: boolean;
   isSaving: boolean;
   learningAction: ReactNode;
   relatedLinksSectionRef: RefObject<HTMLDivElement | null>;
   onTitleChange: (value: string) => void;
-  onTitleBlur: () => void;
+  onContentChange: (value: string) => void;
+  onExternalDocUrlChange: (value: string) => void;
   onShowTagInputChange: (open: boolean) => void;
   onAddTag: (tag: { id: number; name: string }) => void;
   onRemoveTag: (tagId: number) => void;
@@ -133,7 +125,7 @@ interface KnowledgeDetailSidePanelProps {
   onRemoveRelatedLink: (index: number) => void;
   onToggleSpaceTags: () => void;
   onSpaceTagSelect: (spaceTagId: number) => void | Promise<void>;
-  onStartEditing: () => void;
+  onStartEditingMeta: () => void;
   onDelete: () => void;
   onCancelEdit: () => void;
   onSave: () => void;
@@ -142,6 +134,9 @@ interface KnowledgeDetailSidePanelProps {
 export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> = ({
   knowledge,
   activeTitle,
+  activeContent,
+  activeExternalDocUrl,
+  showStepsInSidebar = true,
   activeTags,
   activeRelatedLinks,
   activeSpaceTagId,
@@ -152,14 +147,15 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   shouldShowSystemTagsSection,
   showTagInput,
   showSpaceTags,
-  editing,
-  hasContentChanges,
+  editingMeta,
+  hasMetaChanges,
   editingLinks,
   isSaving,
   learningAction,
   relatedLinksSectionRef,
   onTitleChange,
-  onTitleBlur,
+  onContentChange,
+  onExternalDocUrlChange,
   onShowTagInputChange,
   onAddTag,
   onRemoveTag,
@@ -170,25 +166,24 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
   onRemoveRelatedLink,
   onToggleSpaceTags,
   onSpaceTagSelect,
-  onStartEditing,
+  onStartEditingMeta,
   onDelete,
   onCancelEdit,
   onSave,
 }) => (
   <div className="kd-right">
     <div className="kd-right-header">
-      {canUpdateKnowledge ? (
+      {canUpdateKnowledge && editingMeta ? (
         <input
           value={activeTitle}
           onChange={(e) => onTitleChange(e.target.value)}
-          onBlur={onTitleBlur}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault();
               event.currentTarget.blur();
             }
           }}
-          placeholder="Title goes here"
+          placeholder="标题"
           className="kd-title-input"
         />
       ) : (
@@ -198,12 +193,44 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
     </div>
 
     <ScrollContainer className="kd-right-body">
+      {canUpdateKnowledge && (
+        <div className="kd-section">
+          <p className="kd-label">文档链接</p>
+          {editingMeta ? (
+            <input
+              value={activeExternalDocUrl}
+              onChange={(e) => onExternalDocUrlChange(e.target.value)}
+              placeholder="https://..."
+              className="krl-input"
+            />
+          ) : (
+            <p className="kd-field-text">{activeExternalDocUrl || '—'}</p>
+          )}
+        </div>
+      )}
+
+      {showStepsInSidebar && (
+        <div className="kd-section">
+          <p className="kd-label">步骤摘要</p>
+          {canUpdateKnowledge && editingMeta ? (
+            <StepsEditor value={activeContent} onChange={onContentChange} minHeight={64} />
+          ) : activeContent ? (
+            <div
+              className="kd-steps-preview"
+              dangerouslySetInnerHTML={{ __html: sanitizeStepsHtml(activeContent) }}
+            />
+          ) : (
+            <p className="kd-field-text">暂无</p>
+          )}
+        </div>
+      )}
+
       {shouldShowSystemTagsSection && (
         <div className="kd-section">
           <TagAssignmentSection
             applicableTo="knowledge"
             title="系统标签"
-            canEdit={canUpdateKnowledge}
+            canEdit={canUpdateKnowledge && editingMeta}
             selectedTags={activeTags}
             expanded={showTagInput}
             onExpandedChange={onShowTagInputChange}
@@ -218,29 +245,31 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       )}
 
-      <div className="kd-section">
-        <p className="kd-label">详细信息</p>
-        <div className="kd-meta-list">
-          {(knowledge.updated_by_name || knowledge.created_by_name) && (
+      {knowledge.id > 0 && (
+        <div className="kd-section">
+          <p className="kd-label">详细信息</p>
+          <div className="kd-meta-list">
+            {(knowledge.updated_by_name || knowledge.created_by_name) && (
+              <div className="kd-meta-item">
+                <User className="kd-meta-icon" />
+                <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
+              </div>
+            )}
             <div className="kd-meta-item">
-              <User className="kd-meta-icon" />
-              <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
+              <Calendar className="kd-meta-icon" />
+              <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
             </div>
-          )}
-          <div className="kd-meta-item">
-            <Calendar className="kd-meta-icon" />
-            <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
-          </div>
-          <div className="kd-meta-item">
-            <Eye className="kd-meta-icon" />
-            <span>{knowledge.view_count ?? 0} 次阅读</span>
+            <div className="kd-meta-item">
+              <Eye className="kd-meta-icon" />
+              <span>{knowledge.view_count ?? 0} 次阅读</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <KnowledgeRelatedLinksSection
         activeRelatedLinks={activeRelatedLinks}
-        canUpdateKnowledge={canUpdateKnowledge}
+        canUpdateKnowledge={canUpdateKnowledge && editingMeta}
         editingLinks={editingLinks}
         relatedLinksSectionRef={relatedLinksSectionRef}
         onOpenRelatedLinksEditor={onOpenRelatedLinksEditor}
@@ -280,28 +309,28 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
         </div>
       )}
 
-      {canUpdateKnowledge && (editing || hasContentChanges) ? (
+      {canUpdateKnowledge && editingMeta ? (
         <div className="kd-edit-actions">
           <button
             type="button"
             onClick={onCancelEdit}
             disabled={isSaving}
             className="kd-edit-icon-btn"
-            title="取消编辑"
-            aria-label="取消编辑"
+            title="取消"
+            aria-label="取消"
           >
             <X style={{ width: 15, height: 15 }} strokeWidth={1.9} />
           </button>
           <button
             type="button"
             onClick={onSave}
-            disabled={!hasContentChanges || isSaving}
+            disabled={!hasMetaChanges || isSaving}
             className="kd-edit-icon-btn kd-edit-icon-btn-confirm"
             title={isSaving ? '保存中…' : '保存'}
             aria-label={isSaving ? '保存中' : '保存'}
             style={{
-              opacity: !hasContentChanges || isSaving ? 0.5 : 1,
-              cursor: !hasContentChanges || isSaving ? 'not-allowed' : 'pointer',
+              opacity: !hasMetaChanges || isSaving ? 0.5 : 1,
+              cursor: !hasMetaChanges || isSaving ? 'not-allowed' : 'pointer',
             }}
           >
             <Check style={{ width: 15, height: 15 }} strokeWidth={1.9} />
@@ -326,11 +355,14 @@ export const KnowledgeDetailSidePanel: React.FC<KnowledgeDetailSidePanelProps> =
           )}
           {canUpdateKnowledge && (
             <button
-              onClick={onStartEditing}
+              onClick={onStartEditingMeta}
               className="kd-action-btn"
-              title="编辑"
+              title="编辑信息"
             >
-              <Edit style={{ width: 15, height: 15 }} />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
             </button>
           )}
           {canDeleteKnowledge && (

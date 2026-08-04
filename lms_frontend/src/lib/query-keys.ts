@@ -112,13 +112,11 @@ export const queryKeys = {
     infiniteList: ({
       currentRole,
       spaceTagId,
-      tagId,
       search,
       pageSize,
     }: {
       currentRole: QueryRole;
       spaceTagId?: number;
-      tagId?: number;
       search?: string;
       pageSize: number;
     }) => [
@@ -126,7 +124,6 @@ export const queryKeys = {
       'infinite',
       normalizeRoleKey(currentRole),
       spaceTagId,
-      tagId,
       search,
       pageSize,
     ] as const,

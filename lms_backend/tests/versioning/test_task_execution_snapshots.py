@@ -56,7 +56,7 @@ def build_choice_payload(
 
 def create_resources(admin_user):
     knowledge = KnowledgeService(build_request(admin_user)).create(
-        {'title': '知识 A', 'content': '<p>内容 A</p>', 'tag_ids': []}
+        {'title': '知识 A', 'content': '步骤 A', 'external_doc_url': 'https://example.com/doc-a', 'tag_ids': []}
     )
     quiz_service = QuizService(build_request(admin_user))
     quiz = quiz_service.create(
@@ -121,7 +121,7 @@ def test_update_task_blocks_resource_replacement_after_knowledge_progress(monkey
     student = UserFactory()
     knowledge, quiz = create_resources(admin_user)
     other_knowledge = KnowledgeService(build_request(admin_user)).create(
-        {'title': '知识 B', 'content': '<p>内容 B</p>', 'tag_ids': []}
+        {'title': '知识 B', 'content': '步骤 B', 'external_doc_url': 'https://example.com/doc-b', 'tag_ids': []}
     )
     bypass_task_authorization(monkeypatch)
 

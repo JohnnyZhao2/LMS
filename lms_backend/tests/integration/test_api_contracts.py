@@ -216,7 +216,8 @@ def sample_exam_quiz(mentor_user):
 def sample_knowledge(mentor_user, space_tag):
     return Knowledge.objects.create(
         title='契约测试知识',
-        content='契约测试正文内容',
+        content='契约测试步骤摘要',
+        external_doc_url='https://example.com/contract-doc-1',
         created_by=mentor_user,
         updated_by=mentor_user,
         space_tag=space_tag,
@@ -1246,19 +1247,22 @@ class TestKnowledgeApiContracts:
             '/api/knowledge/',
             {
                 'space_tag_id': space_tag.id,
-                'content': '<p>无标题正文内容</p>',
+                'content': '无标题步骤',
+                'external_doc_url': 'https://example.com/doc-no-title',
             },
             format='json',
         )
 
         assert_success(response, status_code=201, message='创建成功')
         assert response.data['data']['title'] == ''
+        assert response.data['data']['external_doc_url'] == 'https://example.com/doc-no-title'
 
     def test_knowledge_create_allows_missing_space_tag(self, api_client, admin_user):
         response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
-                'content': '<p>无space正文内容</p>',
+                'content': '无space步骤',
+                'external_doc_url': 'https://example.com/doc-no-space',
             },
             format='json',
         )
@@ -1266,19 +1270,20 @@ class TestKnowledgeApiContracts:
         assert_success(response, status_code=201, message='创建成功')
         assert response.data['data']['space_tag'] is None
 
-    def test_knowledge_create_rejects_empty_content(self, api_client, admin_user):
+    def test_knowledge_create_allows_empty_doc_url(self, api_client, admin_user):
         response = auth(api_client, admin_user).post(
             '/api/knowledge/',
             {
                 'title': '仅标题',
+                'content': '只有文字内容',
                 'space_tag_id': None,
             },
             format='json',
         )
 
-        assert_status(response, 400)
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert response.data['message'] == '知识文档必须填写正文内容'
+        assert_success(response, status_code=201, message='创建成功')
+        assert response.data['data']['external_doc_url'] == ''
+        assert response.data['data']['content'] == '只有文字内容'
 
     def test_knowledge_create_rejects_non_knowledge_scope_tags(
         self,
@@ -1290,7 +1295,8 @@ class TestKnowledgeApiContracts:
             '/api/knowledge/',
             {
                 'title': '错误标签知识',
-                'content': '<p>正文</p>',
+                'content': '步骤',
+                'external_doc_url': 'https://example.com/doc-bad-tag',
                 'tag_ids': [question_tag.id],
             },
             format='json',

@@ -1,185 +1,124 @@
 import * as React from 'react';
-
-import { hasMeaningfulKnowledgeHtml } from '../../utils/slash-shortcuts';
 import { FocusOrbIcon } from '../shared/focus-icon';
-import { SlashQuillEditor } from '../editor/rich-text-editor';
-import { KnowledgeActionButton } from '../shared/knowledge-action-button';
+import { StepsEditor } from '../shared/steps-editor';
+import { plain } from '../../utils/content-utils';
 
 interface AddKnowledgeCardProps {
-  onSave: (content: string) => Promise<void> | void;
-  onExpand: (content: string) => void;
+  onSave: (payload: { title: string; externalDocUrl: string; content: string }) => Promise<void> | void;
+  onExpand: (payload: { title: string; externalDocUrl: string; content: string }) => void;
   isSaving?: boolean;
 }
 
 /**
- * 内嵌在瀑布流中的快速新建知识卡片
- * 风格来自 mymind — 支持卡片内快速保存，也支持展开进入完整编辑
+ * 瀑布流快速新建：标题 + 文档链接 + 步骤；展开进弹窗 / 直接保存
  */
 export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   onSave,
   onExpand,
   isSaving = false,
 }) => {
-  const cardRef = React.useRef<HTMLDivElement | null>(null);
-  const [focused, setFocused] = React.useState(false);
-  const [hovered, setHovered] = React.useState(false);
-  const [value, setValue] = React.useState('');
-  const hasContent = hasMeaningfulKnowledgeHtml(value);
+  const [title, setTitle] = React.useState('');
+  const [externalDocUrl, setExternalDocUrl] = React.useState('');
+  const [content, setContent] = React.useState('');
 
-  const focusEditor = React.useCallback(() => {
-    const editor = cardRef.current?.querySelector<HTMLElement>('.ql-editor');
-    editor?.focus();
-  }, []);
+  const canSave = Boolean(title.trim() || externalDocUrl.trim() || plain(content));
+  const draft = () => ({ title: title.trim(), externalDocUrl: externalDocUrl.trim(), content });
 
-  const handleCardMouseDown = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (target.closest('button, .ql-editor, .sqe-menu, .sqe-toolbar, .sqe-toolbar-popover')) {
-      return;
-    }
+  const reset = () => {
+    setTitle('');
+    setExternalDocUrl('');
+    setContent('');
+  };
 
-    event.preventDefault();
-    setFocused(true);
-    window.requestAnimationFrame(() => {
-      focusEditor();
-    });
-  }, [focusEditor]);
-
-  const saveDraft = React.useCallback(async () => {
-    if (isSaving || !hasContent) return;
-
+  const saveDraft = async () => {
+    if (isSaving || !canSave) return;
     try {
-      await onSave(value);
-      setValue('');
-      setFocused(false);
-      setHovered(false);
-
-      const activeElement = document.activeElement;
-      if (activeElement instanceof HTMLElement) {
-        activeElement.blur();
-      }
+      await onSave(draft());
+      reset();
     } catch {
-      // 创建失败时保留草稿，方便用户修正后重试
+      // 保留草稿
     }
-  }, [hasContent, isSaving, onSave, value]);
+  };
 
   return (
-    <div
-      style={{
-        marginBottom: 14,
-        breakInside: 'avoid',
-        position: 'relative',
-        zIndex: focused ? 40 : 1,
-      }}
-    >
-      <div
-        ref={cardRef}
-        onMouseDown={handleCardMouseDown}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          background: '#fff',
-          borderRadius: 7,
-          minHeight: 200,
-          overflow: focused ? 'visible' : 'hidden',
-          position: 'relative',
-          boxShadow:
-            focused || hovered
-              ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
-              : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
-          border: 'none',
-          transition: 'box-shadow .22s ease',
-          cursor: 'text',
-        }}
-      >
-        {(focused || hovered) && (
+    <div className="akc-card" style={{ marginBottom: 14, breakInside: 'avoid' }}>
+      <div className="akc-body">
+        <button
+          type="button"
+          className="akc-expand"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onExpand({ title, externalDocUrl, content });
+          }}
+          title="展开"
+          aria-label="展开"
+        >
+          <FocusOrbIcon size={16} interactive />
+        </button>
+
+        <p className="akc-label">添加知识</p>
+        <input
+          className="akc-input akc-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="标题"
+        />
+        <input
+          className="akc-input"
+          value={externalDocUrl}
+          onChange={(e) => setExternalDocUrl(e.target.value)}
+          placeholder="文档链接（可选）"
+        />
+        <StepsEditor value={content} onChange={setContent} minHeight={48} />
+
+        {canSave && (
           <button
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onExpand(value);
-            }}
-            style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 3,
+            type="button"
+            className="akc-save"
+            disabled={isSaving}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              void saveDraft();
             }}
           >
-            <FocusOrbIcon size={16} interactive />
+            {isSaving ? '保存中…' : '保存'}
           </button>
         )}
-
-        <div
-          style={{
-            padding: '22px 24px',
-            paddingBottom: focused && hasContent ? 58 : 22,
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 12px',
-              fontSize: 10.5,
-              fontWeight: 700,
-              color: '#e8793a',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            添加知识
-          </p>
-
-          <SlashQuillEditor
-            value={value}
-            onChange={setValue}
-            onFocus={() => setFocused(true)}
-            onBlur={() => {
-              if (!hasMeaningfulKnowledgeHtml(value)) {
-                setFocused(false);
-              }
-            }}
-            placeholder="在这里输入，键入 / 调出快捷指令"
-            placeholderMode="empty-only"
-            placeholderWrap
-            className="akc-editor ke-content-card"
-            minHeight={46}
-          />
-        </div>
-
-        {focused && hasContent && (
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 2,
-            }}
-          >
-            <KnowledgeActionButton
-              variant="solid"
-              onMouseDown={(event) => {
-                event.preventDefault();
-                void saveDraft();
-              }}
-              disabled={!hasContent || isSaving}
-              className="akc-save-btn"
-            >
-              {isSaving ? '保存中…' : '保存'}
-            </KnowledgeActionButton>
-          </div>
-        )}
       </div>
+
+      <style>{`
+        .akc-card { position: relative; }
+        .akc-body {
+          position: relative;
+          background: #fff;
+          border-radius: 7px;
+          padding: 18px 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+        .akc-expand {
+          position: absolute; top: 10px; right: 10px; z-index: 2;
+          width: 28px; height: 28px; border: none; border-radius: 50%;
+          background: transparent; padding: 0; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .akc-label {
+          margin: 0 0 10px;
+          font-size: 10.5px; font-weight: 700; color: #e8793a;
+          letter-spacing: .1em; text-transform: uppercase;
+        }
+        .akc-input {
+          width: 100%; border: none; border-bottom: 1px solid rgba(0,0,0,.08);
+          outline: none; background: transparent; font-family: inherit;
+          padding: 4px 0 8px; margin-bottom: 8px; color: #555; font-size: 12px;
+        }
+        .akc-title { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 8px; }
+        .akc-save {
+          width: 100%; margin-top: 12px; border: none; border-radius: 6px;
+          background: #e8793a; color: #fff; font-family: inherit;
+          font-size: 12px; font-weight: 600; padding: 10px 0; cursor: pointer;
+        }
+        .akc-save:disabled { opacity: .5; cursor: not-allowed; }
+      `}</style>
     </div>
   );
 };

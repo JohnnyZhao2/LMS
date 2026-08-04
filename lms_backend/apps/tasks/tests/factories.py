@@ -55,7 +55,8 @@ class KnowledgeFactory(DjangoModelFactory):
         model = Knowledge
 
     title = factory.Sequence(lambda n: f'Knowledge {n}')
-    content = factory.Sequence(lambda n: f'<p>knowledge content {n}</p>')
+    content = factory.Sequence(lambda n: f'步骤摘要 {n}')
+    external_doc_url = factory.Sequence(lambda n: f'https://example.com/doc-{n}')
     created_by = factory.SubFactory(UserFactory)
     updated_by = factory.SelfAttribute('created_by')
 
@@ -68,10 +69,11 @@ class KnowledgeRevisionFactory(DjangoModelFactory):
     revision_number = 1
     title = factory.LazyAttribute(lambda obj: obj.source_knowledge.title)
     content = factory.LazyAttribute(lambda obj: obj.source_knowledge.content)
+    external_doc_url = factory.LazyAttribute(lambda obj: obj.source_knowledge.external_doc_url)
     related_links = factory.LazyAttribute(lambda obj: obj.source_knowledge.related_links)
     space_tag_name = ''
     tags_json = []
-    content_hash = factory.LazyAttribute(lambda obj: _hash_value(f'{obj.title}:{obj.content}:{obj.revision_number}'))
+    content_hash = factory.LazyAttribute(lambda obj: _hash_value(f'{obj.title}:{obj.content}:{obj.external_doc_url}:{obj.revision_number}'))
     created_by = factory.LazyAttribute(lambda obj: obj.source_knowledge.created_by)
 
 

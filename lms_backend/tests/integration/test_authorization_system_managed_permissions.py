@@ -352,6 +352,7 @@ def test_permission_override_takes_effect_without_scope_payload():
     knowledge = Knowledge.objects.create(
         title='Scope Normalize Knowledge',
         content='original content',
+        external_doc_url='https://example.com/scope-doc-1',
         created_by=admin_user,
         updated_by=admin_user,
     )
