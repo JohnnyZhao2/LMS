@@ -10,7 +10,7 @@ import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-i
 import { useCompleteLearning } from '@/entities/task/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/entities/task/api/get-task-detail';
 import { useAuth } from '@/session/auth/auth-context';
-import type { KnowledgeDetail as KnowledgeDetailType, RelatedLink } from '@/types/knowledge';
+import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeWriteRequest, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import { StepsEditor } from '../shared/steps-editor';
 import { FocusOrbIcon } from '../shared/focus-icon';
@@ -28,6 +28,28 @@ function relTime(dateStr: string): string {
   if (d === 1) return '昨天';
   if (d < 30) return `${d} 天前`;
   return `${Math.floor(d / 30)} 个月前`;
+}
+
+/**
+ * 比较两组标签 id 是否一致
+ */
+function hasSameTagIds(left: { id: number }[], right: { id: number }[]) {
+  return left.length === right.length && left.every((tag, index) => tag.id === right[index]?.id);
+}
+
+/**
+ * 比较两组相关链接是否一致
+ */
+function hasSameRelatedLinks(left: RelatedLink[], right: RelatedLink[]) {
+  const normalizedLeft = sanitizeRelatedLinks(left);
+  const normalizedRight = sanitizeRelatedLinks(right);
+  return (
+    normalizedLeft.length === normalizedRight.length
+    && normalizedLeft.every((link, index) => (
+      link.url === normalizedRight[index]?.url
+      && (link.title ?? '') === (normalizedRight[index]?.title ?? '')
+    ))
+  );
 }
 
 function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
@@ -65,7 +87,7 @@ interface KnowledgeDetailModalProps {
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
-  startEditing = false,
+  startEditing: _startEditing = false,
   startInFocus = false,
   previewOnly = false,
   initialTitle = '',
@@ -105,7 +127,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   });
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
-  const [editingMeta, setEditingMeta] = useState(isCreateMode || startEditing);
   const [isFocusMode, setIsFocusMode] = useState(startInFocus);
   const [iframeEditMode, setIframeEditMode] = useState(false);
   const [editContent, setEditContent] = useState<string | undefined>(
@@ -186,7 +207,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [learningDetail, taskKnowledgeId, knowledgeId]);
   const isCompleted = taskKnowledgeItem?.is_completed;
 
-  const hasMetaChanges = isCreateMode || Boolean(knowledge && (
+  const hasChanges = isCreateMode || Boolean(knowledge && (
     (editContent !== undefined && editContent !== knowledge.content)
     || (editTitle !== undefined && editTitle !== knowledge.title)
     || (editExternalDocUrl !== undefined && editExternalDocUrl !== knowledge.external_doc_url)
@@ -200,6 +221,42 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [knowledgeId]);
 
   const isSaving = isCreateMode ? createKnowledge.isPending : updateKnowledge.isPending;
+
+  /**
+   * 编辑态字段级落库
+   */
+  const commitPatch = useCallback(async (
+    data: KnowledgeWriteRequest,
+    errorMessage: string,
+    onSuccess?: () => void,
+  ) => {
+    if (isCreateMode || !knowledgeId) return null;
+    try {
+      const updatedKnowledge = await updateKnowledge.mutateAsync({
+        id: knowledgeId,
+        data,
+      });
+      applyKnowledgeSnapshot(updatedKnowledge);
+      onSuccess?.();
+      onUpdated?.();
+      return updatedKnowledge;
+    } catch (error) {
+      showApiError(error, errorMessage);
+      return null;
+    }
+  }, [applyKnowledgeSnapshot, isCreateMode, knowledgeId, onUpdated, updateKnowledge]);
+
+  const clearLocalEdits = useCallback(() => {
+    setEditContent(undefined);
+    setEditTitle(undefined);
+    setEditExternalDocUrl(undefined);
+    setEditTags(undefined);
+    setEditSpaceTagId(undefined);
+    setEditRelatedLinks(undefined);
+    setEditingLinks(false);
+    setShowTagInput(false);
+    setShowSpaceTags(false);
+  }, []);
 
   const handleCreateSave = useCallback(async () => {
     if (createKnowledge.isPending) return;
@@ -238,16 +295,144 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     onCreated,
   ]);
 
+  /**
+   * 失焦时把当前脏字段一次落库（内容失焦 / 显式保存）
+   */
+  const handleSave = useCallback(async () => {
+    if (isCreateMode) {
+      await handleCreateSave();
+      return true;
+    }
+    if (!hasChanges || !knowledge) return false;
+    const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
+    if (draftError) {
+      toast.error(draftError);
+      return false;
+    }
+    const nextDocUrl = (editExternalDocUrl ?? knowledge.external_doc_url ?? '').trim();
+    const updatedKnowledge = await commitPatch(
+      {
+        title: editTitle ?? knowledge.title,
+        content: sanitizeStepsHtml(editContent ?? knowledge.content),
+        external_doc_url: nextDocUrl,
+        ...(editTags !== undefined && { tag_ids: editTags.map((t) => t.id) }),
+        ...(editSpaceTagId !== undefined && { space_tag_id: editSpaceTagId ?? undefined }),
+        ...(editRelatedLinks !== undefined && {
+          related_links: sanitizeRelatedLinks(editRelatedLinks),
+        }),
+      },
+      '保存失败',
+      clearLocalEdits,
+    );
+    return Boolean(updatedKnowledge);
+  }, [
+    clearLocalEdits,
+    commitPatch,
+    editContent,
+    editExternalDocUrl,
+    editRelatedLinks,
+    editSpaceTagId,
+    editTags,
+    editTitle,
+    handleCreateSave,
+    hasChanges,
+    isCreateMode,
+    knowledge,
+  ]);
+
+  const handleTitleBlur = useCallback(() => {
+    if (isCreateMode || !knowledge || editTitle === undefined || editTitle === knowledge.title) {
+      return;
+    }
+    const nextTitle = editTitle;
+    void commitPatch(
+      { title: nextTitle },
+      '标题保存失败',
+      () => {
+        setEditTitle((currentTitle) => (
+          currentTitle === nextTitle ? undefined : currentTitle
+        ));
+      },
+    );
+  }, [commitPatch, editTitle, isCreateMode, knowledge]);
+
+  const handleExternalDocUrlBlur = useCallback(() => {
+    if (isCreateMode || !knowledge || editExternalDocUrl === undefined) return;
+    const nextDocUrl = editExternalDocUrl.trim();
+    const currentDocUrl = knowledge.external_doc_url ?? '';
+    if (nextDocUrl === currentDocUrl) {
+      setEditExternalDocUrl(undefined);
+      return;
+    }
+    void commitPatch(
+      { external_doc_url: nextDocUrl },
+      '文档链接保存失败',
+      () => {
+        setEditExternalDocUrl((current) => (
+          current !== undefined && current.trim() === nextDocUrl ? undefined : current
+        ));
+      },
+    );
+  }, [commitPatch, editExternalDocUrl, isCreateMode, knowledge]);
+
+  /**
+   * 移除文档链接并落库
+   */
+  const handleExternalDocUrlClear = useCallback(() => {
+    if (isCreateMode) {
+      setEditExternalDocUrl(undefined);
+      return;
+    }
+    if (!knowledge) return;
+    if (!(knowledge.external_doc_url ?? '').trim()) {
+      setEditExternalDocUrl(undefined);
+      return;
+    }
+    void commitPatch(
+      { external_doc_url: '' },
+      '文档链接保存失败',
+      () => setEditExternalDocUrl(undefined),
+    );
+  }, [commitPatch, isCreateMode, knowledge]);
+
+  const handleContentBlur = useCallback(() => {
+    if (isCreateMode) return;
+    if (!hasChanges) return;
+    void handleSave();
+  }, [handleSave, hasChanges, isCreateMode]);
+
   const addTag = useCallback((tag: { id: number; name: string }) => {
     const current = editTags ?? knowledge?.tags ?? [];
     if (current.some((t) => t.id === tag.id)) return;
-    setEditTags([...current, tag]);
-  }, [editTags, knowledge?.tags]);
+    const nextTags = [...current, tag];
+    setEditTags(nextTags);
+    if (isCreateMode) return;
+    void commitPatch(
+      { tag_ids: nextTags.map((item) => item.id) },
+      '标签保存失败',
+      () => {
+        setEditTags((currentTags) => (
+          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
+        ));
+      },
+    );
+  }, [commitPatch, editTags, isCreateMode, knowledge?.tags]);
 
   const removeTag = useCallback((tagId: number) => {
     const current = editTags ?? knowledge?.tags ?? [];
-    setEditTags(current.filter((t) => t.id !== tagId));
-  }, [editTags, knowledge?.tags]);
+    const nextTags = current.filter((t) => t.id !== tagId);
+    setEditTags(nextTags);
+    if (isCreateMode) return;
+    void commitPatch(
+      { tag_ids: nextTags.map((item) => item.id) },
+      '标签保存失败',
+      () => {
+        setEditTags((currentTags) => (
+          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
+        ));
+      },
+    );
+  }, [commitPatch, editTags, isCreateMode, knowledge?.tags]);
 
   const updateRelatedLinksDraft = useCallback((
     updater: (current: RelatedLink[]) => RelatedLink[],
@@ -273,8 +458,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [updateRelatedLinksDraft]);
 
   const handleRemoveRelatedLink = useCallback((index: number) => {
-    updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  }, [updateRelatedLinksDraft]);
+    const nextLinks = updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    if (isCreateMode) return;
+    void commitPatch(
+      { related_links: sanitizeRelatedLinks(nextLinks) },
+      '相关链接保存失败',
+      () => {
+        setEditRelatedLinks((currentLinks) => (
+          currentLinks && hasSameRelatedLinks(currentLinks, nextLinks) ? undefined : currentLinks
+        ));
+      },
+    );
+  }, [commitPatch, isCreateMode, updateRelatedLinksDraft]);
 
   const handleOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
     setEditingLinks(true);
@@ -290,13 +485,30 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditingLinks(false);
       return;
     }
-    const draftError = getRelatedLinksDraftError(editRelatedLinks);
+    const nextLinks = editRelatedLinks;
+    const draftError = getRelatedLinksDraftError(nextLinks);
     if (draftError) {
       toast.error(draftError);
       return;
     }
+    if (isCreateMode) {
+      setEditingLinks(false);
+      return;
+    }
+    if (!knowledge || hasSameRelatedLinks(nextLinks, knowledge.related_links ?? [])) {
+      setEditRelatedLinks(undefined);
+      setEditingLinks(false);
+      return;
+    }
     setEditingLinks(false);
-  }, [editRelatedLinks]);
+    void commitPatch(
+      { related_links: sanitizeRelatedLinks(nextLinks) },
+      '相关链接保存失败',
+      () => {
+        setEditRelatedLinks(undefined);
+      },
+    );
+  }, [commitPatch, editRelatedLinks, isCreateMode, knowledge]);
 
   useEffect(() => {
     if (!editingLinks) return;
@@ -309,86 +521,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     return () => document.removeEventListener('pointerdown', handlePointerDown, true);
   }, [editingLinks, handleRelatedLinksBlur]);
 
-  const handleSave = useCallback(async () => {
-    if (!hasMetaChanges || !knowledge) return false;
-    const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
-    if (draftError) {
-      toast.error(draftError);
-      return false;
-    }
-    const nextDocUrl = (editExternalDocUrl ?? knowledge.external_doc_url ?? '').trim();
-    try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId!,
-        data: {
-          title: editTitle ?? knowledge.title,
-          content: sanitizeStepsHtml(editContent ?? knowledge.content),
-          external_doc_url: nextDocUrl,
-          ...(editTags !== undefined && { tag_ids: editTags.map((t) => t.id) }),
-          ...(editSpaceTagId !== undefined && { space_tag_id: editSpaceTagId ?? undefined }),
-          ...(editRelatedLinks !== undefined && {
-            related_links: sanitizeRelatedLinks(editRelatedLinks),
-          }),
-        },
-      });
-      applyKnowledgeSnapshot(updatedKnowledge);
-      toast.success('已保存');
-      setEditingMeta(false);
-      setEditContent(undefined);
-      setEditTitle(undefined);
-      setEditExternalDocUrl(undefined);
-      setEditTags(undefined);
-      setEditSpaceTagId(undefined);
-      setEditRelatedLinks(undefined);
-      onUpdated?.();
-      return true;
-    } catch (error) {
-      showApiError(error, '保存失败');
-      return false;
-    }
-  }, [
-    applyKnowledgeSnapshot,
-    editContent,
-    editExternalDocUrl,
-    editRelatedLinks,
-    editSpaceTagId,
-    editTags,
-    editTitle,
-    hasMetaChanges,
-    knowledge,
-    knowledgeId,
-    onUpdated,
-    updateKnowledge,
-  ]);
-
-  const handleLeftContentBlur = useCallback(async () => {
-    if (!canUpdateKnowledge || !knowledge || !knowledgeId) return;
-    if (editContent === undefined || editContent === knowledge.content) return;
-    try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId,
-        data: { content: sanitizeStepsHtml(editContent) },
-      });
-      applyKnowledgeSnapshot(updatedKnowledge);
-      setEditContent(undefined);
-      onUpdated?.();
-    } catch (error) {
-      showApiError(error, '保存失败');
-    }
-  }, [applyKnowledgeSnapshot, canUpdateKnowledge, editContent, knowledge, knowledgeId, onUpdated, updateKnowledge]);
-
   const handleCancelEdit = useCallback(() => {
-    setEditingMeta(false);
-    setEditContent(undefined);
-    setEditTitle(undefined);
-    setEditExternalDocUrl(undefined);
-    setEditTags(undefined);
-    setEditSpaceTagId(undefined);
-    setEditRelatedLinks(undefined);
-    setEditingLinks(false);
-    setShowTagInput(false);
-    setShowSpaceTags(false);
-  }, []);
+    clearLocalEdits();
+  }, [clearLocalEdits]);
 
   useKnowledgeModalInteractions({
     onEscape: () => {
@@ -396,18 +531,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         setShowSpaceTags(false);
       } else if (isFocusMode) {
         setIsFocusMode(false);
-      } else if (editingMeta && !isCreateMode) {
+      } else if (!isCreateMode && hasChanges) {
         handleCancelEdit();
       } else {
         onClose();
       }
     },
     onSubmit: () => {
-      if (isCreateMode) {
-        void handleCreateSave();
-        return;
-      }
-      if (editingMeta) {
+      if (isCreateMode || hasChanges) {
         void handleSave();
       }
     },
@@ -416,22 +547,19 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
     setShowSpaceTags(false);
     if (activeSpaceTagId === nextSpaceTagId) return;
-    if (editingMeta) {
+    if (isCreateMode) {
       setEditSpaceTagId(nextSpaceTagId);
       return;
     }
-    try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId!,
-        data: { space_tag_id: nextSpaceTagId },
-      });
-      applyKnowledgeSnapshot(updatedKnowledge);
+    const updatedKnowledge = await commitPatch(
+      { space_tag_id: nextSpaceTagId },
+      '空间更新失败',
+      () => setEditSpaceTagId(undefined),
+    );
+    if (updatedKnowledge) {
       toast.success('空间已更新');
-      onUpdated?.();
-    } catch (error) {
-      showApiError(error, '空间更新失败');
     }
-  }, [activeSpaceTagId, applyKnowledgeSnapshot, editingMeta, knowledgeId, onUpdated, updateKnowledge]);
+  }, [activeSpaceTagId, commitPatch, isCreateMode]);
 
   const handleComplete = useCallback(async () => {
     if (!taskId || !taskKnowledgeId) return;
@@ -551,7 +679,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   <StepsEditor
                     value={activeContent}
                     onChange={setEditContent}
-                    onBlur={isCreateMode ? undefined : handleLeftContentBlur}
+                    onBlur={handleContentBlur}
                     placeholder="在这里填写知识内容…"
                     minHeight={280}
                   />
@@ -582,15 +710,19 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               shouldShowSystemTagsSection={shouldShowSystemTagsSection}
               showTagInput={showTagInput}
               showSpaceTags={showSpaceTags}
-              editingMeta={editingMeta}
-              hasMetaChanges={hasMetaChanges}
+              isCreateMode={isCreateMode}
+              hasChanges={hasChanges}
               editingLinks={editingLinks}
               isSaving={isSaving}
               learningAction={learningAction}
               relatedLinksSectionRef={relatedLinksSectionRef}
               onTitleChange={setEditTitle}
+              onTitleBlur={handleTitleBlur}
               onContentChange={setEditContent}
+              onContentBlur={handleContentBlur}
               onExternalDocUrlChange={setEditExternalDocUrl}
+              onExternalDocUrlBlur={handleExternalDocUrlBlur}
+              onExternalDocUrlClear={handleExternalDocUrlClear}
               onShowTagInputChange={setShowTagInput}
               onAddTag={addTag}
               onRemoveTag={removeTag}
@@ -601,13 +733,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               onRemoveRelatedLink={handleRemoveRelatedLink}
               onToggleSpaceTags={() => setShowSpaceTags(!showSpaceTags)}
               onSpaceTagSelect={handleSpaceTagSelect}
-              onStartEditingMeta={() => setEditingMeta(true)}
               onDelete={() => {
                 onDelete?.(knowledgeId!);
                 onClose();
               }}
               onCancelEdit={handleCancelEditOrClose}
-              onSave={() => { void (isCreateMode ? handleCreateSave() : handleSave()); }}
+              onSave={() => { void handleSave(); }}
             />
           </>
         )}

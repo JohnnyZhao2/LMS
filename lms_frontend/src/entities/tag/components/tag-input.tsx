@@ -14,6 +14,8 @@ interface TagInputProps {
   /** 不显示已选标签 chips（由外部渲染） */
   hideChips?: boolean;
   extendScope?: boolean;
+  /** 输入区失焦（焦点离开整个组件）时回调 */
+  onDismiss?: () => void;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -23,6 +25,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   onRemove,
   hideChips = false,
   extendScope = true,
+  onDismiss,
 }) => {
   const [input, setInput] = React.useState('');
   const { data: scopedTags = [] } = useTags({ tag_type: 'TAG', applicable_to: applicableTo });
@@ -93,7 +96,14 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
 
   return (
-    <div className="mb-[14px] flex flex-col gap-2">
+    <div
+      className="mb-[14px] flex flex-col gap-2"
+      onBlur={(event) => {
+        if (!onDismiss) return;
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        onDismiss();
+      }}
+    >
       {!hideChips && selectedTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectedTags.map((t) => (
@@ -126,9 +136,11 @@ export const TagInput: React.FC<TagInputProps> = ({
           }}
           placeholder="输入标签名…"
           className="flex-1 bg-transparent px-[14px] py-[10px] text-[14px] text-[#333] outline-none placeholder:text-[#bbb]"
+          autoFocus
         />
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => void handleAdd()}
           disabled={!trimmedInput || createTag.isPending}
           className="flex h-auto w-11 shrink-0 items-center justify-center border-0 bg-[#e8793a] text-white transition hover:bg-[#d66b2e] disabled:cursor-not-allowed disabled:bg-[#ddd] disabled:text-[#aaa]"
@@ -143,6 +155,7 @@ export const TagInput: React.FC<TagInputProps> = ({
             <button
               key={t.id}
               type="button"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => void handleSelectSuggestion(t)}
               className="flex items-center gap-1.5 px-[14px] py-[9px] text-left text-[12px] text-[#333] transition hover:bg-[#f5f5f5]"
             >
@@ -159,6 +172,7 @@ export const TagInput: React.FC<TagInputProps> = ({
             <button
               key={t.id}
               type="button"
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => void handleSelectSuggestion(t)}
               className="border-0 bg-transparent p-0 text-[12px] text-[#e8793a] underline decoration-transparent transition hover:decoration-[#e8793a]"
             >

@@ -54,20 +54,29 @@ vi.mock('./knowledge-detail-side-panel', () => ({
   KnowledgeDetailSidePanel: ({
     onSave,
     onTitleChange,
+    onTitleBlur,
     onContentChange,
+    onContentBlur,
     onExternalDocUrlChange,
+    onExternalDocUrlBlur,
     learningAction,
   }: {
     onSave: () => void;
     onTitleChange: (value: string) => void;
+    onTitleBlur: () => void;
     onContentChange: (value: string) => void;
+    onContentBlur: () => void;
     onExternalDocUrlChange: (value: string) => void;
+    onExternalDocUrlBlur: () => void;
     learningAction?: React.ReactNode;
   }) => (
     <div>
       <button type="button" onClick={() => onTitleChange('新标题')}>change-title</button>
+      <button type="button" onClick={onTitleBlur}>blur-title</button>
       <button type="button" onClick={() => onContentChange('新步骤')}>change-content</button>
+      <button type="button" onClick={onContentBlur}>blur-content</button>
       <button type="button" onClick={() => onExternalDocUrlChange('https://example.com/doc-2')}>change-doc-url</button>
+      <button type="button" onClick={onExternalDocUrlBlur}>blur-doc-url</button>
       <button type="button" onClick={onSave}>save-knowledge</button>
       {learningAction}
     </div>
@@ -119,17 +128,15 @@ describe('KnowledgeDetailModal', () => {
       isLoading: false,
     });
     useStudentLearningTaskDetailMock.mockReturnValue({ data: undefined });
-    updateKnowledgeMutateAsyncMock.mockResolvedValue({
+    updateKnowledgeMutateAsyncMock.mockImplementation(async ({ data }) => ({
       ...knowledgeDetail,
-      title: '新标题',
-      content: '新步骤',
-      external_doc_url: 'https://example.com/doc-2',
-    });
+      ...data,
+    }));
     createKnowledgeMutateAsyncMock.mockResolvedValue({ id: 1 });
     completeLearningMutateAsyncMock.mockResolvedValue(undefined);
   });
 
-  it('保存编辑信息时会提交标题、步骤和文档链接', async () => {
+  it('标题失焦时单独保存标题', async () => {
     const user = userEvent.setup();
     const onUpdated = vi.fn();
 
@@ -141,24 +148,76 @@ describe('KnowledgeDetailModal', () => {
     render(
       <KnowledgeDetailModal
         knowledgeId={1}
-        startEditing
         onClose={vi.fn()}
         onUpdated={onUpdated}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'change-title' }));
-    await user.click(screen.getByRole('button', { name: 'change-content' }));
+    await user.click(screen.getByRole('button', { name: 'blur-title' }));
+
+    await waitFor(() => {
+      expect(updateKnowledgeMutateAsyncMock).toHaveBeenCalledWith({
+        id: 1,
+        data: { title: '新标题' },
+      });
+    });
+    expect(onUpdated).toHaveBeenCalled();
+  });
+
+  it('文档链接失焦时单独保存链接', async () => {
+    const user = userEvent.setup();
+
+    useAuthMock.mockReturnValue({
+      currentRole: 'ADMIN',
+      hasCapability: vi.fn((permissionCode: string) => permissionCode.startsWith('knowledge.')),
+    });
+
+    render(
+      <KnowledgeDetailModal
+        knowledgeId={1}
+        onClose={vi.fn()}
+      />,
+    );
+
     await user.click(screen.getByRole('button', { name: 'change-doc-url' }));
-    await user.click(screen.getByRole('button', { name: 'save-knowledge' }));
+    await user.click(screen.getByRole('button', { name: 'blur-doc-url' }));
+
+    await waitFor(() => {
+      expect(updateKnowledgeMutateAsyncMock).toHaveBeenCalledWith({
+        id: 1,
+        data: { external_doc_url: 'https://example.com/doc-2' },
+      });
+    });
+  });
+
+  it('内容失焦时会提交当前脏字段', async () => {
+    const user = userEvent.setup();
+    const onUpdated = vi.fn();
+
+    useAuthMock.mockReturnValue({
+      currentRole: 'ADMIN',
+      hasCapability: vi.fn((permissionCode: string) => permissionCode.startsWith('knowledge.')),
+    });
+
+    render(
+      <KnowledgeDetailModal
+        knowledgeId={1}
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'change-content' }));
+    await user.click(screen.getByRole('button', { name: 'blur-content' }));
 
     await waitFor(() => {
       expect(updateKnowledgeMutateAsyncMock).toHaveBeenCalledWith({
         id: 1,
         data: {
-          title: '新标题',
+          title: '旧标题',
           content: '新步骤',
-          external_doc_url: 'https://example.com/doc-2',
+          external_doc_url: 'https://example.com/doc-1',
         },
       });
     });
@@ -239,6 +298,7 @@ describe('KnowledgeDetailModal', () => {
         tag_ids: [],
       });
     });
+    expect(updateKnowledgeMutateAsyncMock).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
     expect(onCreated).toHaveBeenCalledWith(1);
   });

@@ -47,6 +47,9 @@
 .kd-tag-remove:hover{color:#666}
 .kd-add-tag-btn{display:inline-flex;align-items:center;gap:4px;border:none;border-radius:100px;padding:5px 14px;background:#e8793a;color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
 .kd-add-tag-btn:hover{background:#d66b2e}
+.kd-doc-url-row{display:flex;align-items:center;gap:6px}
+.kd-doc-url-row .krl-input{flex:1;min-width:0}
+.kd-section > .kd-related-link{display:flex;width:100%;align-items:center;gap:8px;border:none;padding:0;background:none;text-align:left;cursor:pointer}
 .kd-complete-done{display:flex;align-items:center;gap:8px;border:none;border-radius:6px;padding:10px 12px;background:#e0f5e0;color:#2d8a2d;font-size:13px;font-weight:600}
 .kd-complete-done-docked{min-width:108px;justify-content:center}
 .kd-linetype-popover{position:absolute;left:20px;right:20px;bottom:calc(100% + 8px);z-index:10;overflow:hidden;border-radius:6px;background:#fff;box-shadow:0 -4px 28px rgba(0,0,0,.13)}

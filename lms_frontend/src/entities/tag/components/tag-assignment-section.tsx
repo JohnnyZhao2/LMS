@@ -43,14 +43,15 @@ export const TagAssignmentSection: React.FC<TagAssignmentSectionProps> = ({
         onAdd={onAdd}
         onRemove={onRemove}
         hideChips
+        onDismiss={() => onExpandedChange(false)}
       />
     ) : null}
 
     <div className={tagsWrapClassName}>
-      {canEdit ? (
+      {canEdit && !expanded ? (
         <button
           type="button"
-          onClick={() => onExpandedChange(!expanded)}
+          onClick={() => onExpandedChange(true)}
           className={addButtonClassName}
         >
           <Plus className="h-3 w-3" strokeWidth={2.2} />
