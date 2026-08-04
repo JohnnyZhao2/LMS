@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
     Search,
+    Upload,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,6 +24,12 @@ import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
 import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
+import {
+    parseKnowledgeImportXlsx,
+    collectKnowledgeImportNames,
+    resolveKnowledgeImportRows,
+} from '../utils/import-knowledge-xlsx';
+import { SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 
 type KnowledgeModalState =
     | {
@@ -75,7 +82,15 @@ export const KnowledgeCenter: React.FC = () => {
     const isCreateRoute = location.pathname.endsWith('/knowledge/create');
     const isEditRoute = location.pathname.endsWith('/edit');
 
-    const { data: spaceTags = [] } = useTags({ tag_type: 'SPACE' });
+    const [isImporting, setIsImporting] = React.useState(false);
+    const importInputRef = React.useRef<HTMLInputElement | null>(null);
+
+    const { data: spaceTags = [] } = useTags({ tag_type: 'SPACE', limit: 200 });
+    const { data: knowledgeTags = [] } = useTags({
+        tag_type: 'TAG',
+        applicable_to: 'knowledge',
+        limit: 500,
+    });
     const selectedSpaceTag = React.useMemo(
         () => spaceTags.find((tag) => tag.id === selectedSpaceTagId),
         [spaceTags, selectedSpaceTagId],
@@ -224,6 +239,84 @@ export const KnowledgeCenter: React.FC = () => {
         }
     }, [createKnowledge, selectedSpaceTagId, refetch]);
 
+    const handleImportXlsx = React.useCallback(async (file: File) => {
+        if (isImporting) return;
+        setIsImporting(true);
+        try {
+            const rows = await parseKnowledgeImportXlsx(file);
+            const { spaceNames, tagNames } = collectKnowledgeImportNames(rows);
+
+            const spaces = [...spaceTags];
+            const tags = [...knowledgeTags];
+            const spaceByName = new Map(spaces.map((item) => [item.name.trim(), item]));
+            const tagByName = new Map(tags.map((item) => [item.name.trim(), item]));
+
+            for (const [index, name] of spaceNames.entries()) {
+                if (spaceByName.has(name)) continue;
+                const created = await createTag.mutateAsync({
+                    name,
+                    tag_type: 'SPACE',
+                    color: SPACE_THEME_COLORS[index % SPACE_THEME_COLORS.length],
+                });
+                spaces.push(created);
+                spaceByName.set(created.name.trim(), created);
+            }
+
+            for (const name of tagNames) {
+                if (tagByName.has(name)) continue;
+                const created = await createTag.mutateAsync({
+                    name,
+                    tag_type: 'TAG',
+                    current_module: 'knowledge',
+                    allow_knowledge: true,
+                });
+                tags.push(created);
+                tagByName.set(created.name.trim(), created);
+            }
+
+            const { ready, failures } = resolveKnowledgeImportRows(rows, spaces, tags);
+            let successCount = 0;
+            const createFailures = [...failures];
+
+            for (const item of ready) {
+                const { rowNumber, ...payload } = item;
+                try {
+                    await createKnowledge.mutateAsync(payload);
+                    successCount += 1;
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : '创建失败';
+                    createFailures.push({ rowNumber, reason: message });
+                }
+            }
+
+            await refetch();
+
+            if (successCount > 0 && createFailures.length === 0) {
+                toast.success(`已导入 ${successCount} 条知识`);
+                return;
+            }
+            if (successCount > 0) {
+                toast.warning(`导入完成：成功 ${successCount}，失败 ${createFailures.length}`);
+            } else {
+                toast.error(`导入失败：${createFailures[0]?.reason ?? '无有效数据'}`);
+            }
+            if (createFailures.length > 0 && createFailures.length <= 8) {
+                createFailures.forEach((item) => {
+                    toast.error(`第 ${item.rowNumber} 行：${item.reason}`);
+                });
+            } else if (createFailures.length > 8) {
+                toast.error(`另有 ${createFailures.length - 1} 行失败`);
+            }
+        } catch (error) {
+            showApiError(error, '导入失败');
+        } finally {
+            setIsImporting(false);
+            if (importInputRef.current) {
+                importInputRef.current.value = '';
+            }
+        }
+    }, [createKnowledge, createTag, isImporting, knowledgeTags, refetch, spaceTags]);
+
     const handleCreateSpaceTag = React.useCallback(async ({ name, color }: { name: string; color: string }) => {
         try {
             await createTag.mutateAsync({
@@ -319,6 +412,33 @@ export const KnowledgeCenter: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {canCreateKnowledge && (
+                            <>
+                                <input
+                                    ref={importInputRef}
+                                    type="file"
+                                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                                    className="hidden"
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) void handleImportXlsx(file);
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    disabled={isImporting}
+                                    onClick={() => importInputRef.current?.click()}
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-medium text-foreground disabled:opacity-50"
+                                    style={{
+                                        fontSize: 12.5,
+                                        boxShadow: '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
+                                    }}
+                                >
+                                    <Upload className="h-3.5 w-3.5" strokeWidth={1.8} />
+                                    {isImporting ? '导入中…' : '导入表格'}
+                                </button>
+                            </>
+                        )}
                         {isManagementView && (
                             <button
                                 type="button"

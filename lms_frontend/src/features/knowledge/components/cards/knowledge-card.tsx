@@ -96,9 +96,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             }}
             dangerouslySetInnerHTML={{ __html: stepsHtml }}
           />
-        ) : (
-          <p style={{ margin: 0, fontSize: 13, color: '#b0b6c0' }}>暂无步骤摘要</p>
-        )}
+        ) : null}
 
         {sourceHost && firstRelatedLink?.url && (
           <a
