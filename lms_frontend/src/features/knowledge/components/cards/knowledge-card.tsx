@@ -1,10 +1,7 @@
 import * as React from 'react';
-import {
-  Link as LinkGlyph,
-} from 'lucide-react';
+import { Link as LinkGlyph } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/knowledge';
-import { plain, isLong } from '../../utils/content-utils';
-import { KnowledgeContentRenderer } from '../shared/knowledge-content-renderer';
+import { plain, sanitizeStepsHtml } from '../../utils/content-utils';
 import { FocusOrbIcon } from '../shared/focus-icon';
 
 interface KnowledgeCardMymindProps {
@@ -14,27 +11,29 @@ interface KnowledgeCardMymindProps {
   index: number;
 }
 
+/**
+ * 知识瀑布流卡片：标题 + 步骤摘要；悬停显示专注球
+ */
 export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   item,
   onClick,
   onFocusOpen,
   index,
 }) => {
-  const long = isLong(item.content);
-  const text = plain(item.content);
+  const stepsHtml = sanitizeStepsHtml(item.content_preview || '');
+  const text = plain(stepsHtml);
+  const long = text.length > 120;
   const short = !long && text.length < 80;
 
-  const getSourceHost = React.useCallback((url?: string) => {
-    if (!url) return '';
-    try {
-      return new URL(url).host;
-    } catch {
-      return url.replace(/^https?:\/\//i, '').split('/')[0] ?? '';
-    }
-  }, []);
-
   const firstRelatedLink = item.related_links?.[0];
-  const sourceHost = getSourceHost(firstRelatedLink?.url);
+  let sourceHost = '';
+  if (firstRelatedLink?.url) {
+    try {
+      sourceHost = new URL(firstRelatedLink.url).host;
+    } catch {
+      sourceHost = firstRelatedLink.url.replace(/^https?:\/\//i, '').split('/')[0] ?? '';
+    }
+  }
 
   return (
     <div
@@ -42,7 +41,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
       style={{
         marginBottom: 22,
         animation: 'mymind-appear .25s ease both',
-        animationDelay: `${index * 0.015}s`,
+        animationDelay: `${Math.min(index, 24) * 0.015}s`,
       }}
     >
       <div
@@ -52,7 +51,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
           padding: short ? '28px 26px 24px' : '24px 26px 22px',
         }}
       >
-        {onFocusOpen && (
+        {onFocusOpen ? (
           <button
             type="button"
             onClick={(e) => {
@@ -60,32 +59,44 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
               e.stopPropagation();
               onFocusOpen(item.id);
             }}
-            className="absolute top-[10px] right-[10px] z-[3] flex h-7 w-7 -translate-y-[2px] items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 transition-[opacity,transform] duration-180 group-hover:translate-y-0 group-hover:opacity-100"
-            style={{
-              width: 28,
-              height: 28,
-              cursor: 'pointer',
-            }}
+            className="absolute top-[10px] right-[10px] z-[3] flex h-7 w-7 items-center justify-center rounded-full border-none bg-transparent p-0 opacity-0 transition-opacity duration-180 group-hover:opacity-100"
             title="专注"
             aria-label="专注"
           >
             <FocusOrbIcon size={16} interactive />
           </button>
-        )}
+        ) : null}
 
-        {/* 内容显示 */}
-        <KnowledgeContentRenderer
-          html={item.content}
-          variant="card"
-          compact={short}
-          contentStyle={{
-            maxHeight: long ? 400 : undefined,
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: long ? 15 : short ? 6 : 8,
-            WebkitBoxOrient: 'vertical',
-          }}
-        />
+        {item.title ? (
+          <h3
+            style={{
+              margin: '0 0 10px',
+              fontSize: short ? 18 : 16,
+              fontWeight: 600,
+              color: '#1a1a1a',
+              lineHeight: 1.35,
+            }}
+          >
+            {item.title}
+          </h3>
+        ) : null}
+
+        {stepsHtml ? (
+          <div
+            className="card-rich"
+            style={{
+              maxHeight: long ? 220 : undefined,
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: long ? 10 : short ? 5 : 7,
+              WebkitBoxOrient: 'vertical',
+              fontSize: 15,
+              lineHeight: 1.7,
+              color: '#444',
+            }}
+            dangerouslySetInnerHTML={{ __html: stepsHtml }}
+          />
+        ) : null}
 
         {sourceHost && firstRelatedLink?.url && (
           <a
@@ -99,23 +110,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             {sourceHost}
           </a>
         )}
-
       </div>
-
-      {/* 标题显示在卡片底部中间 */}
-      {item.title && (
-        <p
-          className="text-text-muted"
-          style={{
-            margin: '5px 6px 0',
-            fontSize: 12.5,
-            lineHeight: 1.3,
-            textAlign: 'center',
-          }}
-        >
-          {item.title}
-        </p>
-      )}
     </div>
   );
 };

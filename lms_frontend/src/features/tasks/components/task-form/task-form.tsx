@@ -8,6 +8,9 @@ import { TWO_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-lay
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
 import { TaskPipelinePanel } from './task-pipeline-panel';
+import { TaskResourceLibraryPanel } from './task-resource-library-panel';
+import { QuizPreviewDialog } from '@/entities/quiz/components/quiz-preview-dialog';
+import { KnowledgeDetailModal } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 
 const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT', '室组'],

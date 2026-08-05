@@ -4,6 +4,7 @@ import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
+import { sanitizeStepsHtml } from '@/features/knowledge/utils/content-utils';
 
 interface KnowledgeItemProps {
   knowledge: LatestKnowledge;
@@ -11,7 +12,7 @@ interface KnowledgeItemProps {
 }
 
 export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigate }) => {
-  const previewText = knowledge.content_preview;
+  const previewHtml = sanitizeStepsHtml(knowledge.content_preview || '');
 
   return (
     <div
@@ -27,11 +28,14 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
           {knowledge.title}
         </h5>
 
-        <div
-          className="min-h-0 flex-1 overflow-hidden whitespace-pre-line break-words text-[13px] font-medium leading-[1.64] tracking-normal text-slate-500/95"
-        >
-          {previewText}
-        </div>
+        {previewHtml ? (
+          <div
+            className="min-h-0 flex-1 overflow-hidden break-words text-[13px] font-medium leading-[1.64] tracking-normal text-slate-500/95 [&_strong]:font-bold [&_strong]:text-slate-700"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
+        ) : (
+          <div className="min-h-0 flex-1" />
+        )}
 
         <div className="mt-3 flex shrink-0 items-end justify-between border-t border-slate-200/60 pt-2.5">
           <div className="min-w-0">

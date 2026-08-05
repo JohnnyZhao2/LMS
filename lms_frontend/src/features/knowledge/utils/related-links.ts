@@ -1,46 +1,17 @@
 import type { RelatedLink } from '@/types/knowledge';
 
-const RELATED_LINK_DISPLAY_MAX_LENGTH = 42;
-
-export function createEmptyRelatedLink(): RelatedLink {
-  return {
-    title: '',
-    url: '',
-  };
-}
-
+/** 过滤空链接并 trim */
 export function sanitizeRelatedLinks(relatedLinks: RelatedLink[]): RelatedLink[] {
-  return relatedLinks.reduce<RelatedLink[]>((accumulator, link) => {
+  return relatedLinks.flatMap((link) => {
     const url = link.url.trim();
-    if (!url) {
-      return accumulator;
-    }
-
-    accumulator.push({
-      title: link.title?.trim() ?? '',
-      url,
-    });
-    return accumulator;
-  }, []);
+    return url ? [{ title: link.title?.trim() ?? '', url }] : [];
+  });
 }
 
-function normalizeRelatedLinkUrl(url: string): string {
-  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-}
-
-function truncateRelatedLinkText(text: string): string {
-  if (text.length <= RELATED_LINK_DISPLAY_MAX_LENGTH) {
-    return text;
-  }
-
-  return `${text.slice(0, RELATED_LINK_DISPLAY_MAX_LENGTH).trimEnd()}...`;
-}
-
+/** 侧栏展示用短文本 */
 export function getRelatedLinkDisplayText(link: RelatedLink): string {
-  const title = link.title?.trim();
-  if (title) {
-    return truncateRelatedLinkText(title);
-  }
-
-  return truncateRelatedLinkText(normalizeRelatedLinkUrl(link.url) || '相关链接');
+  const text = link.title?.trim()
+    || link.url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+    || '相关链接';
+  return text.length <= 42 ? text : `${text.slice(0, 42).trimEnd()}...`;
 }

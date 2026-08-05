@@ -71,5 +71,6 @@ def get_knowledge_queryset(
     for term in parse_knowledge_search_terms(search):
         qs = qs.filter(build_knowledge_search_query(term))
     if ordering:
-        qs = qs.order_by(ordering)
+        # -id：同秒更新时新建/后写入的仍靠前
+        qs = qs.order_by(ordering, '-id')
     return qs.distinct()

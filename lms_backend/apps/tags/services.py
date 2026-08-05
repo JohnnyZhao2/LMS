@@ -114,6 +114,23 @@ class TagService(BaseService):
                 message='无效的标签类型',
             )
 
+        if 'name' in data:
+            data['name'] = data['name'].strip()
+            duplicate = Tag.objects.filter(
+                name=data['name'],
+                tag_type=next_tag_type,
+            ).exclude(pk=tag.pk).exists()
+            if duplicate:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='同类型下标签名称已存在',
+                )
+
+        if next_tag_type == 'SPACE':
+            self._apply_space_fields(tag, data)
+        else:
+            self._apply_tag_fields(tag, data)
+
         original_tag_type = tag.tag_type
         self._apply_update_fields(tag, data, next_tag_type)
 
@@ -220,6 +237,16 @@ class TagService(BaseService):
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='合并后的标签名称不能为空',
+            )
+
+        existing_conflict = Tag.objects.filter(
+            name=merged_name,
+            tag_type=ordered_tags[0].tag_type,
+        ).exclude(id__in=normalized_source_ids).first()
+        if existing_conflict:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='合并后的标签名称已存在',
             )
 
         target = next((tag for tag in ordered_tags if tag.name == merged_name), ordered_tags[0])

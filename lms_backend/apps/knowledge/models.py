@@ -1,18 +1,35 @@
 """Knowledge models for LMS."""
 
+import re
+
 from django.db import models
-from django.utils.html import strip_tags
 
 from apps.tags.models import Tag
 from core.mixins import CreatorMixin, TimestampMixin
 
 
-def build_content_preview(content: str, max_length: int = 150) -> str:
-    preview_text = strip_tags((content or '').strip())
-    preview_text = ' '.join(preview_text.split())
-    if len(preview_text) > max_length:
-        return f'{preview_text[:max_length]}...'
-    return preview_text
+def sanitize_steps_html(html: str) -> str:
+    """清洗步骤摘要，仅保留裸 br / strong（剥掉全部属性，防 XSS）。"""
+    text = html or ''
+    text = re.sub(r'<(script|style)\b[^>]*>.*?</\1>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'</p>', '<br>', text, flags=re.IGNORECASE)
+    text = re.sub(r'<p[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<div[^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</div>', '<br>', text, flags=re.IGNORECASE)
+    text = re.sub(r'<(?!/?(?:br|strong|b)\b)[^>]+>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<br\b[^>]*>', '<br>', text, flags=re.IGNORECASE)
+    text = re.sub(r'<(?:strong|b)\b[^>]*>', '<strong>', text, flags=re.IGNORECASE)
+    text = re.sub(r'</(?:strong|b)>', '</strong>', text, flags=re.IGNORECASE)
+    text = re.sub(r'(?:<br\s*/?\s*>\s*)+$', '', text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+def build_content_preview(content: str, max_chars: int = 500) -> str:
+    """列表预览：轻量 HTML；超长硬截断后再洗一次（视觉截断交给前端 line-clamp）。"""
+    html = sanitize_steps_html(content)
+    if len(html) <= max_chars:
+        return html
+    return sanitize_steps_html(html[:max_chars])
 
 
 class Knowledge(TimestampMixin, CreatorMixin, models.Model):
@@ -35,7 +52,14 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
         verbose_name='知识标签',
         limit_choices_to={'tag_type': 'TAG'},
     )
-    content = models.TextField(blank=True, default='', verbose_name='正文内容')
+    content = models.TextField(blank=True, default='', verbose_name='步骤摘要')
+    external_doc_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='文档链接',
+        help_text='第三方文档查看链接，编辑时追加 mode=edit',
+    )
     updated_by = models.ForeignKey(
         'users.User',
         on_delete=models.SET_NULL,
@@ -49,14 +73,14 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
         verbose_name='相关链接',
         default=list,
         blank=True,
-        help_text='相关资料链接列表，格式为 [{"title": "文档标题", "url": "https://example.com"}]',
+        help_text='相关资料链接列表，格式为 [{"title": "链接名称", "url": "https://example.com"}]',
     )
 
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
         verbose_name_plural = '知识文档'
-        ordering = ['-created_at']
+        ordering = ['-updated_at', '-id']
 
     def __str__(self):
         return self.title
@@ -86,7 +110,13 @@ class KnowledgeRevision(TimestampMixin, CreatorMixin, models.Model):
     )
     revision_number = models.PositiveIntegerField(default=1, verbose_name='快照版本号')
     title = models.CharField(max_length=200, verbose_name='标题')
-    content = models.TextField(blank=True, default='', verbose_name='正文内容')
+    content = models.TextField(blank=True, default='', verbose_name='步骤摘要')
+    external_doc_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='文档链接',
+    )
     related_links = models.JSONField(verbose_name='相关链接', default=list, blank=True)
     space_tag_name = models.CharField(max_length=100, blank=True, default='', verbose_name='space 名称')
     tags_json = models.JSONField(verbose_name='标签快照', default=list, blank=True)

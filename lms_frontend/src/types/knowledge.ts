@@ -22,8 +22,8 @@ export interface KnowledgeListItem {
   id: number;
   title: string;
   space_tag?: SimpleTag | null;
-  content: string;
-  content_preview?: string;
+  content_preview: string;
+  external_doc_url: string;
   created_by_name?: string;
   updated_by_name?: string;
   view_count: number;
@@ -37,6 +37,7 @@ export interface KnowledgeDetail {
   title: string;
   space_tag?: SimpleTag | null;
   content: string;
+  external_doc_url: string;
   tags: SimpleTag[];
   created_by_name?: string;
   updated_by_name?: string;
@@ -46,24 +47,12 @@ export interface KnowledgeDetail {
   updated_at: string;
 }
 
-export interface KnowledgeCreateRequest {
+/** 创建 / 更新共用写入体 */
+export interface KnowledgeWriteRequest {
   title?: string;
-  space_tag_id?: number;
-  content: string;
-  related_links?: RelatedLink[];
-  tag_ids?: number[];
-}
-
-export interface KnowledgeUpdateRequest {
-  title?: string;
-  space_tag_id?: number;
+  space_tag_id?: number | null;
   content?: string;
+  external_doc_url?: string;
   related_links?: RelatedLink[];
   tag_ids?: number[];
-}
-
-export interface ParseDocumentResponse {
-  suggested_title: string;
-  content: string;
-  file_type: string;
 }

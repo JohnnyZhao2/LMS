@@ -1,22 +1,34 @@
 /**
- * 将 HTML 转换为纯文本
+ * 步骤摘要工具：仅支持换行与加粗（strong/b/br）
  */
+
+/** 将 HTML 转为纯文本 */
 export function plain(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * 判断是否为长内容
- * 长内容：包含标题标签（h1/h2/h3）或纯文本超过 160 字符
- */
-export function isLong(html: string): boolean {
-  return /<h[123]/.test(html) || plain(html).length > 160;
+/** 清洗步骤摘要，仅保留裸 br / strong（剥掉全部属性，防 XSS） */
+export function sanitizeStepsHtml(html: string): string {
+  const withBreaks = (html || '')
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<\/p>/gi, '<br>')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<div[^>]*>/gi, '')
+    .replace(/<\/div>/gi, '<br>');
+
+  return withBreaks
+    .replace(/<(?!\/?(?:br|strong|b)\b)[^>]+>/gi, '')
+    .replace(/<br\b[^>]*>/gi, '<br>')
+    .replace(/<\/?(?:strong|b)\b[^>]*>/gi, (tag) => (
+      tag.startsWith('</') ? '</strong>' : '<strong>'
+    ))
+    .replace(/(?:<br\s*\/?\s*>\s*)+$/i, '')
+    .trim();
 }
 
-/**
- * 提取内容中的第一个一级标题，作为知识主题
- */
-export function getKnowledgeTitleFromHtml(html: string): string {
-  const match = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
-  return match ? plain(match[1]) : '';
+/** 构建文档 iframe URL；编辑模式追加 mode=edit */
+export function buildDocUrl(url: string, mode: 'view' | 'edit' = 'view'): string {
+  const base = (url || '').trim();
+  if (!base || mode === 'view') return base;
+  return base.includes('?') ? `${base}&mode=edit` : `${base}?mode=edit`;
 }

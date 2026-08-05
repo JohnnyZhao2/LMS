@@ -7,8 +7,17 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce, scope_filter
-from apps.authorization.roles import enforce_student_workspace, is_student_workspace
+from apps.authorization.engine import enforce
+from apps.knowledge.serializers import (
+    KnowledgeBulkDeleteSerializer,
+    KnowledgeBulkImportSerializer,
+    KnowledgeCreateSerializer,
+    KnowledgeDetailSerializer,
+    KnowledgeListSerializer,
+    KnowledgeUpdateSerializer,
+)
+from apps.knowledge.selectors import get_knowledge_queryset
+from apps.knowledge.services import KnowledgeService
 from apps.tasks.models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
@@ -142,8 +151,34 @@ class KnowledgeListCreateView(BaseAPIView):
             context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
-        knowledge = self.service.create(data=serializer.validated_data)
-        return created_response(KnowledgeDetailSerializer(knowledge).data)
+        knowledge = self.service.create(
+            data=serializer.validated_data
+        )
+        # 5. 序列化输出
+        response_serializer = KnowledgeDetailSerializer(knowledge)
+        return created_response(response_serializer.data)
+class KnowledgeBulkImportView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    service_class = KnowledgeService
+
+    @extend_schema(summary='批量导入知识文档', request=KnowledgeBulkImportSerializer, tags=['知识管理'])
+    def post(self, request):
+        enforce('knowledge.create', request, error_message='无权导入知识文档')
+        serializer = KnowledgeBulkImportSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        return success_response(self.service.bulk_import(items=serializer.validated_data['items']))
+
+
+class KnowledgeBulkDeleteView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    service_class = KnowledgeService
+
+    @extend_schema(summary='批量删除知识文档', request=KnowledgeBulkDeleteSerializer, tags=['知识管理'])
+    def post(self, request):
+        enforce('knowledge.delete', request, error_message='无权删除知识文档')
+        serializer = KnowledgeBulkDeleteSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        return success_response(self.service.bulk_delete(items=serializer.validated_data['items']))
 
 
 class KnowledgeDetailView(BaseAPIView):

@@ -4,6 +4,8 @@ from django.urls import path
 
 from .document import ParseDocumentView
 from .views import (
+    KnowledgeBulkDeleteView,
+    KnowledgeBulkImportView,
     KnowledgeDetailView,
     KnowledgeIncrementViewCountView,
     KnowledgeListCreateView,
@@ -12,7 +14,8 @@ from .views import (
 
 urlpatterns = [
     path('', KnowledgeListCreateView.as_view(), name='knowledge-list-create'),
-    path('parse-document/', ParseDocumentView.as_view(), name='parse-document'),
+    path('import/', KnowledgeBulkImportView.as_view(), name='knowledge-bulk-import'),
+    path('bulk-delete/', KnowledgeBulkDeleteView.as_view(), name='knowledge-bulk-delete'),
     path('task/<int:task_knowledge_id>/', StudentTaskKnowledgeDetailView.as_view(), name='student-task-knowledge-detail'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),
     path('<int:pk>/view/', KnowledgeIncrementViewCountView.as_view(), name='knowledge-view'),

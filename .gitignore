@@ -34,20 +34,6 @@ trae/
 /*.pdf
 /招乎统一认证-API使用文档_副本.md
 
-# 测试文件
-**/tests/
-**/__tests__/
-**/src/test/
-*.test.ts
-*.test.tsx
-*.test.js
-*.test.jsx
-*.spec.ts
-*.spec.tsx
-*.spec.js
-*.spec.jsx
-test_*.py
-*_test.py
-conftest.py
-pytest.ini
-**/settings/test.py
+# Excel 本地锁文件 / 知识导入压测表
+/~$*.xlsx
+/knowledge-import-speed-*.xlsx
