@@ -1,16 +1,10 @@
-"""Authorization constants derived from the registry."""
+"""Authorization constants derived from business declarations."""
 
 from .registry import (
     build_permission_catalog,
     build_permission_constraint_summaries,
-    build_permission_implication_map,
-    build_permission_scope_rules,
     build_resource_authorization_handlers,
-    build_role_permission_defaults,
-    build_role_system_permission_defaults,
-    build_scope_group_rules,
     build_scope_filter_handlers,
-    build_scope_aware_permission_codes,
     build_system_managed_permission_codes,
     load_authorization_specs,
 )
@@ -19,89 +13,45 @@ from .registry import (
 AUTHORIZATION_SPECS = load_authorization_specs()
 PERMISSION_CATALOG = build_permission_catalog(AUTHORIZATION_SPECS)
 PERMISSION_CATALOG_BY_CODE = {item['code']: item for item in PERMISSION_CATALOG}
-PERMISSION_IMPLIES_MAP = build_permission_implication_map(AUTHORIZATION_SPECS)
-PERMISSION_SCOPE_GROUP_KEY_MAP = {
-    item['code']: item.get('scope_group_key')
-    for item in PERMISSION_CATALOG
-}
-REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
-
-SYSTEM_MANAGED_PERMISSION_CODES = sorted(build_system_managed_permission_codes(AUTHORIZATION_SPECS))
-ROLE_SYSTEM_PERMISSION_DEFAULTS = build_role_system_permission_defaults(AUTHORIZATION_SPECS)
-ROLE_PERMISSION_DEFAULTS = build_role_permission_defaults(AUTHORIZATION_SPECS)
-
-CONFIG_PERMISSION_MODULE = 'config'
-CONFIG_PERMISSION_MANAGEABLE_ROLE = 'ADMIN'
-CONFIG_MODULE_PERMISSION_CODES = frozenset(
-    item['code']
-    for item in PERMISSION_CATALOG
-    if item.get('module') == CONFIG_PERMISSION_MODULE
+REGISTERED_PERMISSION_CODES = frozenset(PERMISSION_CATALOG_BY_CODE)
+SYSTEM_MANAGED_PERMISSION_CODES = frozenset(
+    build_system_managed_permission_codes(AUTHORIZATION_SPECS)
 )
-
-
-SCOPE_ALL = 'ALL'
-SCOPE_SELF = 'SELF'
-SCOPE_MENTEES = 'MENTEES'
-SCOPE_DEPARTMENT = 'DEPARTMENT'
-SCOPE_EXPLICIT_USERS = 'EXPLICIT_USERS'
-
-SCOPE_CHOICES = [
-    (SCOPE_ALL, '全部对象'),
-    (SCOPE_SELF, '本人数据'),
-    (SCOPE_MENTEES, '仅名下学员'),
-    (SCOPE_DEPARTMENT, '仅同部门'),
-    (SCOPE_EXPLICIT_USERS, '指定用户'),
-]
-
-DEFAULT_SCOPE_GROUP_ALLOWED_SCOPE_TYPES = tuple(scope_code for scope_code, _ in SCOPE_CHOICES)
-
-
-def _resolve_allowed_scope_types(catalog_item: dict) -> tuple[str, ...]:
-    configured_scope_types = tuple(catalog_item.get('allowed_scope_types') or ())
-    return configured_scope_types or DEFAULT_SCOPE_GROUP_ALLOWED_SCOPE_TYPES
-
-
-PERMISSION_ALLOWED_SCOPE_TYPES_MAP = {
-    item['code']: _resolve_allowed_scope_types(item)
-    for item in PERMISSION_CATALOG
-}
-
-
-def _build_scope_groups() -> dict:
-    scope_groups: dict[str, dict] = {}
-    for item in PERMISSION_CATALOG:
-        scope_group_key = item.get('scope_group_key')
-        if not scope_group_key:
-            continue
-
-        allowed_scope_types = PERMISSION_ALLOWED_SCOPE_TYPES_MAP[item['code']]
-        scope_group = scope_groups.setdefault(
-            scope_group_key,
-            {
-                'permission_codes': [],
-                'available_scope_types': allowed_scope_types,
-            },
-        )
-        if tuple(scope_group['available_scope_types']) != tuple(allowed_scope_types):
-            raise ValueError(f'范围组 {scope_group_key} 的可选范围配置不一致')
-        scope_group['permission_codes'].append(item['code'])
-    return scope_groups
-
-
-PERMISSION_SCOPE_GROUPS = _build_scope_groups()
-
-PERMISSION_SCOPE_RULES = build_permission_scope_rules(AUTHORIZATION_SPECS)
-SCOPE_GROUP_RULES = build_scope_group_rules(AUTHORIZATION_SPECS)
-
-SCOPE_AWARE_PERMISSION_CODES = build_scope_aware_permission_codes(AUTHORIZATION_SPECS)
 RESOURCE_AUTHORIZATION_HANDLERS = build_resource_authorization_handlers(AUTHORIZATION_SPECS)
 SCOPE_FILTER_HANDLERS = build_scope_filter_handlers(AUTHORIZATION_SPECS)
 PERMISSION_CONSTRAINT_SUMMARIES = build_permission_constraint_summaries(AUTHORIZATION_SPECS)
 
+# 显式依赖：拥有左侧权限时必须同时拥有右侧权限。
+_EXPLICIT_PERMISSION_DEPENDENCIES: dict[str, frozenset[str]] = {
+    'grading.view': frozenset({'task.view'}),
+    'grading.score': frozenset({'grading.view'}),
+    'task.assign': frozenset({'task.view'}),
+    'task.analytics.view': frozenset({'task.view'}),
+    'user.role.assign': frozenset({'user.view'}),
+    'user.permission.view': frozenset({'user.view'}),
+    'user.permission.update': frozenset({'user.permission.view'}),
+}
 
-EFFECT_ALLOW = 'ALLOW'
-EFFECT_DENY = 'DENY'
-EFFECT_CHOICES = [
-    (EFFECT_ALLOW, '允许'),
-    (EFFECT_DENY, '拒绝'),
-]
+
+def _build_permission_dependencies(permission_codes: frozenset[str]) -> dict[str, frozenset[str]]:
+    """构建权限依赖：CRUD 写操作依赖同前缀 view，并合并显式依赖。"""
+    dependencies: dict[str, set[str]] = {
+        code: set(required)
+        for code, required in _EXPLICIT_PERMISSION_DEPENDENCIES.items()
+        if code in permission_codes
+    }
+    for code in permission_codes:
+        prefix, _, action = code.rpartition('.')
+        if action not in {'create', 'update', 'delete'} or not prefix:
+            continue
+        view_code = f'{prefix}.view'
+        if view_code in permission_codes:
+            dependencies.setdefault(code, set()).add(view_code)
+    return {
+        code: frozenset(required)
+        for code, required in dependencies.items()
+        if required
+    }
+
+
+PERMISSION_DEPENDENCIES = _build_permission_dependencies(REGISTERED_PERMISSION_CODES)

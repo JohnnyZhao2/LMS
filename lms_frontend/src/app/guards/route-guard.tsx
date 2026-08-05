@@ -52,6 +52,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   } = useAuth();
   const { role: urlRole } = useParams<{ role: string }>();
   const normalizedUrlRole = normalizeRoleCode(urlRole);
+  const actingRole = normalizedUrlRole ?? currentRole;
 
   if (isLoading) {
     return <RouteLoadingState />;
@@ -61,24 +62,33 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  if (allowedRoles?.length && (!normalizedUrlRole || !allowedRoles.includes(normalizedUrlRole))) {
-    const fallbackPath = getAccessibleWorkspaceHome(
-      availableRoles.map((item) => item.code),
-      currentRole,
-    ) ?? ROUTES.LOGIN;
-    return <Navigate to={fallbackPath} replace />;
-  }
+  const hasAccess = (() => {
+    if (!actingRole) {
+      return false;
+    }
 
-  const hasRequiredPermissions = !requiredPermissions || requiredPermissions.length === 0
-    ? true
-    : permissionMode === 'any'
+    // 学员工作台：只认 allowedRoles 是否包含 STUDENT，不查权限点
+    if (actingRole === 'STUDENT') {
+      return Boolean(allowedRoles?.includes('STUDENT'));
+    }
+
+    if (allowedRoles?.length && !allowedRoles.includes(actingRole)) {
+      return false;
+    }
+
+    if (!requiredPermissions?.length) {
+      return true;
+    }
+
+    return permissionMode === 'any'
       ? hasAnyCapability(requiredPermissions)
       : requiredPermissions.every((permissionCode) => hasCapability(permissionCode));
+  })();
 
-  if (!hasRequiredPermissions) {
+  if (!hasAccess) {
     const fallbackPath = getAccessibleWorkspaceHome(
       availableRoles.map((item) => item.code),
-      normalizedUrlRole ?? currentRole,
+      actingRole ?? currentRole,
     ) ?? ROUTES.LOGIN;
     return <Navigate to={fallbackPath} replace />;
   }

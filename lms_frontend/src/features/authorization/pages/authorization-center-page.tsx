@@ -1,112 +1,195 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
+import { AUTH_ROLES } from '@/config/role-constants';
+import {
+  USER_PERMISSION_VIEW_PERMISSION,
+  USER_ROLE_ASSIGN_PERMISSION,
+} from '@/config/permission-constants';
+import { isAllowedDepartmentCode, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { useAssignRoles } from '@/entities/user/api/manage-users';
+import {
+  getManagedRoleCodes,
+  getNextAssignableRoleCodes,
+  isAssignableRoleCode,
+  withoutAuthRoles,
+} from '@/entities/user/utils/user-role-assignment';
 import { useAuth } from '@/session/auth/auth-context';
+import type { RoleCode, UserList } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
-import type { RoleCode } from '@/types/common';
-import { ROLE_ORDER } from '@/config/role-constants';
-import {
-  useReplaceRolePermissionTemplate,
-  useRolePermissionTemplates,
-  usePermissionCatalog,
-} from '@/entities/authorization/api/authorization';
-import {
-  AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
-  ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS,
-  ROLE_PERMISSION_TEMPLATE_UPDATE_PERMISSION,
-} from '@/entities/authorization/constants/access';
-import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
+import { RoleMemberPanel } from '../components/role-member-panel';
+import { UserPermissionPanel } from '../components/user-permission-panel';
 
-const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');
-
+/**
+ * 用户授权中心：角色成员管理 + 用户权限配置。
+ */
 export const AuthorizationCenterPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const { hasCapability, refreshUser } = useAuth();
-  const canAccessWorkbench = AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS.some(hasCapability);
-  const canViewRoleTemplate = ROLE_PERMISSION_TEMPLATE_ACCESS_PERMISSIONS.some(hasCapability);
-  const canUpdateRoleTemplate = hasCapability(ROLE_PERMISSION_TEMPLATE_UPDATE_PERMISSION);
+  const { hasCapability } = useAuth();
+  const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
+  const canViewUserAuthorization = hasCapability(USER_PERMISSION_VIEW_PERMISSION);
+
   const initialRoleCode = searchParams.get('role_code');
   const initialUserIdParam = searchParams.get('user_id');
-  const initialSelectedRole = ROLE_TEMPLATE_ORDER.includes(initialRoleCode as (typeof ROLE_TEMPLATE_ORDER)[number])
-    ? (initialRoleCode as (typeof ROLE_TEMPLATE_ORDER)[number])
+  const initialSelectedRole = AUTH_ROLES.includes(initialRoleCode as RoleCode)
+    ? (initialRoleCode as RoleCode)
     : null;
   const initialSelectedUserId = initialUserIdParam ? Number(initialUserIdParam) : null;
 
-  const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
-  const shouldLoadData = canAccessWorkbench;
+  const [activeRole, setActiveRole] = useState<RoleCode | null>(initialSelectedRole);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(initialSelectedUserId);
+  const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
+  const assignRoles = useAssignRoles();
 
-  const { data: permissionCatalog = [] } = usePermissionCatalog({ view: 'role_template' }, shouldLoadData);
-  const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
-  const permissionCodesByRole = useMemo(
-    () => Object.fromEntries(
-      ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
-        roleCode,
-        roleTemplateQueries[index]?.data?.permission_codes ?? [],
-      ]),
-    ) as Partial<Record<RoleCode, string[]>>,
-    [roleTemplateQueries],
+  const resolvedActiveRole = useMemo(
+    () => (activeRole && AUTH_ROLES.includes(activeRole) ? activeRole : AUTH_ROLES[0] ?? null),
+    [activeRole],
   );
-  const isLoadingTemplates = roleTemplateQueries.some((query) => query.isLoading);
-  const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
+  const { data: allVisibleUsers = [], isLoading: isLoadingMembers } = useUsers(
+    { isActive: true },
+    { enabled: Boolean(resolvedActiveRole) && (canManageRoleMembers || canViewUserAuthorization) },
+  );
+  const {
+    data: selectedUserDetail,
+    isLoading: isLoadingSelectedUser,
+  } = useUserDetail(selectedUserId ?? 0);
 
-  const handleChangeRoleTemplate = async (
-    roleCode: RoleCode,
-    nextCodes: string[],
-  ) => {
-    if (!canUpdateRoleTemplate) return;
+  const groupedMembersByRole = useMemo(() => {
+    const byUsername = (left: UserList, right: UserList) =>
+      left.username.localeCompare(right.username, 'zh-Hans-CN');
 
-    const previousCodes = permissionCodesByRole[roleCode] ?? [];
-    const normalizedNextCodes = Array.from(new Set(nextCodes)).sort();
-    if (previousCodes.join('|') === normalizedNextCodes.join('|')) {
+    return Object.fromEntries(
+      AUTH_ROLES.map((roleCode) => [
+        roleCode,
+        allVisibleUsers
+          .filter((user) => user.roles.some((role) => role.code === roleCode))
+          .sort(byUsername),
+      ]),
+    ) as Partial<Record<RoleCode, UserList[]>>;
+  }, [allVisibleUsers]);
+
+  const candidatesByRole = useMemo(
+    () => Object.fromEntries(
+      AUTH_ROLES.map((roleCode) => [
+        roleCode,
+        allVisibleUsers
+          .filter((user) => !user.is_superuser)
+          .filter((user) => !user.roles.some((role) => role.code === roleCode))
+          .filter((user) => user.roles.every((role) => role.code === 'STUDENT' || !isAssignableRoleCode(role.code)))
+          .filter((user) => isAllowedDepartmentCode(user.department?.code))
+          .sort((left, right) => left.username.localeCompare(right.username, 'zh-Hans-CN')),
+      ]),
+    ) as Partial<Record<RoleCode, UserList[]>>,
+    [allVisibleUsers],
+  );
+
+  useEffect(() => {
+    if (!selectedUserDetail || !resolvedActiveRole) {
       return;
     }
+    if (selectedUserDetail.roles.some((role) => role.code === resolvedActiveRole)) {
+      return;
+    }
+    setSelectedUserId(null);
+  }, [resolvedActiveRole, selectedUserDetail]);
 
-    setSavingRoleCodes((previous) => (previous.includes(roleCode) ? previous : [...previous, roleCode]));
+  useEffect(() => {
+    if (!initialSelectedRole || !AUTH_ROLES.includes(initialSelectedRole)) {
+      return;
+    }
+    setActiveRole(initialSelectedRole);
+  }, [initialSelectedRole]);
 
+  useEffect(() => {
+    setSelectedUserId(initialSelectedUserId ?? null);
+  }, [initialSelectedRole, initialSelectedUserId]);
+
+  const handleAssignRole = async (roleCode: RoleCode, user: UserList) => {
+    if (!canManageRoleMembers || !AUTH_ROLES.includes(roleCode)) {
+      return;
+    }
+    setMutatingUserId(user.id);
     try {
-      await replaceRoleTemplateMutation.mutateAsync({
-        roleCode,
-        permissionCodes: normalizedNextCodes,
+      await assignRoles.mutateAsync({
+        id: user.id,
+        roles: getNextAssignableRoleCodes(getManagedRoleCodes(user.roles), roleCode),
       });
-      const roleIndex = ROLE_TEMPLATE_ORDER.indexOf(roleCode as (typeof ROLE_TEMPLATE_ORDER)[number]);
-      await Promise.all([
-        refreshUser(),
-        roleIndex >= 0 ? roleTemplateQueries[roleIndex]?.refetch() : Promise.resolve(),
-      ]);
+      setActiveRole(roleCode);
     } catch (error) {
       showApiError(error);
     } finally {
-      setSavingRoleCodes((previous) => previous.filter((code) => code !== roleCode));
+      setMutatingUserId((current) => (current === user.id ? null : current));
     }
   };
 
-  if (!canAccessWorkbench) {
-    return (
-      <PageFillShell>
-        <PageWorkbench className="gap-0">
-          <div className="flex h-full items-center justify-center rounded-2xl border border-border bg-muted px-6 py-8 text-sm text-text-muted">
-            当前账号没有用户授权工作台权限，请联系管理员开通。
-          </div>
-        </PageWorkbench>
-      </PageFillShell>
-    );
-  }
+  const handleRemoveRole = async (user: UserList) => {
+    if (!canManageRoleMembers || !resolvedActiveRole) {
+      return;
+    }
+    setMutatingUserId(user.id);
+    try {
+      await assignRoles.mutateAsync({
+        id: user.id,
+        roles: withoutAuthRoles(getManagedRoleCodes(user.roles)),
+      });
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setMutatingUserId((current) => (current === user.id ? null : current));
+    }
+  };
+
+  const handleSelectRole = (roleCode: RoleCode) => {
+    setActiveRole(roleCode);
+    setSelectedUserId(null);
+  };
+
+  const handleSelectMember = (roleCode: RoleCode, user: UserList) => {
+    setActiveRole(roleCode);
+    setSelectedUserId((current) => (
+      current === user.id && resolvedActiveRole === roleCode ? null : user.id
+    ));
+  };
 
   return (
     <PageFillShell>
       <PageWorkbench className="gap-0">
-        <RolePermissionTemplatePanel
-          canViewRoleTemplate={canViewRoleTemplate}
-          canUpdateRoleTemplate={canUpdateRoleTemplate}
-          roleCodes={ROLE_TEMPLATE_ORDER}
-          permissionCatalog={permissionCatalog}
-          permissionCodesByRole={permissionCodesByRole}
-          onChangeCodes={handleChangeRoleTemplate}
-          isLoadingTemplate={isLoadingTemplates}
-          savingRoleCodes={savingRoleCodes}
-          initialRoleCode={initialSelectedRole}
-          initialSelectedUserId={initialSelectedUserId}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          {resolvedActiveRole ? (
+            <section className="grid h-full min-h-0 grid-cols-1 overflow-hidden rounded-[20px] border border-border/70 bg-white xl:grid-cols-[320px_minmax(0,1fr)]">
+              <RoleMemberPanel
+                roleCodes={AUTH_ROLES}
+                activeRole={resolvedActiveRole}
+                membersByRole={groupedMembersByRole}
+                candidatesByRole={candidatesByRole}
+                isLoading={isLoadingMembers}
+                canManageMembers={canManageRoleMembers}
+                isMutating={assignRoles.isPending}
+                mutatingUserId={mutatingUserId}
+                onAddMember={(roleCode, user) => void handleAssignRole(roleCode, user)}
+                onRemoveMember={(user) => void handleRemoveRole(user)}
+                selectedMemberId={selectedUserId}
+                canSelectMember={canViewUserAuthorization}
+                onSelectRole={handleSelectRole}
+                onSelectMember={handleSelectMember}
+              />
+              <div className="flex min-h-0 flex-col">
+                <div className="min-h-0 flex-1 overflow-auto px-4 py-5">
+                  {selectedUserId ? (
+                    <UserPermissionPanel
+                      userDetail={selectedUserDetail}
+                      isLoading={isLoadingSelectedUser}
+                    />
+                  ) : (
+                    <div className="flex h-full min-h-[260px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/30 px-6 text-sm text-text-muted">
+                      请选择左侧成员配置用户权限。
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </div>
       </PageWorkbench>
     </PageFillShell>
   );

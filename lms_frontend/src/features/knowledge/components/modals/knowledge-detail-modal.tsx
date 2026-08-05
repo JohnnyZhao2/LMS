@@ -185,6 +185,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [initialSpaceTagId, isCreateMode, spaces]);
   const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
+  const contentScrollRef = useRef<HTMLElement | null>(null);
+  const contentHostRef = useRef<HTMLDivElement | null>(null);
+  const isOutlineScrollLockedRef = useRef(false);
   const [editingLinks, setEditingLinks] = useState(false);
   const [showTagInput, setShowTagInput] = useState(false);
   const [showSpaceTags, setShowSpaceTags] = useState(false);
@@ -647,8 +650,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             </div>
           </>
         ) : !knowledge ? (
-          <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
+          <div className="kd-left-shell">
+            <div className="kd-left kd-left-static" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
+            </div>
           </div>
         ) : (
           <>

@@ -1,15 +1,15 @@
 from django.db.models import Q
 
 
-def hard_delete_user_business_data(user_id: int) -> None:
-    """硬删除用户关联业务数据。"""
+def delete_user_related_business_data(user_id: int) -> None:
+    """硬删除用户关联业务数据（不含 User 主记录本身）。"""
     from apps.knowledge.models import Knowledge, KnowledgeRevision
     from apps.questions.models import Question
     from apps.quizzes.models import Quiz, QuizRevision
     from apps.spot_checks.models import SpotCheck
     from apps.submissions.models import Submission
     from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
-    from apps.tasks.task_service import TaskService
+    from apps.tasks.services import TaskService
 
     created_task_ids = list(Task.objects.filter(created_by_id=user_id).values_list('id', flat=True))
     created_quiz_ids = list(Quiz.objects.filter(created_by_id=user_id).values_list('id', flat=True))

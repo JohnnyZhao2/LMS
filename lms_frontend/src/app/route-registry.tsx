@@ -14,7 +14,8 @@ import { PageFillShell, PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
 import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
-import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
+import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/permission-constants';
+import { MANAGER_ROLES, STUDENT_AND_MANAGER_ROLES } from '@/config/role-constants';
 import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
 
 export type PermissionMode = 'all' | 'any';
@@ -62,10 +63,9 @@ export type OrderedMenuItem = {
 
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
 const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
-const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
-const StudentTaskList = lazy(() => import('@/features/tasks/components/student-task-list').then(m => ({ default: m.StudentTaskList })));
+const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
 const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
@@ -100,9 +100,6 @@ export const getWorkspaceDashboardElement = (variant: DashboardVariant): ReactEl
   if (variant === 'mentor') {
     return <MentorDashboard />;
   }
-  if (variant === 'team_manager') {
-    return <TeamManagerDashboard />;
-  }
   return <AdminDashboard />;
 };
 
@@ -110,7 +107,7 @@ const TaskRoutePage = () => {
   const { role } = useParams<{ role: string }>();
 
   if (normalizeRoleCode(role) === 'STUDENT') {
-    return <StudentTaskList />;
+    return <StudentTaskCenter />;
   }
 
   return <TaskManagement />;
@@ -121,12 +118,20 @@ const TaskDetailRoutePage = () => {
   const { hasCapability } = useAuth();
   const normalizedRole = normalizeRoleCode(role);
 
-  if (normalizedRole === 'STUDENT' || !hasCapability('task.update')) {
+  const canOpenTaskPreview = hasCapability('task.update') || hasCapability('task.analytics.view') || hasCapability('grading.view');
+
+  if (normalizedRole === 'STUDENT' || !canOpenTaskPreview) {
     return <TaskDetail />;
   }
 
   const rolePrefix = getRolePathPrefix(normalizedRole);
-  return <Navigate to={`${rolePrefix}/tasks/${id}/edit`} replace />;
+  return <Navigate to={`${rolePrefix}/tasks/${id}/preview?tab=progress&entry=task-management`} replace />;
+};
+
+/** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
+const SpotCheckCreateRedirect = () => {
+  const { role } = useParams<{ role: string }>();
+  return <Navigate to={`${getRolePathPrefix(normalizeRoleCode(role))}/spot-checks`} replace />;
 };
 
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
@@ -134,10 +139,11 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'tasks',
     kind: 'business',
     path: 'tasks',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['task.view'],
     showInMenu: true,
     menu: {
-      label: (workspace) => (workspace.menuVariant === 'admin' ? '任务管理' : '任务中心'),
+      label: (_workspace, role) => (role === 'STUDENT' ? '任务中心' : '任务管理'),
       icon: ListTodo,
       order: 50,
     },
@@ -169,6 +175,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'task-detail',
     kind: 'business',
     path: 'tasks/:id',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['task.view'],
     render: () => <TaskDetailRoutePage />,
   },
@@ -189,6 +196,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge',
     kind: 'business',
     path: 'knowledge',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['knowledge.view'],
     showInMenu: true,
     menu: {
@@ -216,6 +224,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge-detail',
     kind: 'business',
     path: 'knowledge/:id',
+    allowedRoles: STUDENT_AND_MANAGER_ROLES,
     requiredPermissions: ['knowledge.view'],
     component: KnowledgeCenter,
   },
@@ -296,6 +305,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-checks',
     kind: 'business',
     path: 'spot-checks',
+    // 学员抽查入口在任务中心 Tab；管理端禁止学员。
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.view'],
     showInMenu: true,
     menu: {
@@ -309,13 +320,16 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-create',
     kind: 'business',
     path: 'spot-checks/create',
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.create'],
-    component: SpotCheckForm,
+    // 发起统一在列表弹窗完成（左侧选人/勾选）
+    render: () => <SpotCheckCreateRedirect />,
   },
   {
     key: 'spot-check-edit',
     kind: 'business',
     path: 'spot-checks/:id/edit',
+    allowedRoles: MANAGER_ROLES,
     requiredPermissions: ['spot_check.view', 'spot_check.update'],
     component: SpotCheckForm,
   },
@@ -406,21 +420,21 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'quiz-player',
     kind: 'business',
     path: 'quiz/:id',
-    requiredPermissions: ['submission.answer'],
+    allowedRoles: ['STUDENT'],
     component: QuizPlayer,
   },
   {
     key: 'review-practice',
     kind: 'business',
     path: 'review/practice',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="practice" />,
   },
   {
     key: 'review-exam',
     kind: 'business',
     path: 'review/exam',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="exam" />,
   },
   {

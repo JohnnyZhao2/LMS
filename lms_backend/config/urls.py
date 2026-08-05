@@ -17,7 +17,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # API endpoints
     path('api/auth/', include('apps.auth.urls')),
-    path('api/users/', include('apps.users.urls.users')),
+    path('api/users/', include('apps.users.urls')),
     path('api/authorization/', include('apps.authorization.urls')),
     path('api/tags/', include('apps.tags.urls')),
     path('api/knowledge/', include('apps.knowledge.urls')),
@@ -25,7 +25,7 @@ urlpatterns = [
     path('api/quizzes/', include('apps.quizzes.urls')),
     path('api/tasks/', include('apps.tasks.urls')),
     path('api/grading/', include('apps.grading.urls')),
-    path('api/submissions/', include('apps.submissions.urls.submissions')),
+    path('api/submissions/', include('apps.submissions.urls')),
     path('api/spot-checks/', include('apps.spot_checks.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/logs/', include('apps.activity_logs.urls')),

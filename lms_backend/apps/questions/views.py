@@ -9,11 +9,7 @@ from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import created_response, no_content_response, success_response
 
-from .serializers import (
-    QuestionCreateSerializer,
-    QuestionSerializer,
-    QuestionUpdateSerializer,
-)
+from .serializers import QuestionSerializer, QuestionWriteSerializer
 from .services import QuestionService
 
 
@@ -65,8 +61,8 @@ class QuestionListCreateView(BaseAPIView):
 
     @extend_schema(
         summary='创建题目',
-        description='创建新题目（导师/室经理/管理员）',
-        request=QuestionCreateSerializer,
+        description='创建新题目（导师/室组/全局）',
+        request=QuestionWriteSerializer,
         responses={
             201: QuestionSerializer,
             400: OpenApiResponse(description='参数错误'),
@@ -76,7 +72,7 @@ class QuestionListCreateView(BaseAPIView):
     )
     def post(self, request):
         enforce('question.create', request, error_message='无权创建题目')
-        serializer = QuestionCreateSerializer(data=request.data, context={'request': request})
+        serializer = QuestionWriteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         question = self.service.create(data=serializer.validated_data)
         return created_response(QuestionSerializer(question).data)
@@ -103,7 +99,7 @@ class QuestionDetailView(BaseAPIView):
     @extend_schema(
         summary='更新题目',
         description='更新题目信息',
-        request=QuestionUpdateSerializer,
+        request=QuestionWriteSerializer,
         responses={
             200: QuestionSerializer,
             400: OpenApiResponse(description='参数错误'),
@@ -113,8 +109,7 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理'],
     )
     def patch(self, request, pk):
-        question = self.service.get_by_id(pk)
-        serializer = QuestionUpdateSerializer(instance=question, data=request.data, partial=True)
+        serializer = QuestionWriteSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated_question = self.service.update(pk=pk, data=serializer.validated_data)
         return success_response(QuestionSerializer(updated_question).data)

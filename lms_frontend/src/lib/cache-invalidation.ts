@@ -7,20 +7,9 @@ const invalidateMany = (
   keys: readonly QueryKey[],
 ) => Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 
-export const invalidateAfterActivityLogDeletion = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.activityLogs.all(),
-  ]);
-
 export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.activityLogs.policies(),
-  ]);
-
-export const invalidateAfterAuthorizationOverrideMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
   ]);
 
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
@@ -57,18 +46,13 @@ export const invalidateAfterQuizMutation = (queryClient: QueryClient) =>
     queryKeys.tasks.resourceOptionsRoot(),
   ]);
 
-export const invalidateAfterRoleTemplateMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.permissionCatalogRoot(),
-    queryKeys.authorization.roleTemplatesRoot(),
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
-  ]);
-
 export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.spotChecks.all(),
     queryKeys.spotChecks.detailRoot(),
+    queryKeys.spotChecks.studentsRoot(),
+    ['spot-checks-mine'],
+    ['spot-checks-batch-peers'],
   ]);
 
 export const invalidateAfterSubmissionAnswerSaved = (

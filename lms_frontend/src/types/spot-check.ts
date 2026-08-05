@@ -2,24 +2,31 @@
  * 抽查相关类型定义
  */
 
+export type SpotCheckStatus = 'PENDING' | 'SUBMITTED' | 'SCORED';
+
 export interface SpotCheckItem {
   id?: number;
   topic: string;
-  score: string;
-  comment: string;
+  /** 导师要求说明，提交后仍保留 */
+  instruction?: string;
+  /** 学员填写内容 */
+  content?: string;
+  score?: string | null;
+  comment?: string;
+  images?: string[];
   order?: number;
 }
 
 interface SpotCheckActions {
-  update: boolean;
   delete: boolean;
+  submit: boolean;
+  score: boolean;
 }
 
-/**
- * 抽查记录
- */
 export interface SpotCheck {
   id: number;
+  /** 同次批量发起的批次标识 */
+  batch_id: string | null;
   student: number;
   student_name: string;
   student_employee_id?: string;
@@ -28,10 +35,15 @@ export interface SpotCheck {
   checker: number;
   checker_name: string;
   checker_avatar_key: string;
+  status: SpotCheckStatus;
+  submitted_at: string | null;
+  /** 乐观锁版本号 */
+  revision: number;
   topic_count: number;
   topic_summary: string;
   average_score: string | null;
-  items: SpotCheckItem[];
+  /** 仅详情接口返回；列表已去掉 items */
+  items?: SpotCheckItem[];
   actions: SpotCheckActions;
   created_at: string;
   updated_at: string;
@@ -43,12 +55,21 @@ export interface SpotCheckStudent {
   employee_id?: string;
   avatar_key?: string | null;
   department_name?: string | null;
+  /** 待评分抽查数量 */
+  pending_score_count?: number;
 }
 
-/**
- * 创建抽查请求
- */
 export interface SpotCheckCreateRequest {
-  student: number;
-  items: SpotCheckItem[];
+  students: number[];
+  items: Array<{ topic: string; instruction?: string }>;
+}
+
+export interface SpotCheckSubmitRequest {
+  revision: number;
+  items: Array<{ id: number; content: string; images: string[] }>;
+}
+
+export interface SpotCheckScoreRequest {
+  revision: number;
+  items: Array<{ id: number; score: string | null; comment: string }>;
 }

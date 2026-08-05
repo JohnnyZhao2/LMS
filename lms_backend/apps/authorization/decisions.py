@@ -10,8 +10,6 @@ class AuthorizationDecision:
     allowed: bool
     permission_code: str
     message: str = ''
-    reason: str = ''
-    constraint: str = ''
 
     @classmethod
     def allow(
@@ -19,15 +17,11 @@ class AuthorizationDecision:
         permission_code: str,
         *,
         message: str = '',
-        reason: str = '',
-        constraint: str = '',
     ) -> 'AuthorizationDecision':
         return cls(
             allowed=True,
             permission_code=permission_code,
             message=message,
-            reason=reason,
-            constraint=constraint,
         )
 
     @classmethod
@@ -36,32 +30,21 @@ class AuthorizationDecision:
         permission_code: str,
         *,
         message: str = '',
-        reason: str = '',
-        constraint: str = '',
     ) -> 'AuthorizationDecision':
         return cls(
             allowed=False,
             permission_code=permission_code,
             message=message,
-            reason=reason,
-            constraint=constraint,
         )
 
 
-def conditional_allow(permission_code: str, *, constraint: str = '') -> AuthorizationDecision:
-    return AuthorizationDecision.allow(permission_code, constraint=constraint)
+def conditional_allow(permission_code: str) -> AuthorizationDecision:
+    return AuthorizationDecision.allow(permission_code)
 
 
 def conditional_deny(
     permission_code: str,
     *,
     message: str = '',
-    reason: str = '',
-    constraint: str = '',
 ) -> AuthorizationDecision:
-    return AuthorizationDecision.deny(
-        permission_code,
-        message=message,
-        reason=reason,
-        constraint=constraint,
-    )
+    return AuthorizationDecision.deny(permission_code, message=message)

@@ -1,14 +1,19 @@
 from rest_framework import serializers
 
-from .assignment_workflow import get_assignment_progress_data
-from .models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
-from .status_serializers import AssignmentExecutionStatusSerializerMixin
-from .student_task_service import StudentTaskService
+from .execution_status import AssignmentExecutionStatusSerializerMixin
+from .models import KnowledgeLearningProgress, TaskAssignment
+from .progress import build_assignment_progress
 
 
 class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
-    knowledge_id = serializers.IntegerField(source='task_knowledge.source_knowledge_id', read_only=True)
-    knowledge_title = serializers.CharField(source='task_knowledge.knowledge.title', read_only=True)
+    knowledge_id = serializers.IntegerField(
+        source='task_knowledge.source_knowledge_id',
+        read_only=True,
+    )
+    knowledge_title = serializers.CharField(
+        source='task_knowledge.knowledge.title',
+        read_only=True,
+    )
     order = serializers.IntegerField(source='task_knowledge.order', read_only=True)
 
     class Meta:
@@ -24,7 +29,24 @@ class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['is_completed', 'started_at', 'completed_at', 'created_at', 'updated_at']
+        read_only_fields = [
+            'is_completed',
+            'started_at',
+            'completed_at',
+            'created_at',
+            'updated_at',
+        ]
+
+
+class CompleteKnowledgeLearningResponseSerializer(KnowledgeLearningProgressSerializer):
+    task_status = serializers.CharField()
+    task_completed = serializers.BooleanField()
+
+    class Meta(KnowledgeLearningProgressSerializer.Meta):
+        fields = KnowledgeLearningProgressSerializer.Meta.fields + [
+            'task_status',
+            'task_completed',
+        ]
 
 
 class StudentAssignmentListSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
@@ -60,13 +82,13 @@ class StudentAssignmentListSerializer(AssignmentExecutionStatusSerializerMixin, 
         ]
 
     def get_has_quiz(self, obj):
-        return obj.task.has_quiz
+        return bool(obj.task.task_quizzes.all())
 
     def get_has_knowledge(self, obj):
-        return obj.task.has_knowledge
+        return bool(obj.task.task_knowledge.all())
 
     def get_progress(self, obj):
-        return get_assignment_progress_data(obj)
+        return build_assignment_progress(obj)
 
 
 class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
@@ -102,19 +124,17 @@ class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, seri
         ]
 
     def get_progress(self, obj):
-        return get_assignment_progress_data(obj)
+        return getattr(obj, 'progress_payload', None) or build_assignment_progress(obj)
 
     def get_knowledge_items(self, obj):
-        return StudentTaskService.get_student_knowledge_items(obj)
+        return getattr(obj, 'knowledge_items_payload', [])
 
     def get_quiz_items(self, obj):
-        return StudentTaskService.get_student_quiz_items(obj)
+        return getattr(obj, 'quiz_items_payload', [])
 
 
 class CompleteKnowledgeLearningSerializer(serializers.Serializer):
-    task_knowledge_id = serializers.IntegerField(min_value=1, help_text='要标记为已学习的任务知识节点ID')
-
-    def validate_task_knowledge_id(self, value):
-        if not TaskKnowledge.objects.filter(id=value).exists():
-            raise serializers.ValidationError('任务知识不存在')
-        return value
+    task_knowledge_id = serializers.IntegerField(
+        min_value=1,
+        help_text='要标记为已学习的任务知识节点ID',
+    )

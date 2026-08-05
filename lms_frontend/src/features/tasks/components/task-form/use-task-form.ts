@@ -1,21 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
 
 import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
-import type { PaginatedResponse } from '@/types/common';
-import type { TaskResourceOption } from '@/types/task';
 import { useQuizDetail } from '@/entities/quiz/api/get-quizzes';
 import { useTaskDetail } from '@/entities/task/api/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
 import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
-import { useTaskResourceOptions } from '../../api/get-task-resources';
 import { useUpdateTask } from '../../api/update-task';
-import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
-import { mapTaskResourceOptionToResource } from './task-form.types';
+import type { ResourceItem, SelectedResource } from './task-form.types';
 import {
   buildStableUid,
   buildTaskFormInitialSelectedResources,
@@ -25,13 +22,7 @@ import {
   reorderSelectedResourcesWithinGroup,
 } from './use-task-form.helpers';
 
-const PAGE_SIZE = 9;
-
-const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  return data.results;
-};
+const DEFAULT_DEADLINE_DAYS = 7;
 
 type Updater<T> = T | ((prev: T) => T);
 
@@ -40,6 +31,12 @@ const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
     return (updater as (prev: T) => T)(current);
   }
   return updater;
+};
+
+/** 将绝对截止时间换算为距今天数（至少 1 天） */
+const toDeadlineDays = (deadline: string | Date): number => {
+  const days = Math.ceil(dayjs(deadline).diff(dayjs(), 'day', true));
+  return Math.max(1, days);
 };
 
 export const useTaskForm = () => {
@@ -53,13 +50,10 @@ export const useTaskForm = () => {
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
-  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(null);
+  const [deadlineDaysDraft, setDeadlineDaysDraft] = useState<number | null>(null);
   const [selectedResourcesDraft, setSelectedResourcesDraft] = useState<SelectedResource[] | null>(null);
-  const [resourceSearch, setResourceSearch] = useState('');
-  const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
   const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<number[] | null>(null);
   const [userSearch, setUserSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -75,7 +69,9 @@ export const useTaskForm = () => {
 
   const initialTitle = isEdit && task ? task.title : '';
   const initialDescription = isEdit && task ? (task.description || '') : '';
-  const initialDeadline = isEdit && task?.deadline ? new Date(task.deadline) : undefined;
+  const initialDeadlineDays = isEdit && task?.deadline
+    ? toDeadlineDays(task.deadline)
+    : DEFAULT_DEADLINE_DAYS;
 
   const initialSelectedResources = useMemo<SelectedResource[]>(() => {
     return buildTaskFormInitialSelectedResources({
@@ -94,13 +90,13 @@ export const useTaskForm = () => {
 
   const title = titleDraft ?? initialTitle;
   const description = descriptionDraft ?? initialDescription;
-  const deadline = deadlineDraft === null ? initialDeadline : deadlineDraft;
+  const deadlineDays = deadlineDaysDraft ?? initialDeadlineDays;
   const selectedResources = selectedResourcesDraft ?? initialSelectedResources;
   const selectedUserIds = selectedUserIdsDraft ?? initialSelectedUserIds;
 
   const setTitle = (nextTitle: string) => setTitleDraft(nextTitle);
   const setDescription = (nextDescription: string) => setDescriptionDraft(nextDescription);
-  const setDeadline = (nextDeadline: Date | undefined) => setDeadlineDraft(nextDeadline);
+  const setDeadlineDays = (nextDeadlineDays: number) => setDeadlineDaysDraft(nextDeadlineDays);
   const setSelectedResources = (updater: Updater<SelectedResource[]>) => {
     setSelectedResourcesDraft((prev) => applyUpdater(updater, prev ?? initialSelectedResources));
   };
@@ -123,24 +119,6 @@ export const useTaskForm = () => {
         .map((item) => item.id),
     )).sort((left, right) => left - right);
   }, [selectedResources]);
-
-  const resourceQuery = useTaskResourceOptions({
-    search: resourceSearch,
-    page: currentPage,
-    page_size: PAGE_SIZE,
-    resource_type: resourceType,
-    exclude_document_ids: excludedDocumentIds,
-    exclude_quiz_ids: excludedQuizIds,
-  });
-
-  const availableResources = useMemo(
-    () => getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource),
-    [resourceQuery.data],
-  );
-
-  const totalCount = resourceQuery.data?.count ?? availableResources.length;
-  const totalPages = resourceQuery.data?.total_pages ?? Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const safeCurrentPage = resourceQuery.data?.current_page ?? Math.min(currentPage, totalPages);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -211,8 +189,8 @@ export const useTaskForm = () => {
       toast.error('请输入任务标题');
       return;
     }
-    if (!deadline) {
-      toast.error('请选择截止时间');
+    if (!Number.isFinite(deadlineDays) || deadlineDays < 1) {
+      toast.error('请填写有效的截止天数');
       return;
     }
     if (selectedResources.length === 0 || selectedUserIds.length === 0) {
@@ -228,7 +206,7 @@ export const useTaskForm = () => {
       const payload: TaskCreateRequest = buildTaskSubmitPayload({
         title,
         description,
-        deadline,
+        deadline: dayjs().add(deadlineDays, 'day').endOf('day').toDate(),
         selectedResources,
         selectedUserIds,
         resourcesDisabled,
@@ -247,11 +225,10 @@ export const useTaskForm = () => {
     }
   };
 
-  const isLoading = resourceQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
   const canSubmit = Boolean(
     title.trim()
-    && deadline
+    && deadlineDays >= 1
     && selectedResources.length > 0
     && selectedUserIds.length > 0
     && (resourcesDisabled || !hasMissingSources)
@@ -265,27 +242,17 @@ export const useTaskForm = () => {
     setTitle,
     description,
     setDescription,
-    deadline,
-    setDeadline,
+    deadlineDays,
+    setDeadlineDays,
     selectedResources,
-    resourceSearch,
-    setResourceSearch,
-    resourceType,
-    setResourceType,
     selectedUserIds,
     userSearch,
     setUserSearch,
-    currentPage,
-    setCurrentPage,
-    availableResources,
-    totalResourceCount: totalCount,
-    resourcePageSize: PAGE_SIZE,
-    totalPages,
-    safeCurrentPage,
-    shouldPaginateResources: totalPages > 1,
+    excludedDocumentIds,
+    excludedQuizIds,
     filteredUsers,
     isUsersLoading,
-    isLoading,
+    isLoading: taskLoading,
     isSubmitting,
     canSubmit,
     resourcesDisabled,

@@ -1,14 +1,15 @@
-"""
-Django development settings for LMS project.
-"""
+"""Django development settings."""
+import os
+
 from .base import *
 
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', *[
+    host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host
+]]
 
-# CORS - Allow all in development
 CORS_ALLOW_ALL_ORIGINS = True
-# Logging
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

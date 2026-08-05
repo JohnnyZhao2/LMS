@@ -1,13 +1,9 @@
-"""
-Student dashboard views.
-Implements:
-- Student dashboard API
-- Task participants progress API
-"""
+"""学员仪表盘与任务参与者进度。"""
+
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.roles import enforce_student_workspace
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
     StudentDashboardSerializer,
@@ -19,10 +15,8 @@ from core.responses import list_response, success_response
 
 
 class StudentDashboardView(BaseAPIView):
-    """
-    学员仪表盘 API 端点
-    GET /api/dashboard/student/
-    """
+    """GET /api/dashboard/student/"""
+
     permission_classes = [IsAuthenticated]
     service_class = StudentDashboardService
 
@@ -34,15 +28,10 @@ class StudentDashboardView(BaseAPIView):
             OpenApiParameter(name='knowledge_limit', type=int, description='最新知识数量限制（默认6）'),
         ],
         responses={200: StudentDashboardSerializer},
-        tags=['学员仪表盘']
+        tags=['学员仪表盘'],
     )
     def get(self, request):
-        enforce(
-            'dashboard.student.view',
-            request,
-            error_message='只有学员可以访问此仪表盘',
-        )
-        user = request.user
+        enforce_student_workspace(request, error_message='只有学员可以访问此仪表盘')
         task_limit = parse_int_query_param(
             request=request,
             name='task_limit',
@@ -59,34 +48,32 @@ class StudentDashboardView(BaseAPIView):
         )
 
         data = self.service.get_dashboard_data(
-            user=user,
+            user=request.user,
             task_limit=task_limit,
-            knowledge_limit=knowledge_limit
+            knowledge_limit=knowledge_limit,
         )
-
-        return success_response(StudentDashboardSerializer(data).data)
+        quiz_progress_map = data.pop('quiz_progress_map', {})
+        return success_response(
+            StudentDashboardSerializer(
+                data,
+                context={'quiz_progress_map': quiz_progress_map},
+            ).data
+        )
 
 
 class TaskParticipantsView(BaseAPIView):
-    """
-    任务参与者进度 API 端点
-    GET /api/dashboard/student/task/<task_id>/participants/
-    """
+    """GET /api/dashboard/student/task/<task_id>/participants/"""
+
     permission_classes = [IsAuthenticated]
     service_class = StudentDashboardService
 
     @extend_schema(
         summary='获取任务参与者进度',
-        description='获取指定任务的所有参与者进度',
+        description='获取指定任务的所有参与者进度（仅限本人已分配任务）',
         responses={200: PeerRankingSerializer(many=True)},
-        tags=['学员仪表盘']
+        tags=['学员仪表盘'],
     )
     def get(self, request, task_id: int):
-        enforce(
-            'dashboard.student.view',
-            request,
-            error_message='只有学员可以访问此接口',
-        )
-        user = request.user
-        participants = self.service.get_task_participants(user, task_id)
+        enforce_student_workspace(request, error_message='只有学员可以访问此接口')
+        participants = self.service.get_task_participants(request.user, task_id)
         return list_response(PeerRankingSerializer(participants, many=True).data)

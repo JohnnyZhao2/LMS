@@ -8,48 +8,6 @@ export const queryKeys = {
     list: (params: unknown) => ['activity-logs', params] as const,
     policies: () => ['activity-log-policies'] as const,
   },
-  authorization: {
-    permissionCatalogRoot: () => ['authorization', 'permission-catalog'] as const,
-    permissionCatalog: ({
-      currentRole,
-      module,
-      view,
-    }: {
-      currentRole: QueryRole;
-      module?: string;
-      view?: string;
-    }) => [
-      'authorization',
-      'permission-catalog',
-      normalizeRoleKey(currentRole),
-      module ?? 'ALL',
-      view ?? 'ALL',
-    ] as const,
-    roleTemplatesRoot: () => ['authorization', 'role-template'] as const,
-    roleTemplate: ({
-      currentRole,
-      roleCode,
-    }: {
-      currentRole: QueryRole;
-      roleCode: string;
-    }) => ['authorization', 'role-template', normalizeRoleKey(currentRole), roleCode] as const,
-    userOverridesRoot: () => ['authorization', 'user-overrides'] as const,
-    userOverrides: ({
-      currentRole,
-      userId,
-    }: {
-      currentRole: QueryRole;
-      userId: number | null;
-    }) => ['authorization', 'user-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
-    userScopeGroupOverridesRoot: () => ['authorization', 'user-scope-group-overrides'] as const,
-    userScopeGroupOverrides: ({
-      currentRole,
-      userId,
-    }: {
-      currentRole: QueryRole;
-      userId: number | null;
-    }) => ['authorization', 'user-scope-group-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
-  },
   dashboards: {
     admin: (currentRole: QueryRole) => ['admin-dashboard', normalizeRoleKey(currentRole)] as const,
     mentor: (currentRole: QueryRole) => ['mentor-dashboard', normalizeRoleKey(currentRole)] as const,
@@ -64,6 +22,13 @@ export const queryKeys = {
     }) => ['student-dashboard', normalizeRoleKey(currentRole), taskLimit, knowledgeLimit] as const,
     taskParticipants: (taskId: number | null) => ['task-participants', taskId] as const,
     teamManager: (currentRole: QueryRole) => ['team-manager-dashboard', normalizeRoleKey(currentRole)] as const,
+    examReport: ({
+      currentRole,
+      filters,
+    }: {
+      currentRole: QueryRole;
+      filters: string;
+    }) => ['exam-report', normalizeRoleKey(currentRole), filters] as const,
   },
   grading: {
     pendingRoot: () => ['grading', 'pending'] as const,
@@ -209,22 +174,65 @@ export const queryKeys = {
     list: ({
       currentRole,
       studentId,
+      batchId,
+      status,
       page,
       pageSize,
     }: {
       currentRole: QueryRole;
       studentId?: number;
+      batchId?: string;
+      status?: string;
       page: number;
       pageSize: number;
-    }) => ['spot-checks', normalizeRoleKey(currentRole), studentId ?? 'ALL', page, pageSize] as const,
+    }) => [
+      'spot-checks',
+      normalizeRoleKey(currentRole),
+      studentId ?? 'ALL',
+      batchId ?? 'ALL',
+      status ?? 'all',
+      page,
+      pageSize,
+    ] as const,
+    batchPeers: ({
+      currentRole,
+      batchId,
+    }: {
+      currentRole: QueryRole;
+      batchId: string;
+    }) => ['spot-checks-batch-peers', normalizeRoleKey(currentRole), batchId] as const,
+    mine: ({
+      currentRole,
+      page,
+      pageSize,
+      status,
+    }: {
+      currentRole: QueryRole;
+      page: number;
+      pageSize: number;
+      status?: string;
+    }) => ['spot-checks-mine', normalizeRoleKey(currentRole), page, pageSize, status ?? 'all'] as const,
     studentsRoot: () => ['spot-check-students'] as const,
     students: ({
       currentRole,
       search,
+      department,
+      page,
+      pageSize,
     }: {
       currentRole: QueryRole;
       search?: string;
-    }) => ['spot-check-students', normalizeRoleKey(currentRole), search ?? ''] as const,
+      department?: string;
+      page: number;
+      pageSize: number;
+    }) => [
+      'spot-check-students',
+      normalizeRoleKey(currentRole),
+      search ?? '',
+      department ?? 'all',
+      page,
+      pageSize,
+    ] as const,
     detailRoot: () => ['spot-check-detail'] as const,
     detail: ({
       currentRole,
@@ -286,14 +294,12 @@ export const queryKeys = {
       pageSize,
       search,
       taskStatus,
-      creatorSide,
     }: {
       currentRole: QueryRole;
       page: number;
       pageSize: number;
       search?: string;
       taskStatus?: string;
-      creatorSide?: string;
     }) => [
       'tasks',
       normalizeRoleKey(currentRole),
@@ -301,7 +307,6 @@ export const queryKeys = {
       pageSize,
       search,
       taskStatus,
-      creatorSide,
     ] as const,
     detailRoot: () => ['task-detail'] as const,
     detail: ({
@@ -337,6 +342,7 @@ export const queryKeys = {
     resourceOptions: ({
       currentRole,
       resourceType,
+      quizType,
       search,
       page,
       pageSize,
@@ -345,6 +351,7 @@ export const queryKeys = {
     }: {
       currentRole: QueryRole;
       resourceType: string;
+      quizType: string;
       search: string;
       page: number;
       pageSize: number;
@@ -354,6 +361,7 @@ export const queryKeys = {
       'task-resource-options',
       normalizeRoleKey(currentRole),
       resourceType,
+      quizType,
       search,
       page,
       pageSize,

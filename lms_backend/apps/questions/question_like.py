@@ -12,7 +12,8 @@ QUESTION_TYPE_CHOICES = [
     ('SHORT_ANSWER', '简答题'),
 ]
 
-DEFAULT_QUESTION_SCORE = 5.0
+OBJECTIVE_TYPES = frozenset({'SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'})
+DEFAULT_QUESTION_SCORE = Decimal('5.00')
 
 
 def build_choice_option_key(index: int) -> str:
@@ -57,7 +58,7 @@ class QuestionContentMixin(models.Model):
 
     @property
     def is_objective(self):
-        return self.question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
+        return self.question_type in OBJECTIVE_TYPES
 
     @property
     def is_subjective(self):

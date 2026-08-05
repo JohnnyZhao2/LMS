@@ -12,6 +12,7 @@ interface StudentStats {
   in_progress_count: number;
   urgent_count: number;
   completion_rate: number;
+  /** 考试平均得分率 0–100 */
   exam_avg_score: number | null;
   total_tasks: number;
   completed_count: number;
@@ -68,63 +69,17 @@ export interface StudentDashboard {
  */
 export interface MentorDashboard {
   summary: MentorDashboardSummary;
-  students: MentorDashboardStudent[];
-  pending_grading: { count: number };
-  spot_check_stats: MentorDashboardSpotCheckStats;
-  score_distribution: MentorDashboardScoreDistribution;
 }
 
 export interface MentorDashboardSummary {
   total_students: number;
-  monthly_tasks: number;
   total_tasks: number;
   completed_tasks: number;
   in_progress_tasks: number;
   overdue_tasks: number;
   overall_completion_rate: number;
+  /** 考试平均得分率 0–100 */
   overall_avg_score: number | null;
-}
-
-export interface MentorDashboardSpotCheckStats {
-  count: number;
-  avg_score: number | null;
-}
-
-export interface MentorDashboardScoreDistribution {
-  excellent: number;
-  good: number;
-  pass: number;
-  fail: number;
-  total: number;
-}
-
-interface MentorDashboardRadarMetrics {
-  completion_rate: number;
-  overdue_rate: number;
-  avg_score: number;
-  monthly_active: number;
-  spot_check_avg_score: number;
-}
-
-export interface MentorDashboardStudent {
-  id: number;
-  employee_id: string;
-  username: string;
-  department_name: string | null;
-  total_tasks: number;
-  completed_tasks: number;
-  in_progress_tasks: number;
-  overdue_tasks: number;
-  completion_rate: number;
-  overdue_rate: number;
-  avg_score: number | null;
-  exam_count: number;
-  exam_passed_count: number;
-  exam_pass_rate: number | null;
-  monthly_active: boolean;
-  spot_check_count_month: number;
-  spot_check_avg_score_month: number | null;
-  radar_metrics: MentorDashboardRadarMetrics;
 }
 
 export interface AdminDashboard {
@@ -136,64 +91,97 @@ export interface AdminDashboardSummary {
   monthly_tasks: number;
 }
 
-/**
- * 团队经理仪表盘
- */
-export interface TeamManagerDashboard {
-  summary: TeamManagerDashboardSummary;
-  department_comparison: TeamManagerDepartmentComparison;
-  department_student_view: TeamManagerDepartmentStudentViewItem[];
+/** 考试报表 */
+export type ExamReportView = 'detail' | 'student' | 'exam';
+export type ExamReportExportTemplate = 'detail' | 'student_summary' | 'exam_summary';
+
+export interface ExamReportFiltersState {
+  view: ExamReportView;
+  examId?: number;
+  studentId?: number;
+  departmentId?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
 }
 
-export interface TeamManagerDashboardSummary {
-  total_students: number;
-  total_mentors: number;
-  total_knowledge: number;
+export interface ExamReportPagination {
+  count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
-export interface TeamManagerDepartmentMetrics {
-  department_id: number | null;
-  department_name: string;
-  student_count: number;
-  mentor_count: number;
-  avg_completion_rate: number;
-  avg_score: number | null;
-  weekly_active_users: number;
-  weekly_active_rate: number;
+export interface ExamReportExamOption {
+  id: number;
+  label: string;
+  exam_title: string;
+  task_title: string;
+  total_score?: number;
+  pass_score?: number | null;
 }
 
-interface TeamManagerDepartmentGap {
-  student_count: number;
-  mentor_count: number;
-  completion_rate: number;
-  avg_score: number | null;
-  weekly_active_rate: number;
+export interface ExamReportStudentOption {
+  id: number;
+  name: string;
+  employee_id: string;
 }
 
-export interface TeamManagerDepartmentComparison {
-  left_department: TeamManagerDepartmentMetrics;
-  right_department: TeamManagerDepartmentMetrics;
-  gap: TeamManagerDepartmentGap;
+export interface ExamReportDepartmentOption {
+  id: number;
+  name: string;
 }
 
-interface TeamManagerDepartmentStudent {
+export interface ExamReportDetailRow {
   student_id: number;
   student_name: string;
-  mentor_name: string | null;
-  completion_rate: number;
-  avg_score: number | null;
-  is_at_risk: boolean;
+  employee_id: string;
+  department_name: string;
+  mentor_name: string;
+  avatar_key: string;
+  exam_id: number;
+  exam_title: string;
+  task_id: number;
+  task_title: string;
+  score: number | null;
+  total_score: number;
+  pass_score: number | null;
+  rank: number | null;
+  pass_status: string;
+  submission_status: string;
+  attempt_number: number | null;
+  time_spent_minutes: number | null;
 }
 
-export interface TeamManagerDepartmentStudentViewItem {
-  department_id: number;
+export interface ExamReportStudentRow {
+  student_id: number;
+  student_name: string;
+  employee_id: string;
   department_name: string;
-  mentor_count: number;
-  student_count: number;
-  avg_completion_rate: number;
-  avg_score: number | null;
-  weekly_active_users: number;
-  weekly_active_rate: number;
-  at_risk_students: number;
-  students: TeamManagerDepartmentStudent[];
+  mentor_name: string;
+  avatar_key: string;
+  scored_count: number;
+  average_score: number | null;
+  passed_count: number;
+  pass_ratio: string;
+  exam_scores: Record<string, number | null>;
+  exam_pass: Record<string, string>;
+}
+
+export interface ExamReportResponse {
+  view: ExamReportView;
+  selected_exam_id: number | null;
+  summary: {
+    student_count: number;
+    exam_count: number;
+    record_count: number;
+  };
+  filters: {
+    exams: ExamReportExamOption[];
+    students: ExamReportStudentOption[];
+    departments: ExamReportDepartmentOption[];
+  };
+  exams: ExamReportExamOption[];
+  rows: Array<ExamReportDetailRow | ExamReportStudentRow>;
+  pagination: ExamReportPagination;
 }

@@ -89,7 +89,7 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
         from django.db.models import F
 
         Knowledge.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
-        self.refresh_from_db()
+        self.refresh_from_db(fields=['view_count'])
         return self.view_count
 
     @property

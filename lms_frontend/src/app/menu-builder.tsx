@@ -10,11 +10,24 @@ const resolveMenuLabel = (
   role: RoleCode,
 ): string => (typeof label === 'function' ? label(workspace, role) : label);
 
-const isPermissionGranted = (
+/**
+ * 学员：只看 allowedRoles 是否包含 STUDENT，不看权限点。
+ * 管理角色：allowedRoles 限制 + requiredPermissions。
+ */
+const isRouteAccessible = (
   route: BusinessRouteMeta,
+  role: RoleCode,
   hasCapability: (permissionCode: string) => boolean,
   hasAnyCapability: (permissionCodes: string[]) => boolean,
 ): boolean => {
+  if (role === 'STUDENT') {
+    return Boolean(route.allowedRoles?.includes('STUDENT'));
+  }
+
+  if (route.allowedRoles?.length && !route.allowedRoles.includes(role)) {
+    return false;
+  }
+
   if (!route.requiredPermissions?.length) {
     return true;
   }
@@ -56,10 +69,7 @@ export const getMenuItemsBySection = (
     if (!route.showInMenu || !route.menu) {
       return;
     }
-    if (route.allowedRoles && !route.allowedRoles.includes(role)) {
-      return;
-    }
-    if (!isPermissionGranted(route, hasCapability, hasAnyCapability)) {
+    if (!isRouteAccessible(route, role, hasCapability, hasAnyCapability)) {
       return;
     }
 

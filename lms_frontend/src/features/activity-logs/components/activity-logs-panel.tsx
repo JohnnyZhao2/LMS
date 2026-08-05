@@ -5,9 +5,6 @@ import {
   ShieldAlert,
   X,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -15,12 +12,7 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/sea
 import { PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { showApiError } from '@/utils/error-handler';
-import { cn } from '@/lib/utils';
-import {
-  useActivityLogs,
-  useBulkDeleteActivityLogs,
-} from '../api/use-activity-logs';
+import { useActivityLogs } from '../api/use-activity-logs';
 import { ActivityLogFeed } from './activity-log-feed';
 import { ActivityLogMemberList } from './activity-log-member-list';
 import type { ActivityLogItem, ActivityLogMember, ActivityLogType } from '../types';
@@ -44,8 +36,6 @@ export const ActivityLogsPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
-  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search.trim());
   const dateFrom = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
@@ -65,7 +55,6 @@ export const ActivityLogsPanel: React.FC = () => {
   );
 
   const { data, isLoading } = useActivityLogs(query, canViewActivityLogs);
-  const bulkDeleteActivityLogs = useBulkDeleteActivityLogs();
   const members = useMemo<ActivityLogMember[]>(
     () => data?.members ?? [],
     [data?.members]
@@ -82,13 +71,6 @@ export const ActivityLogsPanel: React.FC = () => {
       .map(({ user }) => user),
     [members, selectedMemberIds]
   );
-  const selectedLogs = useMemo(
-    () => normalizedItems.filter((item) => selectedLogIds.includes(item.id)),
-    [normalizedItems, selectedLogIds]
-  );
-  const isAllLogsSelected = normalizedItems.length > 0 && selectedLogIds.length === normalizedItems.length;
-  const hasPartialLogSelection = selectedLogIds.length > 0 && !isAllLogsSelected;
-  const isDeleting = bulkDeleteActivityLogs.isPending;
   const hasActiveFilters =
     selectedMemberIds.length > 0 ||
     search.trim().length > 0 ||
@@ -97,37 +79,15 @@ export const ActivityLogsPanel: React.FC = () => {
   const totalCount = data?.count ?? 0;
   const shouldShowPagination = totalCount > pageSize;
 
-  const clearSelectedLogs = () => {
-    setSelectedLogIds([]);
-  };
-
-  const resetPagingAndSelection = () => {
+  const resetPaging = () => {
     setPage(1);
-    clearSelectedLogs();
   };
 
   const resetFiltersAndSelection = () => {
     setSearch('');
     setDateRange(undefined);
     setSelectedMemberIds([]);
-    resetPagingAndSelection();
-  };
-
-  const handleConfirmBulkDelete = async () => {
-    if (selectedLogs.length === 0) return;
-
-    try {
-      const selectedCount = selectedLogs.length;
-      await bulkDeleteActivityLogs.mutateAsync(selectedLogs.map((item) => item.id));
-      if (selectedCount === normalizedItems.length && page > 1) {
-        setPage((current) => Math.max(1, current - 1));
-      }
-      clearSelectedLogs();
-      setBulkDeleteOpen(false);
-      toast.success(`已删除 ${selectedCount} 条日志`);
-    } catch (error) {
-      showApiError(error, '批量删除日志失败');
-    }
+    resetPaging();
   };
 
   const handleTypeChange = (nextType: ActivityLogType) => {
@@ -143,20 +103,8 @@ export const ActivityLogsPanel: React.FC = () => {
       setSelectedMemberIds((cur) =>
         cur.includes(memberId) ? cur.filter((id) => id !== memberId) : [...cur, memberId]
       );
-      resetPagingAndSelection();
+      resetPaging();
     });
-  };
-
-  const handleToggleLog = (logId: string) => {
-    setSelectedLogIds((current) =>
-      current.includes(logId)
-        ? current.filter((itemId) => itemId !== logId)
-        : [...current, logId]
-    );
-  };
-
-  const handleToggleAllLogs = () => {
-    setSelectedLogIds(isAllLogsSelected ? [] : normalizedItems.map((item) => item.id));
   };
 
   if (!canViewActivityLogs) {
@@ -199,7 +147,7 @@ export const ActivityLogsPanel: React.FC = () => {
             dateRange={dateRange}
             onDateRangeChange={(range) => {
               setDateRange(range);
-              resetPagingAndSelection();
+              resetPaging();
             }}
             placeholder="时间区间"
             align="end"
@@ -211,7 +159,7 @@ export const ActivityLogsPanel: React.FC = () => {
             value={search}
             onChange={(value) => {
               setSearch(value);
-              resetPagingAndSelection();
+              resetPaging();
             }}
             placeholder="搜索日志"
           />
@@ -226,7 +174,6 @@ export const ActivityLogsPanel: React.FC = () => {
           )}
         </div>
 
-        {/* 左侧成员列表 */}
         <div className="min-h-0 xl:row-span-2 xl:row-start-1">
           <ActivityLogMemberList
             members={members}
@@ -236,10 +183,8 @@ export const ActivityLogsPanel: React.FC = () => {
           />
         </div>
 
-        {/* 右侧日志流 */}
         <div className="min-h-0 h-full xl:col-start-2 xl:row-start-2">
           <div className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background">
-            {/* 选中成员标签 + Tab */}
             <div className="border-b border-border/60 px-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 {selectedMembers.length > 0 ? (
@@ -274,47 +219,13 @@ export const ActivityLogsPanel: React.FC = () => {
                     <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
                   </button>
                 )}
-
-                {normalizedItems.length > 0 && (
-                  <div className="flex h-14 flex-wrap items-center gap-3">
-                    <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
-                      <Checkbox
-                        checked={isAllLogsSelected ? true : hasPartialLogSelection ? 'indeterminate' : false}
-                        onCheckedChange={handleToggleAllLogs}
-                        disabled={isDeleting}
-                      />
-                      <span>本页全选</span>
-                      <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-text-muted">
-                        {selectedLogIds.length}/{normalizedItems.length}
-                      </span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => setBulkDeleteOpen(true)}
-                      disabled={selectedLogIds.length === 0 || isDeleting}
-                      className={cn(
-                        'inline-flex h-8 items-center rounded-lg border px-3 text-[12px] font-medium transition-colors',
-                        selectedLogIds.length > 0 && !isDeleting
-                          ? 'border-destructive/20 bg-error-50 text-destructive hover:bg-error-100'
-                          : 'cursor-not-allowed border-border/60 bg-background text-text-muted opacity-60'
-                      )}
-                    >
-                      删除选中
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* 日志列表 */}
             <div className="min-h-0 flex-1 overflow-hidden">
               <ActivityLogFeed
                 items={normalizedItems}
                 isLoading={isLoading}
-                selectedLogIds={selectedLogIds}
-                selectionDisabled={isDeleting}
-                onToggleSelect={handleToggleLog}
               />
             </div>
 
@@ -330,12 +241,10 @@ export const ActivityLogsPanel: React.FC = () => {
                   onChange={(p, s) => {
                     setPage(p);
                     setPageSize(s);
-                    clearSelectedLogs();
                   }}
                   onShowSizeChange={(p, s) => {
                     setPage(p);
                     setPageSize(s);
-                    clearSelectedLogs();
                   }}
                 />
               </div>
@@ -343,19 +252,6 @@ export const ActivityLogsPanel: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={(open) => {
-          setBulkDeleteOpen(open);
-        }}
-        title="删除选中日志？"
-        description={`将永久删除已选 ${selectedLogs.length} 条日志记录。此操作不可撤销。`}
-        confirmText="确认删除"
-        confirmVariant="destructive"
-        isConfirming={bulkDeleteActivityLogs.isPending}
-        onConfirm={handleConfirmBulkDelete}
-      />
     </PageWorkbench>
   );
 };

@@ -10,7 +10,7 @@ from apps.authorization.roles import resolve_current_role
 class RoleAwareJWTAuthentication(JWTAuthentication):
     """
     Extends JWT authentication to attach the current_role claim to the user.
-    This allows downstream permission checks (e.g., get_current_role) to
+    This allows downstream permission checks (e.g., resolve_current_role) to
     respect the actively selected role that is stored inside the token.
     """
     def get_user(self, validated_token):

@@ -6,7 +6,7 @@ from apps.tags.models import Tag
 from core.mixins import CreatorMixin, TimestampMixin
 
 from .question_like import (
-    QUESTION_TYPE_CHOICES,
+    QUESTION_TYPE_CHOICES as SHARED_QUESTION_TYPE_CHOICES,
     QuestionContentMixin,
     QuestionOptionContentMixin,
 )
@@ -15,7 +15,7 @@ from .question_like import (
 class Question(TimestampMixin, CreatorMixin, QuestionContentMixin, models.Model):
     """题库中的当前源题。"""
 
-    QUESTION_TYPE_CHOICES = QUESTION_TYPE_CHOICES
+    QUESTION_TYPE_CHOICES = SHARED_QUESTION_TYPE_CHOICES
 
     updated_by = models.ForeignKey(
         'users.User',
@@ -40,14 +40,6 @@ class Question(TimestampMixin, CreatorMixin, QuestionContentMixin, models.Model)
         blank=True,
         verbose_name='题目标签',
         limit_choices_to={'tag_type': 'TAG'},
-    )
-    created_from_quiz = models.ForeignKey(
-        'quizzes.Quiz',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_bank_questions',
-        verbose_name='首次沉淀来源试卷',
     )
 
     class Meta:

@@ -5,6 +5,11 @@ import { queryKeys } from '@/lib/query-keys';
 import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
 
+interface SubmitGradingOptions {
+  beforeInvalidate?: (variables: GradingSubmitRequest) => void | Promise<void>;
+  afterInvalidate?: (variables: GradingSubmitRequest) => void;
+}
+
 /**
  * 获取任务分析数据
  */
@@ -73,11 +78,15 @@ export const useGradingAnswers = (
 /**
  * 提交评分
  */
-export const useSubmitGrading = (taskId: number) => {
+export const useSubmitGrading = (taskId: number, options: SubmitGradingOptions = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: GradingSubmitRequest) =>
-      apiClient.post(`/grading/tasks/${taskId}/submit/`, data),
-    onSuccess: () => invalidateAfterGradingMutation(queryClient),
+      apiClient.post<void>(`/grading/tasks/${taskId}/submit/`, data),
+    onSuccess: async (_data, variables) => {
+      await options.beforeInvalidate?.(variables);
+      await invalidateAfterGradingMutation(queryClient);
+      options.afterInvalidate?.(variables);
+    },
   });
 };

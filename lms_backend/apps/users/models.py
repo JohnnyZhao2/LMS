@@ -11,7 +11,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
-from django.db import models, transaction
+from django.db import models
 from django.utils.functional import cached_property
 
 from core.mixins import TimestampMixin
@@ -19,18 +19,9 @@ from core.mixins import TimestampMixin
 
 class UserManager(BaseUserManager):
     """自定义 User Manager，支持使用 employee_id 作为用户名字段"""
-    DEFAULT_ROLE_CODE = 'STUDENT'
-    DEFAULT_ROLE_DEFAULTS = {'name': '学员', 'description': '系统默认角色'}
-
-    def _ensure_default_student_role(self, user):
-        student_role, _ = Role.objects.get_or_create(
-            code=self.DEFAULT_ROLE_CODE,
-            defaults=self.DEFAULT_ROLE_DEFAULTS,
-        )
-        UserRole.objects.get_or_create(user=user, role=student_role)
 
     def create_user(self, employee_id, username, password=None, **extra_fields):
-        """创建普通用户"""
+        """创建普通用户（不分配业务角色）。"""
         if not employee_id:
             raise ValueError('工号必须提供')
         if not username:
@@ -38,13 +29,11 @@ class UserManager(BaseUserManager):
         user = self.model(employee_id=employee_id, username=username, **extra_fields)
         if password:
             user.set_password(password)
-        with transaction.atomic(using=self._db):
-            user.save(using=self._db)
-            if not user.is_superuser:
-                self._ensure_default_student_role(user)
+        user.save(using=self._db)
         return user
+
     def create_superuser(self, employee_id, username, password=None, **extra_fields):
-        """创建超级用户"""
+        """创建超级用户（专有身份，不创建业务角色）。"""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         if extra_fields.get('is_staff') is not True:
@@ -52,9 +41,12 @@ class UserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('超级用户必须 is_superuser=True')
         return self.create_user(employee_id, username, password, **extra_fields)
+
     def get_by_natural_key(self, employee_id):
         """通过自然键（employee_id）获取用户"""
         return self.get(employee_id=employee_id)
+
+
 class Department(TimestampMixin, models.Model):
     """
     部门/室模型
@@ -63,54 +55,58 @@ class Department(TimestampMixin, models.Model):
     name = models.CharField(max_length=50, unique=True, verbose_name='部门名称')
     code = models.CharField(max_length=20, unique=True, verbose_name='部门代码')
     description = models.TextField(blank=True, default='', verbose_name='部门描述')
+
     class Meta:
         db_table = 'lms_department'
         verbose_name = '部门'
         verbose_name_plural = '部门'
         ordering = ['code']
+
     def __str__(self):
         return self.name
+
+
 class Role(TimestampMixin, models.Model):
     """
     角色模型
+
     系统预定义角色:
-    - STUDENT: 学员（默认角色；与 DEPT_MANAGER/TEAM_MANAGER 互斥）
-    - MENTOR: 导师
-    - DEPT_MANAGER: 室经理
-    - ADMIN: 管理员（能力叠加角色，可与学员共存）
-    - TEAM_MANAGER: 团队经理
+    - STUDENT: 学员（学习工作台身份，不参与授权配置）
+    - MENTOR: 导师（授权角色，名下学员范围）
+    - DEPT: 室组（授权角色，本室范围，可多人）
+    - GLOBAL: 全局（授权角色，全平台范围）
     """
     ROLE_CHOICES = [
         ('STUDENT', '学员'),
         ('MENTOR', '导师'),
-        ('DEPT_MANAGER', '室经理'),
-        ('ADMIN', '管理员'),
-        ('TEAM_MANAGER', '团队经理'),
+        ('DEPT', '室组'),
+        ('GLOBAL', '全局'),
     ]
-    # 角色优先级顺序（从高到低）
-    # 用于确定用户的默认角色
     ROLE_PRIORITY_ORDER = [
-        'ADMIN',
-        'DEPT_MANAGER',
+        'GLOBAL',
+        'DEPT',
         'MENTOR',
-        'TEAM_MANAGER',
         'STUDENT',
     ]
     code = models.CharField(
-        max_length=20, 
-        unique=True, 
+        max_length=20,
+        unique=True,
         choices=ROLE_CHOICES,
-        verbose_name='角色代码'
+        verbose_name='角色代码',
     )
     name = models.CharField(max_length=50, verbose_name='角色名称')
     description = models.TextField(blank=True, default='', verbose_name='角色描述')
+
     class Meta:
         db_table = 'lms_role'
         verbose_name = '角色'
         verbose_name_plural = '角色'
         ordering = ['code']
+
     def __str__(self):
         return self.name
+
+
 class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     """
     用户模型
@@ -132,22 +128,29 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'employee_id'
     REQUIRED_FIELDS = ['username']
     objects = UserManager()
+
     class Meta:
         db_table = 'lms_user'
         ordering = ['employee_id']
+
     def __str__(self):
         return self.username
+
     def has_role(self, role_code: str) -> bool:
         """检查用户是否拥有指定角色"""
         return self.roles.filter(code=role_code).exists()
+
     @property
     def is_admin(self) -> bool:
-        """是否为管理员"""
-        return self.is_superuser or self.has_role('ADMIN')
+        """是否为全局管理者"""
+        return self.is_superuser or self.has_role('GLOBAL')
+
     @cached_property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""
         return list(self.roles.values_list('code', flat=True))
+
+
 class UserRole(TimestampMixin, models.Model):
     """
     用户角色关联模型
@@ -159,13 +162,13 @@ class UserRole(TimestampMixin, models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='user_roles',
-        verbose_name='用户'
+        verbose_name='用户',
     )
     role = models.ForeignKey(
         Role,
         on_delete=models.CASCADE,
         related_name='role_users',
-        verbose_name='角色'
+        verbose_name='角色',
     )
     assigned_by = models.ForeignKey(
         User,
@@ -173,34 +176,15 @@ class UserRole(TimestampMixin, models.Model):
         null=True,
         blank=True,
         related_name='assigned_roles',
-        verbose_name='分配者'
+        verbose_name='分配者',
     )
+
     class Meta:
         db_table = 'lms_user_role'
         verbose_name = '用户角色'
         verbose_name_plural = '用户角色'
         unique_together = ['user', 'role']
         ordering = ['user', 'role']
+
     def __str__(self):
         return f"{self.user.username} - {self.role.name}"
-# Signal handlers for automatic role assignment
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-
-@receiver(post_save, sender=User)
-def assign_default_student_role(sender, instance, created, **kwargs):
-    """
-    新用户创建后自动分配学员角色。
-    后续仅在分配室经理/团队经理时，角色分配流程会移除学员角色。
-    - Property 5: 新用户默认学员角色
-    """
-    if created and not instance.is_superuser:
-        # 获取或创建学员角色
-        student_role, _ = Role.objects.get_or_create(
-            code='STUDENT',
-            defaults={'name': '学员', 'description': '系统默认角色'}
-        )
-        # 检查是否已有学员角色（避免重复）
-        if not UserRole.objects.filter(user=instance, role=student_role).exists():
-            UserRole.objects.create(user=instance, role=student_role)

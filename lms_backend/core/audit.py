@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 @dataclass(frozen=True)
@@ -13,7 +15,7 @@ class UserActionAuditEvent:
     description: str
     operator: Any = None
     status: str = 'success'
-    action_key: Optional[str] = None
+    action_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -25,7 +27,7 @@ class ContentActionAuditEvent:
     action: str
     description: str
     status: str = 'success'
-    action_key: Optional[str] = None
+    action_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -36,7 +38,7 @@ class OperationAuditEvent:
     description: str
     duration: int = 0
     status: str = 'success'
-    action_key: Optional[str] = None
+    action_key: str | None = None
     target_type: str = ''
     target_id: str = ''
     target_title: str = ''
@@ -53,7 +55,7 @@ class AuditPublisher(Protocol):
         ...
 
 
-_audit_publisher: Optional[AuditPublisher] = None
+_audit_publisher: AuditPublisher | None = None
 
 
 def register_audit_publisher(publisher: AuditPublisher) -> None:
@@ -74,7 +76,7 @@ def audit_user_action(
     description: str,
     operator: Any = None,
     status: str = 'success',
-    action_key: Optional[str] = None,
+    action_key: str | None = None,
 ) -> Any:
     return get_audit_publisher().publish_user_action(
         UserActionAuditEvent(
@@ -97,7 +99,7 @@ def audit_content_action(
     action: str,
     description: str,
     status: str = 'success',
-    action_key: Optional[str] = None,
+    action_key: str | None = None,
 ) -> Any:
     return get_audit_publisher().publish_content_action(
         ContentActionAuditEvent(
@@ -121,7 +123,7 @@ def audit_operation(
     description: str,
     duration: int = 0,
     status: str = 'success',
-    action_key: Optional[str] = None,
+    action_key: str | None = None,
     target_type: str = '',
     target_id: str = '',
     target_title: str = '',

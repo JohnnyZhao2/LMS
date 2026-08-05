@@ -71,7 +71,8 @@ export const StatCard: React.FC<StatCardProps> = ({
                             "w-1 rounded-full transition-all duration-500 ease-out",
                             isCompact ? "h-2.5 group-hover:h-4" : "h-3 group-hover:h-5",
                             accentClassName,
-                            "shadow-[0_0_12px_rgba(0,0,0,0.3)]"
+                            inferredTextColor,
+                            "shadow-[0_0_10px_currentColor]"
                         )}
                         />
                         <p className={cn(
@@ -120,7 +121,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
                 {/* Right Visual Zone */}
                 <div className={cn(
-                    "relative flex h-full shrink-0 items-center justify-center overflow-hidden",
+                    "pointer-events-none relative flex h-full shrink-0 items-center justify-center overflow-visible",
                     isCompact ? "w-20" : "w-32",
                 )}>
                     {/* The Icon: Watermark Style - Tinted Lines */}

@@ -1,4 +1,6 @@
-"""Knowledge services."""
+"""Knowledge services: CRUD and immutable revision snapshots."""
+
+from __future__ import annotations
 
 import hashlib
 import json
@@ -49,10 +51,29 @@ def build_knowledge_revision_hash(payload: dict) -> str:
     return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
 
 
+@transaction.atomic
 def ensure_knowledge_revision(knowledge: Knowledge, *, actor) -> KnowledgeRevision:
-    payload = build_knowledge_revision_payload(knowledge)
+    """生成任务引用快照；同内容复用，并对源知识行加锁避免版本号竞争。"""
+    locked = (
+        Knowledge.objects.select_for_update()
+        .select_related('space_tag')
+        .prefetch_related('tags')
+        .filter(pk=knowledge.pk)
+        .first()
+    )
+    if locked is None:
+        raise BusinessError(
+            code=ErrorCodes.RESOURCE_NOT_FOUND,
+            message=f'知识文档 {knowledge.pk} 不存在',
+        )
+
+    payload = build_knowledge_revision_payload(locked)
     content_hash = build_knowledge_revision_hash(payload)
-    latest = KnowledgeRevision.objects.filter(source_knowledge=knowledge).order_by('-revision_number').first()
+    latest = (
+        KnowledgeRevision.objects.filter(source_knowledge_id=locked.pk)
+        .order_by('-revision_number')
+        .first()
+    )
     if latest and latest.content_hash == content_hash:
         return latest
 
@@ -140,10 +161,12 @@ class KnowledgeService(BaseService):
 
     def _delete_record(self, pk: int) -> Knowledge:
         knowledge = self.get_by_id(pk)
-        revisions = list(knowledge.revisions.all())
+        # owner gate：资源所有权
+        enforce('knowledge.delete', self.request, resource=knowledge, error_message='无权删除知识文档')
+        revision_ids = list(knowledge.revisions.values_list('id', flat=True))
         knowledge.delete()
         KnowledgeRevision.objects.filter(
-            id__in=[revision.id for revision in revisions],
+            id__in=revision_ids,
             knowledge_tasks__isnull=True,
         ).delete()
         return knowledge

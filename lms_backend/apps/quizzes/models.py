@@ -1,7 +1,7 @@
 """Quiz models for LMS."""
 
 from django.db import models
-from django.db.models import Count, Sum
+from django.db.models import Sum
 
 from core.mixins import CreatorMixin, TimestampMixin
 from apps.questions.question_like import (
@@ -39,6 +39,9 @@ class QuizDefinitionMixin(models.Model):
         blank=True,
         verbose_name='及格分数',
     )
+    # QuizRevisionQuestion 自身含 score/question_type；Quiz 关系表经 question 聚合
+    _score_lookup = 'score'
+    _question_type_lookup = 'question_type'
 
     class Meta:
         abstract = True
@@ -48,13 +51,19 @@ class QuizDefinitionMixin(models.Model):
 
     @property
     def total_score(self):
+        annotated = getattr(self, 'total_score_value', None)
+        if annotated is not None:
+            return annotated
         if not self.pk:
             return 0
-        result = self.quiz_questions.aggregate(total=Sum('score'))
+        result = self.quiz_questions.aggregate(total=Sum(self._score_lookup))
         return result['total'] or 0
 
     @property
     def question_count(self):
+        annotated = getattr(self, 'question_count_value', None)
+        if annotated is not None:
+            return annotated
         if not self.pk:
             return 0
         return self.quiz_questions.count()
@@ -63,30 +72,32 @@ class QuizDefinitionMixin(models.Model):
     def has_subjective_questions(self):
         if not self.pk:
             return False
-        return self.quiz_questions.filter(question_type='SHORT_ANSWER').exists()
+        return self.quiz_questions.filter(
+            **{self._question_type_lookup: 'SHORT_ANSWER'}
+        ).exists()
 
     @property
     def objective_question_count(self):
         if not self.pk:
             return 0
-        return self.quiz_questions.exclude(question_type='SHORT_ANSWER').count()
+        return self.quiz_questions.exclude(
+            **{self._question_type_lookup: 'SHORT_ANSWER'}
+        ).count()
 
     @property
     def subjective_question_count(self):
         if not self.pk:
             return 0
-        return self.quiz_questions.filter(question_type='SHORT_ANSWER').count()
-
-    @property
-    def question_type_counts(self):
-        if not self.pk:
-            return {}
-        counts = self.quiz_questions.values('question_type').annotate(count=Count('id'))
-        return {item['question_type']: item['count'] for item in counts}
+        return self.quiz_questions.filter(
+            **{self._question_type_lookup: 'SHORT_ANSWER'}
+        ).count()
 
 
 class Quiz(TimestampMixin, CreatorMixin, QuizDefinitionMixin, models.Model):
     """当前可编辑试卷。"""
+
+    _score_lookup = 'question__score'
+    _question_type_lookup = 'question__question_type'
 
     updated_by = models.ForeignKey(
         'users.User',
@@ -104,10 +115,8 @@ class Quiz(TimestampMixin, CreatorMixin, QuizDefinitionMixin, models.Model):
         ordering = ['-created_at']
 
 
-class QuizQuestion(TimestampMixin, QuestionContentMixin, models.Model):
-    """当前试卷中的题目副本。"""
-
-    QUESTION_TYPE_CHOICES = QUESTION_TYPE_CHOICES
+class QuizQuestion(TimestampMixin, models.Model):
+    """试卷与题库题的关系（顺序）。"""
 
     quiz = models.ForeignKey(
         Quiz,
@@ -117,15 +126,11 @@ class QuizQuestion(TimestampMixin, QuestionContentMixin, models.Model):
     )
     question = models.ForeignKey(
         'questions.Question',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='quiz_copies',
-        verbose_name='来源题库题',
+        on_delete=models.PROTECT,
+        related_name='quiz_relations',
+        verbose_name='题目',
     )
     order = models.PositiveIntegerField(default=1, verbose_name='顺序')
-    space_tag_name = models.CharField(max_length=100, blank=True, default='', verbose_name='space 名称')
-    tags_json = models.JSONField(verbose_name='标签快照', default=list, blank=True)
 
     class Meta:
         db_table = 'lms_quiz_question'
@@ -140,33 +145,7 @@ class QuizQuestion(TimestampMixin, QuestionContentMixin, models.Model):
         ]
 
     def __str__(self):
-        return f'{self.quiz.title} - Q{self.order}'
-
-
-class QuizQuestionOption(TimestampMixin, QuestionOptionContentMixin, models.Model):
-    """当前试卷题目副本的选项。"""
-
-    question = models.ForeignKey(
-        QuizQuestion,
-        on_delete=models.CASCADE,
-        related_name='question_options',
-        verbose_name='试卷题目',
-    )
-
-    class Meta:
-        db_table = 'lms_quiz_question_option'
-        verbose_name = '试卷题目选项'
-        verbose_name_plural = '试卷题目选项'
-        ordering = ['question_id', 'sort_order', 'id']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['question', 'sort_order'],
-                name='uniq_quiz_question_option_order',
-            ),
-        ]
-
-    def __str__(self):
-        return f'QQ{self.question_id}#{self.sort_order}'
+        return f'{self.quiz_id} - Q{self.order}'
 
 
 class QuizRevision(TimestampMixin, CreatorMixin, QuizDefinitionMixin, models.Model):

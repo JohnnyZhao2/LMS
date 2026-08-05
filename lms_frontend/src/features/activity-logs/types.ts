@@ -11,7 +11,7 @@ export interface ActivityLogActor {
 }
 
 export interface ActivityLogItem {
-  id: string;
+  id: number;
   category: ActivityLogType;
   actor: ActivityLogActor | null;
   action: string;

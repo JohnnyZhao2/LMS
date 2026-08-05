@@ -1,9 +1,8 @@
-"""
-Knowledge URLs.
-API endpoints for knowledge document management.
-"""
+"""Knowledge URLs."""
+
 from django.urls import path
 
+from .document import ParseDocumentView
 from .views import (
     KnowledgeBulkDeleteView,
     KnowledgeBulkImportView,

@@ -1,4 +1,3 @@
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
@@ -7,9 +6,6 @@ import type { ActivityLogItem } from '../types';
 interface ActivityLogFeedProps {
   items: ActivityLogItem[];
   isLoading?: boolean;
-  selectedLogIds?: string[];
-  selectionDisabled?: boolean;
-  onToggleSelect?: (itemId: string) => void;
 }
 
 const formatTime = (value: string) =>
@@ -64,9 +60,6 @@ const LoadingState = () => (
 export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
   items,
   isLoading = false,
-  selectedLogIds = [],
-  selectionDisabled = false,
-  onToggleSelect,
 }) => {
   if (isLoading) return <LoadingState />;
 
@@ -98,11 +91,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                 <div key={item.id} className="relative">
                   <div className="absolute -left-[3px] top-[18px] h-1.5 w-1.5 rounded-full bg-border" />
 
-                  <div
-                    className={cn(
-                      'group ml-5 flex gap-3 rounded-lg py-2.5 pl-2 pr-2 transition-colors hover:bg-muted',
-                    )}
-                  >
+                  <div className="ml-5 flex gap-3 rounded-lg py-2.5 pl-2 pr-2 transition-colors hover:bg-muted">
                     <UserAvatar
                       avatarKey={item.actor?.avatar_key}
                       name={item.actor?.username ?? ''}
@@ -132,21 +121,6 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                         </div>
                       )}
                     </div>
-
-                    {onToggleSelect ? (
-                      <Checkbox
-                        checked={selectedLogIds.includes(item.id)}
-                        onCheckedChange={() => onToggleSelect(item.id)}
-                        disabled={selectionDisabled}
-                        aria-label={`选择日志 ${item.id}`}
-                        className={cn(
-                          'mt-2.5 shrink-0 transition-opacity',
-                          selectedLogIds.includes(item.id)
-                            ? 'opacity-100'
-                            : 'opacity-70 md:opacity-0 md:group-hover:opacity-100'
-                        )}
-                      />
-                    ) : null}
                   </div>
                 </div>
               );

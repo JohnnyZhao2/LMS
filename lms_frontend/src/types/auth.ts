@@ -3,7 +3,13 @@
  */
 
 import type { RoleCode, UserInfo, Role } from './common';
-import type { CapabilityMap } from './authorization';
+
+interface PermissionCapability {
+  allowed: boolean;
+}
+
+/** 当前角色下的能力表，由后端按角色返回 */
+export type CapabilityMap = Record<string, PermissionCapability>;
 
 /**
  * 登录请求

@@ -1,20 +1,45 @@
+from apps.authorization.decisions import conditional_allow, conditional_deny
 from apps.authorization.registry import (
     AuthorizationSpec,
+    ResourceAuthorizationHandler,
     ScopeFilterHandler,
     crud_permissions,
-    scope_rules,
     perm,
 )
 from apps.users.models import User
 
 
-def _filter_viewable_users(engine, *, queryset, context=None):
-    return engine.get_scoped_user_queryset('user.view', queryset.distinct(), cache_key='viewable_users')
+USER_SCOPE_CODES = (
+    'user.view',
+    'user.create',
+    'user.update',
+    'user.delete',
+    'user.activate',
+    'user.role.assign',
+    'user.avatar.update',
+)
+MEMBER_SUMMARY = '按当前角色人员范围'
+
+
+def _filter_viewable_users(engine, *, queryset):
+    return engine.get_role_scoped_user_queryset(queryset.distinct(), cache_key='viewable_users')
+
+
+def _authorize_user(engine, permission_code, *, resource=None, error_message=None):
+    if not isinstance(resource, User):
+        return None
+    if engine.get_role_scoped_user_queryset(
+        User.objects.filter(pk=resource.pk)
+    ).exists():
+        return conditional_allow(permission_code)
+    return conditional_deny(
+        permission_code,
+        message=error_message or '该用户不在当前管理范围内',
+    )
 
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
-        key='users.permissions',
         module='user',
         permissions=(
             *crud_permissions(
@@ -22,7 +47,6 @@ AUTHORIZATION_SPECS = (
                 '用户',
                 names={'update': '编辑用户'},
                 descriptions={'create': '创建新用户', 'update': '编辑用户资料和指定导师', 'delete': '彻底删除离职用户'},
-                kwargs_by_action={'view': {'scope_group_key': 'user_scope'}},
             ),
             perm(
                 code='user.activate',
@@ -33,50 +57,41 @@ AUTHORIZATION_SPECS = (
                 code='user.role.assign',
                 name='分配用户角色',
                 description='给用户分配或移除业务角色',
-                implies=('user.view',),
             ),
             perm(
                 code='user.permission.view',
                 name='查看用户权限',
-                description='查看用户继承的角色权限和用户权限自定义',
-                implies=('user.view',),
+                description='查看用户直接拥有的管理权限',
             ),
             perm(
                 code='user.permission.update',
                 name='更新用户权限',
-                description='配置用户权限自定义和范围自定义',
-                implies=('user.permission.view',),
+                description='配置用户直接拥有的管理权限',
             ),
             perm(
                 code='user.avatar.update',
                 name='修改他人头像',
-                description='管理员修改指定用户头像',
+                description='全局角色修改指定用户头像',
             ),
         ),
-        role_defaults={
-            'ADMIN': ('user.avatar.update',),
-        },
-        scope_rules=scope_rules('user.view', MENTOR='MENTEES', DEPT_MANAGER='DEPARTMENT', ADMIN='ALL'),
+        resource_authorization_handlers=(
+            ResourceAuthorizationHandler(
+                key='users.member_scope',
+                permission_codes=USER_SCOPE_CODES,
+                authorize=_authorize_user,
+                constraint_summaries={
+                    code: MEMBER_SUMMARY for code in USER_SCOPE_CODES
+                },
+            ),
+        ),
         scope_filter_handlers=(
             ScopeFilterHandler(
                 key='users.scope_filter.user_view',
                 permission_code='user.view',
                 resource_model=User,
                 filter_queryset=_filter_viewable_users,
-                constraint_summary='角色范围',
+                constraint_summary=MEMBER_SUMMARY,
             ),
         ),
-    ),
-    AuthorizationSpec(
-        key='users.profile_permissions',
-        module='profile',
-        permissions=(
-            perm(code='profile.student.view', name='查看学员个人中心', description='查看学员个人中心'),
-            perm(code='profile.student.update', name='更新学员个人资料', description='更新学员个人资料'),
-        ),
-        system_managed_codes=('profile.student.view', 'profile.student.update'),
-        role_system_defaults={
-            'STUDENT': ('profile.student.view', 'profile.student.update'),
-        },
     ),
 )

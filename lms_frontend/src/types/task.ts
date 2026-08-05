@@ -103,9 +103,6 @@ interface LearningTaskKnowledgeItem {
 }
 
 export interface LearningTaskQuizItem {
-  id: number;
-  quiz: number;
-  quiz_id: number;
   task_quiz_id: number;
   quiz_revision_id: number;
   quiz_title: string;

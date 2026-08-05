@@ -35,7 +35,7 @@ const ROLE_VISUALS: Record<RoleCode, RoleVisualConfig> = {
     iconBgClass: 'bg-emerald-500',
     borderClass: 'border-emerald-200',
   },
-  DEPT_MANAGER: {
+  DEPT: {
     bar: 'bg-violet-400',
     glow: 'bg-violet-400/80',
     bgClass: 'bg-violet-100/70',
@@ -44,16 +44,7 @@ const ROLE_VISUALS: Record<RoleCode, RoleVisualConfig> = {
     iconBgClass: 'bg-violet-500',
     borderClass: 'border-violet-200',
   },
-  TEAM_MANAGER: {
-    bar: 'bg-amber-400',
-    glow: 'bg-amber-400/80',
-    bgClass: 'bg-amber-100/70',
-    textClass: 'text-amber-700',
-    mutedTextClass: 'text-amber-500',
-    iconBgClass: 'bg-amber-500',
-    borderClass: 'border-amber-200',
-  },
-  ADMIN: {
+  GLOBAL: {
     bar: 'bg-rose-400',
     glow: 'bg-rose-400/80',
     bgClass: 'bg-rose-100/70',
@@ -79,9 +70,8 @@ const ROLE_VISUALS: Record<RoleCode, RoleVisualConfig> = {
 export const ROLE_COLORS: Record<RoleCode, RoleColorConfig> = {
   STUDENT: ROLE_VISUALS.STUDENT,
   MENTOR: ROLE_VISUALS.MENTOR,
-  DEPT_MANAGER: ROLE_VISUALS.DEPT_MANAGER,
-  TEAM_MANAGER: ROLE_VISUALS.TEAM_MANAGER,
-  ADMIN: ROLE_VISUALS.ADMIN,
+  DEPT: ROLE_VISUALS.DEPT,
+  GLOBAL: ROLE_VISUALS.GLOBAL,
   SUPER_ADMIN: ROLE_VISUALS.SUPER_ADMIN,
 };
 
@@ -91,9 +81,8 @@ export const ROLE_COLORS: Record<RoleCode, RoleColorConfig> = {
 export const ROLE_INDICATOR_CLASSES: Record<RoleCode, { bar: string; glow: string }> = {
   STUDENT: { bar: ROLE_VISUALS.STUDENT.bar, glow: ROLE_VISUALS.STUDENT.glow },
   MENTOR: { bar: ROLE_VISUALS.MENTOR.bar, glow: ROLE_VISUALS.MENTOR.glow },
-  DEPT_MANAGER: { bar: ROLE_VISUALS.DEPT_MANAGER.bar, glow: ROLE_VISUALS.DEPT_MANAGER.glow },
-  TEAM_MANAGER: { bar: ROLE_VISUALS.TEAM_MANAGER.bar, glow: ROLE_VISUALS.TEAM_MANAGER.glow },
-  ADMIN: { bar: ROLE_VISUALS.ADMIN.bar, glow: ROLE_VISUALS.ADMIN.glow },
+  DEPT: { bar: ROLE_VISUALS.DEPT.bar, glow: ROLE_VISUALS.DEPT.glow },
+  GLOBAL: { bar: ROLE_VISUALS.GLOBAL.bar, glow: ROLE_VISUALS.GLOBAL.glow },
   SUPER_ADMIN: { bar: ROLE_VISUALS.SUPER_ADMIN.bar, glow: ROLE_VISUALS.SUPER_ADMIN.glow },
 };
 
@@ -106,6 +95,6 @@ export const getRoleColor = (code: string): RoleColorConfig => {
 };
 
 /**
- * 可分配的角色列表（不含 STUDENT）
+ * 可分配的角色列表（学员 + 三个授权角色）
  */
-export const ASSIGNABLE_ROLES: RoleCode[] = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER'];
+export const ASSIGNABLE_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT', 'GLOBAL'];

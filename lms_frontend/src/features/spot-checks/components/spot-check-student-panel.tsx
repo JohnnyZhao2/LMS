@@ -1,32 +1,52 @@
 import { Search, Users } from 'lucide-react';
 
 import { UserSelectList } from '@/components/common/user-select-list';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/pagination';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { cn } from '@/lib/utils';
 import type { SpotCheckStudent } from '@/types/spot-check';
 
 export type SpotCheckDepartmentFilter = 'all' | 'room1' | 'room2';
 
 interface SpotCheckStudentPanelProps {
   students: SpotCheckStudent[];
+  /** 当前查看的学员（点行） */
   selectedStudentId: number | null;
+  /** 勾选用于批量发起的学员（点勾） */
+  checkedStudentIds: number[];
   searchValue: string;
   onSearchChange: (value: string) => void;
   onSelectStudent: (studentId: number) => void;
+  onToggleCheckStudent: (studentId: number) => void;
+  /** true=全选当前列表，false=清空勾选 */
+  onToggleCheckAll: (selectAll: boolean) => void;
   departmentFilter: SpotCheckDepartmentFilter;
   onDepartmentFilterChange: (value: SpotCheckDepartmentFilter) => void;
   isLoading: boolean;
+  totalCount?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   students,
   selectedStudentId,
+  checkedStudentIds,
   searchValue,
   onSearchChange,
   onSelectStudent,
+  onToggleCheckStudent,
+  onToggleCheckAll,
   departmentFilter,
   onDepartmentFilterChange,
   isLoading,
+  totalCount,
+  page = 1,
+  pageSize = 50,
+  onPageChange,
 }) => {
   const panelItems = students.map((student) => ({
     id: student.id,
@@ -35,11 +55,19 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
     meta: student.department_name
       ? `${student.employee_id || '未填写工号'} · ${student.department_name}`
       : (student.employee_id || '未填写工号'),
+    badgeCount: student.pending_score_count ?? 0,
   }));
+
+  const total = students.length;
+  const serverTotal = totalCount ?? total;
+  const checkedCount = checkedStudentIds.length;
+  const isAllChecked = total > 0 && checkedCount === total;
+  const isPartialChecked = checkedCount > 0 && checkedCount < total;
+  const shouldShowPagination = Boolean(onPageChange) && serverTotal > pageSize;
 
   return (
     <aside className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
-      <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
+      <div className="flex h-14 items-center border-b border-border/60 px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />
           <span className="text-[13px] font-semibold text-foreground">学员</span>
@@ -60,14 +88,33 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
             className="w-full [&>div]:w-full [&>div]:grid [&>div]:grid-cols-3 [&_button]:px-0"
           />
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
-            <Input
-              value={searchValue}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="搜索姓名或工号"
-              className="h-9 rounded-lg border-border/60 bg-background pl-9 pr-3 text-[12px] shadow-none placeholder:text-text-muted/80"
-            />
+          <div className="flex items-center gap-1.5">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
+              <Input
+                value={searchValue}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="搜索姓名或工号"
+                className="h-9 rounded-lg border-border/60 bg-background pl-8 pr-2 text-[12px] shadow-none placeholder:text-text-muted/80"
+              />
+            </div>
+            <label
+              className={cn(
+                'inline-flex h-9 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-1.5',
+                total === 0 && 'cursor-not-allowed opacity-45',
+              )}
+            >
+              <Checkbox
+                checked={isAllChecked ? true : isPartialChecked ? 'indeterminate' : false}
+                disabled={total === 0}
+                onCheckedChange={() => onToggleCheckAll(!isAllChecked)}
+                className="rounded-[3px]"
+                aria-label={isAllChecked ? '清空勾选' : '全选'}
+              />
+              <span className="whitespace-nowrap text-[10px] font-bold tabular-nums text-text-muted">
+                {checkedCount}/{total}
+              </span>
+            </label>
           </div>
         </div>
       </div>
@@ -76,14 +123,29 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
         items={panelItems}
         selectedIds={selectedStudentId ? [selectedStudentId] : []}
         onSelect={onSelectStudent}
-        selectionMode="single"
+        checkedIds={checkedStudentIds}
+        onToggleCheck={onToggleCheckStudent}
+        selectionMode="multiple"
         appearance="panel"
         emptyText={searchValue.trim() ? '没有匹配的学员' : '暂无可查看学员'}
         isLoading={isLoading}
         loadingText="加载学员中..."
-        className="max-h-none"
+        className="max-h-none min-h-0 flex-1"
         listClassName="space-y-2"
       />
+
+      {shouldShowPagination && onPageChange ? (
+        <div className="border-t border-border/60 px-3 py-2">
+          <Pagination
+            current={page}
+            total={serverTotal}
+            pageSize={pageSize}
+            onChange={(nextPage) => onPageChange?.(nextPage)}
+            showSizeChanger={false}
+            showTotal={(count, [start, end]) => `${start}-${end}/${count}`}
+          />
+        </div>
+      ) : null}
     </aside>
   );
 };

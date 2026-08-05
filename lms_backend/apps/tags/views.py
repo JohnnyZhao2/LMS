@@ -3,15 +3,21 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import authorize, enforce
+from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import TagSerializer
-from .services import (
-    TagService,
-    enforce_tag_view_permission,
-)
+from .services import TagService
+
+
+def _enforce_tag_view_permission(request, error_message='无权查看标签', *, tag_type=None) -> None:
+    if authorize('tag.view', request).allowed:
+        return
+    if tag_type == 'SPACE' and authorize('knowledge.view', request).allowed:
+        return
+    raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
 
 
 class TagListCreateView(APIView):
@@ -32,7 +38,7 @@ class TagListCreateView(APIView):
         tag_type = request.query_params.get('tag_type', '').strip() or None
         search = request.query_params.get('search', '').strip() or None
         applicable_to = request.query_params.get('applicable_to', '').strip() or None
-        enforce_tag_view_permission(
+        _enforce_tag_view_permission(
             request,
             '无权查看标签列表',
             tag_type=tag_type,

@@ -1,7 +1,8 @@
-"""
-活动日志服务
-"""
-from typing import Optional
+"""活动日志服务。"""
+
+from __future__ import annotations
+
+import logging
 
 from django.core.cache import cache
 
@@ -10,54 +11,7 @@ from apps.users.models import User
 from .models import ActivityLog, ActivityLogPolicy
 from .registry import get_log_action_def, get_log_action_index
 
-_USER_ACTION_SUMMARIES = {
-    'login': '{actor} 登录成功',
-    'logout': '{actor} 退出登录',
-    'login_failed': '{actor} 登录失败',
-    'switch_role': '{actor} 切换了角色',
-    'password_change': '{actor} 修改了用户密码',
-    'role_assigned': '{actor} 更新了用户角色',
-    'mentor_assigned': '{actor} 分配了导师',
-    'activate': '{actor} 启用了用户账号',
-    'deactivate': '{actor} 停用了用户账号',
-}
-
-_CONTENT_TYPE_NAMES = {
-    'knowledge': '知识文档',
-    'quiz': '试卷',
-    'question': '题目',
-    'assignment': '作业',
-    'tag': '标签',
-}
-
-_CONTENT_ACTION_VERBS = {
-    'create': '创建了',
-    'update': '更新了',
-    'delete': '删除了',
-    'publish': '发布了',
-}
-
-_OPERATION_ACTION_SUMMARIES = {
-    'create_and_assign': '{actor} 创建了任务《{target}》',
-    'update_task': '{actor} 更新了任务《{target}》',
-    'delete_task': '{actor} 删除了任务《{target}》',
-    'create_spot_check': '{actor} 抽查了 {target}',
-    'update_spot_check': '{actor} 更新了 {target} 的抽查记录',
-    'delete_spot_check': '{actor} 删除了 {target} 的抽查记录',
-    'manual_grade': '{actor} 批改了答卷',
-    'batch_grade': '{actor} 批量评分',
-    'replace_role_permissions': '{actor} 更新了角色模板《{target}》的权限',
-    'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
-    'delete_user_permission_override': '{actor} 删除了 {target} 的权限覆盖',
-    'create_user_scope_group_override': '{actor} 新增了 {target} 的范围组覆盖',
-    'delete_user_scope_group_override': '{actor} 删除了 {target} 的范围组覆盖',
-    'merge_tags': '{actor} 合并了标签《{target}》',
-    'reorder_spaces': '{actor} 调整了空间标签顺序',
-    'start_quiz': '{actor} 开始答题《{target}》',
-    'submit': '{actor} 提交了《{target}》',
-    'submit_quiz': '{actor} 提交了《{target}》',
-    'complete_knowledge': '{actor} 完成了知识学习《{target}》',
-}
+logger = logging.getLogger(__name__)
 
 
 class ActivityLogService:
@@ -102,6 +56,14 @@ class ActivityLogService:
         cache.delete(cls._build_cache_key(action_key))
 
     @classmethod
+    def set_policy_enabled(cls, key: str, enabled: bool) -> ActivityLogPolicy:
+        policy = cls._ensure_policy(key)
+        policy.enabled = enabled
+        policy.save(update_fields=['enabled', 'updated_at'])
+        cls.invalidate_policy_cache(key)
+        return policy
+
+    @classmethod
     def sync_policies(cls) -> None:
         action_index = get_log_action_index()
         valid_keys = set(action_index)
@@ -132,8 +94,25 @@ class ActivityLogService:
             ActivityLogPolicy.objects.bulk_update(updated_policies, ['category', 'group', 'label'])
 
     @staticmethod
-    def _resolve_actor_name(actor: Optional[User]) -> str:
+    def _resolve_actor_name(actor: User | None) -> str:
         return actor.username if actor else '系统'
+
+    @classmethod
+    def _build_summary(
+        cls,
+        *,
+        action_key: str,
+        actor: User | None,
+        summary: str | None,
+        target_title: str = '',
+    ) -> str:
+        if summary:
+            return summary
+        actor_name = cls._resolve_actor_name(actor)
+        label = get_log_action_def(action_key)['label']
+        if target_title:
+            return f'{actor_name} {label}《{target_title}》'
+        return f'{actor_name} {label}'
 
     @classmethod
     def _create_log(
@@ -141,7 +120,7 @@ class ActivityLogService:
         action_key: str,
         *,
         category: str,
-        actor: Optional[User],
+        actor: User | None,
         action: str,
         summary: str,
         description: str,
@@ -150,7 +129,7 @@ class ActivityLogService:
         target_id: str = '',
         target_title: str = '',
         duration: int = 0,
-    ) -> Optional[ActivityLog]:
+    ) -> ActivityLog | None:
         if not cls.is_action_enabled(action_key):
             return None
 
@@ -173,19 +152,24 @@ class ActivityLogService:
         user: User,
         action: str,
         description: str,
-        operator: Optional[User] = None,
+        operator: User | None = None,
         status: str = 'success',
-        action_key: Optional[str] = None,
-    ) -> Optional[ActivityLog]:
+        action_key: str | None = None,
+        summary: str | None = None,
+    ) -> ActivityLog | None:
         actor = operator or user
-        actor_name = cls._resolve_actor_name(actor)
-        template = _USER_ACTION_SUMMARIES.get(action, '{actor} 执行了 ' + action)
+        resolved_key = action_key or f'user.{action}'
         return cls._create_log(
-            action_key or f'user.{action}',
+            resolved_key,
             category='user',
             actor=actor,
             action=action,
-            summary=template.format(actor=actor_name, user=user.username),
+            summary=cls._build_summary(
+                action_key=resolved_key,
+                actor=actor,
+                summary=summary,
+                target_title=user.username,
+            ),
             description=description,
             status=status,
             target_type='user',
@@ -203,25 +187,24 @@ class ActivityLogService:
         action: str,
         description: str,
         status: str = 'success',
-        action_key: Optional[str] = None,
-    ) -> Optional[ActivityLog]:
-        actor_name = cls._resolve_actor_name(operator)
-        verb = _CONTENT_ACTION_VERBS.get(action, action)
-        type_name = _CONTENT_TYPE_NAMES.get(content_type, content_type)
-        resolved_title = content_title or ''
-        if content_type == 'question' and len(resolved_title) > 20:
-            resolved_title = resolved_title[:20] + '...'
-        if resolved_title and content_type != 'question':
-            summary = f'{actor_name} {verb}{type_name}《{resolved_title}》'
-        else:
-            summary = f'{actor_name} {verb}{type_name}'
-
+        action_key: str | None = None,
+        summary: str | None = None,
+    ) -> ActivityLog | None:
+        resolved_key = action_key or f'content.{content_type}.{action}'
+        display_title = content_title
+        if content_type == 'question' and len(display_title) > 20:
+            display_title = display_title[:20] + '...'
         return cls._create_log(
-            action_key or f'content.{content_type}.{action}',
+            resolved_key,
             category='content',
             actor=operator,
             action=action,
-            summary=summary,
+            summary=cls._build_summary(
+                action_key=resolved_key,
+                actor=operator,
+                summary=summary,
+                target_title='' if content_type == 'question' else display_title,
+            ),
             description=description,
             status=status,
             target_type=content_type,
@@ -232,26 +215,30 @@ class ActivityLogService:
     @classmethod
     def log_operation(
         cls,
-        operator: Optional[User],
+        operator: User | None,
         operation_type: str,
         action: str,
         description: str,
         duration: int = 0,
         status: str = 'success',
-        action_key: Optional[str] = None,
+        action_key: str | None = None,
         target_type: str = '',
         target_id: str = '',
         target_title: str = '',
-    ) -> Optional[ActivityLog]:
-        actor_name = cls._resolve_actor_name(operator)
-        template = _OPERATION_ACTION_SUMMARIES.get(action)
-        summary = template.format(actor=actor_name, target=target_title or '') if template else f'{actor_name} {action}'
+        summary: str | None = None,
+    ) -> ActivityLog | None:
+        resolved_key = action_key or f'operation.{operation_type}.{action}'
         return cls._create_log(
-            action_key or f'operation.{operation_type}.{action}',
+            resolved_key,
             category='operation',
             actor=operator,
             action=action,
-            summary=summary,
+            summary=cls._build_summary(
+                action_key=resolved_key,
+                actor=operator,
+                summary=summary,
+                target_title=target_title,
+            ),
             description=description,
             status=status,
             target_type=target_type or operation_type,

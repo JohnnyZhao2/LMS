@@ -9,48 +9,86 @@ from typing import Any, List
 
 from apps.activity_logs.decorators import log_content_action
 from django.db import transaction
-from django.db.models import Count, DecimalField, Sum, Value
+from django.db.models import Count, DecimalField, IntegerField, OuterRef, Prefetch, QuerySet, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 
-from apps.authorization.engine import scope_filter
+from apps.authorization.engine import enforce, scope_filter
 from apps.questions.models import Question
-from apps.questions.services import QuestionService
-from apps.tags.models import Tag
-from apps.tags.resource_sync import apply_resource_tag_changes
+from apps.questions.payload import (
+    build_merged_question_payload,
+    build_storage_payload,
+    current_model_fields,
+    current_option_definitions,
+    sync_question_options,
+    validate_question_payload,
+)
+from apps.tags.resource_tags import (
+    apply_resource_tag_changes,
+    pop_resource_tag_payload,
+)
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
+
+
+def _format_score(value) -> str:
+    if value is None:
+        return '0'
+    text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text
+
+
+def _quiz_log_event(self, result, args):
+    return {
+        'description': (
+            f'{result.get_quiz_type_display()}，'
+            f'{result.question_count} 题，{_format_score(result.total_score)} 分'
+        ),
+    }
 
 from .models import (
     Quiz,
     QuizQuestion,
-    QuizQuestionOption,
     QuizRevision,
     QuizRevisionQuestion,
     QuizRevisionQuestionOption,
 )
 
+TEMP_ORDER_BASE = 1_000_000
+
 
 def build_quiz_revision_payload(quiz: Quiz) -> dict:
+    """从当前试卷关系读取题库题内容，生成 revision payload。"""
     question_rows = []
-    for relation in quiz.quiz_questions.prefetch_related('question_options').order_by('order', 'id'):
+    relations = (
+        quiz.quiz_questions.select_related('question__space_tag')
+        .prefetch_related('question__question_options', 'question__tags')
+        .order_by('order', 'id')
+    )
+    for relation in relations:
+        question = relation.question
         question_rows.append(
             {
-                'source_question_id': relation.question_id,
-                'content': relation.content,
-                'question_type': relation.question_type,
-                'reference_answer': relation.reference_answer,
-                'explanation': relation.explanation,
-                'score': str(relation.score),
+                'source_question_id': question.id,
+                'content': question.content,
+                'question_type': question.question_type,
+                'reference_answer': question.reference_answer,
+                'explanation': question.explanation,
+                'score': str(question.score),
                 'order': relation.order,
-                'space_tag_name': relation.space_tag_name,
-                'tags_json': relation.tags_json,
+                'space_tag_name': question.space_tag.name if question.space_tag_id else '',
+                'tags_json': [
+                    {'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type}
+                    for tag in question.tags.order_by('id')
+                ],
                 'options': [
                     {
                         'sort_order': option.sort_order,
                         'content': option.content,
                         'is_correct': option.is_correct,
                     }
-                    for option in relation.question_options.all().order_by('sort_order', 'id')
+                    for option in question._ordered_options()
                 ],
             }
         )
@@ -118,41 +156,70 @@ class QuizService(BaseService):
 
     BASE_FIELDS = ['title', 'quiz_type', 'duration', 'pass_score']
 
-    def __init__(self, request):
-        super().__init__(request)
-        self.question_service = QuestionService(request)
-
-    def get_by_id(self, pk: int) -> Quiz:
-        queryset = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
-            'quiz_questions__question_options',
+    def _quiz_detail_queryset(self) -> QuerySet:
+        return Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
+            Prefetch(
+                'quiz_questions',
+                queryset=QuizQuestion.objects.select_related(
+                    'question__space_tag',
+                    'question__created_by',
+                    'question__updated_by',
+                ).prefetch_related(
+                    'question__question_options',
+                    'question__tags',
+                ).order_by('order', 'id'),
+            ),
         )
-        quiz = scope_filter('quiz.view', self.request, base_queryset=queryset).filter(pk=pk).first()
+
+    def _get_raw_by_id(self, pk: int) -> Quiz:
+        quiz = self._quiz_detail_queryset().filter(pk=pk).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
+
+    def get_for_permission(self, pk: int, permission_code: str) -> Quiz:
+        quiz = self._get_raw_by_id(pk)
+        enforce(permission_code, self.request, resource=quiz, error_message='无权操作此试卷')
+        return quiz
+
+    def get_by_id(self, pk: int) -> Quiz:
+        return self.get_for_permission(pk, 'quiz.view')
 
     def get_list(
         self,
         filters: dict = None,
         search: str = None,
         ordering: str = '-updated_at',
-        limit: int = None,
-        offset: int = None,
-    ) -> List[Quiz]:
+    ) -> QuerySet:
+        from apps.tasks.models import TaskQuiz
+
+        score_field = DecimalField(max_digits=10, decimal_places=2)
+        question_stats = QuizQuestion.objects.filter(quiz_id=OuterRef('pk')).values('quiz_id').annotate(
+            question_count=Count('id'),
+            total_score=Sum('question__score', output_field=score_field),
+        )
+        usage_stats = TaskQuiz.objects.filter(source_quiz_id=OuterRef('pk')).values('source_quiz_id').annotate(
+            usage_count=Count('task_id', distinct=True),
+        )
         qs = scope_filter(
             'quiz.view',
             self.request,
             base_queryset=Quiz.objects.select_related('created_by', 'updated_by'),
         ).annotate(
-            question_count_value=Count('quiz_questions', distinct=True),
-            total_score_value=Coalesce(
-                Sum(
-                    'quiz_questions__score',
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
+            question_count_value=Coalesce(
+                Subquery(question_stats.values('question_count')[:1], output_field=IntegerField()),
                 Value(0),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
+                output_field=IntegerField(),
             ),
-            usage_count_value=Count('task_bindings__task_id', distinct=True),
+            total_score_value=Coalesce(
+                Subquery(question_stats.values('total_score')[:1], output_field=score_field),
+                Value(Decimal('0')),
+                output_field=score_field,
+            ),
+            usage_count_value=Coalesce(
+                Subquery(usage_stats.values('usage_count')[:1], output_field=IntegerField()),
+                Value(0),
+                output_field=IntegerField(),
+            ),
         )
         if filters:
             if filters.get('created_by_id'):
@@ -163,17 +230,15 @@ class QuizService(BaseService):
             qs = qs.filter(title__icontains=search)
         if ordering:
             qs = qs.order_by(ordering)
-        if limit:
-            qs = qs[offset:offset + limit] if offset else qs[:limit]
-        return list(qs)
+        return qs
 
     @transaction.atomic
     @log_content_action(
         'quiz',
         'create',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='创建试卷',
+        build_event=_quiz_log_event,
     )
     def create(self, data: dict, questions: List[dict] = None) -> Quiz:
         payload = dict(data)
@@ -181,19 +246,18 @@ class QuizService(BaseService):
         payload['updated_by'] = self.user
         quiz = Quiz.objects.create(**payload)
         self._sync_quiz_questions(quiz, questions or [])
-        quiz.refresh_from_db()
-        return quiz
+        return self._get_raw_by_id(quiz.id)
 
     @transaction.atomic
     @log_content_action(
         'quiz',
         'update',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='更新试卷',
+        build_event=_quiz_log_event,
     )
     def update(self, pk: int, data: dict, questions: List[dict] = None) -> Quiz:
-        quiz = self.get_by_id(pk)
+        quiz = self.get_for_permission(pk, 'quiz.update')
         changed_fields = {
             field: value
             for field, value in data.items()
@@ -206,46 +270,32 @@ class QuizService(BaseService):
             quiz.save(update_fields=list(changed_fields.keys()))
         if questions is not None:
             self._sync_quiz_questions(quiz, questions)
-        quiz.refresh_from_db()
-        return quiz
+        return self._get_raw_by_id(quiz.id)
 
     @transaction.atomic
     @log_content_action(
         'quiz',
         'delete',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
         group='试卷',
         label='删除试卷',
+        build_event=_quiz_log_event,
     )
     def delete(self, pk: int) -> Quiz:
-        quiz = self.get_by_id(pk)
-        stale_question_ids = list(quiz.quiz_questions.values_list('id', flat=True))
+        quiz = self.get_for_permission(pk, 'quiz.delete')
         stale_revision_ids = list(quiz.revisions.filter(quiz_tasks__isnull=True).values_list('id', flat=True))
-        stale_source_question_ids = [
-            relation.question_id
-            for relation in quiz.quiz_questions.select_related('question')
-            if relation.question_id
-        ]
-        for relation in list(quiz.quiz_questions.select_related('question')):
-            self._cleanup_orphan_source_question(relation, deleting_relation=True)
         quiz.delete()
         if stale_revision_ids:
             QuizRevision.objects.filter(id__in=stale_revision_ids).delete()
-        QuizQuestionOption.objects.filter(question_id__in=stale_question_ids).delete()
-        for question in Question.objects.filter(id__in=stale_source_question_ids):
-            if question.quiz_copies.exists():
-                continue
-            if question.quiz_revision_entries.exists():
-                continue
-            question.delete()
         return quiz
 
     def _sync_quiz_questions(self, quiz: Quiz, question_payloads: List[dict[str, Any]]) -> None:
         existing_relations = {
             relation.id: relation
-            for relation in quiz.quiz_questions.select_related('question').prefetch_related('question_options')
+            for relation in quiz.quiz_questions.select_related(
+                'question__space_tag',
+            ).prefetch_related('question__question_options', 'question__tags')
         }
-        keep_ids: list[int] = []
+        prepared: list[tuple[QuizQuestion | None, Question, int]] = []
         for order, raw_item in enumerate(question_payloads, start=1):
             item = dict(raw_item)
             relation_id = item.get('id')
@@ -258,143 +308,136 @@ class QuizService(BaseService):
                         message=f'试卷题目 {relation_id} 不存在或不属于当前试卷',
                     )
 
-            source_question = self._resolve_source_question(quiz, relation, item)
-            copy_fields, option_defs = self._build_quiz_question_storage(item, source_question, order)
+            bound_question = self._resolve_bound_question(relation, item)
+            prepared.append((relation, bound_question, order))
 
-            if relation is None:
-                relation = QuizQuestion.objects.create(
-                    quiz=quiz,
-                    question=source_question,
-                    **copy_fields,
-                )
-            else:
-                for key, value in copy_fields.items():
-                    setattr(relation, key, value)
-                relation.question = source_question
-                relation.save()
-
-            self._sync_quiz_question_options(relation, option_defs)
-            keep_ids.append(relation.id)
-
-        stale_relations = list(quiz.quiz_questions.exclude(id__in=keep_ids).select_related('question'))
+        keep_ids = [relation.id for relation, _, _ in prepared if relation is not None]
+        stale_relations = list(quiz.quiz_questions.exclude(id__in=keep_ids))
         for relation in stale_relations:
-            self._cleanup_orphan_source_question(relation, deleting_relation=True)
             relation.delete()
 
-    def _resolve_source_question(
+        # 先整体挪到临时 order，避免 (quiz, order) 唯一约束冲突
+        active_relations = [relation for relation, _, _ in prepared if relation is not None]
+        for index, relation in enumerate(active_relations):
+            relation.order = TEMP_ORDER_BASE + index
+        if active_relations:
+            QuizQuestion.objects.bulk_update(active_relations, ['order'])
+
+        for relation, bound_question, order in prepared:
+            if relation is None:
+                QuizQuestion.objects.create(
+                    quiz=quiz,
+                    question=bound_question,
+                    order=order,
+                )
+                continue
+            update_fields = []
+            if relation.question_id != bound_question.id:
+                relation.question = bound_question
+                update_fields.append('question')
+            if relation.order != order:
+                relation.order = order
+                update_fields.append('order')
+            if update_fields:
+                relation.save(update_fields=update_fields)
+
+    def _resolve_bound_question(
         self,
-        quiz: Quiz,
+        relation: QuizQuestion | None,
+        item: dict[str, Any],
+    ) -> Question:
+        """解析本卷应绑定的题目：未改则复用；改了则写时复制或原地更新。"""
+        base_question = self._load_base_question(relation, item)
+        validate_question_payload(item, source=base_question)
+
+        tag_defaults = (
+            list(base_question.tags.values_list('id', flat=True)) if base_question else []
+        )
+        space_default = base_question.space_tag_id if base_question else None
+        working = dict(item)
+        tag_payload = pop_resource_tag_payload(
+            working,
+            scope='question',
+            default_space_tag_id=space_default,
+            default_tag_ids=tag_defaults,
+        )
+        model_fields, option_defs = build_storage_payload(
+            build_merged_question_payload(working, source=base_question)
+        )
+
+        if base_question is None:
+            return self._create_question(model_fields, option_defs, tag_payload)
+
+        content_changed = (
+            model_fields != current_model_fields(base_question)
+            or option_defs != current_option_definitions(base_question)
+        )
+        space_changed = tag_payload.space_tag_id != base_question.space_tag_id
+        current_tag_ids = set(base_question.tags.values_list('id', flat=True))
+        tags_changed = set(tag_payload.tag_ids) != current_tag_ids
+
+        if not content_changed and not space_changed and not tags_changed:
+            return base_question
+
+        shared = base_question.quiz_relations.exclude(
+            id=relation.id if relation else None,
+        ).exists()
+        if shared:
+            return self._create_question(model_fields, option_defs, tag_payload)
+
+        if content_changed:
+            for key, value in model_fields.items():
+                setattr(base_question, key, value)
+            base_question.updated_by = self.user
+            base_question.save(update_fields=[*model_fields.keys(), 'updated_by'])
+            sync_question_options(base_question, option_defs)
+
+        apply_resource_tag_changes(
+            base_question,
+            space_tag_id=tag_payload.space_tag_id,
+            tag_ids=tag_payload.tag_ids,
+            space_tag_provided=space_changed,
+            tag_ids_provided=tags_changed,
+        )
+        return base_question
+
+    def _load_base_question(
+        self,
         relation: QuizQuestion | None,
         item: dict[str, Any],
     ) -> Question | None:
-        source_question_id = item.get('source_question_id')
-        if source_question_id is not None:
-            source_question = scope_filter(
-                'question.view',
-                self.request,
-                base_queryset=Question.objects.all(),
-            ).filter(pk=source_question_id).first()
-            if source_question is None:
-                raise BusinessError(
-                    code=ErrorCodes.RESOURCE_NOT_FOUND,
-                    message=f'题目 {source_question_id} 不存在',
-                )
-            return source_question
-
-        if relation and relation.question_id:
+        # 已有关系以当前绑定题为准，避免 COW 后客户端仍带旧 source_question_id
+        if relation is not None:
             return relation.question
 
-        return self._create_bank_question_from_quiz(quiz, item)
+        source_question_id = item.get('source_question_id')
+        if source_question_id is None:
+            return None
 
-    def _create_bank_question_from_quiz(self, quiz: Quiz, item: dict[str, Any]) -> Question:
-        merged_payload = self.question_service._build_merged_question_payload(item)
-        question_data, option_defs = self.question_service._build_storage_payload(merged_payload)
+        source_question = scope_filter(
+            'question.view',
+            self.request,
+            base_queryset=Question.objects.prefetch_related('question_options', 'tags'),
+        ).select_related('space_tag').filter(pk=source_question_id).first()
+        if source_question is None:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message=f'题目 {source_question_id} 不存在',
+            )
+        return source_question
+
+    def _create_question(self, model_fields: dict, option_defs: list[dict], tag_payload) -> Question:
         question = Question.objects.create(
-            **question_data,
+            **model_fields,
             created_by=self.user,
             updated_by=self.user,
-            created_from_quiz=quiz,
         )
-        self.question_service._sync_question_options(question, option_defs)
+        sync_question_options(question, option_defs)
         apply_resource_tag_changes(
             question,
-            space_tag_id=item.get('space_tag_id'),
-            tag_ids=item.get('tag_ids', []),
-            space_tag_provided='space_tag_id' in item,
-            tag_ids_provided='tag_ids' in item,
+            space_tag_id=tag_payload.space_tag_id,
+            tag_ids=tag_payload.tag_ids,
+            space_tag_provided=True,
+            tag_ids_provided=True,
         )
         return question
-
-    def _build_quiz_question_storage(
-        self,
-        item: dict[str, Any],
-        source_question: Question | None,
-        order: int,
-    ) -> tuple[dict, list[dict]]:
-        merged_payload = self.question_service._build_merged_question_payload(item, source=source_question)
-        question_data, option_defs = self.question_service._build_storage_payload(merged_payload)
-        tag_ids = item.get(
-            'tag_ids',
-            list(source_question.tags.values_list('id', flat=True)) if source_question else [],
-        )
-        space_tag_id = item.get('space_tag_id', source_question.space_tag_id if source_question else None)
-        return (
-            {
-                **question_data,
-                'order': order,
-                'space_tag_name': self._resolve_space_tag_name(space_tag_id, source_question),
-                'tags_json': self._resolve_tags_json(tag_ids, source_question),
-            },
-            option_defs,
-        )
-
-    def _resolve_space_tag_name(self, space_tag_id, source_question: Question | None) -> str:
-        if space_tag_id is None:
-            return source_question.space_tag.name if source_question and source_question.space_tag else ''
-        return Tag.objects.filter(id=space_tag_id, tag_type='SPACE').values_list('name', flat=True).first() or ''
-
-    def _resolve_tags_json(self, tag_ids: list[int], source_question: Question | None) -> list[dict]:
-        if not tag_ids and source_question:
-            return [
-                {'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type}
-                for tag in source_question.tags.order_by('id')
-            ]
-        return [
-            {'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type}
-            for tag in Tag.objects.filter(id__in=tag_ids).order_by('id')
-        ]
-
-    def _sync_quiz_question_options(self, relation: QuizQuestion, option_defs: list[dict]) -> None:
-        relation.question_options.all().delete()
-        prefetched_cache = getattr(relation, '_prefetched_objects_cache', None)
-        if prefetched_cache is not None:
-            prefetched_cache.pop('question_options', None)
-        if not option_defs:
-            return
-        QuizQuestionOption.objects.bulk_create(
-            [
-                QuizQuestionOption(
-                    question=relation,
-                    sort_order=option_def['sort_order'],
-                    content=option_def['content'],
-                    is_correct=option_def['is_correct'],
-                )
-                for option_def in option_defs
-            ]
-        )
-
-    def _cleanup_orphan_source_question(
-        self,
-        relation: QuizQuestion,
-        *,
-        deleting_relation: bool = False,
-    ) -> None:
-        source_question = relation.question
-        if not source_question or source_question.created_from_quiz_id != relation.quiz_id:
-            return
-        remaining_copies = source_question.quiz_copies.exclude(id=relation.id if deleting_relation else None).exists()
-        if remaining_copies:
-            return
-        if source_question.quiz_revision_entries.exists():
-            return
-        source_question.delete()

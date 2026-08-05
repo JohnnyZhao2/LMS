@@ -9,6 +9,7 @@ interface CreateUserRequest {
   username: string;
   department_id?: number;
   mentor_id?: number | null;
+  role_codes?: RoleCode[];
 }
 
 interface UpdateUserRequest {

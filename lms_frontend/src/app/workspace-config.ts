@@ -7,7 +7,7 @@ import {
 } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
 
-export type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
+export type DashboardVariant = 'student' | 'mentor' | 'global';
 export type MenuVariant = 'student' | 'manager' | 'admin';
 
 export interface WorkspaceConfig {
@@ -30,28 +30,22 @@ const WORKSPACE_CONFIG: Record<RoleCode, WorkspaceConfig> = {
     dashboardVariant: 'mentor',
     menuVariant: 'manager',
   },
-  DEPT_MANAGER: {
-    home: '/dept_manager/dashboard',
+  DEPT: {
+    home: '/dept/dashboard',
     layout: AppLayout,
     dashboardVariant: 'mentor',
     menuVariant: 'manager',
   },
-  TEAM_MANAGER: {
-    home: '/team_manager/dashboard',
+  GLOBAL: {
+    home: '/global/dashboard',
     layout: AppLayout,
-    dashboardVariant: 'team_manager',
-    menuVariant: 'student',
-  },
-  ADMIN: {
-    home: '/admin/dashboard',
-    layout: AppLayout,
-    dashboardVariant: 'admin',
+    dashboardVariant: 'global',
     menuVariant: 'admin',
   },
   SUPER_ADMIN: {
     home: '/super_admin/dashboard',
     layout: AppLayout,
-    dashboardVariant: 'admin',
+    dashboardVariant: 'global',
     menuVariant: 'admin',
   },
 };

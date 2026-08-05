@@ -1,38 +1,28 @@
 """
 Authentication views.
-Implements:
-- Login / Logout
-- Token refresh
-- Role switching
-- Password change
-- Current user info
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from core.base_view import BaseAPIView
-from core.responses import success_response
-from core.throttles import AuthThrottle
 from apps.auth.serializers import (
     AuthSessionSerializer,
     ChangeMyPasswordRequestSerializer,
     ChangePasswordRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
-    LogoutRequestSerializer,
     OneAccountAuthorizeUrlResponseSerializer,
     OneAccountCodeLoginRequestSerializer,
-    RefreshTokenRequestSerializer,
-    RefreshTokenResponseSerializer,
+    RefreshTokenSerializer,
     SwitchRoleRequestSerializer,
+    TokenPairSerializer,
 )
 from apps.auth.services import AuthenticationService
+from core.base_view import BaseAPIView
+from core.responses import success_response
+from core.throttles import AuthThrottle
 
 
 class LoginView(BaseAPIView):
-    """
-    User login endpoint.
-    """
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
@@ -45,7 +35,7 @@ class LoginView(BaseAPIView):
             200: LoginResponseSerializer,
             400: OpenApiResponse(description='凭证无效或用户已停用'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
         serializer = LoginRequestSerializer(data=request.data)
@@ -53,30 +43,26 @@ class LoginView(BaseAPIView):
 
         result = self.service.login(
             employee_id=serializer.validated_data['employee_id'],
-            password=serializer.validated_data['password']
+            password=serializer.validated_data['password'],
         )
         return success_response(result)
 
 
 class LogoutView(BaseAPIView):
-    """
-    User logout endpoint.
-    Blacklists the refresh token to invalidate the session.
-    """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
     @extend_schema(
         summary='用户登出',
         description='登出当前用户，使刷新令牌失效',
-        request=LogoutRequestSerializer,
+        request=RefreshTokenSerializer,
         responses={
             200: OpenApiResponse(description='登出成功'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
-        serializer = LogoutRequestSerializer(data=request.data)
+        serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         refresh_token = serializer.validated_data['refresh_token']
@@ -85,10 +71,6 @@ class LogoutView(BaseAPIView):
 
 
 class RefreshTokenView(BaseAPIView):
-    """
-    Token refresh endpoint.
-    Generates new access and refresh tokens using a valid refresh token.
-    """
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
@@ -96,27 +78,24 @@ class RefreshTokenView(BaseAPIView):
     @extend_schema(
         summary='刷新令牌',
         description='使用刷新令牌获取新的访问令牌',
-        request=RefreshTokenRequestSerializer,
+        request=RefreshTokenSerializer,
         responses={
-            200: RefreshTokenResponseSerializer,
+            200: TokenPairSerializer,
             400: OpenApiResponse(description='刷新令牌无效'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
-        serializer = RefreshTokenRequestSerializer(data=request.data)
+        serializer = RefreshTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         result = self.service.refresh_token(
-            refresh_token=serializer.validated_data['refresh_token']
+            refresh_token=serializer.validated_data['refresh_token'],
         )
         return success_response(result)
 
 
 class SwitchRoleView(BaseAPIView):
-    """
-    Role switching endpoint.
-    """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
@@ -128,7 +107,7 @@ class SwitchRoleView(BaseAPIView):
             200: LoginResponseSerializer,
             400: OpenApiResponse(description='用户没有该角色权限'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
         serializer = SwitchRoleRequestSerializer(data=request.data)
@@ -136,16 +115,12 @@ class SwitchRoleView(BaseAPIView):
 
         result = self.service.switch_role(
             user=request.user,
-            role_code=serializer.validated_data['role_code']
+            role_code=serializer.validated_data['role_code'],
         )
         return success_response(result)
 
 
 class MeView(BaseAPIView):
-    """
-    获取当前登录用户信息。
-    用于页面刷新时同步最新的用户信息和角色列表。
-    """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
@@ -156,7 +131,7 @@ class MeView(BaseAPIView):
             200: AuthSessionSerializer,
             401: OpenApiResponse(description='未登录'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def get(self, request):
         result = self.service.get_me(
@@ -167,9 +142,6 @@ class MeView(BaseAPIView):
 
 
 class ChangePasswordView(BaseAPIView):
-    """
-    Admin password change endpoint.
-    """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
@@ -182,7 +154,7 @@ class ChangePasswordView(BaseAPIView):
             403: OpenApiResponse(description='无权限执行此操作'),
             404: OpenApiResponse(description='用户不存在'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
         serializer = ChangePasswordRequestSerializer(data=request.data)
@@ -198,9 +170,6 @@ class ChangePasswordView(BaseAPIView):
 
 
 class ChangeMyPasswordView(BaseAPIView):
-    """
-    Current user password change endpoint.
-    """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
 
@@ -213,7 +182,7 @@ class ChangeMyPasswordView(BaseAPIView):
             400: OpenApiResponse(description='参数无效'),
             401: OpenApiResponse(description='当前密码错误或未登录'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
         serializer = ChangeMyPasswordRequestSerializer(data=request.data)
@@ -239,7 +208,7 @@ class OneAccountAuthorizeUrlView(BaseAPIView):
         responses={
             200: OneAccountAuthorizeUrlResponseSerializer,
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def get(self, request):
         result = self.service.get_one_account_authorize_url()
@@ -259,11 +228,13 @@ class OneAccountCodeLoginView(BaseAPIView):
             200: LoginResponseSerializer,
             401: OpenApiResponse(description='授权码无效或统一认证失败'),
         },
-        tags=['认证']
+        tags=['认证'],
     )
     def post(self, request):
         serializer = OneAccountCodeLoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        result = self.service.login_by_one_account_code(code=serializer.validated_data['code'])
+        result = self.service.login_by_one_account_code(
+            code=serializer.validated_data['code'],
+        )
         return success_response(result)

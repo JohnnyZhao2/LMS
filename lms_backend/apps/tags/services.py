@@ -1,17 +1,34 @@
-from typing import List, Optional
+from __future__ import annotations
 
-from django.core.exceptions import ValidationError
-from django.db.models import Max
+from typing import Optional
+
 from django.db import IntegrityError, transaction
+from django.db.models import Max
 
 from apps.activity_logs.decorators import log_content_action, log_operation
-from apps.authorization.engine import authorize
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Tag
+
+
+def _tag_type_event(self, result, args):
+    return {'description': result.get_tag_type_display()}
+
+
+def _reorder_spaces_event(self, result, args):
+    return {'description': f'{len(args.get("ordered_tag_ids") or [])} 个空间标签'}
+
+
+def _merge_tags_event(self, result, args):
+    return {
+        'description': f'{len(args.get("source_tag_ids") or [])} 个标签合并为《{result.name}》',
+        'target_type': 'tag',
+        'target_id': str(result.id),
+        'target_title': result.name,
+    }
 
 
 class TagService(BaseService):
@@ -33,27 +50,23 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'create',
-        '{tag_type_label}',
         group='标签管理',
         label='创建标签',
+        build_event=_tag_type_event,
     )
     def create(self, data: dict) -> Tag:
         current_module = data.pop('current_module', None)
         extend_scope = data.pop('extend_scope', False)
-        data['name'] = data['name'].strip()
+        data = self._normalize_tag_data(data, current_module=current_module)
         tag_type = data['tag_type']
 
-        if tag_type == 'SPACE':
-            data['allow_knowledge'] = True
-            data['allow_question'] = True
-            if data.get('sort_order') is None:
-                data['sort_order'] = self._next_space_sort_order()
-        else:
-            self._apply_scope_defaults(data, current_module)
-            data['sort_order'] = 0
-
-        existing = Tag.objects.filter(name=data['name'], tag_type=tag_type).first()
+        existing = Tag.objects.filter(name=data['name']).first()
         if existing:
+            if existing.tag_type != tag_type:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='标签名称已存在',
+                )
             return self._reuse_existing_tag(
                 existing=existing,
                 tag_type=tag_type,
@@ -63,25 +76,28 @@ class TagService(BaseService):
 
         try:
             return Tag.objects.create(**data)
-        except (ValidationError, IntegrityError) as error:
+        except IntegrityError:
             # 并发下可能在查询后到创建前被同名插入，此处回查并走统一复用逻辑。
-            existing_after_conflict = Tag.objects.filter(name=data['name'], tag_type=tag_type).first()
-            if existing_after_conflict:
+            existing_after_conflict = Tag.objects.filter(name=data['name']).first()
+            if existing_after_conflict and existing_after_conflict.tag_type == tag_type:
                 return self._reuse_existing_tag(
                     existing=existing_after_conflict,
                     tag_type=tag_type,
                     current_module=current_module,
                     extend_scope=extend_scope,
                 )
-            self._raise_validation_error(error if isinstance(error, ValidationError) else ValidationError(str(error)))
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='标签名称已存在',
+            )
 
     @transaction.atomic
     @log_content_action(
         'tag',
         'update',
-        '{tag_type_label}',
         group='标签管理',
         label='更新标签',
+        build_event=_tag_type_event,
     )
     def update(self, pk: int, data: dict) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
@@ -116,42 +132,47 @@ class TagService(BaseService):
             self._apply_tag_fields(tag, data)
 
         original_tag_type = tag.tag_type
-        tag.tag_type = next_tag_type
+        self._apply_update_fields(tag, data, next_tag_type)
 
-        if tag.tag_type == 'SPACE':
-            if original_tag_type != 'SPACE' and 'sort_order' not in data:
-                tag.sort_order = self._next_space_sort_order(exclude_id=tag.id)
-            tag.allow_knowledge = True
-            tag.allow_question = True
-        elif not tag.allow_knowledge and not tag.allow_question:
+        pending_relation_change = None
+        if original_tag_type != next_tag_type:
+            if next_tag_type == 'SPACE':
+                self._validate_tag_to_space_conversion(tag)
+                pending_relation_change = 'tag_to_space'
+            else:
+                knowledge_ids, question_ids = self._prepare_space_to_tag_conversion(tag)
+                pending_relation_change = ('space_to_tag', knowledge_ids, question_ids)
+
+        if tag.tag_type == 'TAG' and not tag.allow_knowledge and not tag.allow_question:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='普通标签至少需要适用于知识或题目之一',
             )
-        elif tag.sort_order != 0:
-            tag.sort_order = 0
 
         try:
             tag.save()
-        except ValidationError as error:
-            self._raise_validation_error(error)
+        except IntegrityError:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='标签名称已存在',
+            )
 
-        if original_tag_type != next_tag_type:
-            if next_tag_type == 'SPACE':
-                self._migrate_tag_relations_to_space(tag)
-            else:
-                self._migrate_space_relations_to_tag(tag)
+        if pending_relation_change == 'tag_to_space':
+            self._apply_tag_to_space_relations(tag)
+        elif isinstance(pending_relation_change, tuple):
+            _, knowledge_ids, question_ids = pending_relation_change
+            self._apply_space_to_tag_relations(tag, knowledge_ids, question_ids)
         return tag
 
     @transaction.atomic
     @log_operation(
         'tag_management',
         'reorder_spaces',
-        '{ordered_tag_count} 个空间标签',
         group='标签管理',
         label='调整空间标签顺序',
+        build_event=_reorder_spaces_event,
     )
-    def reorder_spaces(self, ordered_tag_ids: List[int]) -> None:
+    def reorder_spaces(self, ordered_tag_ids: list[int]) -> None:
         if not ordered_tag_ids:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
@@ -183,13 +204,11 @@ class TagService(BaseService):
     @log_operation(
         'tag_management',
         'merge_tags',
-        '{source_tag_count} 个标签合并为《{result.name}》',
-        target_type='tag',
-        target_title_template='{result.name}',
         group='标签管理',
         label='合并标签',
+        build_event=_merge_tags_event,
     )
-    def merge(self, source_tag_ids: List[int], merged_name: str) -> Tag:
+    def merge(self, source_tag_ids: list[int], merged_name: str) -> Tag:
         normalized_source_ids = [tag_id for tag_id in source_tag_ids if tag_id]
         if len(normalized_source_ids) < 2:
             raise BusinessError(
@@ -232,6 +251,7 @@ class TagService(BaseService):
 
         target = next((tag for tag in ordered_tags if tag.name == merged_name), ordered_tags[0])
         source_tags = [tag for tag in ordered_tags if tag.id != target.id]
+        source_ids = [tag.id for tag in source_tags]
 
         if target.tag_type == 'SPACE':
             for source in source_tags:
@@ -242,12 +262,7 @@ class TagService(BaseService):
                 target.allow_knowledge = target.allow_knowledge or source.allow_knowledge
                 target.allow_question = target.allow_question or source.allow_question
 
-                for knowledge in source.knowledge_items.all():
-                    knowledge.tags.add(target)
-                for question in source.question_items.all():
-                    question.tags.add(target)
-                source.knowledge_items.clear()
-                source.question_items.clear()
+            self._merge_tag_m2m(target, source_ids)
 
         for source in source_tags:
             source.delete()
@@ -257,17 +272,20 @@ class TagService(BaseService):
             target.sort_order = 0
         try:
             target.save()
-        except ValidationError as error:
-            self._raise_validation_error(error)
+        except IntegrityError:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='合并后的标签名称已存在',
+            )
         return target
 
     @transaction.atomic
     @log_content_action(
         'tag',
         'delete',
-        '{tag_type_label}',
         group='标签管理',
         label='删除标签',
+        build_event=_tag_type_event,
     )
     def delete(self, pk: int) -> Tag:
         tag = Tag.objects.filter(pk=pk).first()
@@ -282,6 +300,71 @@ class TagService(BaseService):
 
         tag.delete()
         return tag
+
+    def _normalize_tag_data(
+        self,
+        data: dict,
+        *,
+        current_module: Optional[str] = None,
+        existing: Optional[Tag] = None,
+    ) -> dict:
+        normalized = dict(data)
+        if 'name' in normalized:
+            normalized['name'] = normalized['name'].strip()
+
+        tag_type = normalized.get('tag_type', existing.tag_type if existing else None)
+        if tag_type not in {'SPACE', 'TAG'}:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='无效的标签类型',
+            )
+        normalized['tag_type'] = tag_type
+
+        if tag_type == 'SPACE':
+            normalized['allow_knowledge'] = True
+            normalized['allow_question'] = True
+            if normalized.get('sort_order') is None:
+                normalized['sort_order'] = self._next_space_sort_order(
+                    exclude_id=existing.id if existing else None,
+                )
+        else:
+            if existing is None:
+                self._apply_scope_defaults(normalized, current_module)
+            normalized['sort_order'] = 0
+            if not normalized.get('allow_knowledge') and not normalized.get('allow_question'):
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='普通标签至少需要适用于知识或题目之一',
+                )
+        return normalized
+
+    def _apply_update_fields(self, tag: Tag, data: dict, next_tag_type: str) -> None:
+        original_tag_type = tag.tag_type
+
+        if 'name' in data:
+            tag.name = data['name'].strip()
+        if 'color' in data and (next_tag_type == 'SPACE' or data['color']):
+            tag.color = data['color']
+
+        if next_tag_type == 'SPACE':
+            if 'sort_order' in data:
+                tag.sort_order = data['sort_order']
+            elif original_tag_type != 'SPACE':
+                tag.sort_order = self._next_space_sort_order(exclude_id=tag.id)
+            tag.allow_knowledge = True
+            tag.allow_question = True
+        else:
+            if 'allow_knowledge' in data:
+                tag.allow_knowledge = data['allow_knowledge']
+            elif original_tag_type == 'SPACE':
+                tag.allow_knowledge = False
+            if 'allow_question' in data:
+                tag.allow_question = data['allow_question']
+            elif original_tag_type == 'SPACE':
+                tag.allow_question = False
+            tag.sort_order = 0
+
+        tag.tag_type = next_tag_type
 
     @staticmethod
     def _apply_scope_defaults(data: dict, current_module: Optional[str]) -> None:
@@ -347,30 +430,8 @@ class TagService(BaseService):
 
         return existing
 
-    def _apply_space_fields(self, tag: Tag, data: dict) -> None:
-        if 'name' in data:
-            tag.name = data['name']
-        if 'color' in data:
-            tag.color = data['color']
-        if 'sort_order' in data:
-            tag.sort_order = data['sort_order']
-
-    def _apply_tag_fields(self, tag: Tag, data: dict) -> None:
-        if 'name' in data:
-            tag.name = data['name']
-        if 'color' in data and data['color']:
-            tag.color = data['color']
-        if 'allow_knowledge' in data:
-            tag.allow_knowledge = data['allow_knowledge']
-        elif tag.tag_type == 'SPACE':
-            tag.allow_knowledge = False
-        if 'allow_question' in data:
-            tag.allow_question = data['allow_question']
-        elif tag.tag_type == 'SPACE':
-            tag.allow_question = False
-        tag.sort_order = 0
-
-    def _migrate_tag_relations_to_space(self, tag: Tag) -> None:
+    @staticmethod
+    def _validate_tag_to_space_conversion(tag: Tag) -> None:
         conflicting_knowledge_count = tag.knowledge_items.exclude(space_tag_id__isnull=True).count()
         conflicting_question_count = tag.question_items.exclude(space_tag_id__isnull=True).count()
         if conflicting_knowledge_count or conflicting_question_count:
@@ -383,6 +444,8 @@ class TagService(BaseService):
                 },
             )
 
+    @staticmethod
+    def _apply_tag_to_space_relations(tag: Tag) -> None:
         knowledge_ids = list(tag.knowledge_items.values_list('id', flat=True))
         question_ids = list(tag.question_items.values_list('id', flat=True))
         if knowledge_ids:
@@ -392,38 +455,85 @@ class TagService(BaseService):
         tag.knowledge_items.clear()
         tag.question_items.clear()
 
-    def _migrate_space_relations_to_tag(self, tag: Tag) -> None:
-        knowledge_items = list(Knowledge.objects.filter(space_tag_id=tag.id))
-        question_items = list(Question.objects.filter(space_tag_id=tag.id))
-
-        if knowledge_items:
+    @staticmethod
+    def _prepare_space_to_tag_conversion(tag: Tag) -> tuple[list[int], list[int]]:
+        knowledge_ids = list(
+            Knowledge.objects.filter(space_tag_id=tag.id).values_list('id', flat=True)
+        )
+        question_ids = list(
+            Question.objects.filter(space_tag_id=tag.id).values_list('id', flat=True)
+        )
+        if knowledge_ids:
             tag.allow_knowledge = True
-        if question_items:
+        if question_ids:
             tag.allow_question = True
-        if not tag.allow_knowledge and not tag.allow_question:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='普通标签至少需要适用于知识或题目之一',
-            )
-        tag.save(update_fields=['allow_knowledge', 'allow_question'])
-
-        for knowledge in knowledge_items:
-            knowledge.tags.add(tag)
-        for question in question_items:
-            question.tags.add(tag)
-
-        if knowledge_items:
-            Knowledge.objects.filter(id__in=[item.id for item in knowledge_items]).update(space_tag=None)
-        if question_items:
-            Question.objects.filter(id__in=[item.id for item in question_items]).update(space_tag=None)
+        return knowledge_ids, question_ids
 
     @staticmethod
-    def _raise_validation_error(error: ValidationError) -> None:
-        message = error.messages[0] if getattr(error, 'messages', None) else str(error)
-        raise BusinessError(
-            code=ErrorCodes.VALIDATION_ERROR,
-            message=message,
+    def _apply_space_to_tag_relations(
+        tag: Tag,
+        knowledge_ids: list[int],
+        question_ids: list[int],
+    ) -> None:
+        knowledge_through = Knowledge.tags.through
+        question_through = Question.tags.through
+        if knowledge_ids:
+            knowledge_through.objects.bulk_create(
+                [
+                    knowledge_through(knowledge_id=item_id, tag_id=tag.id)
+                    for item_id in knowledge_ids
+                ],
+                ignore_conflicts=True,
+            )
+            Knowledge.objects.filter(id__in=knowledge_ids).update(space_tag=None)
+        if question_ids:
+            question_through.objects.bulk_create(
+                [
+                    question_through(question_id=item_id, tag_id=tag.id)
+                    for item_id in question_ids
+                ],
+                ignore_conflicts=True,
+            )
+            Question.objects.filter(id__in=question_ids).update(space_tag=None)
+
+    @staticmethod
+    def _merge_tag_m2m(target: Tag, source_ids: list[int]) -> None:
+        if not source_ids:
+            return
+
+        knowledge_through = Knowledge.tags.through
+        question_through = Question.tags.through
+
+        knowledge_ids = list(
+            knowledge_through.objects.filter(tag_id__in=source_ids)
+            .values_list('knowledge_id', flat=True)
+            .distinct()
         )
+        question_ids = list(
+            question_through.objects.filter(tag_id__in=source_ids)
+            .values_list('question_id', flat=True)
+            .distinct()
+        )
+
+        if knowledge_ids:
+            knowledge_through.objects.bulk_create(
+                [
+                    knowledge_through(knowledge_id=item_id, tag_id=target.id)
+                    for item_id in knowledge_ids
+                ],
+                ignore_conflicts=True,
+            )
+        if question_ids:
+            question_through.objects.bulk_create(
+                [
+                    question_through(question_id=item_id, tag_id=target.id)
+                    for item_id in question_ids
+                ],
+                ignore_conflicts=True,
+            )
+
+        knowledge_through.objects.filter(tag_id__in=source_ids).delete()
+        question_through.objects.filter(tag_id__in=source_ids).delete()
 
     @staticmethod
     def _next_space_sort_order(*, exclude_id: Optional[int] = None) -> int:
@@ -432,19 +542,3 @@ class TagService(BaseService):
             queryset = queryset.exclude(id=exclude_id)
         max_sort_order = queryset.aggregate(max_sort_order=Max('sort_order'))['max_sort_order'] or 0
         return max_sort_order + 1
-
-
-def enforce_tag_view_permission(
-    request,
-    error_message='无权查看标签',
-    *,
-    tag_type: Optional[str] = None,
-) -> None:
-    if authorize('tag.view', request).allowed:
-        return
-    if (
-        tag_type == 'SPACE'
-        and authorize('knowledge.view', request).allowed
-    ):
-        return
-    raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)

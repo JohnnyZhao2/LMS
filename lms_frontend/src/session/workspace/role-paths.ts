@@ -4,9 +4,8 @@ import type { RoleCode } from '@/types/common';
 export const WORKSPACE_HOME_BY_ROLE: Record<RoleCode, string> = {
   STUDENT: '/student/dashboard',
   MENTOR: '/mentor/dashboard',
-  DEPT_MANAGER: '/dept_manager/dashboard',
-  TEAM_MANAGER: '/team_manager/dashboard',
-  ADMIN: '/admin/dashboard',
+  DEPT: '/dept/dashboard',
+  GLOBAL: '/global/dashboard',
   SUPER_ADMIN: '/super_admin/dashboard',
 };
 

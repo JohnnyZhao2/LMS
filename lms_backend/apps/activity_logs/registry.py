@@ -11,15 +11,14 @@ _DECLARATION_MODULES = (
     'apps.questions.services',
     'apps.knowledge.services',
     'apps.quizzes.services',
-    'apps.tasks.task_service',
-    'apps.tasks.student_task_service',
+    'apps.tasks.services',
     'apps.submissions.services',
     'apps.spot_checks.services',
     'apps.tags.services',
-    'apps.authorization.role_template_service',
-    'apps.authorization.user_override_service',
-    'apps.grading.views',
+    'apps.grading.services',
+    'apps.authorization.services',
 )
+
 
 _LOG_ACTION_INDEX: dict[str, dict] = {}
 _DECLARATIONS_LOADED = False
@@ -124,4 +123,3 @@ def get_log_action_def(action_key: str) -> dict:
 def get_log_action_index() -> dict[str, dict]:
     load_declared_log_actions()
     return dict(_LOG_ACTION_INDEX)
-

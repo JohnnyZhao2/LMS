@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 
@@ -57,7 +59,11 @@ class GradingSubmitSerializer(serializers.Serializer):
     quiz_id = serializers.IntegerField()
     question_id = serializers.IntegerField()
     student_id = serializers.IntegerField()
-    score = serializers.FloatField()
+    score = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('0'),
+    )
     comments = serializers.CharField(required=False, allow_blank=True, default='')
 
 

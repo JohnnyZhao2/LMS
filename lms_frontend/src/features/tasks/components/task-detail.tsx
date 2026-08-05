@@ -191,6 +191,7 @@ export const TaskDetail: React.FC = () => {
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
   const isStudent = !authLoading && currentRole === 'STUDENT';
+  const taskListLabel = isStudent ? '任务中心' : '任务管理';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
@@ -274,7 +275,7 @@ export const TaskDetail: React.FC = () => {
             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">任务不存在</h3>
             <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看。</p>
             <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
-              返回任务中心
+              返回{taskListLabel}
             </Button>
           </div>
         </div>
@@ -287,7 +288,7 @@ export const TaskDetail: React.FC = () => {
   const studentStatusDisplay = learningDetail?.status_display;
 
   const canStartExam = isStudent
-    ? studentStatus === 'NOT_STARTED' || studentStatus === 'IN_PROGRESS'
+    ? Boolean(studentStatus && studentStatus !== 'COMPLETED' && studentStatus !== 'OVERDUE')
     : Boolean(myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && Boolean(task.actions.update) && dayjs(task.deadline).isAfter(dayjs());
 
@@ -416,12 +417,14 @@ export const TaskDetail: React.FC = () => {
                             const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
                             const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
                             const isCompleted = Boolean(studentQuizItem?.is_completed);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const quizId = studentQuizItem
+                              ? studentQuizItem.task_quiz_id
+                              : (adminQuizItem?.quiz ?? 0);
                             const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名测验';
 
                             return (
                               <TaskNodeCard
-                                key={item.id}
+                                key={item.task_quiz_id}
                                 index={index}
                                 title={title}
                                 meta={getQuizMetaText(item)}
@@ -462,12 +465,14 @@ export const TaskDetail: React.FC = () => {
                             const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
                             const isCompleted = Boolean(studentQuizItem?.is_completed);
                             const isDisabled = Boolean(isStudent && !canStartExam && !isCompleted);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
+                            const quizId = studentQuizItem
+                              ? studentQuizItem.task_quiz_id
+                              : (adminQuizItem?.quiz ?? 0);
                             const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名考试';
 
                             return (
                               <TaskNodeCard
-                                key={item.id}
+                                key={item.task_quiz_id}
                                 index={index}
                                 title={title}
                                 meta={getQuizMetaText(item)}
@@ -481,9 +486,7 @@ export const TaskDetail: React.FC = () => {
                                           {studentQuizItem?.score ?? '--'} 分
                                         </span>
                                       )
-                                      : isDisabled
-                                        ? <span className="text-warning-700">待解锁</span>
-                                        : null
+                                      : null
                                     : null
                                 }
                                 tone={isCompleted ? 'success' : 'warning'}

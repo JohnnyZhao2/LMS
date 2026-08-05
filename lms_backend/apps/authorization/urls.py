@@ -1,33 +1,13 @@
-"""Authorization URLs."""
-
 from django.urls import path
 
-from .views import (
-    PermissionCatalogView,
-    RolePermissionView,
-    UserPermissionOverrideListCreateView,
-    UserPermissionOverrideDeleteView,
-    UserScopeGroupOverrideListCreateView,
-    UserScopeGroupOverrideDeleteView,
-)
+from .views import PermissionCatalogView, UserPermissionsView
+
 
 urlpatterns = [
     path('permissions/', PermissionCatalogView.as_view(), name='authorization-permissions'),
-    path('roles/<str:role_code>/permissions/', RolePermissionView.as_view(), name='authorization-role-permissions'),
-    path('users/<int:user_id>/overrides/', UserPermissionOverrideListCreateView.as_view(), name='authorization-user-overrides'),
     path(
-        'users/<int:user_id>/scope-group-overrides/',
-        UserScopeGroupOverrideListCreateView.as_view(),
-        name='authorization-user-scope-group-overrides',
-    ),
-    path(
-        'users/<int:user_id>/overrides/<int:override_id>/',
-        UserPermissionOverrideDeleteView.as_view(),
-        name='authorization-user-override-delete',
-    ),
-    path(
-        'users/<int:user_id>/scope-group-overrides/<int:override_id>/',
-        UserScopeGroupOverrideDeleteView.as_view(),
-        name='authorization-user-scope-group-override-delete',
+        'users/<int:user_id>/permissions/',
+        UserPermissionsView.as_view(),
+        name='authorization-user-permissions',
     ),
 ]

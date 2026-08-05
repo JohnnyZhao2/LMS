@@ -2,8 +2,6 @@ from rest_framework import serializers
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from .policies import get_task_actions_payload
-from .selectors import is_assignment_abnormal
-from .student_task_service import extract_knowledge_preview
 
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
@@ -41,7 +39,8 @@ class TaskKnowledgeSerializer(serializers.ModelSerializer):
         return obj.source_knowledge.title if obj.source_knowledge else None
 
     def get_content_preview(self, obj):
-        return extract_knowledge_preview(obj.knowledge)
+        preview = obj.knowledge.content_preview or ''
+        return preview[:160]
 
 
 class TaskQuizSerializer(serializers.ModelSerializer):
@@ -51,11 +50,21 @@ class TaskQuizSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     source_title = serializers.SerializerMethodField()
     question_count = serializers.IntegerField(source='quiz.question_count', read_only=True)
-    total_score = serializers.DecimalField(source='quiz.total_score', max_digits=6, decimal_places=2, read_only=True)
+    total_score = serializers.DecimalField(
+        source='quiz.total_score',
+        max_digits=6,
+        decimal_places=2,
+        read_only=True,
+    )
     quiz_type = serializers.CharField(source='quiz.quiz_type', read_only=True)
     quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
     duration = serializers.IntegerField(source='quiz.duration', read_only=True)
-    pass_score = serializers.DecimalField(source='quiz.pass_score', max_digits=5, decimal_places=2, read_only=True)
+    pass_score = serializers.DecimalField(
+        source='quiz.pass_score',
+        max_digits=5,
+        decimal_places=2,
+        read_only=True,
+    )
     revision_number = serializers.IntegerField(source='quiz.revision_number', read_only=True)
 
     class Meta:
@@ -84,14 +93,21 @@ class TaskQuizSerializer(serializers.ModelSerializer):
 
 class TaskListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
+    updated_by_name = serializers.CharField(
+        source='updated_by.username',
+        read_only=True,
+        allow_null=True,
+    )
     knowledge_count = serializers.IntegerField(source='knowledge_count_value', read_only=True)
     quiz_count = serializers.IntegerField(source='quiz_count_value', read_only=True)
     exam_count = serializers.IntegerField(source='exam_count_value', read_only=True)
     practice_count = serializers.IntegerField(source='practice_count_value', read_only=True)
     assignee_count = serializers.IntegerField(source='assignee_count_value', read_only=True)
     completed_count = serializers.IntegerField(source='completed_count_value', read_only=True)
-    pending_grading_count = serializers.IntegerField(source='pending_grading_count_value', read_only=True)
+    pending_grading_count = serializers.IntegerField(
+        source='pending_grading_count_value',
+        read_only=True,
+    )
     abnormal_count = serializers.SerializerMethodField()
     actions = serializers.SerializerMethodField()
 
@@ -118,12 +134,8 @@ class TaskListSerializer(serializers.ModelSerializer):
         ]
 
     def get_abnormal_count(self, obj):
-        abnormal_ids = {
-            assignment.assignee_id
-            for assignment in obj.completed_assignments_for_abnormal
-            if is_assignment_abnormal(assignment)
-        }
-        return len(abnormal_ids)
+        abnormal_counts = self.context.get('abnormal_counts') or {}
+        return abnormal_counts.get(obj.id, 0)
 
     def get_actions(self, obj):
         return get_task_actions_payload(self.context.get('request'), obj)
@@ -131,11 +143,15 @@ class TaskListSerializer(serializers.ModelSerializer):
 
 class TaskDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
+    updated_by_name = serializers.CharField(
+        source='updated_by.username',
+        read_only=True,
+        allow_null=True,
+    )
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
-    has_progress = serializers.SerializerMethodField()
+    has_progress = serializers.BooleanField(source='has_student_progress', read_only=True)
     actions = serializers.SerializerMethodField()
 
     class Meta:
@@ -156,57 +172,44 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'actions',
         ]
 
-    def get_has_progress(self, obj):
-        return obj.has_student_progress
-
     def get_actions(self, obj):
         return get_task_actions_payload(self.context.get('request'), obj)
 
 
-class TaskCreateSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=200)
-    description = serializers.CharField(required=False, allow_blank=True, default='')
-    deadline = serializers.DateTimeField()
-    knowledge_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
-    quiz_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
-    assignee_ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
+class TaskWriteSerializer(serializers.Serializer):
+    """创建/更新共用写入字段；业务约束由 Service 校验。"""
 
-    def validate_assignee_ids(self, value):
-        if not value:
-            raise serializers.ValidationError('请至少选择一名指派人员')
-        return value
-
-    def validate(self, attrs):
-        if not attrs.get('knowledge_ids', []) and not attrs.get('quiz_ids', []):
-            raise serializers.ValidationError('请至少选择一个知识文档或试卷')
-        return attrs
-
-
-class TaskUpdateSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=200, required=False)
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
     deadline = serializers.DateTimeField(required=False)
-    knowledge_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
-    quiz_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
-    assignee_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    knowledge_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
+    quiz_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
+    assignee_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
 
-    class Meta:
-        model = Task
-        fields = ['title', 'description', 'deadline', 'knowledge_ids', 'quiz_ids', 'assignee_ids']
 
-    def validate_assignee_ids(self, value):
-        if value is None:
-            return value
-        if not value:
-            raise serializers.ValidationError('请至少选择一名指派人员')
-        return value
+class TaskCreateSerializer(TaskWriteSerializer):
+    title = serializers.CharField(max_length=200)
+    deadline = serializers.DateTimeField()
+    assignee_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )
 
-    def validate(self, attrs):
-        knowledge_ids = attrs.get('knowledge_ids')
-        quiz_ids = attrs.get('quiz_ids')
-        if knowledge_ids is not None and quiz_ids is not None and not knowledge_ids and not quiz_ids:
-            raise serializers.ValidationError('请至少选择一个知识文档或试卷')
-        return attrs
+
+class TaskUpdateSerializer(TaskWriteSerializer):
+    pass
 
 
 class TaskResourceOptionSerializer(serializers.Serializer):

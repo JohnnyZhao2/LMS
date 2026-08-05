@@ -16,28 +16,21 @@ if SETTINGS_MODULE.endswith('.development'):
 elif SETTINGS_MODULE.endswith('.production'):
     APP_ENV = 'production'
     ENV_FILE = BASE_DIR / '.env.production'
-elif SETTINGS_MODULE.endswith('.test'):
-    APP_ENV = 'test'
-    ENV_FILE = None
 else:
     raise ValueError(
         'Unsupported DJANGO_SETTINGS_MODULE '
-        f'"{SETTINGS_MODULE}". Expected development, production, or test settings.'
+        f'"{SETTINGS_MODULE}". Expected development or production settings.'
     )
 
-if ENV_FILE is not None:
-    if not ENV_FILE.exists():
-        raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
-    load_dotenv(ENV_FILE, override=True)
+if not ENV_FILE.exists():
+    raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
+load_dotenv(ENV_FILE, override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 secret_key = os.getenv('SECRET_KEY')
-if APP_ENV == 'test':
-    SECRET_KEY = 'django-test-secret-key'
-else:
-    if not secret_key:
-        raise ValueError(f'SECRET_KEY must be set in {ENV_FILE}')
-    SECRET_KEY = secret_key
+if not secret_key:
+    raise ValueError(f'SECRET_KEY must be set in {ENV_FILE}')
+SECRET_KEY = secret_key
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -187,15 +180,14 @@ SPECTACULAR_SETTINGS = {
 - **试卷管理** - 试卷 CRUD、题目关联
 - **任务管理** - 学习/练习/考试任务
 - **答题评分** - 答题提交、自动评分、人工评分
-- **抽查管理** - 线下抽查记录
+- **抽查管理** - 抽查任务发放、学员填写贴图、评分
 - **统计分析** - 仪表盘
 - **通知服务** - 任务通知、截止提醒
 ## 角色权限
-- **学员 (STUDENT)** - 执行任务、查看知识
+- **学员 (STUDENT)** - 学习任务、查看知识
 - **导师 (MENTOR)** - 管理名下学员、创建任务
-- **室经理 (DEPT_MANAGER)** - 管理本室人员
-- **管理员 (ADMIN)** - 全平台管理
-- **团队经理 (TEAM_MANAGER)** - 知识查看
+- **室组 (DEPT)** - 管理本室人员与内容
+- **全局 (GLOBAL)** - 全平台管理
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -209,7 +201,7 @@ SPECTACULAR_SETTINGS = {
         # 认证与用户
         {'name': '认证', 'description': '用户登录、登出、角色切换'},
         {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
-        {'name': '授权管理', 'description': '角色权限模板与用户级权限覆盖'},
+        {'name': '授权管理', 'description': '用户角色分配与用户级权限覆盖'},
         # 内容管理
         {'name': '知识管理', 'description': '知识库管理、分类管理'},
         {'name': '题库管理', 'description': '题目管理、批量导入'},
@@ -222,14 +214,14 @@ SPECTACULAR_SETTINGS = {
         {'name': '考试答题', 'description': '考试任务答题提交'},
         {'name': '评分管理', 'description': '待评分列表、主观题评分'},
         # 抽查
-        {'name': '抽查管理', 'description': '线下抽查记录管理'},
+        {'name': '抽查管理', 'description': '抽查发起、学员填写与评分'},
         # 学员端
         {'name': '学员仪表盘', 'description': '学员首页待办任务和最新知识'},
         {'name': '学员知识中心', 'description': '学员浏览知识文档'},
         {'name': '学员任务中心', 'description': '学员任务列表和筛选'},
         {'name': '学员个人中心', 'description': '个人信息、历史成绩、错题本'},
         # 管理端
-        {'name': '导师/室经理仪表盘', 'description': '导师和室经理的统计数据'},
+        {'name': '导师/室组仪表盘', 'description': '导师和室组的统计数据'},
         # 通知
         {'name': '通知', 'description': '通知列表、已读标记'},
     ],
