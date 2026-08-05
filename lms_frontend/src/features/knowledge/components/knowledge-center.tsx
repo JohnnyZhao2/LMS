@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
     Search,
+    Trash2,
     Upload,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -16,7 +17,15 @@ import { useAuth } from '@/session/auth/auth-context';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/common';
 
-import { useInfiniteKnowledgeList, useCreateKnowledge, useDeleteKnowledge, useIncrementViewCount } from '../api/knowledge';
+import {
+    useInfiniteKnowledgeList,
+    useCreateKnowledge,
+    useBulkImportKnowledge,
+    useBulkDeleteKnowledge,
+    useDeleteKnowledge,
+    useIncrementViewCount,
+    type KnowledgeBulkDeleteItem,
+} from '../api/knowledge';
 import { useCreateTag, useDeleteTag, useTags } from '@/entities/tag/api/tags';
 import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
 import { showApiError } from '@/utils/error-handler';
@@ -28,6 +37,7 @@ import {
     parseKnowledgeImportXlsx,
     collectKnowledgeImportNames,
     resolveKnowledgeImportRows,
+    KNOWLEDGE_IMPORT_HEADERS,
 } from '../utils/import-knowledge-xlsx';
 import { SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 
@@ -40,6 +50,78 @@ type KnowledgeModalState =
         initialSpaceTagId?: number;
       }
     | { kind: 'detail'; knowledgeId: number; startEditing: boolean; startInFocus?: boolean };
+
+type BulkRowFailure = { row: number; reason: string };
+
+const XLSX_ACCEPT = '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+const XLSX_BTN_STYLE = {
+  fontSize: 12.5,
+  boxShadow: '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
+} as const;
+
+/** 批量导入/删除结果 toast */
+function toastBulkOutcome(
+  successCount: number,
+  failures: BulkRowFailure[],
+  messages: { ok: string; partial: string; fail: string },
+) {
+  if (successCount > 0 && failures.length === 0) {
+    toast.success(messages.ok);
+    return;
+  }
+  if (successCount > 0) toast.warning(messages.partial);
+  else toast.error(messages.fail);
+  if (failures.length > 0 && failures.length <= 8) {
+    failures.forEach((item) => toast.error(`第 ${item.row} 行：${item.reason}`));
+  } else if (failures.length > 8) {
+    toast.error(`另有 ${failures.length - 1} 行失败`);
+  }
+}
+
+/** 表格导入/删除按钮（进度文案显示在按钮上） */
+function KnowledgeXlsxButton({
+  inputRef,
+  progress,
+  idleLabel,
+  title,
+  disabled,
+  icon,
+  onFile,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  progress: string | null;
+  idleLabel: string;
+  title: string;
+  disabled: boolean;
+  icon: React.ReactNode;
+  onFile: (file: File) => void;
+}) {
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={XLSX_ACCEPT}
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onFile(file);
+        }}
+      />
+      <button
+        type="button"
+        disabled={disabled}
+        title={title}
+        onClick={() => inputRef.current?.click()}
+        className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-medium text-foreground disabled:opacity-50"
+        style={XLSX_BTN_STYLE}
+      >
+        {progress ? <Spinner size="sm" /> : icon}
+        {progress ?? idleLabel}
+      </button>
+    </>
+  );
+}
 
 export const KnowledgeCenter: React.FC = () => {
     const { roleNavigate } = useRoleNavigate();
@@ -55,10 +137,13 @@ export const KnowledgeCenter: React.FC = () => {
 
     const deleteKnowledge = useDeleteKnowledge();
     const createKnowledge = useCreateKnowledge();
+    const bulkImportKnowledge = useBulkImportKnowledge();
+    const bulkDeleteKnowledge = useBulkDeleteKnowledge();
     const createTag = useCreateTag();
     const deleteTag = useDeleteTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
     const [deleteSpaceTagTarget, setDeleteSpaceTagTarget] = React.useState<number | null>(null);
+    const [bulkDeleteItems, setBulkDeleteItems] = React.useState<KnowledgeBulkDeleteItem[] | null>(null);
     const [modalState, setModalState] = React.useState<KnowledgeModalState | null>(null);
     const [hoveredSpaceTagId, setHoveredSpaceTagId] = React.useState<number | null>(null);
     const [isSpaceTagActionHovered, setIsSpaceTagActionHovered] = React.useState(false);
@@ -82,8 +167,13 @@ export const KnowledgeCenter: React.FC = () => {
     const isCreateRoute = location.pathname.endsWith('/knowledge/create');
     const isEditRoute = location.pathname.endsWith('/edit');
 
-    const [isImporting, setIsImporting] = React.useState(false);
+    /** 非 null 表示进行中，文案直接显示在对应按钮上 */
+    const [importProgress, setImportProgress] = React.useState<string | null>(null);
+    const [deleteProgress, setDeleteProgress] = React.useState<string | null>(null);
+    const isImporting = importProgress !== null;
+    const isBulkDeleting = deleteProgress !== null;
     const importInputRef = React.useRef<HTMLInputElement | null>(null);
+    const bulkDeleteInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const { data: spaceTags = [] } = useTags({ tag_type: 'SPACE', limit: 200 });
     const { data: knowledgeTags = [] } = useTags({
@@ -240,8 +330,8 @@ export const KnowledgeCenter: React.FC = () => {
     }, [createKnowledge, selectedSpaceTagId, refetch]);
 
     const handleImportXlsx = React.useCallback(async (file: File) => {
-        if (isImporting) return;
-        setIsImporting(true);
+        if (importProgress) return;
+        setImportProgress('解析中…');
         try {
             const rows = await parseKnowledgeImportXlsx(file);
             const { spaceNames, tagNames } = collectKnowledgeImportNames(rows);
@@ -250,9 +340,13 @@ export const KnowledgeCenter: React.FC = () => {
             const tags = [...knowledgeTags];
             const spaceByName = new Map(spaces.map((item) => [item.name.trim(), item]));
             const tagByName = new Map(tags.map((item) => [item.name.trim(), item]));
+            const tagTotal = spaceNames.filter((n) => !spaceByName.has(n)).length
+                + tagNames.filter((n) => !tagByName.has(n)).length;
+            let tagDone = 0;
 
             for (const [index, name] of spaceNames.entries()) {
                 if (spaceByName.has(name)) continue;
+                setImportProgress(`标签 ${++tagDone}/${tagTotal}`);
                 const created = await createTag.mutateAsync({
                     name,
                     tag_type: 'SPACE',
@@ -264,6 +358,7 @@ export const KnowledgeCenter: React.FC = () => {
 
             for (const name of tagNames) {
                 if (tagByName.has(name)) continue;
+                setImportProgress(`标签 ${++tagDone}/${tagTotal}`);
                 const created = await createTag.mutateAsync({
                     name,
                     tag_type: 'TAG',
@@ -275,47 +370,92 @@ export const KnowledgeCenter: React.FC = () => {
             }
 
             const { ready, failures } = resolveKnowledgeImportRows(rows, spaces, tags);
-            let successCount = 0;
-            const createFailures = [...failures];
-
-            for (const item of ready) {
-                const { rowNumber, ...payload } = item;
-                try {
-                    await createKnowledge.mutateAsync(payload);
-                    successCount += 1;
-                } catch (error) {
-                    const message = error instanceof Error ? error.message : '创建失败';
-                    createFailures.push({ rowNumber, reason: message });
-                }
-            }
-
-            await refetch();
-
-            if (successCount > 0 && createFailures.length === 0) {
-                toast.success(`已导入 ${successCount} 条知识`);
+            if (ready.length === 0) {
+                toast.error(failures[0] ? `第 ${failures[0].rowNumber} 行：${failures[0].reason}` : '无有效数据');
                 return;
             }
-            if (successCount > 0) {
-                toast.warning(`导入完成：成功 ${successCount}，失败 ${createFailures.length}`);
-            } else {
-                toast.error(`导入失败：${createFailures[0]?.reason ?? '无有效数据'}`);
-            }
-            if (createFailures.length > 0 && createFailures.length <= 8) {
-                createFailures.forEach((item) => {
-                    toast.error(`第 ${item.rowNumber} 行：${item.reason}`);
-                });
-            } else if (createFailures.length > 8) {
-                toast.error(`另有 ${createFailures.length - 1} 行失败`);
-            }
+
+            setImportProgress(`同步 ${ready.length} 条…`);
+            const result = await bulkImportKnowledge.mutateAsync(
+                ready.map(({ rowNumber, ...payload }) => ({
+                    ...payload,
+                    row_number: rowNumber,
+                })),
+            );
+            setImportProgress('刷新中…');
+            await refetch();
+
+            const allFailures: BulkRowFailure[] = [
+                ...failures.map((item) => ({ row: item.rowNumber, reason: item.reason })),
+                ...result.failures.map((item) => ({ row: item.row_number, reason: item.reason })),
+            ];
+            const successCount = result.created + result.updated + result.unchanged;
+            toastBulkOutcome(successCount, allFailures, {
+                ok: `已同步 ${successCount} 条（新建 ${result.created}，更新 ${result.updated}，未变更 ${result.unchanged}）`,
+                partial: `导入完成：新建 ${result.created}，更新 ${result.updated}，未变更 ${result.unchanged}，失败 ${allFailures.length}`,
+                fail: `导入失败：${allFailures[0]?.reason ?? '无有效数据'}`,
+            });
         } catch (error) {
             showApiError(error, '导入失败');
         } finally {
-            setIsImporting(false);
+            setImportProgress(null);
             if (importInputRef.current) {
                 importInputRef.current.value = '';
             }
         }
-    }, [createKnowledge, createTag, isImporting, knowledgeTags, refetch, spaceTags]);
+    }, [bulkImportKnowledge, createTag, importProgress, knowledgeTags, refetch, spaceTags]);
+
+    const handleBulkDeleteXlsx = React.useCallback(async (file: File) => {
+        if (deleteProgress) return;
+        setDeleteProgress('解析中…');
+        try {
+            const rows = await parseKnowledgeImportXlsx(file);
+            const items = rows
+                .filter((row) => row.externalDocUrl)
+                .map((row) => ({
+                    row_number: row.rowNumber,
+                    external_doc_url: row.externalDocUrl,
+                    title: row.title,
+                }));
+            if (items.length === 0) {
+                toast.error('表格中没有文档链接');
+                return;
+            }
+            setBulkDeleteItems(items);
+        } catch (error) {
+            showApiError(error, '解析表格失败');
+        } finally {
+            setDeleteProgress(null);
+            if (bulkDeleteInputRef.current) {
+                bulkDeleteInputRef.current.value = '';
+            }
+        }
+    }, [deleteProgress]);
+
+    const confirmBulkDelete = React.useCallback(async () => {
+        if (!bulkDeleteItems || deleteProgress) return;
+        setDeleteProgress(`删除 ${bulkDeleteItems.length} 条…`);
+        try {
+            const result = await bulkDeleteKnowledge.mutateAsync(bulkDeleteItems);
+            setDeleteProgress('刷新中…');
+            await refetch();
+            setBulkDeleteItems(null);
+
+            toastBulkOutcome(
+                result.deleted,
+                result.failures.map((item) => ({ row: item.row_number, reason: item.reason })),
+                {
+                    ok: `已删除 ${result.deleted} 条知识`,
+                    partial: `删除完成：成功 ${result.deleted}，失败 ${result.failures.length}`,
+                    fail: `删除失败：${result.failures[0]?.reason ?? '无匹配数据'}`,
+                },
+            );
+        } catch (error) {
+            showApiError(error, '批量删除失败');
+        } finally {
+            setDeleteProgress(null);
+        }
+    }, [bulkDeleteItems, bulkDeleteKnowledge, deleteProgress, refetch]);
 
     const handleCreateSpaceTag = React.useCallback(async ({ name, color }: { name: string; color: string }) => {
         try {
@@ -413,31 +553,26 @@ export const KnowledgeCenter: React.FC = () => {
 
                     <div className="flex items-center gap-2">
                         {canCreateKnowledge && (
-                            <>
-                                <input
-                                    ref={importInputRef}
-                                    type="file"
-                                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                                    className="hidden"
-                                    onChange={(event) => {
-                                        const file = event.target.files?.[0];
-                                        if (file) void handleImportXlsx(file);
-                                    }}
-                                />
-                                <button
-                                    type="button"
-                                    disabled={isImporting}
-                                    onClick={() => importInputRef.current?.click()}
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 font-medium text-foreground disabled:opacity-50"
-                                    style={{
-                                        fontSize: 12.5,
-                                        boxShadow: '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
-                                    }}
-                                >
-                                    <Upload className="h-3.5 w-3.5" strokeWidth={1.8} />
-                                    {isImporting ? '导入中…' : '导入表格'}
-                                </button>
-                            </>
+                            <KnowledgeXlsxButton
+                                inputRef={importInputRef}
+                                progress={importProgress}
+                                idleLabel="导入表格"
+                                title={`表头：${KNOWLEDGE_IMPORT_HEADERS.join('、')}`}
+                                disabled={isImporting || isBulkDeleting}
+                                icon={<Upload className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                                onFile={(file) => { void handleImportXlsx(file); }}
+                            />
+                        )}
+                        {canDeleteKnowledge && (
+                            <KnowledgeXlsxButton
+                                inputRef={bulkDeleteInputRef}
+                                progress={deleteProgress}
+                                idleLabel="表格删除"
+                                title="按表格「文档链接」中的 id 批量删除"
+                                disabled={isImporting || isBulkDeleting}
+                                icon={<Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                                onFile={(file) => { void handleBulkDeleteXlsx(file); }}
+                            />
                         )}
                         {isManagementView && (
                             <button
@@ -562,6 +697,17 @@ export const KnowledgeCenter: React.FC = () => {
                 confirmVariant="destructive"
                 isConfirming={deleteKnowledge.isPending}
                 onConfirm={confirmDelete}
+            />
+
+            <ConfirmDialog
+                open={bulkDeleteItems !== null}
+                onOpenChange={(open) => { if (!open && !isBulkDeleting) setBulkDeleteItems(null); }}
+                title="确认批量删除"
+                description={`将按文档链接删除 ${bulkDeleteItems?.length ?? 0} 条知识，此操作不可恢复。`}
+                confirmText="删除"
+                confirmVariant="destructive"
+                isConfirming={isBulkDeleting}
+                onConfirm={confirmBulkDelete}
             />
 
             <ConfirmDialog

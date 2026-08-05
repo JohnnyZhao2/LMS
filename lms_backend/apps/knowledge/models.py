@@ -73,14 +73,14 @@ class Knowledge(TimestampMixin, CreatorMixin, models.Model):
         verbose_name='相关链接',
         default=list,
         blank=True,
-        help_text='相关资料链接列表，格式为 [{"title": "文档标题", "url": "https://example.com"}]',
+        help_text='相关资料链接列表，格式为 [{"title": "链接名称", "url": "https://example.com"}]',
     )
 
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
         verbose_name_plural = '知识文档'
-        ordering = ['-created_at']
+        ordering = ['-updated_at', '-id']
 
     def __str__(self):
         return self.title

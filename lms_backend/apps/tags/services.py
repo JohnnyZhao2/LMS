@@ -42,12 +42,6 @@ class TagService(BaseService):
         extend_scope = data.pop('extend_scope', False)
         data['name'] = data['name'].strip()
         tag_type = data['tag_type']
-        cross_type_duplicate = Tag.objects.filter(name=data['name']).exclude(tag_type=tag_type).first()
-        if cross_type_duplicate:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='标签名称不能与其他类型重复',
-            )
 
         if tag_type == 'SPACE':
             data['allow_knowledge'] = True
@@ -97,21 +91,24 @@ class TagService(BaseService):
         if current_module:
             self._enable_scope(tag, current_module)
 
-        if 'name' in data:
-            data['name'] = data['name'].strip()
-            duplicate = Tag.objects.filter(name=data['name']).exclude(pk=tag.pk).exists()
-            if duplicate:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='标签名称不能与其他类型重复',
-                )
-
         next_tag_type = data.get('tag_type', tag.tag_type)
         if next_tag_type not in {'SPACE', 'TAG'}:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='无效的标签类型',
             )
+
+        if 'name' in data:
+            data['name'] = data['name'].strip()
+            duplicate = Tag.objects.filter(
+                name=data['name'],
+                tag_type=next_tag_type,
+            ).exclude(pk=tag.pk).exists()
+            if duplicate:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='同类型下标签名称已存在',
+                )
 
         if next_tag_type == 'SPACE':
             self._apply_space_fields(tag, data)
@@ -223,7 +220,10 @@ class TagService(BaseService):
                 message='合并后的标签名称不能为空',
             )
 
-        existing_conflict = Tag.objects.filter(name=merged_name).exclude(id__in=normalized_source_ids).first()
+        existing_conflict = Tag.objects.filter(
+            name=merged_name,
+            tag_type=ordered_tags[0].tag_type,
+        ).exclude(id__in=normalized_source_ids).first()
         if existing_conflict:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,

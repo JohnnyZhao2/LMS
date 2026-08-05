@@ -31,3 +31,7 @@
 /*.webp
 /*.pdf
 /招乎统一认证-API使用文档_副本.md
+
+# Excel 本地锁文件 / 知识导入压测表
+/~$*.xlsx
+/knowledge-import-speed-*.xlsx

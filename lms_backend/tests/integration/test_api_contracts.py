@@ -915,7 +915,7 @@ class TestTagApiContracts:
         assert question_tag.id in result_ids
         assert knowledge_tag.id not in result_ids
 
-    def test_tag_create_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag):
+    def test_tag_create_allows_name_duplicated_with_other_type(self, api_client, admin_user, space_tag):
         response = auth(api_client, admin_user).post(
             '/api/tags/',
             {
@@ -927,9 +927,10 @@ class TestTagApiContracts:
             format='json',
         )
 
-        assert_status(response, 400)
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert response.data['message'] == '标签名称不能与其他类型重复'
+        assert_success(response, status_code=201, message='创建成功')
+        assert response.data['data']['name'] == space_tag.name
+        assert response.data['data']['tag_type'] == 'TAG'
+        assert response.data['data']['id'] != space_tag.id
 
     def test_tag_create_can_auto_extend_scope_and_reuse_existing_tag(
         self,
@@ -983,16 +984,24 @@ class TestTagApiContracts:
         knowledge_tag.refresh_from_db()
         assert knowledge_tag.allow_question is False
 
-    def test_tag_patch_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag, knowledge_tag):
+    def test_tag_patch_allows_name_duplicated_with_other_type(
+        self,
+        api_client,
+        admin_user,
+        space_tag,
+        knowledge_tag,
+    ):
         response = auth(api_client, admin_user).patch(
             f'/api/tags/{knowledge_tag.id}/',
             {'name': space_tag.name},
             format='json',
         )
 
-        assert_status(response, 400)
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert response.data['message'] == '标签名称不能与其他类型重复'
+        assert_success(response)
+        assert response.data['data']['name'] == space_tag.name
+        assert response.data['data']['tag_type'] == 'TAG'
+        knowledge_tag.refresh_from_db()
+        assert knowledge_tag.name == space_tag.name
 
     def test_tag_patch_can_convert_tag_to_space(
         self,
@@ -1305,6 +1314,87 @@ class TestKnowledgeApiContracts:
         assert_status(response, 400)
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == 'tag_ids 包含无效的知识标签ID'
+
+    def test_knowledge_bulk_import_upserts_by_doc_query_id(
+        self, api_client, admin_user, mentor_user, space_tag,
+    ):
+        def item(row, title, content, url):
+            return {
+                'row_number': row,
+                'title': title,
+                'content': content,
+                'external_doc_url': url,
+                'space_tag_id': space_tag.id,
+                'tag_ids': [],
+                'related_links': [],
+            }
+
+        existing = Knowledge.objects.create(
+            title='旧标题',
+            content='旧步骤',
+            external_doc_url='https://xx.feishu.cn/wiki/v?id=doc-1',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=space_tag,
+        )
+        client = auth(api_client, admin_user)
+        response = client.post(
+            '/api/knowledge/import/',
+            {
+                'items': [
+                    item(2, '新标题', '新步骤', 'https://xx.feishu.cn/wiki/v?id=doc-1&mode=edit'),
+                    item(3, '全新', '步骤', 'https://xx.feishu.cn/wiki/v?id=doc-2'),
+                ],
+            },
+            format='json',
+        )
+        assert_success(response)
+        data = response.data['data']
+        assert (data['created'], data['updated'], data['unchanged'], data['failures']) == (1, 1, 0, [])
+
+        existing.refresh_from_db()
+        assert existing.title == '新标题'
+        created = Knowledge.objects.get(external_doc_url__contains='id=doc-2')
+        list_ids = [row['id'] for row in client.get('/api/knowledge/').data['data']['results']]
+        assert list_ids[:2] == [created.id, existing.id]
+
+        noop = client.post(
+            '/api/knowledge/import/',
+            {'items': [item(2, existing.title, existing.content, existing.external_doc_url)]},
+            format='json',
+        )
+        assert_success(noop)
+        assert noop.data['data']['unchanged'] == 1
+        assert noop.data['data']['created'] == noop.data['data']['updated'] == 0
+
+    def test_knowledge_bulk_delete_by_doc_query_id(
+        self, api_client, admin_user, mentor_user, space_tag,
+    ):
+        keep = Knowledge.objects.create(
+            title='保留', content='步骤',
+            external_doc_url='https://xx.feishu.cn/wiki/v?id=keep-1',
+            created_by=mentor_user, updated_by=mentor_user, space_tag=space_tag,
+        )
+        remove = Knowledge.objects.create(
+            title='删除', content='步骤',
+            external_doc_url='https://xx.feishu.cn/wiki/v?id=remove-1',
+            created_by=mentor_user, updated_by=mentor_user, space_tag=space_tag,
+        )
+        response = auth(api_client, admin_user).post(
+            '/api/knowledge/bulk-delete/',
+            {
+                'items': [
+                    {'row_number': 2, 'title': '删除', 'external_doc_url': 'https://xx.feishu.cn/wiki/v?id=remove-1&mode=edit'},
+                    {'row_number': 3, 'title': '不存在的知识', 'external_doc_url': 'https://xx.feishu.cn/wiki/v?id=missing-1'},
+                ],
+            },
+            format='json',
+        )
+        assert_success(response)
+        assert response.data['data']['deleted'] == 1
+        assert response.data['data']['failures'][0]['row_number'] == 3
+        assert Knowledge.objects.filter(id=keep.id).exists()
+        assert not Knowledge.objects.filter(id=remove.id).exists()
 
     def test_knowledge_patch_allows_blank_title(self, api_client, admin_user, sample_knowledge):
         response = auth(api_client, admin_user).patch(

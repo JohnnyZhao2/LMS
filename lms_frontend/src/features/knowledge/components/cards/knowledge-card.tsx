@@ -90,8 +90,8 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
               display: '-webkit-box',
               WebkitLineClamp: long ? 10 : short ? 5 : 7,
               WebkitBoxOrient: 'vertical',
-              fontSize: 13.5,
-              lineHeight: 1.65,
+              fontSize: 15,
+              lineHeight: 1.7,
               color: '#444',
             }}
             dangerouslySetInnerHTML={{ __html: stepsHtml }}

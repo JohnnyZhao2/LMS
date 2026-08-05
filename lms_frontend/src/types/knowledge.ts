@@ -50,7 +50,7 @@ export interface KnowledgeDetail {
 /** 创建 / 更新共用写入体 */
 export interface KnowledgeWriteRequest {
   title?: string;
-  space_tag_id?: number;
+  space_tag_id?: number | null;
   content?: string;
   external_doc_url?: string;
   related_links?: RelatedLink[];

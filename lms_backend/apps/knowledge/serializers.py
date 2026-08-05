@@ -129,3 +129,24 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         return _normalize_knowledge_payload(attrs)
+
+
+class KnowledgeImportItemSerializer(KnowledgeCreateSerializer):
+    row_number = serializers.IntegerField(min_value=1)
+
+    class Meta(KnowledgeCreateSerializer.Meta):
+        fields = [*KnowledgeCreateSerializer.Meta.fields, 'row_number']
+
+
+class KnowledgeBulkImportSerializer(serializers.Serializer):
+    items = KnowledgeImportItemSerializer(many=True, allow_empty=False)
+
+
+class KnowledgeBulkDeleteItemSerializer(serializers.Serializer):
+    row_number = serializers.IntegerField(min_value=1)
+    external_doc_url = serializers.URLField(max_length=500)
+    title = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class KnowledgeBulkDeleteSerializer(serializers.Serializer):
+    items = KnowledgeBulkDeleteItemSerializer(many=True, allow_empty=False)

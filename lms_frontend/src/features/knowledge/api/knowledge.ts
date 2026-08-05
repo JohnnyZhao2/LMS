@@ -73,6 +73,34 @@ export const useKnowledgeDetail = ({
   });
 };
 
+type BulkRowFailure = { row_number: number; reason: string };
+
+export type KnowledgeBulkImportItem = KnowledgeWriteRequest & { row_number: number };
+export type KnowledgeBulkImportResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  failures: BulkRowFailure[];
+};
+
+export type KnowledgeBulkDeleteItem = {
+  row_number: number;
+  external_doc_url: string;
+  title?: string;
+};
+export type KnowledgeBulkDeleteResult = {
+  deleted: number;
+  failures: BulkRowFailure[];
+};
+
+function useKnowledgeItemsMutation<TItem, TResult>(path: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items: TItem[]) => apiClient.post<TResult>(path, { items }),
+    onSuccess: () => invalidateAfterKnowledgeMutation(queryClient),
+  });
+}
+
 export const useCreateKnowledge = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -81,6 +109,12 @@ export const useCreateKnowledge = () => {
     onSuccess: () => invalidateAfterKnowledgeMutation(queryClient),
   });
 };
+
+export const useBulkImportKnowledge = () =>
+  useKnowledgeItemsMutation<KnowledgeBulkImportItem, KnowledgeBulkImportResult>('/knowledge/import/');
+
+export const useBulkDeleteKnowledge = () =>
+  useKnowledgeItemsMutation<KnowledgeBulkDeleteItem, KnowledgeBulkDeleteResult>('/knowledge/bulk-delete/');
 
 export const useUpdateKnowledge = () => {
   const queryClient = useQueryClient();
