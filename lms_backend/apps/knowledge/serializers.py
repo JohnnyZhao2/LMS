@@ -4,7 +4,8 @@ from rest_framework import serializers
 
 from apps.tags.serializers import TagSimpleSerializer
 
-from .models import Knowledge, sanitize_steps_html
+from .html_sanitize import sanitize_steps_html
+from .models import Knowledge
 
 
 class RelatedLinkSerializer(serializers.Serializer):
