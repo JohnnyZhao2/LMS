@@ -5,17 +5,13 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce_any
 from apps.dashboard.exam_report_service import ExamReportService
 from apps.dashboard.serializers import ExamReportExportQuerySerializer, ExamReportQuerySerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import success_response
 
-EXAM_REPORT_PERMISSIONS = (
-    'dashboard.mentor.view',
-    'dashboard.admin.view',
-)
+from .base import EXAM_REPORT_ROLES, require_current_role
 
 
 class ExamReportBaseView(BaseAPIView):
@@ -23,9 +19,9 @@ class ExamReportBaseView(BaseAPIView):
     service_class = ExamReportService
 
     def _enforce_access(self):
-        enforce_any(
-            EXAM_REPORT_PERMISSIONS,
+        require_current_role(
             self.request,
+            EXAM_REPORT_ROLES,
             error_message='无权查看考试报表',
         )
 

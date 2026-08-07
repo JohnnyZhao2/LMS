@@ -2,10 +2,10 @@ from datetime import datetime
 from typing import Optional
 
 import pytest
+from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog
-from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.questions.models import Question, QuestionOption
@@ -14,7 +14,7 @@ from apps.quizzes.services import ensure_quiz_revision
 from apps.submissions.models import Answer, Submission
 from apps.tasks.models import KnowledgeLearningProgress, Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
-from apps.users.models import Department, Role, User, UserRole
+from apps.users.models import Department, User
 
 
 @pytest.fixture
@@ -24,33 +24,33 @@ def department():
 
 @pytest.fixture
 def mentor_role(grant_role_permissions):
-    role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    role, _ = Group.objects.get_or_create(name='MENTOR')
     grant_role_permissions(
         role,
         [
-            'question.view',
-            'question.create',
-            'question.update',
-            'question.delete',
-            'tag.view',
-            'tag.create',
-            'quiz.view',
-            'quiz.create',
-            'quiz.update',
-            'quiz.delete',
-            'task.view',
-            'task.create',
-            'task.update',
-            'task.delete',
-            'task.assign',
-            'task.analytics.view',
-            'spot_check.view',
-            'spot_check.create',
-            'spot_check.update',
-            'spot_check.delete',
-            'grading.view',
-            'grading.score',
-            'knowledge.view',
+            'questions.view_question',
+            'questions.add_question',
+            'questions.change_question',
+            'questions.delete_question',
+            'tags.view_tag',
+            'tags.add_tag',
+            'quizzes.view_quiz',
+            'quizzes.add_quiz',
+            'quizzes.change_quiz',
+            'quizzes.delete_quiz',
+            'tasks.view_task',
+            'tasks.add_task',
+            'tasks.change_task',
+            'tasks.delete_task',
+            'tasks.assign_task',
+            'tasks.view_task_analytics',
+            'spot_checks.view_spotcheck',
+            'spot_checks.add_spotcheck',
+            'spot_checks.change_spotcheck',
+            'spot_checks.delete_spotcheck',
+            'tasks.view_grading',
+            'tasks.score_grading',
+            'knowledge.view_knowledge',
         ],
     )
     return role
@@ -58,20 +58,20 @@ def mentor_role(grant_role_permissions):
 
 @pytest.fixture
 def admin_role(grant_role_permissions):
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    role, _ = Group.objects.get_or_create(name='ADMIN')
     grant_role_permissions(
         role,
         [
-            'knowledge.view',
-            'knowledge.create',
-            'knowledge.update',
-            'knowledge.delete',
-            'tag.view',
-            'tag.create',
-            'tag.update',
-            'tag.delete',
-            'user.view',
-            'activity_log.view',
+            'knowledge.view_knowledge',
+            'knowledge.add_knowledge',
+            'knowledge.change_knowledge',
+            'knowledge.delete_knowledge',
+            'tags.view_tag',
+            'tags.add_tag',
+            'tags.change_tag',
+            'tags.delete_tag',
+            'users.view_user',
+            'activity_logs.view_activitylog',
         ],
     )
     return role
@@ -85,7 +85,7 @@ def mentor_user(department, mentor_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.groups.add(mentor_role)
     user.current_role = 'MENTOR'
     return user
 
@@ -98,7 +98,7 @@ def other_mentor_user(department, mentor_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.groups.add(mentor_role)
     user.current_role = 'MENTOR'
     return user
 
@@ -111,13 +111,15 @@ def admin_user(department, admin_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.groups.add(admin_role)
     user.current_role = 'ADMIN'
     return user
 
 
 @pytest.fixture
-def student_user(department, mentor_user):
+def student_user(department, mentor_user, grant_role_permissions):
+    student_role, _ = Group.objects.get_or_create(name='STUDENT')
+    grant_role_permissions(student_role, ['knowledge.view_knowledge', 'tasks.view_task'])
     return User.objects.create_user(
         employee_id='CONTRACT_STUDENT_001',
         username='契约测试学员',
@@ -454,7 +456,7 @@ class TestQuestionApiContracts:
         mentor_user,
         other_mentor_user,
     ):
-        grant_role_permissions(admin_role, ['question.view'])
+        grant_role_permissions(admin_role, ['questions.view_question'])
         mentor_question = create_single_choice_question(
             created_by=mentor_user,
             content='导师题目',
@@ -470,32 +472,6 @@ class TestQuestionApiContracts:
         result_ids = {item['id'] for item in response.data['data']['results']}
         assert mentor_question.id in result_ids
         assert other_question.id in result_ids
-
-    def test_question_resource_scope_ignores_explicit_creator_override(
-        self,
-        api_client,
-        mentor_user,
-        other_mentor_user,
-    ):
-        other_question = create_single_choice_question(
-            created_by=other_mentor_user,
-            content='范围覆盖可见题目',
-        )
-        UserScopeGroupOverride.objects.create(
-            user=mentor_user,
-            scope_group_key='question_resource_scope',
-            effect='ALLOW',
-            applies_to_role='MENTOR',
-            scope_type='EXPLICIT_USERS',
-            scope_user_ids=[other_mentor_user.id],
-            granted_by=mentor_user,
-        )
-
-        response = auth(api_client, mentor_user).get('/api/questions/?page=1&page_size=10')
-
-        assert_status(response, 200)
-        result_ids = {item['id'] for item in response.data['data']['results']}
-        assert other_question.id not in result_ids
 
     def test_question_list_hides_history_versions(self, api_client, mentor_user, sample_question):
         quiz = Quiz.objects.create(
@@ -773,7 +749,7 @@ class TestQuizApiContracts:
         mentor_user,
         other_mentor_user,
     ):
-        grant_role_permissions(admin_role, ['quiz.view'])
+        grant_role_permissions(admin_role, ['quizzes.view_quiz'])
         mentor_quiz = Quiz.objects.create(
             title='导师试卷',
             quiz_type='PRACTICE',
@@ -1641,8 +1617,10 @@ class TestStudentTaskApiContracts:
 
 @pytest.mark.django_db
 class TestTaskListApiContracts:
-    def test_task_list_response_is_wrapped(self, api_client, student_user, student_assignment):
-        response = auth(api_client, student_user).get('/api/tasks/?status=open&page=1&page_size=10')
+    """管理态任务列表：仅创建者可见，被分配不进此列表。"""
+
+    def test_task_list_response_is_wrapped(self, api_client, mentor_user, student_assignment):
+        response = auth(api_client, mentor_user).get('/api/tasks/?status=open&page=1&page_size=10')
 
         assert_success(response)
         assert 'data' in response.data
@@ -1650,8 +1628,8 @@ class TestTaskListApiContracts:
         task_ids = [item['id'] for item in response.data['data']['results']]
         assert student_assignment.task_id in task_ids
 
-    def test_task_list_rejects_invalid_status(self, api_client, student_user):
-        response = auth(api_client, student_user).get('/api/tasks/?status=unknown')
+    def test_task_list_rejects_invalid_status(self, api_client, mentor_user):
+        response = auth(api_client, mentor_user).get('/api/tasks/?status=unknown')
 
         assert_validation_error(response, 'status')
 
@@ -1669,7 +1647,7 @@ class TestTaskListApiContracts:
             status='IN_PROGRESS',
         )
 
-        response = auth(api_client, student_user).get('/api/tasks/?status=closed&page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/tasks/?status=closed&page=1&page_size=10')
 
         assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -1703,7 +1681,7 @@ class TestTaskListApiContracts:
             status='IN_PROGRESS',
         )
 
-        response = auth(api_client, student_user).get('/api/tasks/?search=命中&page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/tasks/?search=命中&page=1&page_size=10')
 
         assert_status(response, 200)
         result_ids = [item['id'] for item in response.data['data']['results']]
@@ -1742,12 +1720,22 @@ class TestTaskListApiContracts:
         submission.submitted_at = timezone.now()
         submission.save(update_fields=['started_at', 'submitted_at'])
 
-        response = auth(api_client, student_user).get('/api/tasks/?search=风险计数&page=1&page_size=10')
+        response = auth(api_client, mentor_user).get('/api/tasks/?search=风险计数&page=1&page_size=10')
 
         assert_status(response, 200)
         result = response.data['data']['results'][0]
         assert result['pending_grading_count'] == 1
         assert result['abnormal_count'] == 1
+
+    def test_assignee_does_not_see_task_in_management_list(self, api_client, student_user, student_assignment):
+        """被分配只走执行态，管理列表不应出现。"""
+        response = auth(api_client, student_user).get('/api/tasks/?page=1&page_size=10')
+
+        if response.status_code == 403:
+            return
+        assert_status(response, 200)
+        task_ids = [item['id'] for item in response.data['data']['results']]
+        assert student_assignment.task_id not in task_ids
 
 
 @pytest.mark.django_db
@@ -1860,13 +1848,11 @@ class TestSpotCheckApiContracts:
         response = auth(api_client, mentor_user).post(
             '/api/spot-checks/',
             {
-                'student': student_user.id,
+                'students': [student_user.id],
                 'items': [
                     {
                         'topic': '新建抽查',
-                        'content': '闭包和事件循环',
-                        'score': '91.5',
-                        'comment': '创建成功',
+                        'instruction': '闭包和事件循环',
                     }
                 ],
             },
@@ -1875,8 +1861,8 @@ class TestSpotCheckApiContracts:
 
         assert_success(response, status_code=201, message='创建成功')
         assert 'data' in response.data
-        assert response.data['data']['student'] == student_user.id
-        assert response.data['data']['topic_count'] == 1
+        assert response.data['data'][0]['student'] == student_user.id
+        assert response.data['data'][0]['topic_count'] == 1
 
     def test_spot_check_list_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
         response = auth(api_client, mentor_user).get('/api/spot-checks/?page=1&page_size=10')
@@ -1904,25 +1890,6 @@ class TestSpotCheckApiContracts:
         assert response.data['data']['student_avatar_key'] == sample_spot_check.student.avatar_key
         assert response.data['data']['checker_avatar_key'] == sample_spot_check.checker.avatar_key
         assert response.data['data']['items'][0]['topic'] == '契约测试抽查'
-
-    def test_spot_check_patch_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
-        response = auth(api_client, mentor_user).patch(
-            f'/api/spot-checks/{sample_spot_check.id}/',
-            {
-                'items': [
-                    {
-                        'topic': '契约测试抽查',
-                        'content': '补充追问',
-                        'score': '88.0',
-                        'comment': '已更新评语',
-                    }
-                ]
-            },
-            format='json',
-        )
-
-        assert_success(response)
-        assert response.data['data']['items'][0]['comment'] == '已更新评语'
 
     def test_spot_check_student_list_includes_students_without_records(
         self,

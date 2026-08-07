@@ -5,10 +5,10 @@ from typing import Iterable, Optional, Set
 
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Role, User
+from .models import User
 
 
-NON_STUDENT_ROLE_CODES = {'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'}
+NON_STUDENT_ROLE_CODES = {'MENTOR', 'DEPT_MANAGER', 'ADMIN'}
 
 
 def validate_role_assignment_constraints(
@@ -25,7 +25,6 @@ def validate_role_assignment_constraints(
     Rules:
     - Non-STUDENT business roles are single-select (at most one).
     - Superuser account is a dedicated role and cannot be assigned business roles.
-    - TEAM_MANAGER is globally unique (active users only).
     - DEPT_MANAGER is unique per department (active users only).
     """
     normalized_codes = _normalize_role_codes(role_codes)
@@ -67,25 +66,12 @@ def _validate_exclusive_role_uniqueness(
     department_id: Optional[int],
     exclude_user_id: Optional[int],
 ) -> None:
-    team_manager_queryset = User.objects.filter(
-        roles__code='TEAM_MANAGER',
-        is_active=True,
-    )
     dept_manager_queryset = User.objects.filter(
-        roles__code='DEPT_MANAGER',
+        groups__name='DEPT_MANAGER',
         is_active=True,
     )
     if exclude_user_id is not None:
-        team_manager_queryset = team_manager_queryset.exclude(pk=exclude_user_id)
         dept_manager_queryset = dept_manager_queryset.exclude(pk=exclude_user_id)
-
-    if 'TEAM_MANAGER' in role_codes:
-        existing_team_manager = team_manager_queryset.first()
-        if existing_team_manager:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
-            )
 
     if 'DEPT_MANAGER' in role_codes:
         if not department_id:

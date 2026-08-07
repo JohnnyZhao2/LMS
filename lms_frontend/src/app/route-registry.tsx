@@ -20,6 +20,9 @@ import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
 export type PermissionMode = 'all' | 'any';
 export type MenuLabelResolver = string | ((workspace: WorkspaceConfig, role: RoleCode) => string);
 
+const SHARED_WORKSPACE_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+const MANAGEMENT_WORKSPACE_ROLES: RoleCode[] = ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+
 export type MenuMeta = {
   label: MenuLabelResolver;
   icon?: LucideIcon;
@@ -62,7 +65,6 @@ export type OrderedMenuItem = {
 
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
 const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
-const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
@@ -100,9 +102,6 @@ export const getWorkspaceDashboardElement = (variant: DashboardVariant): ReactEl
   if (variant === 'mentor') {
     return <MentorDashboard />;
   }
-  if (variant === 'team_manager') {
-    return <TeamManagerDashboard />;
-  }
   return <AdminDashboard />;
 };
 
@@ -121,7 +120,7 @@ const TaskDetailRoutePage = () => {
   const { hasCapability } = useAuth();
   const normalizedRole = normalizeRoleCode(role);
 
-  if (normalizedRole === 'STUDENT' || !hasCapability('task.update')) {
+  if (normalizedRole === 'STUDENT' || !hasCapability('tasks.change_task')) {
     return <TaskDetail />;
   }
 
@@ -140,7 +139,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'tasks',
     kind: 'business',
     path: 'tasks',
-    requiredPermissions: ['task.view'],
+    allowedRoles: SHARED_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.view_task'],
     showInMenu: true,
     menu: {
       label: (workspace) => (workspace.menuVariant === 'admin' ? '任务管理' : '任务中心'),
@@ -153,21 +153,24 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'task-create',
     kind: 'business',
     path: 'tasks/create',
-    requiredPermissions: ['task.create'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.add_task'],
     component: TaskForm,
   },
   {
     key: 'task-edit',
     kind: 'business',
     path: 'tasks/:id/edit',
-    requiredPermissions: ['task.update'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.change_task'],
     component: TaskForm,
   },
   {
     key: 'task-preview',
     kind: 'business',
     path: 'tasks/:id/preview',
-    requiredPermissions: ['task.update', 'task.analytics.view', 'grading.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.change_task', 'tasks.view_task_analytics', 'tasks.view_grading'],
     permissionMode: 'any',
     component: TaskPreviewPage,
   },
@@ -175,14 +178,16 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'task-detail',
     kind: 'business',
     path: 'tasks/:id',
-    requiredPermissions: ['task.view'],
+    allowedRoles: SHARED_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.view_task'],
     render: () => <TaskDetailRoutePage />,
   },
   {
     key: 'tags',
     kind: 'business',
     path: 'tags',
-    requiredPermissions: ['tag.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['tags.view_tag'],
     showInMenu: true,
     menu: {
       label: '标签管理',
@@ -195,7 +200,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge',
     kind: 'business',
     path: 'knowledge',
-    requiredPermissions: ['knowledge.view'],
+    allowedRoles: SHARED_WORKSPACE_ROLES,
+    requiredPermissions: ['knowledge.view_knowledge'],
     showInMenu: true,
     menu: {
       label: (workspace) => (workspace.menuVariant === 'student' ? '知识中心' : '知识管理'),
@@ -208,28 +214,32 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'knowledge-create',
     kind: 'business',
     path: 'knowledge/create',
-    requiredPermissions: ['knowledge.create'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['knowledge.add_knowledge'],
     component: KnowledgeCenter,
   },
   {
     key: 'knowledge-edit',
     kind: 'business',
     path: 'knowledge/:id/edit',
-    requiredPermissions: ['knowledge.update'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['knowledge.change_knowledge'],
     component: KnowledgeCenter,
   },
   {
     key: 'knowledge-detail',
     kind: 'business',
     path: 'knowledge/:id',
-    requiredPermissions: ['knowledge.view'],
+    allowedRoles: SHARED_WORKSPACE_ROLES,
+    requiredPermissions: ['knowledge.view_knowledge'],
     component: KnowledgeCenter,
   },
   {
     key: 'quizzes',
     kind: 'business',
     path: 'quizzes',
-    requiredPermissions: ['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['quizzes.view_quiz', 'quizzes.add_quiz', 'quizzes.change_quiz', 'quizzes.delete_quiz'],
     permissionMode: 'any',
     showInMenu: true,
     menu: {
@@ -248,28 +258,32 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'quiz-create',
     kind: 'business',
     path: 'quizzes/create',
-    requiredPermissions: ['quiz.create'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['quizzes.add_quiz'],
     component: QuizForm,
   },
   {
     key: 'quiz-preview',
     kind: 'business',
     path: 'quizzes/:id/preview',
-    requiredPermissions: ['quiz.view', 'question.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['quizzes.view_quiz', 'questions.view_question'],
     component: QuizForm,
   },
   {
     key: 'quiz-edit',
     kind: 'business',
     path: 'quizzes/:id/edit',
-    requiredPermissions: ['quiz.update'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['quizzes.change_quiz'],
     component: QuizForm,
   },
   {
     key: 'questions',
     kind: 'business',
     path: 'questions',
-    requiredPermissions: ['question.view', 'question.create', 'question.update', 'question.delete'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['questions.view_question', 'questions.add_question', 'questions.change_question', 'questions.delete_question'],
     permissionMode: 'any',
     showInMenu: true,
     menu: {
@@ -288,24 +302,26 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'question-create',
     kind: 'business',
     path: 'questions/create',
-    requiredPermissions: ['question.create'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['questions.add_question'],
     component: QuestionFormPage,
   },
   {
     key: 'question-edit',
     kind: 'business',
     path: 'questions/:id/edit',
-    requiredPermissions: ['question.update'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['questions.change_question'],
     component: QuestionFormPage,
   },
   {
     key: 'spot-checks',
     kind: 'business',
     path: 'spot-checks',
-    // 学员只有 spot_check.view（看自己的），入口在任务中心「抽查」Tab；
+    // 学员只有 spot_checks.view_spotcheck（看自己的），入口在任务中心「抽查」Tab；
     // 管理端菜单/路由禁止 STUDENT，避免和学员待办入口重复。
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.view'],
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredPermissions: ['spot_checks.view_spotcheck'],
     showInMenu: true,
     menu: {
       label: '抽查管理',
@@ -318,8 +334,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-create',
     kind: 'business',
     path: 'spot-checks/create',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.create'],
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredPermissions: ['spot_checks.add_spotcheck'],
     // 发起统一在列表弹窗完成（左侧选人/勾选）
     render: () => <SpotCheckCreateRedirect />,
   },
@@ -327,15 +343,16 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'spot-check-edit',
     kind: 'business',
     path: 'spot-checks/:id/edit',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.view', 'spot_check.update'],
+    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredPermissions: ['spot_checks.view_spotcheck', 'spot_checks.change_spotcheck'],
     component: SpotCheckForm,
   },
   {
     key: 'users',
     kind: 'business',
     path: 'users',
-    requiredPermissions: ['user.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['users.view_user'],
     showInMenu: true,
     menu: {
       label: '用户列表',
@@ -353,7 +370,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'audit-log-policy',
     kind: 'business',
     path: 'audit-logs/policy',
-    requiredPermissions: ['activity_log.policy.update'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['activity_logs.change_activitylogpolicy'],
     showInMenu: true,
     menu: {
       label: '日志策略',
@@ -376,7 +394,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'audit-logs',
     kind: 'business',
     path: 'audit-logs',
-    requiredPermissions: ['activity_log.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['activity_logs.view_activitylog'],
     showInMenu: true,
     menu: {
       label: '日志审计',
@@ -399,6 +418,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'authorization-center',
     kind: 'business',
     path: 'authorization',
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
     requiredPermissions: AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
     permissionMode: 'any',
     showInMenu: true,
@@ -418,28 +438,29 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     key: 'quiz-player',
     kind: 'business',
     path: 'quiz/:id',
-    requiredPermissions: ['submission.answer'],
+    allowedRoles: ['STUDENT'],
     component: QuizPlayer,
   },
   {
     key: 'review-practice',
     kind: 'business',
     path: 'review/practice',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="practice" />,
   },
   {
     key: 'review-exam',
     kind: 'business',
     path: 'review/exam',
-    requiredPermissions: ['submission.review'],
+    allowedRoles: ['STUDENT'],
     render: () => <AnswerReview type="exam" />,
   },
   {
     key: 'grading-center',
     kind: 'business',
     path: 'grading-center',
-    requiredPermissions: ['grading.view'],
+    allowedRoles: MANAGEMENT_WORKSPACE_ROLES,
+    requiredPermissions: ['tasks.view_grading'],
     showInMenu: true,
     menu: {
       label: '阅卷中心',

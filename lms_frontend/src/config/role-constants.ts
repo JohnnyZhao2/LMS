@@ -7,7 +7,6 @@ const ROLE_CODES: RoleCode[] = [
   'STUDENT',
   'MENTOR',
   'DEPT_MANAGER',
-  'TEAM_MANAGER',
   'ADMIN',
   'SUPER_ADMIN',
 ]
@@ -24,7 +23,6 @@ export const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   MENTOR: '导师',
   DEPT_MANAGER: '室经理',
   ADMIN: '管理员',
-  TEAM_MANAGER: '团队经理',
   SUPER_ADMIN: '超管',
 }
 

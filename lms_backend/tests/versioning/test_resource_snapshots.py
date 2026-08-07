@@ -1,19 +1,21 @@
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.auth.models import Group
 
+from apps.authorization.selectors import get_permissions_by_codes
 from apps.knowledge.models import Knowledge, KnowledgeRevision
 from apps.knowledge.services import KnowledgeService, ensure_knowledge_revision
 from apps.questions.models import Question
 from apps.quizzes.models import QuizQuestion, QuizRevision
 from apps.quizzes.services import QuizService, ensure_quiz_revision
 from apps.tasks.tests.factories import TaskFactory, TaskKnowledgeFactory, UserFactory
-from apps.users.models import Role, UserRole
 
 
 def build_request(user):
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    UserRole.objects.get_or_create(user=user, role=role)
+    role, _ = Group.objects.get_or_create(name='ADMIN')
+    role.permissions.add(*get_permissions_by_codes(['questions.view_question', 'quizzes.view_quiz']))
+    user.groups.add(role)
     user.__dict__.pop('role_codes', None)
     user.current_role = 'ADMIN'
     return SimpleNamespace(user=user, META={})

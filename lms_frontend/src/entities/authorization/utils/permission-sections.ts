@@ -30,27 +30,3 @@ export const buildPermissionModuleSections = (
       return leftPresentation.label.localeCompare(rightPresentation.label, 'zh-Hans-CN');
     });
 };
-
-export const buildScopeGroupPermissionCodeMap = (
-  permissionCatalog: PermissionCatalogItem[],
-): Map<string, string[]> => {
-  const groupMap = new Map<string, string[]>();
-
-  permissionCatalog.forEach((permission) => {
-    if (!permission.scope_group_key) {
-      return;
-    }
-    const currentCodes = groupMap.get(permission.scope_group_key) ?? [];
-    groupMap.set(permission.scope_group_key, [...currentCodes, permission.code]);
-  });
-
-  return groupMap;
-};
-
-export const buildScopeAwarePermissionCodeSet = (
-  permissionCatalog: PermissionCatalogItem[],
-): Set<string> => new Set(
-  permissionCatalog
-    .filter((permission) => permission.scope_aware)
-    .map((permission) => permission.code),
-);

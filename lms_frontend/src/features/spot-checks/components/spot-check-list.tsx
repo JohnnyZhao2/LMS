@@ -74,7 +74,7 @@ export const SpotCheckList: React.FC = () => {
   const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
   const records = recordsData?.results ?? [];
 
-  const canCreateSpotCheck = hasCapability('spot_check.create');
+  const canCreateSpotCheck = hasCapability('spot_checks.add_spotcheck');
 
   const handleDelete = async () => {
     if (!deleteTarget) {

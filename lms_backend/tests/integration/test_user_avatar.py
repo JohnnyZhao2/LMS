@@ -1,6 +1,7 @@
 import pytest
+from django.contrib.auth.models import Group
 
-from apps.users.models import Department, Role, User, UserRole
+from apps.users.models import Department, User
 
 
 @pytest.fixture
@@ -9,14 +10,14 @@ def department():
 
 @pytest.fixture
 def admin_role(grant_role_permissions):
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    grant_role_permissions(role, ['user.view', 'user.avatar.update'])
+    role, _ = Group.objects.get_or_create(name='ADMIN')
+    grant_role_permissions(role, ['users.view_user', 'users.change_user_avatar'])
     return role
 
 
 @pytest.fixture
 def mentor_role():
-    role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    role, _ = Group.objects.get_or_create(name='MENTOR')
     return role
 
 
@@ -28,7 +29,7 @@ def admin_user(department, admin_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.groups.add(admin_role)
     user.current_role = 'ADMIN'
     return user
 
@@ -51,7 +52,7 @@ def mentor_user(department, mentor_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.groups.add(mentor_role)
     user.current_role = 'MENTOR'
     return user
 

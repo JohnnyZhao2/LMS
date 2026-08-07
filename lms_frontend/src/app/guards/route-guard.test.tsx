@@ -112,7 +112,7 @@ describe('route-guard', () => {
       hasAnyCapability: vi.fn().mockReturnValue(false),
     }), {
       allowedRoles: ['ADMIN'],
-      requiredPermissions: ['quiz.update'],
+      requiredPermissions: ['quizzes.change_quiz'],
     });
 
     expect(screen.getByText('admin-home')).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('route-guard', () => {
       hasAnyCapability: vi.fn().mockReturnValue(true),
     }), {
       allowedRoles: ['ADMIN'],
-      requiredPermissions: ['quiz.create', 'quiz.update'],
+      requiredPermissions: ['quizzes.add_quiz', 'quizzes.change_quiz'],
       permissionMode: 'any',
     });
 

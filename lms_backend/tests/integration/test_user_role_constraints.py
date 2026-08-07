@@ -1,7 +1,8 @@
 import pytest
+from django.contrib.auth.models import Group
 
-from apps.authorization.models import Permission, RolePermission
-from apps.users.models import Department, Role, User, UserRole
+from apps.authorization.selectors import get_permissions_by_codes
+from apps.users.models import Department, User
 
 
 @pytest.fixture
@@ -10,12 +11,11 @@ def roles():
         ('STUDENT', '学员'),
         ('MENTOR', '导师'),
         ('DEPT_MANAGER', '室经理'),
-        ('TEAM_MANAGER', '团队经理'),
         ('ADMIN', '管理员'),
     ]
     result = {}
     for code, name in role_pairs:
-        role, _ = Role.objects.get_or_create(code=code, defaults={'name': name})
+        role, _ = Group.objects.get_or_create(name=code)
         result[code] = role
     return result
 
@@ -34,18 +34,11 @@ def admin_user(department, roles):
         department=department,
     )
     admin_role = roles['ADMIN']
-    UserRole.objects.get_or_create(user=user, role=admin_role)
+    user.groups.add(admin_role)
     user.current_role = 'ADMIN'
-    permission_ids = Permission.objects.filter(
-        code__in=['user.view', 'user.create', 'user.update', 'user.role.assign'],
-    ).values_list('id', flat=True)
-    RolePermission.objects.bulk_create(
-        [
-            RolePermission(role=admin_role, permission_id=permission_id)
-            for permission_id in permission_ids
-        ],
-        ignore_conflicts=True,
-    )
+    admin_role.permissions.add(*get_permissions_by_codes([
+        'users.view_user', 'users.add_user', 'users.change_user', 'users.assign_user_role',
+    ]))
     return user
 
 
@@ -57,7 +50,7 @@ def normal_user(department, roles):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=roles['MENTOR'])
+    user.groups.add(roles['MENTOR'])
     user.current_role = 'MENTOR'
     return user
 
@@ -74,20 +67,6 @@ def super_admin_user(department, roles):
     )
     user.current_role = 'SUPER_ADMIN'
     return user
-
-
-@pytest.mark.django_db
-def test_assign_multiple_non_student_roles_rejected(api_client, admin_user, normal_user):
-    api_client.force_authenticate(user=admin_user)
-
-    response = api_client.post(
-        f'/api/users/{normal_user.id}/assign-roles/',
-        {'role_codes': ['DEPT_MANAGER', 'TEAM_MANAGER']},
-        format='json',
-    )
-
-    assert response.status_code == 400
-    assert '最多只能选择一个' in str(response.data)
 
 
 @pytest.mark.django_db
@@ -238,27 +217,6 @@ def test_assign_admin_role_for_superuser_rejected(api_client, admin_user, super_
 
 
 @pytest.mark.django_db
-def test_assign_team_manager_role_keeps_only_team_manager(api_client, unwrap_response_data, admin_user, normal_user):
-    api_client.force_authenticate(user=admin_user)
-
-    response = api_client.post(
-        f'/api/users/{normal_user.id}/assign-roles/',
-        {'role_codes': ['TEAM_MANAGER']},
-        format='json',
-    )
-
-    assert response.status_code == 200
-
-    data = unwrap_response_data(response)
-    role_codes = {item['code'] for item in data['roles']}
-    assert role_codes == {'TEAM_MANAGER'}
-
-    normal_user.refresh_from_db()
-    db_role_codes = set(normal_user.roles.values_list('code', flat=True))
-    assert db_role_codes == {'TEAM_MANAGER'}
-
-
-@pytest.mark.django_db
 def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, unwrap_response_data, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
@@ -276,11 +234,9 @@ def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, unwrap_r
 
 @pytest.mark.django_db
 def test_user_role_instance_delete_has_no_role_assignment_business_rule(normal_user):
-    student_user_role = UserRole.objects.get(user=normal_user, role__code='STUDENT')
+    normal_user.groups.remove(Group.objects.get(name='STUDENT'))
 
-    student_user_role.delete()
-
-    assert set(normal_user.roles.values_list('code', flat=True)) == {'MENTOR'}
+    assert set(normal_user.groups.values_list('name', flat=True)) == {'MENTOR'}
 
 
 @pytest.mark.django_db

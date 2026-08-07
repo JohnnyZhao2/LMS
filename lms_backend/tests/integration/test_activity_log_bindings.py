@@ -5,9 +5,6 @@ from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog, ActivityLogPolicy
 from apps.activity_logs.services import ActivityLogService
-from apps.authorization.constants import PERMISSION_SCOPE_GROUPS, SCOPE_ALL
-from apps.authorization.models import UserPermissionOverride, UserScopeGroupOverride
-from apps.authorization.services import AuthorizationService
 from apps.submissions.models import Answer
 from apps.tags.models import Tag
 from apps.tags.services import TagService
@@ -22,7 +19,6 @@ from apps.tasks.tests.factories import (
     TaskQuizFactory,
     UserFactory,
 )
-from apps.users.models import Role
 
 
 def build_request(user):
@@ -48,13 +44,6 @@ def test_activity_log_policy_sync_uses_declared_bindings():
     assert create_policy.group == '标签管理'
     assert create_policy.label == '创建标签'
     assert create_policy.enabled is False
-
-    assert ActivityLogPolicy.objects.filter(
-        key='operation.authorization.replace_role_permissions',
-        group='角色模板',
-        label='更新角色模板权限',
-    ).exists()
-
 
 @pytest.mark.django_db
 def test_tag_service_create_writes_activity_log():
@@ -101,80 +90,6 @@ def test_tag_service_reorder_writes_activity_log():
     log = ActivityLog.objects.get(category='operation', action='reorder_spaces', actor=actor)
     assert log.summary == f'{actor.username} 调整了空间标签顺序'
     assert log.description == '2 个空间标签'
-
-
-@pytest.mark.django_db
-def test_authorization_role_template_writes_activity_log():
-    actor = UserFactory(username='授权管理员')
-    Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    service = AuthorizationService(build_request(actor))
-
-    service.replace_role_permissions('ADMIN', ['knowledge.view', 'tag.view'])
-
-    log = ActivityLog.objects.get(category='operation', action='replace_role_permissions', actor=actor)
-    assert log.target_type == 'role'
-    assert log.target_title == 'ADMIN'
-    assert log.summary == f'{actor.username} 更新了角色模板《ADMIN》的权限'
-    assert log.description == '2 项权限'
-
-
-@pytest.mark.django_db
-def test_authorization_user_permission_override_writes_activity_logs():
-    actor = UserFactory(username='授权管理员')
-    target = UserFactory(username='目标用户')
-    service = AuthorizationService(build_request(actor))
-
-    override = service.create_user_permission_override(
-        user_id=target.id,
-        permission_code='knowledge.view',
-        effect='ALLOW',
-        applies_to_role=None,
-        reason='临时放开',
-    )
-    service.delete_user_permission_override(
-        user_id=target.id,
-        override_id=override.id,
-    )
-
-    create_log = ActivityLog.objects.get(category='operation', action='create_user_permission_override', target_title=target.username)
-    delete_log = ActivityLog.objects.get(category='operation', action='delete_user_permission_override', target_title=target.username)
-    assert create_log.actor_id == actor.id
-    assert '权限：knowledge.view' in create_log.description
-    assert '效果：允许' in create_log.description
-    assert delete_log.actor_id == actor.id
-    assert delete_log.description == '权限：knowledge.view'
-    assert not UserPermissionOverride.objects.filter(id=override.id).exists()
-
-
-@pytest.mark.django_db
-def test_authorization_scope_group_override_writes_activity_logs():
-    actor = UserFactory(username='授权管理员')
-    target = UserFactory(username='目标用户')
-    scope_group_key = sorted(PERMISSION_SCOPE_GROUPS)[0]
-    service = AuthorizationService(build_request(actor))
-
-    override = service.create_user_scope_group_override(
-        user_id=target.id,
-        scope_group_key=scope_group_key,
-        effect='ALLOW',
-        applies_to_role=None,
-        scope_type=SCOPE_ALL,
-        scope_user_ids=[],
-        reason='补充范围',
-    )
-    service.delete_user_scope_group_override(
-        user_id=target.id,
-        override_id=override.id,
-    )
-
-    create_log = ActivityLog.objects.get(category='operation', action='create_user_scope_group_override', target_title=target.username)
-    delete_log = ActivityLog.objects.get(category='operation', action='delete_user_scope_group_override', target_title=target.username)
-    assert create_log.actor_id == actor.id
-    assert f'范围组：{scope_group_key}' in create_log.description
-    assert '效果：允许' in create_log.description
-    assert delete_log.actor_id == actor.id
-    assert delete_log.description == f'范围组：{scope_group_key}'
-    assert not UserScopeGroupOverride.objects.filter(id=override.id).exists()
 
 
 @pytest.mark.django_db

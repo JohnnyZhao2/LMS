@@ -7,7 +7,6 @@ Implements:
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
     StudentDashboardSerializer,
@@ -16,6 +15,8 @@ from apps.dashboard.services import StudentDashboardService
 from core.base_view import BaseAPIView
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
+
+from .base import require_current_role
 
 
 class StudentDashboardView(BaseAPIView):
@@ -37,9 +38,9 @@ class StudentDashboardView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request):
-        enforce(
-            'dashboard.student.view',
+        require_current_role(
             request,
+            frozenset({'STUDENT'}),
             error_message='只有学员可以访问此仪表盘',
         )
         user = request.user
@@ -82,9 +83,9 @@ class TaskParticipantsView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request, task_id: int):
-        enforce(
-            'dashboard.student.view',
+        require_current_role(
             request,
+            frozenset({'STUDENT'}),
             error_message='只有学员可以访问此接口',
         )
         user = request.user

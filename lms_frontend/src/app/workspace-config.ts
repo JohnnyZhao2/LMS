@@ -7,7 +7,7 @@ import {
 } from '@/session/workspace/role-paths';
 import type { RoleCode } from '@/types/common';
 
-export type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
+export type DashboardVariant = 'student' | 'mentor' | 'admin';
 export type MenuVariant = 'student' | 'manager' | 'admin';
 
 export interface WorkspaceConfig {
@@ -35,12 +35,6 @@ const WORKSPACE_CONFIG: Record<RoleCode, WorkspaceConfig> = {
     layout: AppLayout,
     dashboardVariant: 'mentor',
     menuVariant: 'manager',
-  },
-  TEAM_MANAGER: {
-    home: '/team_manager/dashboard',
-    layout: AppLayout,
-    dashboardVariant: 'team_manager',
-    menuVariant: 'student',
   },
   ADMIN: {
     home: '/admin/dashboard',

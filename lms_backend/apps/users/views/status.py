@@ -23,7 +23,7 @@ class UserDeactivateView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.activate', request, error_message='只有管理员可以停用用户')
+        enforce('users.activate_user', request, error_message='只有管理员可以停用用户')
         user = self.service.deactivate_user(pk)
         return success_response(UserDetailSerializer(user).data)
 
@@ -43,6 +43,6 @@ class UserActivateView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.activate', request, error_message='只有管理员可以启用用户')
+        enforce('users.activate_user', request, error_message='只有管理员可以启用用户')
         user = self.service.activate_user(pk)
         return success_response(UserDetailSerializer(user).data)

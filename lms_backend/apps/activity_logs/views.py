@@ -52,7 +52,7 @@ class ActivityLogListView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce('activity_log.view', request, error_message='无权查看活动日志')
+        enforce('activity_logs.view_activitylog', request, error_message='无权查看活动日志')
 
         params = self._validated_query_params(request.query_params)
         base_queryset = get_activity_log_queryset(params['type'])
@@ -101,7 +101,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce('activity_log.policy.update', request, error_message='无权查看日志策略')
+        enforce('activity_logs.change_activitylogpolicy', request, error_message='无权查看日志策略')
         ActivityLogService.sync_policies()
         serializer = ActivityLogPolicySerializer(
             ActivityLogPolicy.objects.all().order_by('category', 'group', 'label'),
@@ -117,7 +117,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def patch(self, request):
-        enforce('activity_log.policy.update', request, error_message='无权更新日志策略')
+        enforce('activity_logs.change_activitylogpolicy', request, error_message='无权更新日志策略')
         serializer = ActivityLogPolicyUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         key = serializer.validated_data['key']
@@ -142,7 +142,7 @@ class ActivityLogItemView(BaseAPIView):
         tags=['活动日志']
     )
     def delete(self, request, log_item_id: str):
-        enforce('activity_log.view', request, error_message='无权删除活动日志')
+        enforce('activity_logs.view_activitylog', request, error_message='无权删除活动日志')
 
         category, record_id = _parse_log_item_id(log_item_id)
         deleted_count, _ = ActivityLog.objects.filter(id=record_id, category=category).delete()
@@ -170,7 +170,7 @@ class ActivityLogBulkDeleteView(BaseAPIView):
         tags=['活动日志']
     )
     def post(self, request):
-        enforce('activity_log.view', request, error_message='无权删除活动日志')
+        enforce('activity_logs.view_activitylog', request, error_message='无权删除活动日志')
 
         serializer = ActivityLogBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

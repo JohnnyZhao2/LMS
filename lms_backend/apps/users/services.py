@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from apps.activity_logs.decorators import log_user_action
 from apps.activity_logs.registry import register_user_log_action
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
@@ -13,7 +14,7 @@ from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .avatar_constants import validate_avatar_key
-from .models import Role, User, UserRole
+from .models import ROLE_LABELS, User
 from .role_constraints import validate_role_assignment_constraints
 from .selectors import get_user_by_id, get_valid_mentor_by_id
 from .workflows.delete_user import hard_delete_user_business_data
@@ -198,9 +199,8 @@ class UserManagementService(BaseService):
             BusinessError: If user not found or role constraints violated
         Properties:
         - 非 STUDENT 系统角色单选（最多一个）
-        - Property 9: 室经理/团队经理与学员角色互斥；ADMIN 可叠加学员角色
+        - Property 9: 室经理与学员角色互斥；ADMIN 可叠加学员角色
         - 每个部门只能有一个室经理
-        - 全局只能有一个团队经理
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
@@ -218,7 +218,7 @@ class UserManagementService(BaseService):
             exclude_user_id=user.id,
         )
 
-        leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
+        leadership_roles = {'DEPT_MANAGER'}
         should_keep_student = (
             not user.is_superuser
             and leadership_roles.isdisjoint(set(role_codes))
@@ -229,7 +229,7 @@ class UserManagementService(BaseService):
         if should_keep_student:
             roles_to_assign.add('STUDENT')
         # Get current roles
-        current_role_codes = set(user.roles.values_list('code', flat=True))
+        current_role_codes = set(user.role_codes)
         # Remove roles that are not in the new list (except STUDENT)
         roles_to_remove = current_role_codes - roles_to_assign
         if should_keep_student and 'STUDENT' in roles_to_remove:
@@ -240,15 +240,16 @@ class UserManagementService(BaseService):
         if not roles_to_add and not roles_to_remove:
             return user
 
+        from apps.authorization.roles import MANAGEMENT_ROLE_CODES
+
+        had_management_role = bool(current_role_codes & MANAGEMENT_ROLE_CODES)
+        will_have_management = bool(roles_to_assign & MANAGEMENT_ROLE_CODES)
         with transaction.atomic():
             if roles_to_remove:
-                UserRole.objects.filter(
-                    user_id=user.id,
-                    role__code__in=list(roles_to_remove)
-                ).delete()
+                user.groups.remove(*Group.objects.filter(name__in=roles_to_remove))
             roles_by_code = {
-                role.code: role
-                for role in Role.objects.filter(code__in=list(roles_to_add))
+                group.name: group
+                for group in Group.objects.filter(name__in=roles_to_add)
             }
             missing_role_codes = sorted(roles_to_add - set(roles_by_code))
             if missing_role_codes:
@@ -256,19 +257,15 @@ class UserManagementService(BaseService):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message=f"角色不存在：{'、'.join(missing_role_codes)}",
                 )
-            for role_code in roles_to_add:
-                if not user.roles.filter(code=role_code).exists():
-                    UserRole.objects.create(
-                        user_id=user.id,
-                        role_id=roles_by_code[role_code].id,
-                        assigned_by_id=assigned_by.id
-                    )
+            user.groups.add(*(roles_by_code[role_code] for role_code in roles_to_add))
+            if had_management_role and not will_have_management:
+                # 卸掉全部管理角色时清最终权限，防纯学员残留管理能力
+                user.user_permissions.clear()
         # Refresh user from database
         user.refresh_from_db()
 
-        role_name_map = dict(Role.ROLE_CHOICES)
-        added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
-        removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+        added_names = '、'.join([ROLE_LABELS.get(code, code) for code in sorted(roles_to_add)])
+        removed_names = '、'.join([ROLE_LABELS.get(code, code) for code in sorted(roles_to_remove)])
         parts = [f'被操作账号：{user.username}（{user.employee_id}）']
         if roles_to_add:
             parts.append(f'新增角色：{added_names}')

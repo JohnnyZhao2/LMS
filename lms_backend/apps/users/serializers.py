@@ -8,7 +8,7 @@ from apps.authorization.roles import serialize_user_roles
 from core.exceptions import BusinessError
 
 from .avatar_constants import validate_avatar_key
-from .models import Department, Role, User
+from .models import Department, ROLE_LABELS, User
 from .selectors import get_valid_mentor_by_id
 
 
@@ -56,11 +56,15 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = ['id', 'name', 'code']
-class RoleSerializer(serializers.ModelSerializer):
+class RoleSerializer(serializers.Serializer):
     """Serializer for Role model."""
-    class Meta:
-        model = Role
-        fields = ['code', 'name']
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+    def to_representation(self, instance):
+        if hasattr(instance, 'name'):
+            return {'code': instance.name, 'name': ROLE_LABELS.get(instance.name, instance.name)}
+        return super().to_representation(instance)
 class MentorSerializer(serializers.ModelSerializer):
     """Serializer for mentor information."""
     class Meta:
@@ -152,11 +156,10 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
             ('MENTOR', '导师'),
             ('DEPT_MANAGER', '室经理'),
             ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
         ]),
         required=False,
         default=list,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -205,10 +208,9 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
             ('MENTOR', '导师'),
             ('DEPT_MANAGER', '室经理'),
             ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
         ]),
         required=False,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -234,10 +236,9 @@ class AssignRolesSerializer(serializers.Serializer):
             ('MENTOR', '导师'),
             ('DEPT_MANAGER', '室经理'),
             ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
         ]),
         required=True,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理不保留学员；超管账号禁止分配业务角色）'
     )
 class AssignMentorSerializer(serializers.Serializer):
     """

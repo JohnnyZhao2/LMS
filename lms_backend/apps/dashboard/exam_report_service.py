@@ -261,21 +261,23 @@ class ExamReportService(BaseService):
         """按 task.analytics.view 取学员范围。
 
         有分析权限：走 scope_filter（导师/室经理各自范围，管理员 ALL）。
-        无分析权限：仅 dashboard.admin.view 可回退全员；导师/室经理返回空集，避免越权。
+        无分析权限：仅 ADMIN/超管可回退全员；导师/室经理返回空集，避免越权。
         """
         base = User.objects.filter(
             is_active=True,
-            roles__code='STUDENT',
+            groups__name='STUDENT',
         ).exclude(is_superuser=True).distinct()
 
-        if authorize('task.analytics.view', self.request).allowed:
+        if authorize('tasks.view_task_analytics', self.request).allowed:
             return scope_filter(
-                'task.analytics.view',
+                'tasks.view_task_analytics',
                 self.request,
                 base_queryset=base,
                 resource_model=User,
             )
-        if authorize('dashboard.admin.view', self.request).allowed:
+        from apps.authorization.roles import is_admin_like_role, resolve_current_role
+
+        if is_admin_like_role(resolve_current_role(self.user)):
             return base
         return base.none()
 
@@ -283,14 +285,14 @@ class ExamReportService(BaseService):
         if not student_ids:
             return []
 
-        # 学员被分配的任务 ∩ 当前用户 task.view 可见任务，避免泄露他人创建的不可见任务
+        # 学员被分配的任务 ∩ 当前用户 tasks.view_task 可见任务，避免泄露他人创建的不可见任务
         assigned_task_ids = (
             TaskAssignment.objects.filter(assignee_id__in=student_ids)
             .values_list('task_id', flat=True)
             .distinct()
         )
         visible_task_ids = scope_filter(
-            'task.view',
+            'tasks.view_task',
             self.request,
             resource_model=Task,
             base_queryset=Task.objects.filter(id__in=assigned_task_ids),

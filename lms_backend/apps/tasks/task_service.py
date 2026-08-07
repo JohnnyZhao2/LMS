@@ -33,7 +33,7 @@ class TaskService(BaseService):
 
     def get_task_queryset_for_user(self) -> QuerySet:
         qs = task_list_queryset()
-        return scope_filter('task.view', self.request, base_queryset=qs)
+        return scope_filter('tasks.view_task', self.request, base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(
         self,
@@ -42,7 +42,7 @@ class TaskService(BaseService):
     ) -> QuerySet:
         if not creator_side or creator_side == 'all':
             return queryset
-        if not authorize('user.view', self.request).allowed:
+        if not authorize('users.view_user', self.request).allowed:
             return queryset
         if creator_side == 'management':
             return queryset.filter(created_role__in=self.MANAGEMENT_SIDE_ROLES)
@@ -59,7 +59,7 @@ class TaskService(BaseService):
         return task
 
     def check_task_read_permission(self, task: Task) -> bool:
-        enforce('task.view', self.request, resource=task, error_message='无权访问此任务')
+        enforce('tasks.view_task', self.request, resource=task, error_message='无权访问此任务')
         return True
 
     def check_task_edit_permission(self, task: Task, permission_code: str, error_message: str) -> bool:
@@ -88,7 +88,7 @@ class TaskService(BaseService):
         knowledge_ids = knowledge_ids or []
         quiz_ids = quiz_ids or []
         assignee_ids = assignee_ids or []
-        enforce('task.create', self.request, error_message='无权创建任务')
+        enforce('tasks.add_task', self.request, error_message='无权创建任务')
         self._validate_create_payload(knowledge_ids, quiz_ids, assignee_ids)
 
         current_role = resolve_current_role(self.user)
@@ -159,7 +159,7 @@ class TaskService(BaseService):
         quiz_map = {
             quiz.id: quiz
             for quiz in scope_filter(
-                'quiz.view',
+                'quizzes.view_quiz',
                 self.request,
                 base_queryset=Quiz.objects.filter(id__in=valid_ids),
             ).prefetch_related(
@@ -349,7 +349,7 @@ class TaskService(BaseService):
         normalized_ids = self._dedupe_resource_ids(resource_ids)
         queryset = resource_model.objects.all()
         if resource_model is Quiz:
-            queryset = scope_filter('quiz.view', self.request, base_queryset=queryset)
+            queryset = scope_filter('quizzes.view_quiz', self.request, base_queryset=queryset)
         is_valid, invalid_ids = self._validate_current_resources(normalized_ids, queryset)
         if not is_valid:
             raise BusinessError(
@@ -435,7 +435,7 @@ class TaskService(BaseService):
         existing = User.objects.filter(
             id__in=assignee_ids,
             is_active=True,
-            roles__code__in=('STUDENT', 'DEPT_MANAGER'),
+            groups__name__in=('STUDENT', 'DEPT_MANAGER'),
         ).distinct()
         existing_ids = set(existing.values_list('id', flat=True))
         invalid_ids = list(set(assignee_ids) - existing_ids)

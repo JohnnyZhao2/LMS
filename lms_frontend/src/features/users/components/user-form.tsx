@@ -149,8 +149,8 @@ const UserFormContent: React.FC<{
   onSuccess,
 }) => {
     const { hasCapability } = useAuth();
-    const canCreateUser = hasCapability('user.create');
-    const canUpdateUser = hasCapability('user.update');
+    const canCreateUser = hasCapability('users.add_user');
+    const canUpdateUser = hasCapability('users.change_user');
     const canAssignUserRole = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
     const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
 
@@ -512,8 +512,7 @@ const UserFormContent: React.FC<{
                       )}>
                         {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
                           role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
-                            role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
-                              <User className="w-24 h-24" strokeWidth={0.5} />}
+                            <User className="w-24 h-24" strokeWidth={0.5} />}
                       </div>
 
                       <div className="relative z-10 flex flex-col gap-1">
@@ -527,8 +526,7 @@ const UserFormContent: React.FC<{
                         )}>
                           {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? '全系统最高管理权限' :
                             role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
-                              role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
-                                '职能岗位权限'}
+                              '职能岗位权限'}
                         </p>
                       </div>
                     </div>

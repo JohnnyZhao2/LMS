@@ -8,7 +8,7 @@ from django.db.models import Case, Exists, IntegerField, OuterRef, Q, QuerySet, 
 
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import User, UserRole
+from .models import User
 
 
 def user_base_queryset() -> QuerySet:
@@ -20,7 +20,7 @@ def user_base_queryset() -> QuerySet:
     return User.objects.select_related(
         'department',
         'mentor'
-    ).prefetch_related('roles')
+    ).prefetch_related('groups')
 
 
 def get_user_by_id(pk: int) -> Optional[User]:
@@ -99,9 +99,9 @@ def list_users(
     # 按部门筛选时，室经理置顶
     if department_id:
         # 使用子查询判断是否是室经理，避免 JOIN 导致重复
-        dept_manager_subquery = UserRole.objects.filter(
+        dept_manager_subquery = User.groups.through.objects.filter(
             user_id=OuterRef('pk'),
-            role__code='DEPT_MANAGER'
+            group__name='DEPT_MANAGER'
         )
         qs = qs.annotate(
             _dept_manager_sort=Case(

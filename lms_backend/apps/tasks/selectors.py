@@ -168,7 +168,7 @@ def task_resource_options(
 
     if resource_type in {'ALL', 'QUIZ'}:
         quiz_rows = scope_filter(
-            'quiz.view',
+            'quizzes.view_quiz',
             request,
             base_queryset=Quiz.objects.all(),
         ).annotate(

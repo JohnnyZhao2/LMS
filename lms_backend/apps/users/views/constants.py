@@ -1,1 +1,8 @@
-USER_REFERENCE_PERMISSION_CODES = ['user.create', 'user.update', 'user.role.assign', 'user.permission.view', 'user.permission.update', 'user.view']
+USER_REFERENCE_PERMISSION_CODES = [
+    'users.add_user',
+    'users.change_user',
+    'users.view_user',
+    'users.assign_user_role',
+    'users.change_user_permission',
+    'users.activate_user',
+]

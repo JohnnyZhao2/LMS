@@ -12,10 +12,11 @@ const resolveMenuLabel = (
 
 const isPermissionGranted = (
   route: BusinessRouteMeta,
+  role: RoleCode,
   hasCapability: (permissionCode: string) => boolean,
   hasAnyCapability: (permissionCodes: string[]) => boolean,
 ): boolean => {
-  if (!route.requiredPermissions?.length) {
+  if (role === 'STUDENT' || !route.requiredPermissions?.length) {
     return true;
   }
 
@@ -59,7 +60,7 @@ export const getMenuItemsBySection = (
     if (route.allowedRoles && !route.allowedRoles.includes(role)) {
       return;
     }
-    if (!isPermissionGranted(route, hasCapability, hasAnyCapability)) {
+    if (!isPermissionGranted(route, role, hasCapability, hasAnyCapability)) {
       return;
     }
 

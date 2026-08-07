@@ -36,7 +36,7 @@ class UserListCreateView(APIView):
         tags=['用户管理'],
     )
     def get(self, request):
-        enforce('user.view', request, error_message='无权查看用户列表')
+        enforce('users.view_user', request, error_message='无权查看用户列表')
         queryset = list_users(
             is_active=parse_bool_query_param(request=request, name='is_active', default=None),
             department_id=parse_int_query_param(request=request, name='department_id', minimum=1),
@@ -44,7 +44,7 @@ class UserListCreateView(APIView):
             search=request.query_params.get('search'),
         )
         queryset = scope_filter(
-            'user.view',
+            'users.view_user',
             request,
             resource_model=User,
             base_queryset=queryset,
@@ -54,7 +54,7 @@ class UserListCreateView(APIView):
 
     @extend_schema(
         summary='创建用户',
-        description='创建新用户，按角色规则自动处理学员角色（默认保留学员，室经理/团队经理不保留）',
+        description='创建新用户，按角色规则自动处理学员角色（默认保留学员，室经理不保留）',
         request=UserCreateSerializer,
         responses={
             201: UserDetailSerializer,
@@ -64,11 +64,11 @@ class UserListCreateView(APIView):
         tags=['用户管理'],
     )
     def post(self, request):
-        enforce('user.create', request, error_message='只有管理员可以创建用户')
+        enforce('users.add_user', request, error_message='只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes'):
-            enforce('user.role.assign', request, error_message='无权分配用户角色')
+            enforce('users.assign_user_role', request, error_message='无权分配用户角色')
         user = UserManagementService(request).create_user(dict(serializer.validated_data))
         return created_response(UserDetailSerializer(user).data)
 
@@ -97,9 +97,9 @@ class UserDetailView(APIView):
     )
     def get(self, request, pk):
         user = self.get_object(pk)
-        enforce('user.view', request, error_message='无权查看用户详情')
+        enforce('users.view_user', request, error_message='无权查看用户详情')
         if not scope_filter(
-            'user.view',
+            'users.view_user',
             request,
             resource_model=User,
             base_queryset=User.objects.filter(pk=user.pk),
@@ -123,7 +123,7 @@ class UserDetailView(APIView):
         tags=['用户管理'],
     )
     def patch(self, request, pk):
-        enforce('user.update', request, error_message='只有管理员可以更新用户信息')
+        enforce('users.change_user', request, error_message='只有管理员可以更新用户信息')
         user = self.get_object(pk)
         serializer = UserUpdateSerializer(
             user,
@@ -133,7 +133,7 @@ class UserDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes') is not None:
-            enforce('user.role.assign', request, error_message='无权分配用户角色')
+            enforce('users.assign_user_role', request, error_message='无权分配用户角色')
         user = UserManagementService(request).update_user(user, dict(serializer.validated_data))
         return success_response(UserDetailSerializer(user).data)
 
@@ -149,6 +149,6 @@ class UserDetailView(APIView):
         tags=['用户管理'],
     )
     def delete(self, request, pk):
-        enforce('user.delete', request, error_message='只有管理员可以删除用户')
+        enforce('users.delete_user', request, error_message='只有管理员可以删除用户')
         UserManagementService(request).delete_user(pk)
         return no_content_response()

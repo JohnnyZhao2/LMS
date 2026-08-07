@@ -223,7 +223,7 @@ export const TaskManagement: React.FC = () => {
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
-    const canFilterCreatorSide = hasCapability('user.view')
+    const canFilterCreatorSide = hasCapability('users.view_user')
 
     const { data: tasksData, isLoading } = useTaskList({
         page,

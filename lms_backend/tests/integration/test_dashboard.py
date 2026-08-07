@@ -7,10 +7,10 @@ Dashboard 模块集成测试
 - Selectors 关键函数
 """
 import pytest
+from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from apps.activity_logs.models import ActivityLog
-from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
@@ -19,7 +19,7 @@ from apps.quizzes.services import ensure_quiz_revision
 from apps.questions.models import Question, QuestionOption
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
-from apps.users.models import Department, Role, User, UserRole
+from apps.users.models import Department, User
 
 
 @pytest.fixture
@@ -29,26 +29,20 @@ def department():
 
 @pytest.fixture
 def student_role():
-    role, _ = Role.objects.get_or_create(code='STUDENT', defaults={'name': '学员'})
+    role, _ = Group.objects.get_or_create(name='STUDENT')
     return role
 
 
 @pytest.fixture
-def mentor_role():
-    role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+def mentor_role(grant_role_permissions):
+    role, _ = Group.objects.get_or_create(name='MENTOR')
+    grant_role_permissions(role, ['tasks.view_task_analytics'])
     return role
 
 
 @pytest.fixture
 def admin_role():
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    return role
-
-
-@pytest.fixture
-def team_manager_role(grant_role_permissions):
-    role, _ = Role.objects.get_or_create(code='TEAM_MANAGER', defaults={'name': '团队经理'})
-    grant_role_permissions(role, ['dashboard.team_manager.view'])
+    role, _ = Group.objects.get_or_create(name='ADMIN')
     return role
 
 
@@ -60,7 +54,7 @@ def mentor(department, mentor_role, student_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.create(user=user, role=mentor_role)
+    user.groups.add(mentor_role)
     user.current_role = 'MENTOR'
     return user
 
@@ -98,21 +92,8 @@ def admin(department, admin_role, student_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.create(user=user, role=admin_role)
+    user.groups.add(admin_role)
     user.current_role = 'ADMIN'
-    return user
-
-
-@pytest.fixture
-def team_manager(department, team_manager_role, student_role):
-    user = User.objects.create_user(
-        employee_id='TM001',
-        username='测试团队经理',
-        password='password123',
-        department=department,
-    )
-    UserRole.objects.create(user=user, role=team_manager_role)
-    user.current_role = 'TEAM_MANAGER'
     return user
 
 
@@ -445,74 +426,6 @@ class TestMentorDashboardAPI:
         assert response.status_code == 200
         assert data['summary']['total_students'] >= 8
         assert len(context.captured_queries) <= 25, f"查询次数过多: {len(context.captured_queries)}"
-
-    def test_dashboard_scope_follows_permission_overrides(self, api_client, unwrap_response_data, mentor, student, student2, department):
-        """导师看板学员范围应遵循 task.analytics.view 的 ALLOW/DENY 覆盖"""
-        extra_student = User.objects.create_user(
-            employee_id='MENTOR_DASH_EXTRA_001',
-            username='导师额外学员',
-            password='password123',
-            department=department,
-        )
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get('/api/dashboard/mentor/')
-        data = unwrap_response_data(response)
-
-        assert response.status_code == 200
-        initial_count = data['summary']['total_students']
-        assert initial_count >= 2
-
-        UserScopeGroupOverride.objects.create(
-            user=mentor,
-            scope_group_key='task_assignment_scope',
-            effect='DENY',
-            applies_to_role='MENTOR',
-            scope_type='EXPLICIT_USERS',
-            scope_user_ids=[student.id],
-            granted_by=mentor,
-        )
-
-        response = api_client.get('/api/dashboard/mentor/')
-        data = unwrap_response_data(response)
-
-        assert response.status_code == 200
-        after_deny_count = data['summary']['total_students']
-        assert after_deny_count == initial_count - 1
-
-        UserScopeGroupOverride.objects.create(
-            user=mentor,
-            scope_group_key='task_assignment_scope',
-            effect='ALLOW',
-            applies_to_role='MENTOR',
-            scope_type='EXPLICIT_USERS',
-            scope_user_ids=[extra_student.id],
-            granted_by=mentor,
-        )
-
-        response = api_client.get('/api/dashboard/mentor/')
-        data = unwrap_response_data(response)
-
-        assert response.status_code == 200
-        assert data['summary']['total_students'] == after_deny_count + 1
-
-
-@pytest.mark.django_db
-class TestTeamManagerDashboardAPI:
-    """团队经理仪表盘 API 测试"""
-
-    def test_get_dashboard_returns_platform_knowledge_count(
-        self,
-        api_client,
-        unwrap_response_data,
-        team_manager,
-        knowledge,
-    ):
-        api_client.force_authenticate(user=team_manager)
-        response = api_client.get('/api/dashboard/team-manager/')
-        data = unwrap_response_data(response)
-
-        assert response.status_code == 200
-        assert data['summary']['total_knowledge'] == 1
 
 # ============================================
 # Selectors 单元测试

@@ -1,29 +1,3 @@
-from apps.authorization.registry import AuthorizationSpec, perm
+"""仪表盘入口按工作台角色校验，不进入可配置 Authorization。"""
 
-
-AUTHORIZATION_SPECS = (
-    AuthorizationSpec(
-        key='dashboard.system_permissions',
-        module='dashboard',
-        permissions=(
-            perm(
-                code='dashboard.team_manager.view',
-                name='查看团队经理仪表盘',
-                description='访问团队经理看板',
-            ),
-        ),
-        system_managed_codes=(
-            'dashboard.student.view',
-            'dashboard.mentor.view',
-            'dashboard.team_manager.view',
-            'dashboard.admin.view',
-        ),
-        role_system_defaults={
-            'STUDENT': ('dashboard.student.view',),
-            'MENTOR': ('dashboard.mentor.view',),
-            'DEPT_MANAGER': ('dashboard.mentor.view',),
-            'TEAM_MANAGER': ('dashboard.team_manager.view',),
-            'ADMIN': ('dashboard.admin.view',),
-        },
-    ),
-)
+AUTHORIZATION_SPECS = ()

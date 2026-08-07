@@ -8,7 +8,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce
+from apps.authorization.roles import require_student_workspace
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
@@ -22,7 +22,7 @@ from ..services import SubmissionService, UNSET
 
 
 def enforce_student_submission_role(request) -> None:
-    enforce('submission.answer', request, error_message='只有学员角色可以进行答题和查看结果')
+    require_student_workspace(request.user)
 
 
 class StartQuizView(APIView):

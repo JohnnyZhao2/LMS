@@ -39,8 +39,8 @@ export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
   const { hasCapability, isLoading: isAuthLoading } = useAuth();
   const { tag_type, search, limit = 50, applicable_to } = params;
-  const canViewTags = hasCapability('tag.view');
-  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasCapability('knowledge.view');
+  const canViewTags = hasCapability('tags.view_tag');
+  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasCapability('knowledge.view_knowledge');
   const canQueryTags = canViewTags || canViewKnowledgeSpaces;
 
   return useQuery({

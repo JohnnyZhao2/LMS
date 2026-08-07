@@ -1,9 +1,10 @@
 import pytest
+from django.contrib.auth.models import Group
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, RolePermission, UserPermissionOverride
-from apps.users.models import Department, Role, User, UserRole
+from apps.authorization.selectors import get_permissions_by_codes
+from apps.users.models import Department, User
 
 
 @pytest.fixture(autouse=True)
@@ -18,7 +19,7 @@ def test_multi_role_login_defaults_to_student():
     client = APIClient()
 
     department = Department.objects.create(name='Dept Default Role', code='DEPT_DEFAULT_ROLE')
-    mentor_role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    mentor_role, _ = Group.objects.get_or_create(name='MENTOR')
 
     user = User.objects.create_user(
         employee_id='EMP_DEFAULT_ROLE',
@@ -26,7 +27,7 @@ def test_multi_role_login_defaults_to_student():
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.groups.add(mentor_role)
 
     login_response = client.post(
         '/api/auth/login/',
@@ -38,8 +39,6 @@ def test_multi_role_login_defaults_to_student():
     payload = login_response.data['data']
     assert payload['current_role'] == 'STUDENT'
     assert {item['code'] for item in payload['available_roles']} == {'STUDENT', 'MENTOR'}
-    assert payload['capabilities']['dashboard.student.view']['allowed'] is True
-    assert payload['capabilities']['dashboard.mentor.view']['allowed'] is False
 
 
 @pytest.mark.django_db
@@ -154,16 +153,15 @@ def test_change_password_updates_password_and_invalidates_tokens():
     client = APIClient()
 
     department = Department.objects.create(name='Dept Change Password', code='DEPT_CHANGE_PASSWORD')
-    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    permission = Permission.objects.get(code='user.activate')
-    RolePermission.objects.get_or_create(role=admin_role, permission=permission)
+    admin_role, _ = Group.objects.get_or_create(name='ADMIN')
+    admin_role.permissions.add(*get_permissions_by_codes(['users.activate_user']))
     admin_user = User.objects.create_user(
         employee_id='EMP_CHANGE_PASSWORD_ADMIN',
         username='Change Password Admin',
         password='admin-password',
         department=department,
     )
-    UserRole.objects.get_or_create(user=admin_user, role=admin_role)
+    admin_user.groups.add(admin_role)
     target_user = User.objects.create_user(
         employee_id='EMP_CHANGE_PASSWORD_TARGET',
         username='Change Password Target',
@@ -314,8 +312,9 @@ def test_token_current_role_is_request_source_of_truth():
     client = APIClient()
 
     department = Department.objects.create(name='Dept 3', code='DEPT3')
-    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    mentor_role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    admin_role, _ = Group.objects.get_or_create(name='ADMIN')
+    mentor_role, _ = Group.objects.get_or_create(name='MENTOR')
+    admin_role.permissions.add(*get_permissions_by_codes(['knowledge.view_knowledge']))
 
     user = User.objects.create_user(
         employee_id='EMP003',
@@ -323,8 +322,7 @@ def test_token_current_role_is_request_source_of_truth():
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=admin_role)
-    UserRole.objects.get_or_create(user=user, role=mentor_role)
+    user.groups.add(admin_role, mentor_role)
 
     login_response = client.post(
         '/api/auth/login/',
@@ -339,52 +337,6 @@ def test_token_current_role_is_request_source_of_truth():
 
     assert response.status_code == 200
     assert response.data['code'] == 'SUCCESS'
-
-
-@pytest.mark.django_db
-def test_knowledge_view_permission_can_be_denied_by_override():
-    client = APIClient()
-
-    department = Department.objects.create(name='Dept 5', code='DEPT5')
-    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-
-    admin_user = User.objects.create_user(
-        employee_id='EMP005',
-        username='Denied Admin',
-        password='password123',
-        department=department,
-    )
-    UserRole.objects.get_or_create(user=admin_user, role=admin_role)
-
-    permission = Permission.objects.get(code='knowledge.view')
-    UserPermissionOverride.objects.create(
-        user=admin_user,
-        permission=permission,
-        effect='DENY',
-        applies_to_role='ADMIN',
-        reason='测试显式拒绝优先级',
-        granted_by=admin_user,
-    )
-
-    login_response = client.post(
-        '/api/auth/login/',
-        {'employee_id': 'EMP005', 'password': 'password123'},
-        format='json',
-    )
-    assert login_response.status_code == 200
-    access_token = login_response.data['data']['access_token']
-
-    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    switch_response = client.post(
-        '/api/auth/switch-role/',
-        {'role_code': 'ADMIN'},
-        format='json',
-    )
-    assert switch_response.status_code == 200
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {switch_response.data['data']['access_token']}")
-    response = client.get('/api/knowledge/')
-    assert response.status_code == 403
-    assert response.data['code'] == 'PERMISSION_DENIED'
 
 
 @pytest.mark.django_db
@@ -411,9 +363,9 @@ def test_superuser_login_returns_dedicated_super_admin_role():
     payload = login_response.data['data']
     assert payload['current_role'] == 'SUPER_ADMIN'
     assert payload['available_roles'] == [{'code': 'SUPER_ADMIN', 'name': '超管'}]
-    assert payload['capabilities']['user.view']['allowed'] is True
-    assert payload['capabilities']['knowledge.view']['allowed'] is True
-    assert payload['capabilities']['activity_log.view']['allowed'] is True
+    assert payload['capabilities']['users.view_user']['allowed'] is True
+    assert payload['capabilities']['knowledge.view_knowledge']['allowed'] is True
+    assert payload['capabilities']['activity_logs.view_activitylog']['allowed'] is True
 
 
 @pytest.mark.django_db

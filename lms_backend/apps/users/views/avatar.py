@@ -47,7 +47,7 @@ class UserAvatarUpdateView(BaseAPIView):
         tags=['用户管理'],
     )
     def patch(self, request, pk):
-        enforce('user.avatar.update', request, error_message='只有管理员可以修改其他用户头像')
+        enforce('users.change_user_avatar', request, error_message='只有管理员可以修改其他用户头像')
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.update_avatar(pk, serializer.validated_data['avatar_key'])

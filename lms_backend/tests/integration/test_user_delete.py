@@ -1,10 +1,11 @@
 import pytest
 from unittest.mock import patch
 
+from django.contrib.auth.models import Group
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 
-from apps.authorization.models import Permission, RolePermission
+from apps.authorization.selectors import get_permissions_by_codes
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.questions.models import Question, QuestionOption
@@ -14,7 +15,7 @@ from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Answer, AnswerSelection, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
-from apps.users.models import Department, Role, User, UserRole
+from apps.users.models import Department, User
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def department():
 
 @pytest.fixture
 def admin_role():
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    role, _ = Group.objects.get_or_create(name='ADMIN')
     return role
 
 
@@ -36,11 +37,9 @@ def admin_user(department, admin_role):
         password='password123',
         department=department,
     )
-    UserRole.objects.create(user=user, role=admin_role)
+    user.groups.add(admin_role)
     user.current_role = 'ADMIN'
-    permission = Permission.objects.filter(code='user.delete').first()
-    if permission:
-        RolePermission.objects.get_or_create(role=admin_role, permission=permission)
+    admin_role.permissions.add(*get_permissions_by_codes(['users.delete_user']))
     return user
 
 
@@ -201,13 +200,13 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_
         student=inactive_user,
         checker=admin_user,
         topic='抽查A',
-        score='90',
+        score='9',
     )
     spot_check_as_checker = create_spot_check(
         student=other_user,
         checker=inactive_user,
         topic='抽查B',
-        score='80',
+        score='8',
     )
 
     response = api_client.delete(f'/api/users/{inactive_user.id}/')

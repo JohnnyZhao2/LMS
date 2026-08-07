@@ -25,7 +25,7 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.role.assign', request, error_message='无权分配用户角色')
+        enforce('users.assign_user_role', request, error_message='无权分配用户角色')
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(
@@ -53,7 +53,7 @@ class UserAssignMentorView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.update', request, error_message='只有管理员可以指定导师')
+        enforce('users.change_user', request, error_message='只有管理员可以指定导师')
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_mentor(

@@ -34,7 +34,7 @@ export const TaskPreviewPage: React.FC = () => {
 
   const { data: task, isLoading } = useTaskDetail(taskId);
   const canViewProgress = !!task && (task.actions.update || task.actions.analytics);
-  const canViewGrading = !!task && task.actions.view && hasCapability('grading.view');
+  const canViewGrading = !!task && task.actions.view && hasCapability('tasks.view_grading');
   const availableTabs = React.useMemo(
     () => [
       canViewProgress ? 'progress' : null,

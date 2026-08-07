@@ -60,7 +60,7 @@ class GradingQuestionsView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
+        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
 
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
@@ -120,7 +120,7 @@ class GradingAnswersView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
+        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
@@ -274,7 +274,7 @@ class GradingSubmitView(GradingBaseView):
         tags=['阅卷中心']
     )
     def post(self, request, task_id):
-        task = self._get_task(task_id, 'grading.score', '无权提交评分')
+        task = self._get_task(task_id, 'tasks.score_grading', '无权提交评分')
 
         serializer = GradingSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -344,11 +344,11 @@ class PendingQuizzesView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request):
-        enforce('grading.view', request, error_message='无权访问阅卷中心')
+        enforce('tasks.view_grading', request, error_message='无权访问阅卷中心')
         quiz_type = request.query_params.get('quiz_type')
 
         tasks = scope_filter(
-            'task.view',
+            'tasks.view_task',
             request,
             base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
                 task_quizzes__isnull=False,

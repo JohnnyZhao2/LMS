@@ -35,7 +35,7 @@ class TaskAnalyticsView(BaseAPIView):
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
         enforce(
-            'task.analytics.view',
+            'tasks.view_task_analytics',
             request,
             resource=task,
             error_message='无权查看任务分析',
@@ -63,7 +63,7 @@ class StudentExecutionsView(BaseAPIView):
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
         enforce(
-            'task.analytics.view',
+            'tasks.view_task_analytics',
             request,
             resource=task,
             error_message='无权查看学员执行情况',

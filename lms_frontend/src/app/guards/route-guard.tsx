@@ -69,7 +69,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={fallbackPath} replace />;
   }
 
-  const hasRequiredPermissions = !requiredPermissions || requiredPermissions.length === 0
+  const hasRequiredPermissions = normalizedUrlRole === 'STUDENT'
+    || !requiredPermissions
+    || requiredPermissions.length === 0
     ? true
     : permissionMode === 'any'
       ? hasAnyCapability(requiredPermissions)

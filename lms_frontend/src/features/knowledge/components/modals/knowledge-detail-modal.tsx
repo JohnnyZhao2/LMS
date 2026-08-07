@@ -106,10 +106,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const isStudent = currentRole === 'STUDENT';
   const canUpdateKnowledge = !previewOnly && (
     isCreateMode
-      ? hasCapability('knowledge.create')
-      : hasCapability('knowledge.update')
+      ? hasCapability('knowledge.add_knowledge')
+      : hasCapability('knowledge.change_knowledge')
   );
-  const canDeleteKnowledge = !previewOnly && !isCreateMode && hasCapability('knowledge.delete');
+  const canDeleteKnowledge = !previewOnly && !isCreateMode && hasCapability('knowledge.delete_knowledge');
 
   const { data, isLoading } = useKnowledgeDetail({ knowledgeId, taskKnowledgeId });
   const createKnowledge = useCreateKnowledge();

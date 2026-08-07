@@ -7,21 +7,13 @@ AUTHORIZATION_SPECS = (
         module='grading',
         permissions=(
             perm(
-                code='grading.view',
-                name='查看阅卷中心',
-                description='查看待阅卷任务、题目分析和作答详情',
-                implies=('task.view',),
+                code='tasks.view_grading',
+                implies=('tasks.view_task',),
             ),
             perm(
-                code='grading.score',
-                name='提交评分',
-                description='为主观题提交评分',
-                implies=('grading.view',),
+                code='tasks.score_grading',
+                implies=('tasks.view_grading',),
             ),
         ),
-        role_defaults={
-            'MENTOR': ('grading.view', 'grading.score'),
-            'DEPT_MANAGER': ('grading.view', 'grading.score'),
-        },
     ),
 )

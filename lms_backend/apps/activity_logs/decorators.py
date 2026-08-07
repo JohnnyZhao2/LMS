@@ -19,7 +19,6 @@ ROLE_LABELS = {
     'ADMIN': '管理员',
     'MENTOR': '导师',
     'DEPT_MANAGER': '室经理',
-    'TEAM_MANAGER': '团队经理',
     'STUDENT': '学员',
     'SUPER_ADMIN': '超管',
 }

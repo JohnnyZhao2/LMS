@@ -20,7 +20,6 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
             ('ADMIN', '管理员'),
             ('MENTOR', '导师'),
             ('DEPT_MANAGER', '室经理'),
-            ('TEAM_MANAGER', '团队经理'),
             ('STUDENT', '学员'),
         ],
         default='ADMIN',
@@ -54,6 +53,12 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
         verbose_name = '任务'
         verbose_name_plural = '任务'
         ordering = ['-created_at']
+        permissions = [
+            ('assign_task', '分配任务'),
+            ('view_task_analytics', '查看任务分析'),
+            ('view_grading', '查看阅卷中心'),
+            ('score_grading', '提交评分'),
+        ]
 
     def __str__(self):
         return self.title

@@ -1,17 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode, UserList } from '@/types/common';
-import { isAllowedDepartmentCode, useDepartments, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
+import { isAllowedDepartmentCode, useRoles, useUserDetail, useUsers } from '@/entities/user/api/get-users';
 import { useAssignRoles } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
-import {
-  useRevokeUserPermissionOverride,
-  useRevokeUserScopeGroupOverride,
-  useUserPermissionOverrides,
-  useUserScopeGroupOverrides,
-} from '@/entities/authorization/api/authorization';
 import { showApiError } from '@/utils/error-handler';
-import { buildPermissionModuleSections } from '@/entities/authorization/utils/permission-sections';
 import {
   getNextAssignableRoleCodes,
   getManagedRoleCodes,
@@ -22,76 +15,52 @@ import {
   USER_ROLE_ASSIGN_PERMISSION,
 } from '@/entities/authorization/constants/access';
 
-interface UseRolePermissionTemplateStateParams {
+export const MANAGEMENT_ROLE_CODES: RoleCode[] = ['MENTOR', 'DEPT_MANAGER', 'ADMIN'];
+/** 用户授权中心仅管理角色；学员不参与授权配置 */
+export const AUTHORIZATION_PANEL_ROLE_CODES: RoleCode[] = MANAGEMENT_ROLE_CODES;
+
+interface UseAuthorizationCenterStateParams {
   roleCodes: RoleCode[];
   permissionCatalog: PermissionCatalogItem[];
-  permissionCodesByRole: Partial<Record<RoleCode, string[]>>;
-  savingRoleCodes: RoleCode[];
   initialRoleCode?: RoleCode | null;
   initialSelectedUserId?: number | null;
 }
 
-export function useRolePermissionTemplateState({
+export function useAuthorizationCenterState({
   roleCodes,
   permissionCatalog,
-  permissionCodesByRole,
-  savingRoleCodes,
   initialRoleCode = null,
   initialSelectedUserId = null,
-}: UseRolePermissionTemplateStateParams) {
-  const { hasCapability, refreshUser } = useAuth();
+}: UseAuthorizationCenterStateParams) {
+  const { hasCapability } = useAuth();
   const canManageRoleMembers = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
   const canViewUserAuthorization = USER_PERMISSION_ACCESS_PERMISSIONS.some(hasCapability);
-  const [activeRole, setActiveRole] = useState<RoleCode | null>(initialRoleCode);
+  const [activeRole, setActiveRole] = useState<RoleCode | null>(
+    initialRoleCode && MANAGEMENT_ROLE_CODES.includes(initialRoleCode) ? initialRoleCode : null,
+  );
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
-    initialRoleCode && initialRoleCode !== 'STUDENT' ? initialSelectedUserId : null,
+    initialRoleCode && MANAGEMENT_ROLE_CODES.includes(initialRoleCode) ? initialSelectedUserId : null,
   );
-  const [workbenchElement, setWorkbenchElement] = useState<HTMLDivElement | null>(null);
   const [mutatingUserId, setMutatingUserId] = useState<number | null>(null);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [isResettingOverrides, setIsResettingOverrides] = useState(false);
   const deferredMemberSearch = useDeferredValue(memberSearch);
   const assignRoles = useAssignRoles();
-  const revokeUserOverride = useRevokeUserPermissionOverride();
-  const revokeUserScopeGroupOverride = useRevokeUserScopeGroupOverride();
 
   const resolvedActiveRole = useMemo(
     () => (activeRole && roleCodes.includes(activeRole) ? activeRole : roleCodes[0] ?? null),
     [activeRole, roleCodes],
   );
-  const selectedRolePermissionCodes = useMemo(
-    () => (resolvedActiveRole ? (permissionCodesByRole[resolvedActiveRole] ?? []) : []),
-    [permissionCodesByRole, resolvedActiveRole],
-  );
-  const selectedRolePermissionCodeSet = useMemo(
-    () => new Set(selectedRolePermissionCodes),
-    [selectedRolePermissionCodes],
-  );
-  const permissionSections = useMemo(
-    () => buildPermissionModuleSections(permissionCatalog),
-    [permissionCatalog],
-  );
-  const isSavingCurrentRole = resolvedActiveRole ? savingRoleCodes.includes(resolvedActiveRole) : false;
+  const canEditPermissions = Boolean(selectedUserId && resolvedActiveRole);
+
   const { data: allVisibleUsers = [], isLoading: isLoadingMembers } = useUsers(
     {},
     { enabled: Boolean(resolvedActiveRole) && (canManageRoleMembers || canViewUserAuthorization) },
   );
-  const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
   const {
     data: selectedUserDetail,
     isLoading: isLoadingSelectedUser,
-    refetch: refetchSelectedUserDetail,
   } = useUserDetail(selectedUserId ?? 0);
-  const {
-    data: selectedUserPermissionOverrides = [],
-    refetch: refetchSelectedUserPermissionOverrides,
-  } = useUserPermissionOverrides(selectedUserId, Boolean(selectedUserId));
-  const {
-    data: selectedUserScopeGroupOverrides = [],
-    refetch: refetchSelectedUserScopeGroupOverrides,
-  } = useUserScopeGroupOverrides(selectedUserId, Boolean(selectedUserId));
 
   const roleNameMap = useMemo(
     () => new Map(roles.map((role) => [role.code, role.name])),
@@ -133,9 +102,6 @@ export function useRolePermissionTemplateState({
   );
   const candidateUsers = useMemo(
     () => {
-      const hasActiveTeamManager = allVisibleUsers.some((user) => (
-        user.is_active && user.roles.some((role) => role.code === 'TEAM_MANAGER')
-      ));
       const occupiedDeptManagerDepartmentIds = new Set(
         allVisibleUsers
           .filter((user) => (
@@ -153,7 +119,6 @@ export function useRolePermissionTemplateState({
         .filter((user) => user.roles.every((role) => !isAssignableRoleCode(role.code)))
         .filter((user) => isAllowedDepartmentCode(user.department?.code))
         .filter((user) => {
-          if (resolvedActiveRole === 'TEAM_MANAGER') return !hasActiveTeamManager;
           if (resolvedActiveRole === 'DEPT_MANAGER') {
             return Boolean(user.department?.id) && !occupiedDeptManagerDepartmentIds.has(user.department.id);
           }
@@ -163,24 +128,6 @@ export function useRolePermissionTemplateState({
     },
     [allVisibleUsers, resolvedActiveRole],
   );
-
-  const selectedUserRoleCodes = useMemo(
-    () => selectedUserDetail?.roles.map((role) => role.code as RoleCode) ?? [],
-    [selectedUserDetail],
-  );
-  const currentRolePermissionOverrides = useMemo(
-    () => selectedUserPermissionOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserPermissionOverrides],
-  );
-  const currentRoleScopeOverrides = useMemo(
-    () => selectedUserScopeGroupOverrides.filter((override) => (
-      override.applies_to_role === resolvedActiveRole
-    )),
-    [resolvedActiveRole, selectedUserScopeGroupOverrides],
-  );
-  const canResetCurrentRoleOverrides = currentRolePermissionOverrides.length > 0 || currentRoleScopeOverrides.length > 0;
 
   useEffect(() => {
     if (!selectedUserDetail || !resolvedActiveRole) {
@@ -200,8 +147,7 @@ export function useRolePermissionTemplateState({
   }, [initialRoleCode, roleCodes]);
 
   useEffect(() => {
-    if (initialRoleCode === 'STUDENT') {
-      setSelectedUserId(null);
+    if (!initialRoleCode || !MANAGEMENT_ROLE_CODES.includes(initialRoleCode)) {
       return;
     }
     setSelectedUserId(initialSelectedUserId ?? null);
@@ -285,69 +231,27 @@ export function useRolePermissionTemplateState({
     }
   };
 
-  const handleResetCurrentRoleOverrides = async () => {
-    if (!selectedUserId || isResettingOverrides || !canResetCurrentRoleOverrides) {
-      setResetDialogOpen(false);
-      return;
-    }
-
-    setIsResettingOverrides(true);
-    try {
-      await Promise.all([
-        ...currentRolePermissionOverrides.map((override) => (
-          revokeUserOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-        ...currentRoleScopeOverrides.map((override) => (
-          revokeUserScopeGroupOverride.mutateAsync({ userId: selectedUserId, overrideId: override.id })
-        )),
-      ]);
-      await refreshUser();
-      await Promise.all([
-        refetchSelectedUserDetail(),
-        refetchSelectedUserPermissionOverrides(),
-        refetchSelectedUserScopeGroupOverrides(),
-      ]);
-      setResetDialogOpen(false);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setIsResettingOverrides(false);
-    }
-  };
-
   return {
+    canEditPermissions,
     canManageRoleMembers,
     canViewUserAuthorization,
     candidateUsers,
-    canResetCurrentRoleOverrides,
-    departments,
     groupedMembersByRole,
     handleAssignRole,
     handleRemoveRole,
-    handleResetCurrentRoleOverrides,
     handleSelectMember,
     handleSelectRole,
     handleUserRoleToggle,
     isAssigningRoles: assignRoles.isPending,
     isLoadingMembers,
     isLoadingSelectedUser,
-    isResettingOverrides,
-    isSavingCurrentRole,
-    isViewingUserOverrides: Boolean(selectedUserId),
     memberSearch,
     mutatingUserId,
-    permissionSections,
-    resetDialogOpen,
+    permissionCatalog,
     resolvedActiveRole,
     roleNameMap,
-    selectedRolePermissionCodes,
-    selectedRolePermissionCodeSet,
     selectedUserDetail,
     selectedUserId,
-    selectedUserRoleCodes,
     setMemberSearch,
-    setResetDialogOpen,
-    setWorkbenchElement,
-    workbenchElement,
   };
 }

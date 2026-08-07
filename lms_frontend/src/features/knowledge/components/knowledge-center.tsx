@@ -130,9 +130,9 @@ export const KnowledgeCenter: React.FC = () => {
     const { id: routeKnowledgeId } = useParams<{ id?: string }>();
     const incrementViewCount = useIncrementViewCount();
     const { hasCapability } = useAuth();
-    const canCreateKnowledge = hasCapability('knowledge.create');
-    const canUpdateKnowledge = hasCapability('knowledge.update');
-    const canDeleteKnowledge = hasCapability('knowledge.delete');
+    const canCreateKnowledge = hasCapability('knowledge.add_knowledge');
+    const canUpdateKnowledge = hasCapability('knowledge.change_knowledge');
+    const canDeleteKnowledge = hasCapability('knowledge.delete_knowledge');
     const isManagementView = canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge;
 
     const deleteKnowledge = useDeleteKnowledge();

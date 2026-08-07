@@ -126,7 +126,7 @@ class QuizService(BaseService):
         queryset = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
             'quiz_questions__question_options',
         )
-        quiz = scope_filter('quiz.view', self.request, base_queryset=queryset).filter(pk=pk).first()
+        quiz = scope_filter('quizzes.view_quiz', self.request, base_queryset=queryset).filter(pk=pk).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
 
@@ -139,7 +139,7 @@ class QuizService(BaseService):
         offset: int = None,
     ) -> List[Quiz]:
         qs = scope_filter(
-            'quiz.view',
+            'quizzes.view_quiz',
             self.request,
             base_queryset=Quiz.objects.select_related('created_by', 'updated_by'),
         ).annotate(
@@ -290,7 +290,7 @@ class QuizService(BaseService):
         source_question_id = item.get('source_question_id')
         if source_question_id is not None:
             source_question = scope_filter(
-                'question.view',
+                'questions.view_question',
                 self.request,
                 base_queryset=Question.objects.all(),
             ).filter(pk=source_question_id).first()

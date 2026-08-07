@@ -294,7 +294,7 @@ class AuthenticationService(BaseService):
 
     def change_password(self, operator: User, target_user_id: int, password: str) -> None:
         enforce(
-            'user.activate',
+            'users.activate_user',
             self.request,
             error_message='只有管理员可以修改用户密码',
         )

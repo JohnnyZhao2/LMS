@@ -98,7 +98,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
-        enforce('knowledge.view', request, error_message='无权查看知识列表')
+        enforce('knowledge.view_knowledge', request, error_message='无权查看知识列表')
         return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
@@ -112,7 +112,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request):
-        enforce('knowledge.create', request, error_message='无权创建知识文档')
+        enforce('knowledge.add_knowledge', request, error_message='无权创建知识文档')
         # 3. 反序列化输入
         serializer = KnowledgeCreateSerializer(
             data=request.data,
@@ -131,7 +131,7 @@ class KnowledgeBulkImportView(BaseAPIView):
 
     @extend_schema(summary='批量导入知识文档', request=KnowledgeBulkImportSerializer, tags=['知识管理'])
     def post(self, request):
-        enforce('knowledge.create', request, error_message='无权导入知识文档')
+        enforce('knowledge.add_knowledge', request, error_message='无权导入知识文档')
         serializer = KnowledgeBulkImportSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return success_response(self.service.bulk_import(items=serializer.validated_data['items']))
@@ -143,7 +143,7 @@ class KnowledgeBulkDeleteView(BaseAPIView):
 
     @extend_schema(summary='批量删除知识文档', request=KnowledgeBulkDeleteSerializer, tags=['知识管理'])
     def post(self, request):
-        enforce('knowledge.delete', request, error_message='无权删除知识文档')
+        enforce('knowledge.delete_knowledge', request, error_message='无权删除知识文档')
         serializer = KnowledgeBulkDeleteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return success_response(self.service.bulk_delete(items=serializer.validated_data['items']))
@@ -166,7 +166,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, pk):
-        enforce('knowledge.view', request, error_message='无权查看知识详情')
+        enforce('knowledge.view_knowledge', request, error_message='无权查看知识详情')
         knowledge = self.service.get_by_id(pk)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
@@ -184,7 +184,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def patch(self, request, pk):
-        enforce('knowledge.update', request, error_message='无权更新知识文档')
+        enforce('knowledge.change_knowledge', request, error_message='无权更新知识文档')
         # 2. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
             data=request.data, partial=True,
@@ -210,7 +210,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def delete(self, request, pk):
-        enforce('knowledge.delete', request, error_message='无权删除知识文档')
+        enforce('knowledge.delete_knowledge', request, error_message='无权删除知识文档')
         self.service.delete(pk)
         return no_content_response()
 class StudentTaskKnowledgeDetailView(BaseAPIView):
@@ -229,7 +229,6 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, task_knowledge_id):
-        enforce('knowledge.view', request, error_message='无权查看任务知识详情')
         task_knowledge = TaskKnowledge.objects.select_related('task', 'knowledge').filter(
             id=task_knowledge_id
         ).first()
@@ -248,6 +247,8 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
                 task_knowledge=task_knowledge,
                 defaults={'is_completed': False, 'started_at': timezone.now()},
             )
+        else:
+            enforce('knowledge.view_knowledge', request, error_message='无权查看任务知识详情')
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(serializer.data)
@@ -265,6 +266,6 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
-        enforce('knowledge.view', request, error_message='无权记录知识阅读')
+        enforce('knowledge.view_knowledge', request, error_message='无权记录知识阅读')
         view_count = self.service.increment_view_count(pk)
         return success_response({'view_count': view_count})

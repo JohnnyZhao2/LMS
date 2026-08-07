@@ -312,7 +312,7 @@ export const QuizForm: React.FC = () => {
             quizId={Number(id)}
             quizDraft={quizDraft}
             onEdit={
-              hasCapability('quiz.update')
+              hasCapability('quizzes.change_quiz')
                 ? (targetQuizId) => roleNavigate(`${ROUTES.QUIZZES}/${targetQuizId}/edit`, {
                   state: quizDraft ? { quizDraft } : undefined,
                 })

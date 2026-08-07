@@ -13,42 +13,31 @@ export const queryKeys = {
     permissionCatalog: ({
       currentRole,
       module,
-      view,
     }: {
       currentRole: QueryRole;
       module?: string;
-      view?: string;
     }) => [
       'authorization',
       'permission-catalog',
       normalizeRoleKey(currentRole),
       module ?? 'ALL',
-      view ?? 'ALL',
     ] as const,
-    roleTemplatesRoot: () => ['authorization', 'role-template'] as const,
-    roleTemplate: ({
+    groupPermissionsRoot: () => ['authorization', 'group-permissions'] as const,
+    groupPermissions: ({
       currentRole,
       roleCode,
     }: {
       currentRole: QueryRole;
-      roleCode: string;
-    }) => ['authorization', 'role-template', normalizeRoleKey(currentRole), roleCode] as const,
-    userOverridesRoot: () => ['authorization', 'user-overrides'] as const,
-    userOverrides: ({
+      roleCode: QueryRole;
+    }) => ['authorization', 'group-permissions', normalizeRoleKey(currentRole), roleCode ?? 'NONE'] as const,
+    userPermissionsRoot: () => ['authorization', 'user-permissions'] as const,
+    userPermissions: ({
       currentRole,
       userId,
     }: {
       currentRole: QueryRole;
       userId: number | null;
-    }) => ['authorization', 'user-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
-    userScopeGroupOverridesRoot: () => ['authorization', 'user-scope-group-overrides'] as const,
-    userScopeGroupOverrides: ({
-      currentRole,
-      userId,
-    }: {
-      currentRole: QueryRole;
-      userId: number | null;
-    }) => ['authorization', 'user-scope-group-overrides', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
+    }) => ['authorization', 'user-permissions', normalizeRoleKey(currentRole), userId ?? 'NONE'] as const,
   },
   dashboards: {
     admin: (currentRole: QueryRole) => ['admin-dashboard', normalizeRoleKey(currentRole)] as const,
@@ -63,7 +52,6 @@ export const queryKeys = {
       knowledgeLimit: number;
     }) => ['student-dashboard', normalizeRoleKey(currentRole), taskLimit, knowledgeLimit] as const,
     taskParticipants: (taskId: number | null) => ['task-participants', taskId] as const,
-    teamManager: (currentRole: QueryRole) => ['team-manager-dashboard', normalizeRoleKey(currentRole)] as const,
     examReport: ({
       currentRole,
       filters,

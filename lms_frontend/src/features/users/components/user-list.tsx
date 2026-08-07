@@ -46,13 +46,13 @@ import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { hasCapability } = useAuth()
-  const canCreateUser = hasCapability('user.create')
-  const canUpdateUser = hasCapability('user.update')
-  const canManageUserAccount = hasCapability('user.activate')
-  const canDeleteUser = hasCapability('user.delete')
+  const canCreateUser = hasCapability('users.add_user')
+  const canUpdateUser = hasCapability('users.change_user')
+  const canManageUserAccount = hasCapability('users.activate_user')
+  const canDeleteUser = hasCapability('users.delete_user')
   const canChangePassword = canManageUserAccount
   const canOpenUserEditor = canUpdateUser || hasCapability(USER_ROLE_ASSIGN_PERMISSION)
-  const canAdminEditAvatar = hasCapability('user.avatar.update')
+  const canAdminEditAvatar = hasCapability('users.change_user_avatar')
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 

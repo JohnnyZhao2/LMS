@@ -38,7 +38,7 @@ class QuestionListCreateView(BaseAPIView):
         tags=['题库管理'],
     )
     def get(self, request):
-        enforce('question.view', request, error_message='无权查看题目列表')
+        enforce('questions.view_question', request, error_message='无权查看题目列表')
         filters = {}
         if request.query_params.get('question_type'):
             filters['question_type'] = request.query_params.get('question_type')
@@ -75,7 +75,7 @@ class QuestionListCreateView(BaseAPIView):
         tags=['题库管理'],
     )
     def post(self, request):
-        enforce('question.create', request, error_message='无权创建题目')
+        enforce('questions.add_question', request, error_message='无权创建题目')
         serializer = QuestionCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         question = self.service.create(data=serializer.validated_data)
@@ -96,7 +96,7 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理'],
     )
     def get(self, request, pk):
-        enforce('question.view', request, error_message='无权查看题目详情')
+        enforce('questions.view_question', request, error_message='无权查看题目详情')
         question = self.service.get_by_id(pk)
         return success_response(QuestionSerializer(question).data)
 

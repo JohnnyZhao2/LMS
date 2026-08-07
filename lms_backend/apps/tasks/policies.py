@@ -15,16 +15,16 @@ def get_task_actions_payload(request, task) -> dict[str, bool]:
     if request is None:
         return dict(DEFAULT_TASK_ACTIONS)
     return {
-        'view': authorize('task.view', request, resource=task).allowed,
-        'update': authorize('task.update', request, resource=task).allowed,
-        'delete': authorize('task.delete', request, resource=task).allowed,
-        'analytics': authorize('task.analytics.view', request, resource=task).allowed,
+        'view': authorize('tasks.view_task', request, resource=task).allowed,
+        'update': authorize('tasks.change_task', request, resource=task).allowed,
+        'delete': authorize('tasks.delete_task', request, resource=task).allowed,
+        'analytics': authorize('tasks.view_task_analytics', request, resource=task).allowed,
     }
 
 
 def enforce_assignable_students_scope(assignee_ids: list[int], request) -> None:
     accessible_ids = set(
-        scope_filter('task.assign', request, resource_model=User).values_list('id', flat=True)
+        scope_filter('tasks.assign_task', request, resource_model=User).values_list('id', flat=True)
     )
     invalid_ids = sorted(set(assignee_ids) - accessible_ids)
     if invalid_ids:

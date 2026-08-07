@@ -4,9 +4,11 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from apps.grading.views import GradingAnswersView, PendingQuizzesView
+from apps.authorization.selectors import get_permissions_by_codes
 from apps.questions.services import QuestionService
 from apps.quizzes.services import QuizService
 from apps.submissions.services import SubmissionService
@@ -14,12 +16,13 @@ from apps.submissions.workflows import grade_subjective_answer
 from apps.tasks.assignment_workflow import get_assignment_progress_data
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import UserFactory
-from apps.users.models import Role, UserRole
 
 
 def build_request(user, current_role: str = 'ADMIN'):
-    role, _ = Role.objects.get_or_create(code=current_role, defaults={'name': current_role})
-    UserRole.objects.get_or_create(user=user, role=role)
+    role, _ = Group.objects.get_or_create(name=current_role)
+    if current_role == 'ADMIN':
+        role.permissions.add(*get_permissions_by_codes(['questions.view_question', 'quizzes.view_quiz']))
+    user.groups.add(role)
     user.__dict__.pop('role_codes', None)
     user.current_role = current_role
     return SimpleNamespace(user=user, META={})
@@ -75,8 +78,6 @@ def test_start_quiz_api_returns_submission_payload(api_client, monkeypatch):
     monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr('apps.tasks.task_service.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr('apps.tasks.policies.scope_filter', lambda *args, **kwargs: kwargs['resource_model'].objects.all())
-    monkeypatch.setattr('apps.submissions.views.common.enforce', lambda *args, **kwargs: True)
-
     admin_user = UserFactory(username='答题入口管理员')
     student = UserFactory(
         employee_id='FLOW_START_API_001',

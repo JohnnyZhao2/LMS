@@ -2,8 +2,10 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.auth.models import Group
 from django.utils import timezone
 
+from apps.authorization.selectors import get_permissions_by_codes
 from apps.knowledge.models import KnowledgeRevision
 from apps.knowledge.services import KnowledgeService
 from apps.quizzes.models import QuizRevision
@@ -13,13 +15,13 @@ from apps.tasks.serializers import CompleteKnowledgeLearningSerializer, TaskDeta
 from apps.tasks.student_task_service import StudentTaskService
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import TaskAssignmentFactory, TaskFactory, TaskKnowledgeFactory, UserFactory
-from apps.users.models import Role, UserRole
 from core.exceptions import BusinessError, ErrorCodes
 
 
 def build_request(user):
-    role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    UserRole.objects.get_or_create(user=user, role=role)
+    role, _ = Group.objects.get_or_create(name='ADMIN')
+    role.permissions.add(*get_permissions_by_codes(['questions.view_question', 'quizzes.view_quiz']))
+    user.groups.add(role)
     user.__dict__.pop('role_codes', None)
     user.current_role = 'ADMIN'
     return SimpleNamespace(user=user, META={})

@@ -36,7 +36,7 @@ class QuizListCreateView(BaseAPIView):
         tags=['试卷管理'],
     )
     def get(self, request):
-        enforce('quiz.view', request, error_message='无权查看试卷列表')
+        enforce('quizzes.view_quiz', request, error_message='无权查看试卷列表')
         filters = {}
         created_by_id = parse_int_query_param(request=request, name='created_by', minimum=1)
         if created_by_id is not None:
@@ -62,7 +62,7 @@ class QuizListCreateView(BaseAPIView):
         tags=['试卷管理'],
     )
     def post(self, request):
-        enforce('quiz.create', request, error_message='无权创建试卷')
+        enforce('quizzes.add_quiz', request, error_message='无权创建试卷')
         serializer = QuizCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
@@ -85,7 +85,7 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def get(self, request, pk):
-        enforce('quiz.view', request, error_message='无权查看试卷详情')
+        enforce('quizzes.view_quiz', request, error_message='无权查看试卷详情')
         quiz = self.service.get_by_id(pk)
         return success_response(QuizDetailSerializer(quiz).data)
 
@@ -102,7 +102,7 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def patch(self, request, pk):
-        enforce('quiz.update', request, error_message='无权更新试卷')
+        enforce('quizzes.change_quiz', request, error_message='无权更新试卷')
         quiz = self.service.get_by_id(pk)
         serializer = QuizUpdateSerializer(instance=quiz, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -122,6 +122,6 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def delete(self, request, pk):
-        enforce('quiz.delete', request, error_message='无权删除试卷')
+        enforce('quizzes.delete_quiz', request, error_message='无权删除试卷')
         self.service.delete(pk)
         return no_content_response()

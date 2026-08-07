@@ -17,10 +17,16 @@ export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClien
     queryKeys.activityLogs.policies(),
   ]);
 
-export const invalidateAfterAuthorizationOverrideMutation = (queryClient: QueryClient) =>
+export const invalidateAfterUserPermissionsMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
+    queryKeys.authorization.userPermissionsRoot(),
+    queryKeys.authorization.permissionCatalogRoot(),
+  ]);
+
+export const invalidateAfterGroupPermissionsMutation = (queryClient: QueryClient) =>
+  invalidateMany(queryClient, [
+    queryKeys.authorization.groupPermissionsRoot(),
+    queryKeys.authorization.userPermissionsRoot(),
   ]);
 
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
@@ -55,14 +61,6 @@ export const invalidateAfterQuizMutation = (queryClient: QueryClient) =>
     queryKeys.quizzes.all(),
     queryKeys.quizzes.detailRoot(),
     queryKeys.tasks.resourceOptionsRoot(),
-  ]);
-
-export const invalidateAfterRoleTemplateMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.permissionCatalogRoot(),
-    queryKeys.authorization.roleTemplatesRoot(),
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
   ]);
 
 export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>

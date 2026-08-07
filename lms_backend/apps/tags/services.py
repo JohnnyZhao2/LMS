@@ -440,11 +440,11 @@ def enforce_tag_view_permission(
     *,
     tag_type: Optional[str] = None,
 ) -> None:
-    if authorize('tag.view', request).allowed:
+    if authorize('tags.view_tag', request).allowed:
         return
     if (
         tag_type == 'SPACE'
-        and authorize('knowledge.view', request).allowed
+        and authorize('knowledge.view_knowledge', request).allowed
     ):
         return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)

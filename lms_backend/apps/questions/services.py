@@ -36,7 +36,7 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
     ):
-        queryset = scope_filter('question.view', self.request, base_queryset=question_base_queryset())
+        queryset = scope_filter('questions.view_question', self.request, base_queryset=question_base_queryset())
         queryset = apply_question_filters(queryset, filters or {}, search)
         if ordering:
             queryset = queryset.order_by(ordering)
@@ -82,7 +82,7 @@ class QuestionService(BaseService):
     )
     def update(self, pk: int, data: dict) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.update', self.request, resource=question, error_message='无权编辑此题目')
+        enforce('questions.change_question', self.request, resource=question, error_message='无权编辑此题目')
 
         payload = dict(data)
         self.validate_question_payload(payload, source=question)
@@ -139,7 +139,7 @@ class QuestionService(BaseService):
     )
     def delete(self, pk: int) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.delete', self.request, resource=question, error_message='无权删除此题目')
+        enforce('questions.delete_question', self.request, resource=question, error_message='无权删除此题目')
         question.delete()
         return question
 

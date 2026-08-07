@@ -195,7 +195,6 @@ SPECTACULAR_SETTINGS = {
 - **导师 (MENTOR)** - 管理名下学员、创建任务
 - **室经理 (DEPT_MANAGER)** - 管理本室人员
 - **管理员 (ADMIN)** - 全平台管理
-- **团队经理 (TEAM_MANAGER)** - 知识查看
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

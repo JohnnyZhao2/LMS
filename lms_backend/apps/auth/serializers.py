@@ -3,7 +3,7 @@ Serializers for authentication.
 """
 from rest_framework import serializers
 
-from apps.users.models import Role
+from apps.users.models import ROLE_CHOICES
 from apps.users.serializers import RoleSerializer, UserInfoSerializer
 
 
@@ -69,7 +69,7 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
     Serializer for role switch request.
     """
     role_code = serializers.ChoiceField(
-        choices=Role.ROLE_CHOICES,
+        choices=ROLE_CHOICES,
         required=True,
         help_text='要切换到的角色代码'
     )
