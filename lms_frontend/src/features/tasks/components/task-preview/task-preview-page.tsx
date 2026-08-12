@@ -22,19 +22,21 @@ import { cn } from '@/lib/utils';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from '@/entities/grading/components/grading-center-tab';
 import dayjs from '@/lib/dayjs';
+import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/session/auth/auth-context';
 
 export const TaskPreviewPage: React.FC = () => {
-  const { id, role } = useParams<{ id: string; role: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasCapability } = useAuth();
+  const tasksPath = ROUTES.TASKS;
   const taskId = Number(id);
   const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
 
   const { data: task, isLoading } = useTaskDetail(taskId);
   const canViewProgress = !!task && (task.actions.update || task.actions.analytics);
-  const canViewGrading = !!task && task.actions.view && hasCapability('grading.view');
+  const canViewGrading = !!task && task.actions.view && hasCapability('tasks.view_grading');
   const availableTabs = React.useMemo(
     () => [
       canViewProgress ? 'progress' : null,
@@ -100,7 +102,7 @@ export const TaskPreviewPage: React.FC = () => {
       <PageShell>
         <div className="flex h-96 flex-col items-center justify-center text-text-muted">
           <p>任务不存在</p>
-          <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
+          <Button variant="outline" onClick={() => navigate(tasksPath)} className="mt-4">
             返回任务列表
           </Button>
         </div>
@@ -113,7 +115,7 @@ export const TaskPreviewPage: React.FC = () => {
       <PageShell>
         <div className="flex h-96 flex-col items-center justify-center text-text-muted">
           <p>无权访问当前页面</p>
-          <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
+          <Button variant="outline" onClick={() => navigate(tasksPath)} className="mt-4">
             返回任务列表
           </Button>
         </div>
@@ -131,7 +133,7 @@ export const TaskPreviewPage: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/${role}/tasks`)}
+              onClick={() => navigate(tasksPath)}
               className="mt-0.5 h-10 w-10 rounded-lg transition-colors duration-150 hover:bg-muted"
             >
               <ArrowLeft className="h-5 w-5 text-text-muted" />

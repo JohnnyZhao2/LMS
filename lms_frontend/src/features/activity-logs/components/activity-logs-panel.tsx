@@ -36,7 +36,7 @@ const PANEL_GRID_CLASS = 'grid min-h-0 items-stretch gap-5 xl:grid-cols-[20rem_m
 
 export const ActivityLogsPanel: React.FC = () => {
   const { hasCapability } = useAuth();
-  const canViewActivityLogs = hasCapability('activity_log.view');
+  const canViewActivityLogs = hasCapability('activity_logs.view_activitylog');
 
   const [activeType, setActiveType] = useState<ActivityLogType>('user');
   const [page, setPage] = useState(1);

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { buildQueryString } from '@/lib/api-utils';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
@@ -18,7 +17,6 @@ interface UseTaskResourceOptions {
 }
 
 export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => {
-  const currentRole = useCurrentRole();
   const {
     search = '',
     page = 1,
@@ -33,7 +31,6 @@ export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => 
 
   return useQuery({
     queryKey: queryKeys.tasks.resourceOptions({
-      currentRole,
       resourceType: resource_type,
       search,
       page,
@@ -52,7 +49,7 @@ export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => 
       });
       return apiClient.get<PaginatedResponse<TaskResourceOption>>(`/tasks/resource-options/${queryString}`);
     },
-    enabled: currentRole !== null && enabled,
+    enabled: enabled,
     staleTime: 60_000,
     placeholderData: (previousData) => previousData,
   });

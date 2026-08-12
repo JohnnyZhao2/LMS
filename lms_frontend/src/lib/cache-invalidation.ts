@@ -17,17 +17,22 @@ export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClien
     queryKeys.activityLogs.policies(),
   ]);
 
-export const invalidateAfterAuthorizationOverrideMutation = (queryClient: QueryClient) =>
+export const invalidateAfterUserPermissionsMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
+    queryKeys.authorization.userPermissionsRoot(),
+  ]);
+
+export const invalidateAfterGroupPermissionsMutation = (queryClient: QueryClient) =>
+  invalidateMany(queryClient, [
+    queryKeys.authorization.groupPermissionsRoot(),
+    queryKeys.authorization.userPermissionsRoot(),
   ]);
 
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.grading.answersRoot(),
     queryKeys.grading.questionsRoot(),
-    queryKeys.grading.pendingRoot(),
+    queryKeys.grading.pending(),
     queryKeys.grading.taskAnalyticsRoot(),
     queryKeys.grading.studentExecutionsRoot(),
   ]);
@@ -55,14 +60,6 @@ export const invalidateAfterQuizMutation = (queryClient: QueryClient) =>
     queryKeys.quizzes.all(),
     queryKeys.quizzes.detailRoot(),
     queryKeys.tasks.resourceOptionsRoot(),
-  ]);
-
-export const invalidateAfterRoleTemplateMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.permissionCatalogRoot(),
-    queryKeys.authorization.roleTemplatesRoot(),
-    queryKeys.authorization.userOverridesRoot(),
-    queryKeys.authorization.userScopeGroupOverridesRoot(),
   ]);
 
 export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>
@@ -123,11 +120,11 @@ export const invalidateAfterUserMutation = (
   ];
 
   if (options.includeMentors) {
-    keys.push(queryKeys.users.mentorsRoot());
+    keys.push(queryKeys.users.mentors());
   }
 
   if (options.includeAssignableUsers) {
-    keys.push(queryKeys.users.assignableRoot());
+    keys.push(queryKeys.users.assignable());
   }
 
   return invalidateMany(queryClient, keys);

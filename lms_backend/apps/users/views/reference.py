@@ -2,8 +2,10 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce_any
-from apps.users.models import Department, Role, User
+from apps.authorization.engine import get_engine
+from django.contrib.auth.models import Group
+
+from apps.users.models import Department, ROLE_LABELS, User
 from apps.users.serializers import DepartmentSerializer, MentorSerializer, RoleSerializer
 from core.responses import list_response
 
@@ -15,7 +17,7 @@ class MentorsListView(APIView):
 
     @extend_schema(
         summary='获取导师列表',
-        description='获取所有具有导师角色的用户列表，用于指定导师',
+        description='获取可指定为导师的在职员工',
         responses={
             200: MentorSerializer(many=True),
             403: OpenApiResponse(description='无权限'),
@@ -23,15 +25,13 @@ class MentorsListView(APIView):
         tags=['用户管理'],
     )
     def get(self, request):
-        enforce_any(
-            USER_REFERENCE_PERMISSION_CODES,
-            request,
+        get_engine(request).enforce_any(USER_REFERENCE_PERMISSION_CODES,
             error_message='无权查看导师列表',
         )
         mentors = User.objects.filter(
-            roles__code='MENTOR',
             is_active=True,
-        ).distinct().order_by('username')
+            is_superuser=False,
+        ).order_by('username')
         return list_response(MentorSerializer(mentors, many=True).data)
 
 
@@ -48,9 +48,7 @@ class DepartmentsListView(APIView):
         tags=['用户管理'],
     )
     def get(self, request):
-        enforce_any(
-            USER_REFERENCE_PERMISSION_CODES,
-            request,
+        get_engine(request).enforce_any(USER_REFERENCE_PERMISSION_CODES,
             error_message='无权查看部门列表',
         )
         return list_response(DepartmentSerializer(Department.objects.order_by('code'), many=True).data)
@@ -69,10 +67,8 @@ class RolesListView(APIView):
         tags=['用户管理'],
     )
     def get(self, request):
-        enforce_any(
-            USER_REFERENCE_PERMISSION_CODES,
-            request,
+        get_engine(request).enforce_any(USER_REFERENCE_PERMISSION_CODES,
             error_message='无权查看角色列表',
         )
-        roles = Role.objects.exclude(code='STUDENT').order_by('code')
+        roles = Group.objects.filter(name__in=ROLE_LABELS).order_by('name')
         return list_response(RoleSerializer(roles, many=True).data)

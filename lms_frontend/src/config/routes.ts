@@ -4,6 +4,7 @@
 export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  FORBIDDEN: '/403',
   AUTHORIZATION: '/authorization',
   AUDIT_LOGS: '/audit-logs',
   AUDIT_LOG_POLICY: '/audit-logs/policy',

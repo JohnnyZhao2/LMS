@@ -1,4 +1,4 @@
-from apps.authorization.engine import authorize
+from apps.authorization.engine import get_engine
 from apps.spot_checks.models import SpotCheck
 
 
@@ -13,11 +13,11 @@ def get_spot_check_actions_payload(request, spot_check) -> dict[str, bool]:
     if request is None or spot_check is None:
         return dict(DEFAULT_SPOT_CHECK_ACTIONS)
 
-    can_update = authorize('spot_check.update', request, resource=spot_check).allowed
-    can_delete = authorize('spot_check.delete', request, resource=spot_check).allowed
+    can_update = get_engine(request).authorize('spot_checks.change_spotcheck', resource=spot_check).allowed
+    can_delete = get_engine(request).authorize('spot_checks.delete_spotcheck', resource=spot_check).allowed
     can_submit = (
-        spot_check.status == SpotCheck.STATUS_PENDING
-        and authorize('spot_check.submit', request, resource=spot_check).allowed
+        spot_check.student_id == getattr(request.user, 'id', None)
+        and spot_check.status == SpotCheck.STATUS_PENDING
     )
     can_score = (
         spot_check.status in {SpotCheck.STATUS_SUBMITTED, SpotCheck.STATUS_SCORED}

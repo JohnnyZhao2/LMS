@@ -2,23 +2,22 @@
 /**
  * 业务路由注册表。
  *
- * 路径、权限、菜单元数据集中声明在这里；角色前缀和实际可访问性由
- * `role-routes` 与 route guard 根据这些 meta 生成，避免菜单和路由各维护一份。
+ * 路径、权限、菜单元数据集中声明在这里。
+ * workbenches 只影响菜单和手动切台，不参与路由访问控制。
  */
 import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
-import { getRolePathPrefix, normalizeRoleCode } from '@/session/workspace/role-paths';
-import type { RoleCode } from '@/types/common';
 import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
-import type { DashboardVariant, WorkspaceConfig } from './workspace-config';
+import { useWorkbench } from '@/session/hooks/use-workbench';
+import type { Workbench } from '@/types/common';
+import type { DashboardVariant } from './workspace-config';
 
 export type PermissionMode = 'all' | 'any';
-export type MenuLabelResolver = string | ((workspace: WorkspaceConfig, role: RoleCode) => string);
+export type MenuLabelResolver = string | ((workbench: Workbench) => string);
 
 export type MenuMeta = {
   label: MenuLabelResolver;
@@ -32,20 +31,15 @@ export type MenuMeta = {
   order: number;
 };
 
-type BaseRouteMeta = {
+export type BusinessRouteMeta = {
   key: string;
   path: string;
-  allowedRoles?: RoleCode[];
+  workbenches?: Workbench[];
   requiredPermissions?: string[];
   permissionMode?: PermissionMode;
-  showInMenu?: boolean;
   menu?: MenuMeta;
   component?: ComponentType;
   render?: () => ReactElement;
-};
-
-export type BusinessRouteMeta = BaseRouteMeta & {
-  kind: 'business';
 };
 
 export interface MenuItem {
@@ -62,7 +56,6 @@ export type OrderedMenuItem = {
 
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
 const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
-const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
@@ -93,57 +86,36 @@ const AnswerReview = lazy(() => import('@/features/submissions/components/answer
 
 const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
 
-export const getWorkspaceDashboardElement = (variant: DashboardVariant): ReactElement => {
+export const getDashboardElement = (variant: DashboardVariant): ReactElement => {
   if (variant === 'student') {
     return <StudentDashboard />;
   }
   if (variant === 'mentor') {
     return <MentorDashboard />;
   }
-  if (variant === 'team_manager') {
-    return <TeamManagerDashboard />;
-  }
   return <AdminDashboard />;
 };
 
 const TaskRoutePage = () => {
-  const { role } = useParams<{ role: string }>();
+  const workbench = useWorkbench();
 
-  if (normalizeRoleCode(role) === 'STUDENT') {
+  if (workbench === 'learn') {
     return <StudentTaskCenter />;
   }
 
   return <TaskManagement />;
 };
 
-const TaskDetailRoutePage = () => {
-  const { id, role } = useParams<{ id: string; role: string }>();
-  const { hasCapability } = useAuth();
-  const normalizedRole = normalizeRoleCode(role);
-
-  if (normalizedRole === 'STUDENT' || !hasCapability('task.update')) {
-    return <TaskDetail />;
-  }
-
-  const rolePrefix = getRolePathPrefix(normalizedRole);
-  return <Navigate to={`${rolePrefix}/tasks/${id}/edit`} replace />;
-};
-
 /** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
-const SpotCheckCreateRedirect = () => {
-  const { role } = useParams<{ role: string }>();
-  return <Navigate to={`${getRolePathPrefix(normalizeRoleCode(role))}/spot-checks`} replace />;
-};
+const SpotCheckCreateRedirect = () => <Navigate to="/spot-checks" replace />;
 
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     key: 'tasks',
-    kind: 'business',
     path: 'tasks',
-    requiredPermissions: ['task.view'],
-    showInMenu: true,
+    workbenches: ['learn', 'manage'],
     menu: {
-      label: (workspace) => (workspace.menuVariant === 'admin' ? '任务管理' : '任务中心'),
+      label: (workbench) => (workbench === 'manage' ? '任务管理' : '任务中心'),
       icon: ListTodo,
       order: 50,
     },
@@ -151,39 +123,33 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'task-create',
-    kind: 'business',
     path: 'tasks/create',
-    requiredPermissions: ['task.create'],
+    requiredPermissions: ['tasks.add_task'],
     component: TaskForm,
   },
   {
     key: 'task-edit',
-    kind: 'business',
     path: 'tasks/:id/edit',
-    requiredPermissions: ['task.update'],
+    requiredPermissions: ['tasks.change_task'],
     component: TaskForm,
   },
   {
     key: 'task-preview',
-    kind: 'business',
     path: 'tasks/:id/preview',
-    requiredPermissions: ['task.update', 'task.analytics.view', 'grading.view'],
+    requiredPermissions: ['tasks.change_task', 'tasks.view_grading'],
     permissionMode: 'any',
     component: TaskPreviewPage,
   },
   {
     key: 'task-detail',
-    kind: 'business',
     path: 'tasks/:id',
-    requiredPermissions: ['task.view'],
-    render: () => <TaskDetailRoutePage />,
+    workbenches: ['learn', 'manage'],
+    component: TaskDetail,
   },
   {
     key: 'tags',
-    kind: 'business',
     path: 'tags',
-    requiredPermissions: ['tag.view'],
-    showInMenu: true,
+    requiredPermissions: ['tags.view_tag'],
     menu: {
       label: '标签管理',
       icon: Tags,
@@ -193,12 +159,10 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'knowledge',
-    kind: 'business',
     path: 'knowledge',
-    requiredPermissions: ['knowledge.view'],
-    showInMenu: true,
+    workbenches: ['learn', 'manage'],
     menu: {
-      label: (workspace) => (workspace.menuVariant === 'student' ? '知识中心' : '知识管理'),
+      label: (workbench) => (workbench === 'learn' ? '知识中心' : '知识管理'),
       icon: BookOpen,
       order: 10,
     },
@@ -206,32 +170,27 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'knowledge-create',
-    kind: 'business',
     path: 'knowledge/create',
-    requiredPermissions: ['knowledge.create'],
+    requiredPermissions: ['knowledge.add_knowledge'],
     component: KnowledgeCenter,
   },
   {
     key: 'knowledge-edit',
-    kind: 'business',
     path: 'knowledge/:id/edit',
-    requiredPermissions: ['knowledge.update'],
+    requiredPermissions: ['knowledge.change_knowledge'],
     component: KnowledgeCenter,
   },
   {
     key: 'knowledge-detail',
-    kind: 'business',
     path: 'knowledge/:id',
-    requiredPermissions: ['knowledge.view'],
+    workbenches: ['learn', 'manage'],
     component: KnowledgeCenter,
   },
   {
     key: 'quizzes',
-    kind: 'business',
     path: 'quizzes',
-    requiredPermissions: ['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'],
+    requiredPermissions: ['quizzes.view_quiz', 'quizzes.add_quiz', 'quizzes.change_quiz', 'quizzes.delete_quiz'],
     permissionMode: 'any',
-    showInMenu: true,
     menu: {
       label: '试卷管理',
       group: {
@@ -246,32 +205,27 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'quiz-create',
-    kind: 'business',
     path: 'quizzes/create',
-    requiredPermissions: ['quiz.create'],
+    requiredPermissions: ['quizzes.add_quiz'],
     component: QuizForm,
   },
   {
     key: 'quiz-preview',
-    kind: 'business',
     path: 'quizzes/:id/preview',
-    requiredPermissions: ['quiz.view', 'question.view'],
+    requiredPermissions: ['quizzes.view_quiz', 'questions.view_question'],
     component: QuizForm,
   },
   {
     key: 'quiz-edit',
-    kind: 'business',
     path: 'quizzes/:id/edit',
-    requiredPermissions: ['quiz.update'],
+    requiredPermissions: ['quizzes.change_quiz'],
     component: QuizForm,
   },
   {
     key: 'questions',
-    kind: 'business',
     path: 'questions',
-    requiredPermissions: ['question.view', 'question.create', 'question.update', 'question.delete'],
+    requiredPermissions: ['questions.view_question', 'questions.add_question', 'questions.change_question', 'questions.delete_question'],
     permissionMode: 'any',
-    showInMenu: true,
     menu: {
       label: '题目管理',
       group: {
@@ -286,27 +240,22 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'question-create',
-    kind: 'business',
     path: 'questions/create',
-    requiredPermissions: ['question.create'],
+    requiredPermissions: ['questions.add_question'],
     component: QuestionFormPage,
   },
   {
     key: 'question-edit',
-    kind: 'business',
     path: 'questions/:id/edit',
-    requiredPermissions: ['question.update'],
+    requiredPermissions: ['questions.change_question'],
     component: QuestionFormPage,
   },
   {
     key: 'spot-checks',
-    kind: 'business',
     path: 'spot-checks',
-    // 学员只有 spot_check.view（看自己的），入口在任务中心「抽查」Tab；
-    // 管理端菜单/路由禁止 STUDENT，避免和学员待办入口重复。
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.view'],
-    showInMenu: true,
+    // 学员抽查看/提交走任务中心 Tab + /spot-checks/mine；
+    // 管理端菜单不挂学习入口。
+    requiredPermissions: ['spot_checks.view_spotcheck'],
     menu: {
       label: '抽查管理',
       icon: FileSearch,
@@ -316,27 +265,21 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'spot-check-create',
-    kind: 'business',
     path: 'spot-checks/create',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.create'],
+    requiredPermissions: ['spot_checks.add_spotcheck'],
     // 发起统一在列表弹窗完成（左侧选人/勾选）
     render: () => <SpotCheckCreateRedirect />,
   },
   {
     key: 'spot-check-edit',
-    kind: 'business',
     path: 'spot-checks/:id/edit',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'TEAM_MANAGER'],
-    requiredPermissions: ['spot_check.view', 'spot_check.update'],
+    requiredPermissions: ['spot_checks.view_spotcheck', 'spot_checks.change_spotcheck'],
     component: SpotCheckForm,
   },
   {
     key: 'users',
-    kind: 'business',
     path: 'users',
-    requiredPermissions: ['user.view'],
-    showInMenu: true,
+    requiredPermissions: ['users.view_user'],
     menu: {
       label: '用户列表',
       group: {
@@ -351,10 +294,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'audit-log-policy',
-    kind: 'business',
     path: 'audit-logs/policy',
-    requiredPermissions: ['activity_log.policy.update'],
-    showInMenu: true,
+    requiredPermissions: ['activity_logs.change_activitylogpolicy'],
     menu: {
       label: '日志策略',
       group: {
@@ -374,10 +315,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'audit-logs',
-    kind: 'business',
     path: 'audit-logs',
-    requiredPermissions: ['activity_log.view'],
-    showInMenu: true,
+    requiredPermissions: ['activity_logs.view_activitylog'],
     menu: {
       label: '日志审计',
       group: {
@@ -397,11 +336,9 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'authorization-center',
-    kind: 'business',
     path: 'authorization',
     requiredPermissions: AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
     permissionMode: 'any',
-    showInMenu: true,
     menu: {
       label: '用户授权',
       group: {
@@ -416,31 +353,26 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     key: 'quiz-player',
-    kind: 'business',
     path: 'quiz/:id',
-    requiredPermissions: ['submission.answer'],
+    workbenches: ['learn'],
     component: QuizPlayer,
   },
   {
     key: 'review-practice',
-    kind: 'business',
     path: 'review/practice',
-    requiredPermissions: ['submission.review'],
+    workbenches: ['learn'],
     render: () => <AnswerReview type="practice" />,
   },
   {
     key: 'review-exam',
-    kind: 'business',
     path: 'review/exam',
-    requiredPermissions: ['submission.review'],
+    workbenches: ['learn'],
     render: () => <AnswerReview type="exam" />,
   },
   {
     key: 'grading-center',
-    kind: 'business',
     path: 'grading-center',
-    requiredPermissions: ['grading.view'],
-    showInMenu: true,
+    requiredPermissions: ['tasks.view_grading'],
     menu: {
       label: '阅卷中心',
       group: {

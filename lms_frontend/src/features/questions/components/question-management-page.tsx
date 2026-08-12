@@ -8,7 +8,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTags } from '@/entities/tag/api/tags';
 import { QUESTION_TYPE_CONFIG } from '@/entities/question/constants';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
 import type { QuestionType } from '@/types/common';
 import { QuestionTab } from './question-tab';
 
@@ -25,7 +25,7 @@ export const QuestionManagementPage: React.FC = () => {
   const [filterQuestionType, setFilterQuestionType] = useState<QuestionType | 'all'>('all');
   const [filterSpaceTagId, setFilterSpaceTagId] = useState<string>('all');
   const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
 
   return (
     <PageFillShell>
@@ -69,7 +69,7 @@ export const QuestionManagementPage: React.FC = () => {
               onChange={setSearch}
             />
             <CircleButton
-              onClick={() => roleNavigate('/questions/create')}
+              onClick={() => navigate('/questions/create')}
               label="新建题目"
               className="shrink-0"
             />

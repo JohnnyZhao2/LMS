@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { PaginatedResponse } from '@/types/common';
 import type { QuizDetail, QuizListItem } from '@/types/quiz';
 
@@ -17,12 +16,10 @@ interface UseQuizzesParams {
  * 获取试卷列表
  */
 export const useQuizzes = (params: UseQuizzesParams = {}) => {
-  const currentRole = useCurrentRole();
   const { page = 1, pageSize = 20, search, quizType } = params;
 
   return useQuery({
     queryKey: queryKeys.quizzes.list({
-      currentRole,
       page,
       pageSize,
       search,
@@ -37,7 +34,7 @@ export const useQuizzes = (params: UseQuizzesParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/${queryString}`);
     },
-    enabled: currentRole !== null,
+    enabled: true,
   });
 };
 
@@ -45,10 +42,9 @@ export const useQuizzes = (params: UseQuizzesParams = {}) => {
  * 获取试卷详情
  */
 export const useQuizDetail = (id: number) => {
-  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.quizzes.detail({ currentRole, id }),
+    queryKey: queryKeys.quizzes.detail({ id }),
     queryFn: () => apiClient.get<QuizDetail>(`/quizzes/${id}/`),
-    enabled: !!id && currentRole !== null,
+    enabled: !!id,
   });
 };

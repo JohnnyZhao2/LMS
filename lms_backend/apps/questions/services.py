@@ -6,7 +6,7 @@ from typing import Optional
 from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import get_engine
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
     pop_resource_tag_payload,
@@ -36,7 +36,7 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
     ):
-        queryset = scope_filter('question.view', self.request, base_queryset=question_base_queryset())
+        queryset = get_engine(self.request).scope_filter('questions.view_question', base_queryset=question_base_queryset())
         queryset = apply_question_filters(queryset, filters or {}, search)
         if ordering:
             queryset = queryset.order_by(ordering)
@@ -82,7 +82,7 @@ class QuestionService(BaseService):
     )
     def update(self, pk: int, data: dict) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.update', self.request, resource=question, error_message='无权编辑此题目')
+        get_engine(self.request).enforce('questions.change_question', resource=question, error_message='无权编辑此题目')
 
         payload = dict(data)
         self.validate_question_payload(payload, source=question)
@@ -139,7 +139,7 @@ class QuestionService(BaseService):
     )
     def delete(self, pk: int) -> Question:
         question = self.get_by_id(pk)
-        enforce('question.delete', self.request, resource=question, error_message='无权删除此题目')
+        get_engine(self.request).enforce('questions.delete_question', resource=question, error_message='无权删除此题目')
         question.delete()
         return question
 

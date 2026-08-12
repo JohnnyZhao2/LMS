@@ -5,7 +5,7 @@ from typing import Any, Optional
 from django.db.models import Count, Prefetch, Q, QuerySet, Sum
 from django.utils import timezone
 
-from apps.authorization.engine import scope_filter
+from apps.authorization.engine import get_engine
 from apps.knowledge.selectors import get_knowledge_queryset
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
@@ -167,9 +167,7 @@ def task_resource_options(
         )
 
     if resource_type in {'ALL', 'QUIZ'}:
-        quiz_rows = scope_filter(
-            'quiz.view',
-            request,
+        quiz_rows = get_engine(request).scope_filter('quizzes.view_quiz',
             base_queryset=Quiz.objects.all(),
         ).annotate(
             question_count_value=Count('quiz_questions'),

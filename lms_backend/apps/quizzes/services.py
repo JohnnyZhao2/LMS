@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Count, DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
 
-from apps.authorization.engine import scope_filter
+from apps.authorization.engine import get_engine
 from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.tags.models import Tag
@@ -126,7 +126,7 @@ class QuizService(BaseService):
         queryset = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related(
             'quiz_questions__question_options',
         )
-        quiz = scope_filter('quiz.view', self.request, base_queryset=queryset).filter(pk=pk).first()
+        quiz = get_engine(self.request).scope_filter('quizzes.view_quiz', base_queryset=queryset).filter(pk=pk).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
 
@@ -138,9 +138,7 @@ class QuizService(BaseService):
         limit: int = None,
         offset: int = None,
     ) -> List[Quiz]:
-        qs = scope_filter(
-            'quiz.view',
-            self.request,
+        qs = get_engine(self.request).scope_filter('quizzes.view_quiz',
             base_queryset=Quiz.objects.select_related('created_by', 'updated_by'),
         ).annotate(
             question_count_value=Count('quiz_questions', distinct=True),
@@ -289,9 +287,7 @@ class QuizService(BaseService):
     ) -> Question | None:
         source_question_id = item.get('source_question_id')
         if source_question_id is not None:
-            source_question = scope_filter(
-                'question.view',
-                self.request,
+            source_question = get_engine(self.request).scope_filter('questions.view_question',
                 base_queryset=Question.objects.all(),
             ).filter(pk=source_question_id).first()
             if source_question is None:

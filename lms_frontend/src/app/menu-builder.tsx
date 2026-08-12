@@ -1,14 +1,17 @@
 import { LayoutGrid } from 'lucide-react';
-import type { RoleCode } from '@/types/common';
-import { getRolePathPrefix } from '@/session/workspace/role-paths';
-import { BUSINESS_ROUTE_META, type BusinessRouteMeta, type MenuItem, type MenuLabelResolver, type OrderedMenuItem } from './route-registry';
-import { getWorkspaceConfig, type WorkspaceConfig } from './workspace-config';
+import type { Workbench } from '@/types/common';
+import {
+  BUSINESS_ROUTE_META,
+  type BusinessRouteMeta,
+  type MenuItem,
+  type MenuLabelResolver,
+  type OrderedMenuItem,
+} from './route-registry';
 
 const resolveMenuLabel = (
   label: MenuLabelResolver,
-  workspace: WorkspaceConfig,
-  role: RoleCode,
-): string => (typeof label === 'function' ? label(workspace, role) : label);
+  workbench: Workbench,
+): string => (typeof label === 'function' ? label(workbench) : label);
 
 const isPermissionGranted = (
   route: BusinessRouteMeta,
@@ -25,27 +28,13 @@ const isPermissionGranted = (
 };
 
 export const getMenuItemsBySection = (
-  role: RoleCode | null,
+  workbench: Workbench,
   hasCapability: (permissionCode: string) => boolean,
   hasAnyCapability: (permissionCodes: string[]) => boolean,
 ): MenuItem[] => {
-  if (!role) {
-    return [];
-  }
-
-  const workspace = getWorkspaceConfig(role);
-  if (!workspace) {
-    return [];
-  }
-
-  const rolePrefix = getRolePathPrefix(role);
-  if (!rolePrefix) {
-    return [];
-  }
-
   const items: Array<MenuItem & { order: number; group?: string }> = [
     {
-      key: `${rolePrefix}/dashboard`,
+      key: '/dashboard',
       icon: <LayoutGrid className="h-4 w-4" />,
       label: '概览',
       order: 0,
@@ -53,10 +42,10 @@ export const getMenuItemsBySection = (
   ];
 
   BUSINESS_ROUTE_META.forEach((route) => {
-    if (!route.showInMenu || !route.menu) {
+    if (!route.menu) {
       return;
     }
-    if (route.allowedRoles && !route.allowedRoles.includes(role)) {
+    if (!(route.workbenches ?? ['manage']).includes(workbench)) {
       return;
     }
     if (!isPermissionGranted(route, hasCapability, hasAnyCapability)) {
@@ -64,9 +53,9 @@ export const getMenuItemsBySection = (
     }
 
     items.push({
-      key: `${rolePrefix}/${route.path}`,
+      key: `/${route.path}`,
       icon: route.menu.icon ? <route.menu.icon className="h-4 w-4" /> : undefined,
-      label: resolveMenuLabel(route.menu.label, workspace, role),
+      label: resolveMenuLabel(route.menu.label, workbench),
       order: route.menu.order,
       group: route.menu.group?.key,
     });
@@ -112,7 +101,7 @@ export const getMenuItemsBySection = (
       result.push({
         order: groupMeta.order,
         item: {
-          key: `${rolePrefix}/${groupKey}`,
+          key: `/${groupKey}`,
           icon: <groupMeta.icon className="h-4 w-4" />,
           label: groupMeta.label,
           children: groupChildren

@@ -172,9 +172,11 @@ class ApiClient {
           headers,
         });
       } catch (error) {
-        // 刷新失败，跳转到登录页
+        // 刷新失败：会话已失效，清 token 并回登录页
         tokenStorage.clearTokens();
-        window.location.href = ROUTES.LOGIN;
+        if (window.location.pathname !== ROUTES.LOGIN) {
+          window.location.href = ROUTES.LOGIN;
+        }
         throw error;
       }
     }

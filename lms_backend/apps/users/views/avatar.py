@@ -1,7 +1,8 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import get_engine
+from apps.users.selectors import get_user_or_404
 from apps.users.serializers import AvatarUpdateSerializer, UserDetailSerializer, UserInfoSerializer
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
@@ -47,7 +48,11 @@ class UserAvatarUpdateView(BaseAPIView):
         tags=['用户管理'],
     )
     def patch(self, request, pk):
-        enforce('user.avatar.update', request, error_message='只有管理员可以修改其他用户头像')
+        target = get_user_or_404(pk)
+        get_engine(request).enforce('users.change_user_avatar',
+            resource=target,
+            error_message='无权修改该用户头像',
+        )
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.update_avatar(pk, serializer.validated_data['avatar_key'])

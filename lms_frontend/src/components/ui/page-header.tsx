@@ -1,8 +1,7 @@
 import React from 'react';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { cn } from '@/lib/utils';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { getWorkspaceHome } from '@/session/workspace/role-paths';
+import { ROUTES } from '@/config/routes';
 
 export interface PageHeaderProps {
   /** 页面标题 */
@@ -25,8 +24,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   extra,
   className = '',
 }) => {
-  const currentRole = useCurrentRole();
-  const dashboardPath = getWorkspaceHome(currentRole) ?? '/dashboard';
+  const dashboardPath = ROUTES.DASHBOARD;
   const hasBreadcrumbs = Boolean(breadcrumbs?.length);
 
   if (!hasBreadcrumbs && !extra) {

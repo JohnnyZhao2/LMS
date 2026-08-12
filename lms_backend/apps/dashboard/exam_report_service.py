@@ -10,7 +10,7 @@ from django.db.models import Sum
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from apps.authorization.engine import authorize, scope_filter
+from apps.authorization.engine import get_engine
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.users.models import User
@@ -260,22 +260,20 @@ class ExamReportService(BaseService):
     def _accessible_students(self):
         """按 task.analytics.view 取学员范围。
 
-        有分析权限：走 scope_filter（导师/室经理各自范围，管理员 ALL）。
-        无分析权限：仅 dashboard.admin.view 可回退全员；导师/室经理返回空集，避免越权。
+        有分析权限：走组织关系人员范围（管理员 ALL）。
+        无分析权限：仅 ADMIN/超管可回退全员，其余返回空集。
         """
-        base = User.objects.filter(
-            is_active=True,
-            roles__code='STUDENT',
-        ).exclude(is_superuser=True).distinct()
+        from apps.authorization.roles import learning_member_queryset
 
-        if authorize('task.analytics.view', self.request).allowed:
-            return scope_filter(
-                'task.analytics.view',
-                self.request,
+        base = learning_member_queryset()
+
+        if get_engine(self.request).has_permission('tasks.view_task_analytics'):
+            return get_engine(self.request).scope_filter('tasks.view_task_analytics',
                 base_queryset=base,
                 resource_model=User,
             )
-        if authorize('dashboard.admin.view', self.request).allowed:
+
+        if self.user.is_admin:
             return base
         return base.none()
 
@@ -289,9 +287,7 @@ class ExamReportService(BaseService):
             .values_list('task_id', flat=True)
             .distinct()
         )
-        visible_task_ids = scope_filter(
-            'task.view',
-            self.request,
+        visible_task_ids = get_engine(self.request).scope_filter('tasks.view_task',
             resource_model=Task,
             base_queryset=Task.objects.filter(id__in=assigned_task_ids),
         ).values_list('id', flat=True)

@@ -7,7 +7,7 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import get_engine
 from apps.users.models import User
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
@@ -49,7 +49,7 @@ class SpotCheckListCreateView(BaseAPIView):
         tags=['抽查管理'],
     )
     def get(self, request):
-        enforce('spot_check.view', request, error_message='无权查看抽查记录')
+        get_engine(request).require_permission('spot_checks.view_spotcheck', error_message='无权查看抽查记录')
         student_id = parse_int_query_param(
             request=request,
             name='student_id',
@@ -84,7 +84,7 @@ class SpotCheckListCreateView(BaseAPIView):
     def post(self, request):
         serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        enforce('spot_check.create', request, error_message='无权创建抽查记录')
+        get_engine(request).enforce('spot_checks.add_spotcheck', error_message='无权创建抽查记录')
         created = self.service.batch_create(data=serializer.validated_data)
         response_serializer = SpotCheckDetailSerializer(created, many=True, context={'request': request})
         return created_response(response_serializer.data)
@@ -134,12 +134,10 @@ class SpotCheckStudentListView(BaseAPIView):
         tags=['抽查管理'],
     )
     def get(self, request):
-        enforce('spot_check.view', request, error_message='无权查看抽查学员列表')
-        queryset = scope_filter(
-            'spot_check.view',
-            request,
+        get_engine(request).require_permission('spot_checks.view_spotcheck', error_message='无权查看抽查学员列表')
+        queryset = get_engine(request).scope_filter('spot_checks.view_spotcheck',
             resource_model=User,
-        ).filter(roles__code='STUDENT').select_related('department').distinct()
+        ).select_related('department').distinct()
 
         search = (request.query_params.get('search') or '').strip()
         if search:

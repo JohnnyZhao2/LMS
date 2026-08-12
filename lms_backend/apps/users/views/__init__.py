@@ -7,22 +7,17 @@ from .management import (
     DepartmentsListView,
     MentorsListView,
     RolesListView,
-    UserActivateView,
     UserAvatarUpdateView,
     UserAssignMentorView,
     UserAssignRolesView,
-    UserDeactivateView,
     UserDetailView,
     UserListCreateView,
     UserSelfAvatarView,
 )
 
 __all__ = [
-    # Management views
     'UserListCreateView',
     'UserDetailView',
-    'UserDeactivateView',
-    'UserActivateView',
     'UserAvatarUpdateView',
     'UserAssignRolesView',
     'UserAssignMentorView',

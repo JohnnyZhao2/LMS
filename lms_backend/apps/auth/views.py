@@ -3,7 +3,6 @@ Authentication views.
 Implements:
 - Login / Logout
 - Token refresh
-- Role switching
 - Password change
 - Current user info
 """
@@ -24,7 +23,6 @@ from apps.auth.serializers import (
     OneAccountCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
-    SwitchRoleRequestSerializer,
 )
 from apps.auth.services import AuthenticationService
 
@@ -113,34 +111,6 @@ class RefreshTokenView(BaseAPIView):
         return success_response(result)
 
 
-class SwitchRoleView(BaseAPIView):
-    """
-    Role switching endpoint.
-    """
-    permission_classes = [IsAuthenticated]
-    service_class = AuthenticationService
-
-    @extend_schema(
-        summary='切换角色',
-        description='切换当前用户的生效角色，返回新的令牌',
-        request=SwitchRoleRequestSerializer,
-        responses={
-            200: LoginResponseSerializer,
-            400: OpenApiResponse(description='用户没有该角色权限'),
-        },
-        tags=['认证']
-    )
-    def post(self, request):
-        serializer = SwitchRoleRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        result = self.service.switch_role(
-            user=request.user,
-            role_code=serializer.validated_data['role_code']
-        )
-        return success_response(result)
-
-
 class MeView(BaseAPIView):
     """
     获取当前登录用户信息。
@@ -159,10 +129,7 @@ class MeView(BaseAPIView):
         tags=['认证']
     )
     def get(self, request):
-        result = self.service.get_me(
-            user=request.user,
-            requested_role=getattr(request.user, 'current_role', None),
-        )
+        result = self.service.get_me(user=request.user)
         return success_response(result)
 
 

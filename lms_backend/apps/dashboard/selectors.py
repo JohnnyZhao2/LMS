@@ -20,11 +20,9 @@ from .student_dashboard_queries import (
     get_task_participants_progress,
     get_urgent_tasks_count,
 )
-from .team_manager_dashboard_queries import calculate_average_completion_rate_by_students
 
 __all__ = [
     'calculate_assignment_progress',
-    'calculate_average_completion_rate_by_students',
     'calculate_avg_score',
     'calculate_task_stats',
     'get_assignments_by_students',

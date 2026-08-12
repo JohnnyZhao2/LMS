@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from apps.activity_logs.decorators import log_user_action
 from apps.activity_logs.registry import register_user_log_action
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
@@ -13,8 +14,7 @@ from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .avatar_constants import validate_avatar_key
-from .models import Role, User, UserRole
-from .role_constraints import validate_role_assignment_constraints
+from .models import Department, MANAGEMENT_ROLE_CODES, ROLE_LABELS, User
 from .selectors import get_user_by_id, get_valid_mentor_by_id
 from .workflows.delete_user import hard_delete_user_business_data
 
@@ -25,66 +25,11 @@ register_user_log_action('mentor_assigned', group='账号管理', label='分配�
 class UserManagementService(BaseService):
     """
     User management service.
-    Provides methods for user CRUD operations, activation/deactivation,
-    role assignment, and mentor assignment.
+    Provides methods for user CRUD operations, role assignment, and mentor assignment.
     """
 
     def _get_user(self, user_id: int) -> Optional[User]:
         return get_user_by_id(user_id)
-
-    @log_user_action(
-        'deactivate',
-        '被操作账号：{result.username}（{result.employee_id}）',
-        group='账号管理',
-        label='停用账号',
-    )
-    def deactivate_user(self, user_id: int) -> User:
-        """
-        Deactivate a user.
-        Args:
-            user_id: The user ID to deactivate
-        Returns:
-            The deactivated user
-        Raises:
-            BusinessError: If user not found or user is admin
-        Properties:
-        - Property 7: 用户停用/启用状态切换
-        """
-        user = self._get_user(user_id)
-        self.validate_not_none(user, f'用户 {user_id} 不存在')
-        # 防止停用超级用户（Django 的 is_superuser）
-        if user.is_superuser:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='不能停用超级用户账号'
-            )
-        user.is_active = False
-        user.save(update_fields=['is_active'])
-        return user
-
-    @log_user_action(
-        'activate',
-        '被操作账号：{result.username}（{result.employee_id}）',
-        group='账号管理',
-        label='启用账号',
-    )
-    def activate_user(self, user_id: int) -> User:
-        """
-        Activate a user.
-        Args:
-            user_id: The user ID to activate
-        Returns:
-            The activated user
-        Raises:
-            BusinessError: If user not found
-        Properties:
-        - Property 7: 用户停用/启用状态切换
-        """
-        user = self._get_user(user_id)
-        self.validate_not_none(user, f'用户 {user_id} 不存在')
-        user.is_active = True
-        user.save(update_fields=['is_active'])
-        return user
 
     def _validate_user_can_be_deleted(self, user: User) -> None:
         """校验用户是否允许被彻底删除。"""
@@ -92,13 +37,6 @@ class UserManagementService(BaseService):
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='不能删除超级用户账号'
-            )
-
-        # 仅允许删除离职用户（当前实现：停用用户）
-        if user.is_active:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='仅可删除离职（已停用）用户，请先停用该账号'
             )
 
     def create_user(self, validated_data: dict) -> User:
@@ -109,15 +47,13 @@ class UserManagementService(BaseService):
         mentor_id = validated_data.get('mentor_id')
         role_codes = validated_data.get('role_codes', [])
 
-        user = User(
-            username=username,
-            employee_id=employee_id,
-            department_id=department_id,
-        )
-        user.set_password(password)
-
         with transaction.atomic():
-            user.save()
+            user = User.objects.create_user(
+                employee_id=employee_id,
+                username=username,
+                password=password,
+                department_id=department_id,
+            )
             if mentor_id is not None:
                 user.mentor = get_valid_mentor_by_id(mentor_id)
                 user.save(update_fields=['mentor'])
@@ -134,6 +70,7 @@ class UserManagementService(BaseService):
         username = validated_data.get('username')
         employee_id = validated_data.get('employee_id')
         role_codes = validated_data.get('role_codes')
+        previous_department_id = user.department_id
 
         with transaction.atomic():
             if department_id is not None:
@@ -144,14 +81,44 @@ class UserManagementService(BaseService):
                 user.employee_id = employee_id
             user.save()
 
+            if department_id is not None and department_id != previous_department_id:
+                Department.objects.filter(manager=user, pk=previous_department_id).update(manager=None)
+                user.refresh_from_db(fields=['department'])
+
             if role_codes is not None:
                 user = self.assign_roles(
                     user_id=user.id,
                     role_codes=role_codes,
                     assigned_by=self.user,
                 )
+            else:
+                self._sync_department_manager(user, 'DEPT_MANAGER' in user.role_codes)
 
         return user
+
+    def _sync_department_manager(self, user: User, is_department_manager: bool) -> None:
+        if user.is_superuser or not is_department_manager:
+            Department.objects.filter(manager=user).update(manager=None)
+            return
+        if not user.department_id:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='用户未分配部门，无法设为室经理',
+            )
+        department = user.department
+        if department.manager_id and department.manager_id != user.id:
+            existing = department.manager
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=(
+                    f'部门 {department.name} 已有室经理 '
+                    f'{existing.employee_id}，每个部门只能有一个室经理'
+                ),
+            )
+        Department.objects.filter(manager=user).exclude(pk=department.pk).update(manager=None)
+        if department.manager_id != user.id:
+            department.manager = user
+            department.save(update_fields=['manager'])
 
     def _delete_user_safely(self, user: User) -> None:
         """
@@ -170,10 +137,7 @@ class UserManagementService(BaseService):
             )
 
     def delete_user(self, user_id: int) -> None:
-        """
-        彻底删除用户及全部关联数据。
-        仅允许删除离职（已停用）用户。
-        """
+        """彻底删除用户及全部关联数据。"""
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         self._validate_user_can_be_deleted(user)
@@ -185,22 +149,18 @@ class UserManagementService(BaseService):
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
-        For non-superusers, STUDENT role is preserved unless user is assigned
-        department/team manager role.
-        Superuser accounts are dedicated and cannot be assigned business roles.
+        role_codes is the full intended set of management roles. Empty means
+        a regular employee who can learn without any Group; personal
+        user_permissions are cleared on that demotion.
+        Superuser accounts cannot be assigned business roles.
         Args:
             user_id: The user ID to assign roles to
-            role_codes: List of role codes to assign (excluding STUDENT)
+            role_codes: Full management role code list to assign
             assigned_by: The user performing the assignment
         Returns:
             The updated user
         Raises:
             BusinessError: If user not found or role constraints violated
-        Properties:
-        - 非 STUDENT 系统角色单选（最多一个）
-        - Property 9: 室经理/团队经理与学员角色互斥；ADMIN 可叠加学员角色
-        - 每个部门只能有一个室经理
-        - 全局只能有一个团队经理
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
@@ -210,65 +170,44 @@ class UserManagementService(BaseService):
                 message='超管账号为专有角色，不允许分配业务角色',
             )
 
-        # 统一验证角色约束（专有角色组合、超级管理员限制、唯一性）
-        validate_role_assignment_constraints(
-            role_codes=role_codes,
-            department_id=user.department_id,
-            is_superuser=user.is_superuser,
-            exclude_user_id=user.id,
-        )
-
-        leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
-        should_keep_student = (
-            not user.is_superuser
-            and leadership_roles.isdisjoint(set(role_codes))
-        )
-
-        # Get all roles to assign
-        roles_to_assign = set(role_codes)
-        if should_keep_student:
-            roles_to_assign.add('STUDENT')
-        # Get current roles
-        current_role_codes = set(user.roles.values_list('code', flat=True))
-        # Remove roles that are not in the new list (except STUDENT)
+        roles_to_assign = {code for code in role_codes if code}
+        if len(MANAGEMENT_ROLE_CODES.intersection(roles_to_assign)) > 1:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='系统角色最多只能选择一个',
+            )
+        current_role_codes = set(user.role_codes)
         roles_to_remove = current_role_codes - roles_to_assign
-        if should_keep_student and 'STUDENT' in roles_to_remove:
-            roles_to_remove.remove('STUDENT')  # 普通用户永不移除 STUDENT
-        # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
+
+        with transaction.atomic():
+            if roles_to_add or roles_to_remove:
+                if roles_to_remove:
+                    user.groups.remove(*Group.objects.filter(name__in=roles_to_remove))
+                roles_by_code = {
+                    group.name: group
+                    for group in Group.objects.filter(name__in=roles_to_add)
+                }
+                missing_role_codes = sorted(roles_to_add - set(roles_by_code))
+                if missing_role_codes:
+                    raise BusinessError(
+                        code=ErrorCodes.VALIDATION_ERROR,
+                        message=f"角色不存在：{'、'.join(missing_role_codes)}",
+                    )
+                user.groups.add(*(roles_by_code[role_code] for role_code in roles_to_add))
+                user.refresh_from_db()
+                user.__dict__.pop('role_codes', None)
+            if not MANAGEMENT_ROLE_CODES.intersection(roles_to_assign):
+                user.user_permissions.clear()
+            for cache_key in ('_perm_cache', '_user_perm_cache', '_group_perm_cache'):
+                user.__dict__.pop(cache_key, None)
+            self._sync_department_manager(user, 'DEPT_MANAGER' in roles_to_assign)
 
         if not roles_to_add and not roles_to_remove:
             return user
 
-        with transaction.atomic():
-            if roles_to_remove:
-                UserRole.objects.filter(
-                    user_id=user.id,
-                    role__code__in=list(roles_to_remove)
-                ).delete()
-            roles_by_code = {
-                role.code: role
-                for role in Role.objects.filter(code__in=list(roles_to_add))
-            }
-            missing_role_codes = sorted(roles_to_add - set(roles_by_code))
-            if missing_role_codes:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f"角色不存在：{'、'.join(missing_role_codes)}",
-                )
-            for role_code in roles_to_add:
-                if not user.roles.filter(code=role_code).exists():
-                    UserRole.objects.create(
-                        user_id=user.id,
-                        role_id=roles_by_code[role_code].id,
-                        assigned_by_id=assigned_by.id
-                    )
-        # Refresh user from database
-        user.refresh_from_db()
-
-        role_name_map = dict(Role.ROLE_CHOICES)
-        added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
-        removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+        added_names = '、'.join([ROLE_LABELS.get(code, code) for code in sorted(roles_to_add)])
+        removed_names = '、'.join([ROLE_LABELS.get(code, code) for code in sorted(roles_to_remove)])
         parts = [f'被操作账号：{user.username}（{user.employee_id}）']
         if roles_to_add:
             parts.append(f'新增角色：{added_names}')

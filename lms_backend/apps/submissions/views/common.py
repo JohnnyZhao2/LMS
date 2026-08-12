@@ -8,7 +8,6 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
@@ -19,10 +18,6 @@ from ..serializers import (
     SubmissionDetailSerializer,
 )
 from ..services import SubmissionService, UNSET
-
-
-def enforce_student_submission_role(request) -> None:
-    enforce('submission.answer', request, error_message='只有学员角色可以进行答题和查看结果')
 
 
 class StartQuizView(APIView):
@@ -50,7 +45,6 @@ class StartQuizView(APIView):
         tags=['答题']
     )
     def post(self, request):
-        enforce_student_submission_role(request)
         serializer = StartQuizSerializer(
             data=request.data,
             context={'request': request}
@@ -90,7 +84,6 @@ class SubmitView(BaseAPIView):
         tags=['答题']
     )
     def post(self, request, pk):
-        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         submission = self.service.submit(submission)
         response_serializer = SubmissionDetailSerializer(submission)
@@ -114,7 +107,6 @@ class ResultView(BaseAPIView):
         tags=['答题']
     )
     def get(self, request, pk):
-        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         if submission.status == 'IN_PROGRESS':
             raise BusinessError(
@@ -147,7 +139,6 @@ class SaveAnswerView(BaseAPIView):
         tags=['测验答题', '考试答题']
     )
     def post(self, request, pk):
-        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         serializer = SaveAnswerSerializer(
             data=request.data,

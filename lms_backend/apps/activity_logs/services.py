@@ -14,12 +14,9 @@ _USER_ACTION_SUMMARIES = {
     'login': '{actor} 登录成功',
     'logout': '{actor} 退出登录',
     'login_failed': '{actor} 登录失败',
-    'switch_role': '{actor} 切换了角色',
     'password_change': '{actor} 修改了用户密码',
     'role_assigned': '{actor} 更新了用户角色',
     'mentor_assigned': '{actor} 分配了导师',
-    'activate': '{actor} 启用了用户账号',
-    'deactivate': '{actor} 停用了用户账号',
 }
 
 _CONTENT_TYPE_NAMES = {
@@ -48,11 +45,6 @@ _OPERATION_ACTION_SUMMARIES = {
     'delete_spot_check': '{actor} 删除了 {target} 的抽查记录',
     'manual_grade': '{actor} 批改了答卷',
     'batch_grade': '{actor} 批量评分',
-    'replace_role_permissions': '{actor} 更新了角色模板《{target}》的权限',
-    'create_user_permission_override': '{actor} 新增了 {target} 的权限覆盖',
-    'delete_user_permission_override': '{actor} 删除了 {target} 的权限覆盖',
-    'create_user_scope_group_override': '{actor} 新增了 {target} 的范围组覆盖',
-    'delete_user_scope_group_override': '{actor} 删除了 {target} 的范围组覆盖',
     'merge_tags': '{actor} 合并了标签《{target}》',
     'reorder_spaces': '{actor} 调整了空间标签顺序',
     'start_quiz': '{actor} 开始答题《{target}》',

@@ -42,8 +42,8 @@ class StudentAssignmentListView(BaseAPIView):
     def get(self, request):
         status_filter = request.query_params.get('status')
         search = request.query_params.get('search')
-        
-        # Use StudentTaskService to get queryset (user context injected)
+
+        # 执行态：只查 request.user 自己的分配，不进管理 Scope
         queryset = self.service.get_student_assignments_queryset(
             status_filter=status_filter,
             search=search
@@ -76,9 +76,9 @@ class StudentTaskDetailView(BaseAPIView):
         tags=['学员任务执行']
     )
     def get(self, request, task_id):
-        # Use StudentTaskService to get assignment (user context injected)
+        # 执行态：assignee=request.user，不走管理 /tasks/{id}/
         assignment = self.service.get_student_assignment(task_id)
-        
+
         serializer = StudentTaskDetailSerializer(assignment)
         return success_response(serializer.data)
 
@@ -104,7 +104,6 @@ class CompleteKnowledgeLearningView(BaseAPIView):
         tags=['学员任务执行']
     )
     def post(self, request, task_id):
-        # Get assignment using service
         assignment = self.service.get_student_assignment(task_id)
         
         serializer = CompleteKnowledgeLearningSerializer(data=request.data)

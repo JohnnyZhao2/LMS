@@ -7,26 +7,23 @@ import { type ColumnDef } from "@tanstack/react-table"
 import {
   Pencil,
   KeyRound,
-  Ban,
-  CheckCircle,
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from '@/entities/user/api/get-users'
-import { useActivateUser, useChangePassword, useDeactivateUser, useDeleteUser, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
+import { useChangePassword, useDeleteUser, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
 import { UserForm } from "./user-form"
 import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"
-import { getRoleColor } from "@/lib/role-config"
+import { getRoleColor, SUPERUSER_VISUAL } from "@/lib/role-config"
 import { useAuth } from "@/session/auth/auth-context"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
-  LIST_ACTION_ICON_SUCCESS_CLASS,
   LIST_ACTION_ICON_WARNING_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
-import { CellWithAvatar, CellTags, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
+import { CellWithAvatar, CellTags, CellSmallAvatar } from '@/components/ui/data-table/data-table-cells';
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,7 +35,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
-import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
 import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
@@ -46,13 +42,12 @@ import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { hasCapability } = useAuth()
-  const canCreateUser = hasCapability('user.create')
-  const canUpdateUser = hasCapability('user.update')
-  const canManageUserAccount = hasCapability('user.activate')
-  const canDeleteUser = hasCapability('user.delete')
-  const canChangePassword = canManageUserAccount
+  const canCreateUser = hasCapability('users.add_user')
+  const canUpdateUser = hasCapability('users.change_user')
+  const canDeleteUser = hasCapability('users.delete_user')
+  const canChangePassword = canUpdateUser
   const canOpenUserEditor = canUpdateUser || hasCapability(USER_ROLE_ASSIGN_PERMISSION)
-  const canAdminEditAvatar = hasCapability('user.avatar.update')
+  const canAdminEditAvatar = canUpdateUser
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -112,8 +107,6 @@ export const UserList: React.FC = () => {
     departmentId: departmentFilter,
     mentorId: mentorFilter,
   })
-  const activateUser = useActivateUser()
-  const deactivateUser = useDeactivateUser()
   const deleteUser = useDeleteUser()
   const changePassword = useChangePassword()
   const updateUserAvatar = useUpdateUserAvatar()
@@ -130,20 +123,6 @@ export const UserList: React.FC = () => {
   }, [userIdFromParam])
 
   const filteredUsers = data || []
-
-  const handleToggleActive = async (user: UserListType) => {
-    try {
-      if (user.is_active) {
-        await deactivateUser.mutateAsync(user.id)
-        toast.success("账号已停用")
-      } else {
-        await activateUser.mutateAsync(user.id)
-        toast.success("账号已启用")
-      }
-    } catch (error) {
-      showApiError(error)
-    }
-  }
 
   const closeChangePasswordDialog = () => {
     setChangePasswordDialog({ open: false })
@@ -177,11 +156,6 @@ export const UserList: React.FC = () => {
   const handleDeleteUser = async () => {
     const targetUser = deleteUserDialog.user
     if (!targetUser) return
-
-    if (targetUser.is_active) {
-      toast.error("仅可删除已停用（离职）用户")
-      return
-    }
 
     try {
       await deleteUser.mutateAsync(targetUser.id)
@@ -241,11 +215,15 @@ export const UserList: React.FC = () => {
       meta: { width: '22%', minWidth: '180px' },
       cell: ({ row }) => (
         <CellTags
-          tags={row.original.roles.map((role: Role) => ({
-            key: role.code,
-            label: role.name,
-            bgClass: getRoleColor(role.code).bgClass,
-          }))}
+          tags={
+            row.original.is_superuser
+              ? [{ key: 'SUPERUSER', label: '超管', bgClass: SUPERUSER_VISUAL.bgClass }]
+              : row.original.roles.map((role: Role) => ({
+                  key: role.code,
+                  label: role.name,
+                  bgClass: getRoleColor(role.code).bgClass,
+                }))
+          }
         />
       ),
     },
@@ -270,17 +248,9 @@ export const UserList: React.FC = () => {
       },
     },
     {
-      header: "状态",
-      id: "status",
-      meta: { width: '88px' },
-      cell: ({ row }) => (
-        <CellStatus isActive={row.original.is_active} />
-      ),
-    },
-    {
       header: "操作",
       id: "actions",
-      meta: { minWidth: '184px' },
+      meta: { minWidth: '140px' },
       cell: ({ row }) => (
         <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Tooltip title="编辑资料">
@@ -310,23 +280,6 @@ export const UserList: React.FC = () => {
               </Button>
             </Tooltip>
           )}
-          {canManageUserAccount && (
-            <Tooltip title={row.original.is_active ? "停用账号" : "启用账号"}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  row.original.is_active
-                    ? LIST_ACTION_ICON_DESTRUCTIVE_CLASS
-                    : LIST_ACTION_ICON_SUCCESS_CLASS,
-                  "disabled:pointer-events-none disabled:opacity-50",
-                )}
-                onClick={() => handleToggleActive(row.original)}
-              >
-                {row.original.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-              </Button>
-            </Tooltip>
-          )}
           {canDeleteUser && (
             <Tooltip title="彻底删除">
               <Button
@@ -334,10 +287,6 @@ export const UserList: React.FC = () => {
                 size="icon"
                 className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
                 onClick={() => {
-                  if (row.original.is_active) {
-                    toast.error("请先停用账号，再执行彻底删除")
-                    return
-                  }
                   setDeleteUserDialog({ open: true, user: row.original })
                 }}
               >
@@ -498,7 +447,7 @@ export const UserList: React.FC = () => {
             user: open ? deleteUserDialog.user : undefined,
           })
         }
-        title="彻底删除该离职用户？"
+        title="彻底删除该用户？"
         description={`将永久删除用户「${deleteUserDialog.user?.username ?? ''}」及其所有关联数据（任务、答题、抽查、题库与知识资源）。此操作不可撤销。`}
         icon={<Trash2 className="h-10 w-10" />}
         iconBgColor="bg-destructive-100"

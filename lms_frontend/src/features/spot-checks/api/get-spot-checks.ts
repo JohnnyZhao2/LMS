@@ -2,21 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import type { PaginatedResponse, RoleCode } from '@/types/common';
+import { useAuth } from '@/session/auth/auth-context';
+import type { PaginatedResponse } from '@/types/common';
 import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
 
 interface GetSpotChecksParams {
   page?: number;
   pageSize?: number;
-  role?: RoleCode | null;
   studentId?: number;
   batchId?: string | null;
   enabled?: boolean;
 }
 
 interface GetSpotCheckStudentsParams {
-  role?: RoleCode | null;
   search?: string;
 }
 
@@ -24,13 +22,11 @@ interface GetSpotCheckStudentsParams {
  * 获取抽查记录列表
  */
 export const useSpotChecks = (params: GetSpotChecksParams = {}) => {
-  const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, role, studentId, batchId, enabled = true } = params;
-  const resolvedRole = role ?? currentRole;
-  
+  const { isAuthenticated } = useAuth();
+  const { page = 1, pageSize = 20, studentId, batchId, enabled = true } = params;
+
   return useQuery({
     queryKey: queryKeys.spotChecks.list({
-      currentRole: resolvedRole,
       studentId,
       batchId: batchId ?? undefined,
       page,
@@ -44,17 +40,16 @@ export const useSpotChecks = (params: GetSpotChecksParams = {}) => {
       });
       return apiClient.get<PaginatedResponse<SpotCheck>>(`/spot-checks/${queryString}`);
     },
-    enabled: resolvedRole !== null && enabled,
+    enabled: isAuthenticated && enabled,
   });
 };
 
 /** 拉取同批次全部成员（自动翻页，突破单页 100 上限）。 */
 export const useSpotCheckBatchPeers = (batchId: string | null | undefined) => {
-  const currentRole = useCurrentRole();
+  const { isAuthenticated } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.spotChecks.batchPeers({
-      currentRole,
       batchId: batchId ?? '',
     }),
     queryFn: async () => {
@@ -74,7 +69,7 @@ export const useSpotCheckBatchPeers = (batchId: string | null | undefined) => {
       }
       return all;
     },
-    enabled: currentRole !== null && Boolean(batchId),
+    enabled: isAuthenticated && Boolean(batchId),
   });
 };
 
@@ -82,33 +77,30 @@ export const useSpotCheckBatchPeers = (batchId: string | null | undefined) => {
  * 获取可查看抽查的学员列表
  */
 export const useSpotCheckStudents = (params: GetSpotCheckStudentsParams = {}) => {
-  const currentRole = useCurrentRole();
-  const { role, search } = params;
-  const resolvedRole = role ?? currentRole;
+  const { isAuthenticated } = useAuth();
+  const { search } = params;
 
   return useQuery({
     queryKey: queryKeys.spotChecks.students({
-      currentRole: resolvedRole,
       search,
     }),
     queryFn: () => {
       const queryString = buildQueryString({ search });
       return apiClient.get<SpotCheckStudent[]>(`/spot-checks/students/${queryString}`);
     },
-    enabled: resolvedRole !== null,
+    enabled: isAuthenticated,
   });
 };
 
 /**
  * 获取抽查详情
  */
-export const useSpotCheckDetail = (id: number, role?: RoleCode | null) => {
-  const currentRole = useCurrentRole();
-  const resolvedRole = role ?? currentRole;
+export const useSpotCheckDetail = (id: number) => {
+  const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: queryKeys.spotChecks.detail({ currentRole: resolvedRole, id }),
+    queryKey: queryKeys.spotChecks.detail({ id }),
     queryFn: () => apiClient.get<SpotCheck>(`/spot-checks/${id}/`),
-    enabled: !!id && resolvedRole !== null,
+    enabled: !!id && isAuthenticated,
   });
 };
 
@@ -123,11 +115,11 @@ export const useMySpotChecks = (
     enabled?: boolean;
   } = {},
 ) => {
-  const currentRole = useCurrentRole();
+  const { isAuthenticated } = useAuth();
   const { page = 1, pageSize = 50, status, enabled = true } = params;
 
   return useQuery({
-    queryKey: queryKeys.spotChecks.mine({ currentRole, page, pageSize, status }),
+    queryKey: queryKeys.spotChecks.mine({ page, pageSize, status }),
     queryFn: () => {
       const queryString = buildQueryString({
         ...buildPaginationParams(page, pageSize),
@@ -135,6 +127,6 @@ export const useMySpotChecks = (
       });
       return apiClient.get<PaginatedResponse<SpotCheck>>(`/spot-checks/mine/${queryString}`);
     },
-    enabled: currentRole !== null && enabled,
+    enabled: isAuthenticated && enabled,
   });
 };

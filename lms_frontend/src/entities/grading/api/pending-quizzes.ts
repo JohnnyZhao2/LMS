@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 
 export interface PendingQuiz {
   quiz_id: number;
@@ -25,12 +24,11 @@ interface UsePendingQuizzesOptions {
 }
 
 export const usePendingQuizzes = (options: UsePendingQuizzesOptions = {}) => {
-  const currentRole = useCurrentRole();
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: queryKeys.grading.pending(currentRole),
+    queryKey: queryKeys.grading.pending(),
     queryFn: () => apiClient.get<PendingTask[]>('/grading/pending/'),
-    enabled: currentRole !== null && enabled,
+    enabled: enabled,
   });
 };

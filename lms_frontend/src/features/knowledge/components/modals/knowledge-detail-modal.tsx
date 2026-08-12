@@ -10,6 +10,7 @@ import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-i
 import { useCompleteLearning } from '@/entities/task/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/entities/task/api/get-task-detail';
 import { useAuth } from '@/session/auth/auth-context';
+import { useWorkbench } from '@/session/hooks/use-workbench';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeWriteRequest, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import { StepsEditor } from '../shared/steps-editor';
@@ -102,14 +103,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   onUpdated,
 }) => {
   const isCreateMode = typeof knowledgeId !== 'number';
-  const { currentRole, hasCapability } = useAuth();
-  const isStudent = currentRole === 'STUDENT';
-  const canUpdateKnowledge = !previewOnly && (
+  const { hasCapability } = useAuth();
+  const workbench = useWorkbench();
+  const isStudent = workbench === 'learn';
+  const canUpdateKnowledge = !previewOnly && workbench === 'manage' && (
     isCreateMode
-      ? hasCapability('knowledge.create')
-      : hasCapability('knowledge.update')
+      ? hasCapability('knowledge.add_knowledge')
+      : hasCapability('knowledge.change_knowledge')
   );
-  const canDeleteKnowledge = !previewOnly && !isCreateMode && hasCapability('knowledge.delete');
+  const canDeleteKnowledge = !previewOnly && workbench === 'manage' && !isCreateMode && hasCapability('knowledge.delete_knowledge');
 
   const { data, isLoading } = useKnowledgeDetail({ knowledgeId, taskKnowledgeId });
   const createKnowledge = useCreateKnowledge();

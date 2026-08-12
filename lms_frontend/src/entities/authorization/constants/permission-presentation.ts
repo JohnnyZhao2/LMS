@@ -3,12 +3,9 @@ interface ModulePresentationMeta {
   order: number;
 }
 
+/** module = Django app_label */
 const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
-  dashboard: {
-    label: '仪表盘',
-    order: 5,
-  },
-  task: {
+  tasks: {
     label: '任务管理',
     order: 10,
   },
@@ -16,45 +13,29 @@ const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     label: '知识管理',
     order: 20,
   },
-  tag: {
+  tags: {
     label: '标签管理',
     order: 25,
   },
-  quiz: {
+  quizzes: {
     label: '试卷管理',
     order: 30,
   },
-  question: {
+  questions: {
     label: '题库管理',
     order: 40,
   },
-  grading: {
-    label: '阅卷中心',
-    order: 50,
-  },
-  spot_check: {
+  spot_checks: {
     label: '抽查管理',
     order: 60,
   },
-  user: {
+  users: {
     label: '用户管理',
     order: 70,
   },
-  config: {
-    label: '系统配置',
-    order: 80,
-  },
-  log_management: {
+  activity_logs: {
     label: '日志管理',
     order: 85,
-  },
-  submission: {
-    label: '作答流程',
-    order: 90,
-  },
-  profile: {
-    label: '个人中心',
-    order: 100,
   },
 };
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ListChecks, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
 import { ApiError } from '@/lib/api-client';
 import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
 import {
@@ -184,7 +183,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
   onSuccess,
   onSwitchRecord,
 }) => {
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const createSpotCheck = useCreateSpotCheck();
   const scoreSpotCheck = useScoreSpotCheck();
@@ -340,7 +339,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
 
   const leave = () => {
     if (onCancel) onCancel();
-    else roleNavigate(ROUTES.SPOT_CHECKS);
+    else navigate(ROUTES.SPOT_CHECKS);
   };
 
   const handleSubmit = async () => {
@@ -358,7 +357,7 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
       });
       toast.success(`已向 ${studentIds.length} 名学员发起抽查`);
       if (onSuccess) onSuccess();
-      else roleNavigate(ROUTES.SPOT_CHECKS);
+      else navigate(ROUTES.SPOT_CHECKS);
     } catch (error) {
       showApiError(error, '发起失败');
     }

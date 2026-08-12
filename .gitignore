@@ -22,7 +22,7 @@
 /avatars/
 /inspector.json
 /skills-lock.json
-/package-lock.json
+package-lock.json
 /.agents/
 /plugins/
 /*.png

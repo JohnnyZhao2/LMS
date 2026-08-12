@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useRoleNavigate } from "@/session/hooks/use-role-navigate"
+import { useNavigate } from "react-router-dom"
 import {
     Trash2,
     Clock,
@@ -215,7 +215,7 @@ const TaskRiskCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
 }
 
 export const TaskManagement: React.FC = () => {
-    const { roleNavigate } = useRoleNavigate()
+    const navigate = useNavigate()
     const { hasCapability } = useAuth()
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
@@ -223,7 +223,7 @@ export const TaskManagement: React.FC = () => {
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
-    const canFilterCreatorSide = hasCapability('user.view')
+    const canFilterCreatorSide = hasCapability('users.view_user')
 
     const { data: tasksData, isLoading } = useTaskList({
         page,
@@ -270,7 +270,7 @@ export const TaskManagement: React.FC = () => {
         if (!task.actions.update || !dayjs(task.deadline).isAfter(dayjs())) {
             return
         }
-        roleNavigate(`${ROUTES.TASKS}/${task.id}/edit`)
+        navigate(`${ROUTES.TASKS}/${task.id}/edit`)
     }
 
     const columns: ColumnDef<TaskListItem>[] = [
@@ -327,7 +327,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className={LIST_ACTION_ICON_ANALYTICS_CLASS}
-                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
+                                        onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
                                     </Button>
@@ -343,7 +343,7 @@ export const TaskManagement: React.FC = () => {
                                                 entry: 'task-management',
                                                 taskTitle: row.original.title,
                                             })
-                                            roleNavigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`)
+                                            navigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`)
                                         }}
                                     >
                                         <FileCheck className="h-4 w-4" />
@@ -427,7 +427,7 @@ export const TaskManagement: React.FC = () => {
                             onChange={setSearch}
                         />
                         <CircleButton
-                            onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
+                            onClick={() => navigate(`${ROUTES.TASKS}/create`)}
                             label="发布新任务"
                             className="shrink-0"
                         />

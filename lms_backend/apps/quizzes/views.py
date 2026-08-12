@@ -3,7 +3,7 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import get_engine
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
@@ -36,7 +36,7 @@ class QuizListCreateView(BaseAPIView):
         tags=['试卷管理'],
     )
     def get(self, request):
-        enforce('quiz.view', request, error_message='无权查看试卷列表')
+        get_engine(request).require_permission('quizzes.view_quiz', error_message='无权查看试卷列表')
         filters = {}
         created_by_id = parse_int_query_param(request=request, name='created_by', minimum=1)
         if created_by_id is not None:
@@ -62,7 +62,7 @@ class QuizListCreateView(BaseAPIView):
         tags=['试卷管理'],
     )
     def post(self, request):
-        enforce('quiz.create', request, error_message='无权创建试卷')
+        get_engine(request).enforce('quizzes.add_quiz', error_message='无权创建试卷')
         serializer = QuizCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
@@ -85,8 +85,12 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def get(self, request, pk):
-        enforce('quiz.view', request, error_message='无权查看试卷详情')
         quiz = self.service.get_by_id(pk)
+        get_engine(request).enforce(
+            'quizzes.view_quiz',
+            resource=quiz,
+            error_message='无权查看试卷详情',
+        )
         return success_response(QuizDetailSerializer(quiz).data)
 
     @extend_schema(
@@ -102,8 +106,8 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def patch(self, request, pk):
-        enforce('quiz.update', request, error_message='无权更新试卷')
         quiz = self.service.get_by_id(pk)
+        get_engine(request).enforce('quizzes.change_quiz', resource=quiz, error_message='无权更新试卷')
         serializer = QuizUpdateSerializer(instance=quiz, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
@@ -122,6 +126,7 @@ class QuizDetailView(BaseAPIView):
         tags=['试卷管理'],
     )
     def delete(self, request, pk):
-        enforce('quiz.delete', request, error_message='无权删除试卷')
+        quiz = self.service.get_by_id(pk)
+        get_engine(request).enforce('quizzes.delete_quiz', resource=quiz, error_message='无权删除试卷')
         self.service.delete(pk)
         return no_content_response()

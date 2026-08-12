@@ -3,7 +3,7 @@ import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
 import { useQuestions } from '@/entities/question/api/get-questions';
 import { useDeleteQuestion } from '@/entities/question/api/create-question';
 import { QuestionDetailDialog } from '@/entities/question/components/question-detail-dialog';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
@@ -38,7 +38,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
 }) => {
     const [deleteId, setDeleteId] = React.useState<number | null>(null);
     const [previewQuestion, setPreviewQuestion] = React.useState<Question | null>(null);
-    const { roleNavigate } = useRoleNavigate();
+    const navigate = useNavigate();
 
     const currentScopeKey = `${search}|${filterQuestionType}|${filterSpaceTagId}`;
     const {
@@ -165,7 +165,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                                 variant="ghost"
                                 size="icon"
                                 className={LIST_ACTION_ICON_EDIT_CLASS}
-                                onClick={() => roleNavigate(`/questions/${record.id}/edit`)}
+                                onClick={() => navigate(`/questions/${record.id}/edit`)}
                             >
                                 <PencilLine className="h-4 w-4" strokeWidth={2} />
                             </Button>
@@ -215,7 +215,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 }}
                 onEdit={(question) => {
                     setPreviewQuestion(null);
-                    roleNavigate(`/questions/${question.id}/edit`);
+                    navigate(`/questions/${question.id}/edit`);
                 }}
                 onDelete={(question) => {
                     setPreviewQuestion(null);

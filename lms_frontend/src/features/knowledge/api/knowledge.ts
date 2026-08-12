@@ -6,7 +6,6 @@ import {
   invalidateAfterKnowledgeViewMutation,
 } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { PaginatedResponse } from '@/types/common';
 import type { KnowledgeListItem, KnowledgeDetail, KnowledgeWriteRequest } from '@/types/knowledge';
 
@@ -17,12 +16,10 @@ interface GetKnowledgeListParams {
 }
 
 export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) => {
-  const currentRole = useCurrentRole();
   const { space_tag_id, search, pageSize = 20 } = params;
 
   return useInfiniteQuery({
     queryKey: queryKeys.knowledge.infiniteList({
-      currentRole,
       spaceTagId: space_tag_id,
       search,
       pageSize,
@@ -44,7 +41,7 @@ export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) =>
         ? lastPage.current_page + 1
         : undefined
     ),
-    enabled: currentRole !== null,
+    enabled: true,
   });
 };
 
@@ -55,12 +52,10 @@ export const useKnowledgeDetail = ({
   knowledgeId?: number;
   taskKnowledgeId?: number;
 }) => {
-  const currentRole = useCurrentRole();
   const detailId = taskKnowledgeId ?? knowledgeId ?? 0;
 
   return useQuery({
     queryKey: queryKeys.knowledge.detail({
-      currentRole,
       knowledgeId,
       taskKnowledgeId,
     }),
@@ -69,7 +64,7 @@ export const useKnowledgeDetail = ({
         ? apiClient.get<KnowledgeDetail>(`/knowledge/task/${taskKnowledgeId}/`)
         : apiClient.get<KnowledgeDetail>(`/knowledge/${knowledgeId}/`)
     ),
-    enabled: !!detailId && currentRole !== null,
+    enabled: !!detailId,
   });
 };
 

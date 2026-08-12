@@ -10,7 +10,8 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { useStudentDashboard, useTaskParticipants } from '../api/student-dashboard';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -47,7 +48,7 @@ const DashboardSectionHeader: React.FC<DashboardSectionHeaderProps> = ({
 
 export const StudentDashboard: React.FC = () => {
   const { data, isLoading } = useStudentDashboard(4, 4);
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const [selectedTask, setSelectedTask] = React.useState<StudentDashboardTask | null>(null);
 
   const { data: participants, isLoading: participantsLoading } = useTaskParticipants(
@@ -79,7 +80,7 @@ export const StudentDashboard: React.FC = () => {
                 accentColor="text-teal-500"
                 action={
                   <button
-                    onClick={() => roleNavigate('knowledge')}
+                    onClick={() => navigate(ROUTES.KNOWLEDGE)}
                     className="group/btn flex items-center gap-1.5 text-[12px] font-semibold leading-5 text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
                   >
                     探索大千世界
@@ -91,7 +92,7 @@ export const StudentDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:h-full xl:min-h-0 xl:grid-cols-4 xl:grid-rows-1 xl:pr-1">
                   {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-full min-h-[156px] rounded-xl" />) :
                     latestKnowledge.map((k) => (
-                      <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
+                      <KnowledgeItem key={k.id} knowledge={k} />
                     ))}
                 </div>
               </div>
@@ -115,7 +116,7 @@ export const StudentDashboard: React.FC = () => {
                         task={t}
                         isSelected={selectedTask?.id === t.id}
                         onSelect={() => setSelectedTask(selectedTask?.id === t.id ? null : t)}
-                        onNavigate={() => roleNavigate(`tasks/${t.task_id}?from=dashboard`)}
+                        onNavigate={() => navigate(`${ROUTES.TASKS}/${t.task_id}?from=dashboard`)}
                       />
                     ))}
                 </div>

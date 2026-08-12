@@ -4,11 +4,11 @@ Provides optimized query functions for user-related data retrieval.
 """
 from typing import Optional
 
-from django.db.models import Case, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
+from django.db.models import Case, IntegerField, Q, QuerySet, Value, When
 
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import User, UserRole
+from .models import Department, User
 
 
 def user_base_queryset() -> QuerySet:
@@ -20,7 +20,7 @@ def user_base_queryset() -> QuerySet:
     return User.objects.select_related(
         'department',
         'mentor'
-    ).prefetch_related('roles')
+    ).prefetch_related('groups')
 
 
 def get_user_by_id(pk: int) -> Optional[User]:
@@ -34,6 +34,16 @@ def get_user_by_id(pk: int) -> Optional[User]:
     return user_base_queryset().filter(pk=pk).first()
 
 
+def get_user_or_404(pk: int) -> User:
+    user = get_user_by_id(pk)
+    if not user:
+        raise BusinessError(
+            code=ErrorCodes.RESOURCE_NOT_FOUND,
+            message='用户不存在',
+        )
+    return user
+
+
 def get_user_by_employee_id(employee_id: str) -> Optional[User]:
     """
     Get a user by employee ID with related data.
@@ -42,9 +52,7 @@ def get_user_by_employee_id(employee_id: str) -> Optional[User]:
 
 
 def get_valid_mentor_by_id(mentor_id: Optional[int]) -> Optional[User]:
-    """
-    Get a valid mentor user.
-    """
+    """可指定为导师的在职员工。不要求 MENTOR Group。"""
     if mentor_id is None:
         return None
 
@@ -54,10 +62,10 @@ def get_valid_mentor_by_id(mentor_id: Optional[int]) -> Optional[User]:
             code=ErrorCodes.VALIDATION_ERROR,
             message='导师不存在',
         )
-    if not mentor.has_role('MENTOR'):
+    if mentor.is_superuser:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
-            message='指定的用户不是导师',
+            message='不能指定超管为导师',
         )
     if not mentor.is_active:
         raise BusinessError(
@@ -81,7 +89,7 @@ def list_users(
         mentor_id: Filter by mentor
         search: Search in username or employee_id
     Returns:
-        Filtered QuerySet of users, with dept_manager at top when filtering by department
+        Filtered QuerySet of users, with department.manager at top when filtering by department
     """
     qs = user_base_queryset()
     if is_active is not None:
@@ -96,16 +104,11 @@ def list_users(
             Q(employee_id__icontains=search)
         )
 
-    # 按部门筛选时，室经理置顶
     if department_id:
-        # 使用子查询判断是否是室经理，避免 JOIN 导致重复
-        dept_manager_subquery = UserRole.objects.filter(
-            user_id=OuterRef('pk'),
-            role__code='DEPT_MANAGER'
-        )
+        manager_id = Department.objects.filter(pk=department_id).values_list('manager_id', flat=True).first()
         qs = qs.annotate(
             _dept_manager_sort=Case(
-                When(Exists(dept_manager_subquery), then=Value(0)),
+                When(pk=manager_id, then=Value(0)),
                 default=Value(1),
                 output_field=IntegerField()
             )

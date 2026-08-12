@@ -1,7 +1,8 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import get_engine
+from apps.users.selectors import get_user_or_404
 from apps.users.serializers import AssignMentorSerializer, AssignRolesSerializer, UserDetailSerializer
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
@@ -14,7 +15,7 @@ class UserAssignRolesView(BaseAPIView):
 
     @extend_schema(
         summary='分配角色',
-        description='为用户分配角色，学员角色自动保留',
+        description='为用户分配管理角色；空列表表示普通员工',
         request=AssignRolesSerializer,
         responses={
             200: UserDetailSerializer,
@@ -25,7 +26,11 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.role.assign', request, error_message='无权分配用户角色')
+        target = get_user_or_404(pk)
+        get_engine(request).enforce('users.assign_user_role',
+            resource=target,
+            error_message='无权分配该用户角色',
+        )
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(
@@ -53,7 +58,11 @@ class UserAssignMentorView(BaseAPIView):
         tags=['用户管理'],
     )
     def post(self, request, pk):
-        enforce('user.update', request, error_message='只有管理员可以指定导师')
+        target = get_user_or_404(pk)
+        get_engine(request).enforce('users.change_user',
+            resource=target,
+            error_message='无权为该用户指定导师',
+        )
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_mentor(

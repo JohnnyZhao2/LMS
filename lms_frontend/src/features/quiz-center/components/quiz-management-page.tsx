@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout } from 'lucide-react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
@@ -10,7 +10,7 @@ import { CircleButton } from '@/components/ui/circle-button';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 
 export const QuizManagementPage: React.FC = () => {
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
 
@@ -43,7 +43,7 @@ export const QuizManagementPage: React.FC = () => {
             />
 
             <CircleButton
-              onClick={() => roleNavigate(`${ROUTES.QUIZZES}/create`)}
+              onClick={() => navigate(`${ROUTES.QUIZZES}/create`)}
               label="构建全新试卷"
               className="shrink-0"
             />

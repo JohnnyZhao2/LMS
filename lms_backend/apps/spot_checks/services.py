@@ -11,7 +11,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.activity_logs.decorators import log_operation
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import get_engine
 from apps.users.models import User
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
@@ -59,7 +59,9 @@ class SpotCheckService(BaseService):
     def get_by_id(self, pk: int) -> SpotCheck:
         spot_check = self._base_queryset().filter(pk=pk).first()
         self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
-        enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
+        if spot_check.student_id == getattr(self.user, 'id', None):
+            return spot_check
+        get_engine(self.request).enforce('spot_checks.view_spotcheck', resource=spot_check, error_message='无权访问该抽查记录')
         return spot_check
 
     def get_list(
@@ -75,7 +77,6 @@ class SpotCheckService(BaseService):
         ordering: str = '-created_at',
         status: Optional[str] = None,
     ) -> QuerySet:
-        enforce('spot_check.view', self.request, error_message='无权查看抽查记录')
         qs = self._base_queryset().filter(student_id=self.user.id)
         if status:
             qs = qs.filter(status=status)
@@ -142,12 +143,8 @@ class SpotCheckService(BaseService):
     @transaction.atomic
     def submit(self, pk: int, data: dict) -> SpotCheck:
         spot_check = self._lock_by_id(pk)
-        enforce(
-            'spot_check.submit',
-            self.request,
-            resource=spot_check,
-            error_message='无权提交该抽查',
-        )
+        if spot_check.student_id != getattr(self.user, 'id', None):
+            raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message='只能提交自己的抽查')
         self._require_revision(spot_check, data)
         if spot_check.status != SpotCheck.STATUS_PENDING:
             raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='当前状态不可提交')
@@ -225,7 +222,7 @@ class SpotCheckService(BaseService):
     @transaction.atomic
     def score(self, pk: int, data: dict) -> SpotCheck:
         spot_check = self._lock_by_id(pk)
-        enforce('spot_check.update', self.request, resource=spot_check, error_message='无权评分')
+        get_engine(self.request).enforce('spot_checks.change_spotcheck', resource=spot_check, error_message='无权评分')
         self._require_revision(spot_check, data)
         if spot_check.status not in {SpotCheck.STATUS_SUBMITTED, SpotCheck.STATUS_SCORED}:
             raise BusinessError(code=ErrorCodes.VALIDATION_ERROR, message='学员提交后才能评分')
@@ -249,7 +246,7 @@ class SpotCheckService(BaseService):
     )
     def delete(self, pk: int) -> SpotCheck:
         spot_check = self.get_by_id(pk)
-        enforce('spot_check.delete', self.request, resource=spot_check, error_message='无权删除抽查记录')
+        get_engine(self.request).enforce('spot_checks.delete_spotcheck', resource=spot_check, error_message='无权删除抽查记录')
         spot_check.delete()
         return spot_check
 
@@ -260,7 +257,7 @@ class SpotCheckService(BaseService):
         ordering: str = '-created_at',
     ) -> QuerySet:
         qs = self._base_queryset()
-        qs = scope_filter('spot_check.view', self.request, base_queryset=qs)
+        qs = get_engine(self.request).scope_filter('spot_checks.view_spotcheck', base_queryset=qs)
         if student_id:
             qs = qs.filter(student_id=student_id)
         if batch_id:
@@ -388,8 +385,6 @@ class SpotCheckService(BaseService):
         return normalized_items
 
     def _validate_student_scope(self, student: User) -> None:
-        enforce(
-            'spot_check.create',
-            self.request,
+        get_engine(self.request).enforce('spot_checks.add_spotcheck',
             context={'student': student},
         )

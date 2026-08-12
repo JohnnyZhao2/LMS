@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/session/auth/auth-context';
-import { getWorkspaceHome } from '@/session/workspace/role-paths';
 import { showApiError } from '@/utils/error-handler';
 import { ApiError } from '@/lib/api-client';
 import { beginOneAccountLogin } from '../utils/one-account';
@@ -54,10 +53,9 @@ export const LoginForm: React.FC = () => {
     setPendingAction('one-account');
     void (async () => {
       try {
-        const currentRole = await loginByOneAccountCode(callbackCode);
+        await loginByOneAccountCode(callbackCode);
         toast.success('登录成功');
-        const rolePath = getWorkspaceHome(currentRole) ?? ROUTES.LOGIN;
-        navigate(rolePath, { replace: true });
+        navigate(ROUTES.DASHBOARD, { replace: true });
       } catch (error) {
         if (error instanceof ApiError) {
           showApiError(error, '扫码登录失败');
@@ -88,10 +86,9 @@ export const LoginForm: React.FC = () => {
   const handleSubmit = async (values: LoginFormValues) => {
     setPendingAction('password');
     try {
-      const currentRole = await login(values);
+      await login(values);
       toast.success('登录成功');
-      const rolePath = getWorkspaceHome(currentRole) ?? ROUTES.LOGIN;
-      navigate(rolePath, { replace: true });
+      navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status !== 401 && error.status !== 403) {

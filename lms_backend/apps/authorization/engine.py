@@ -1,133 +1,178 @@
-"""权限判定统一入口。
-
-外部业务代码只应该从本模块调用 `authorize/enforce/scope_filter`。这里把
-“能力开关、资源级约束、列表范围过滤、请求级缓存”收束到同一个入口，避免
-权限规则散落在 view/service 里。
-"""
+"""权限判定统一入口：request-scoped Engine，调用方经 get_engine(request) 取用。"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Optional, Type
+from dataclasses import dataclass
+from typing import Optional, Type
 
 from django.db.models import QuerySet
 
+from apps.authorization.roles import get_management_role_code
 from core.base_service import BaseService
+from core.exceptions import BusinessError, ErrorCodes
 
-from .decisions import AuthorizationDecision
-from .engine_cache import AuthorizationEngineCacheMixin
-from .resource_policy_engine import ResourcePolicyEngineMixin
-from .scoped_queryset import ScopedQuerysetEngineMixin
-from .services import AuthorizationService
+from .registry import get_resource_authorizer, get_scope_filter
 
 
-class AuthorizationEngine(
-    AuthorizationEngineCacheMixin,
-    ResourcePolicyEngineMixin,
-    ScopedQuerysetEngineMixin,
-    BaseService,
-):
-    """单次请求内的权限判定器。
-
-    每次实例化都绑定当前 request；缓存实际挂在 request 上，所以同一个请求里
-    多次创建 engine 也能复用已解析的权限、范围和资源判定。
-    """
-
-    def __init__(self, request):
-        super().__init__(request)
-        self._authorization_service = AuthorizationService(request)
+@dataclass(frozen=True)
+class AuthorizationDecision:
+    allowed: bool
+    message: str = ''
 
 
-def authorize(
-    permission_code: str,
-    request,
-    *,
-    resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
-    error_message: Optional[str] = None,
-) -> AuthorizationDecision:
-    """返回权限判定结果，不抛异常。
+class AuthorizationEngine(BaseService):
+    """单次请求内的管理态权限判定器。"""
 
-    适合菜单显隐、分支逻辑和“有权限则跳转编辑页”这类软判断。
-    """
-    return AuthorizationEngine(request).authorize(
-        permission_code,
-        resource=resource,
-        context=context,
-        error_message=error_message,
-    )
+    def has_permission(self, permission_code: str) -> bool:
+        user = self.user
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if user.is_superuser:
+            return bool(user.is_active)
+        # 个人 user_permissions 只在管理角色下生效；无管理 Group 即普通员工
+        if not get_management_role_code(user):
+            return False
+        return user.has_perm(permission_code)
+
+    def base_permission_decision(
+        self,
+        permission_code: str,
+        *,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        if self.has_permission(permission_code):
+            return AuthorizationDecision(True)
+        return AuthorizationDecision(
+            False,
+            message=error_message or f'缺少权限: {permission_code}',
+        )
+
+    def authorize(
+        self,
+        permission_code: str,
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        authorizer = get_resource_authorizer(permission_code)
+        if authorizer is None:
+            if resource is not None:
+                raise ValueError(f'未注册资源授权: {permission_code}')
+            return self.base_permission_decision(permission_code, error_message=error_message)
+
+        decision = authorizer(
+            self,
+            permission_code,
+            resource=resource,
+            context=context or {},
+            error_message=error_message,
+        )
+        if decision is None:
+            if resource is None:
+                raise ValueError(f'{permission_code} 必须传 resource')
+            raise ValueError(
+                f'未处理的资源类型: {permission_code} / {type(resource).__name__}'
+            )
+        return decision
+
+    def require_permission(
+        self,
+        permission_code: str,
+        *,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        """只查功能权限，不走资源 authorizer。"""
+        decision = self.base_permission_decision(permission_code, error_message=error_message)
+        if decision.allowed:
+            return decision
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=decision.message or error_message or f'缺少权限: {permission_code}',
+        )
+
+    def enforce(
+        self,
+        permission_code: str,
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        decision = self.authorize(
+            permission_code,
+            resource=resource,
+            context=context,
+            error_message=error_message,
+        )
+        if decision.allowed:
+            return decision
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=decision.message or error_message or f'缺少权限: {permission_code}',
+        )
+
+    def enforce_any(
+        self,
+        permission_codes: Sequence[str],
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        if not permission_codes:
+            raise ValueError('permission_codes 不能为空')
+        if resource is None:
+            for permission_code in permission_codes:
+                if self.has_permission(permission_code):
+                    return AuthorizationDecision(True)
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message=error_message or '缺少权限',
+            )
+        last_message = error_message or '缺少权限'
+        for permission_code in permission_codes:
+            decision = self.authorize(
+                permission_code,
+                resource=resource,
+                context=context,
+                error_message=error_message,
+            )
+            if decision.allowed:
+                return decision
+            last_message = decision.message or last_message
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=last_message,
+        )
+
+    def scope_filter(
+        self,
+        permission_code: str,
+        *,
+        resource_model: Optional[Type[Any]] = None,
+        base_queryset: Optional[QuerySet] = None,
+        context: Optional[dict[str, Any]] = None,
+    ) -> QuerySet:
+        queryset = base_queryset
+        model = resource_model or (queryset.model if queryset is not None else None)
+        if queryset is None:
+            if model is None:
+                raise ValueError('resource_model 和 base_queryset 不能同时为空')
+            queryset = model.objects.all()
+
+        filter_fn = get_scope_filter(permission_code, model)
+        if filter_fn is None:
+            raise ValueError(f'未注册 scope: {permission_code} / {model.__name__}')
+        if not self.has_permission(permission_code):
+            return queryset.none()
+        return filter_fn(self, queryset=queryset, context=context or {})
 
 
-def enforce(
-    permission_code: str,
-    request,
-    *,
-    resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
-    error_message: Optional[str] = None,
-) -> AuthorizationDecision:
-    """强制校验权限，失败时抛出业务异常。
-
-    写操作、详情访问和资源级操作默认使用这个入口。
-    """
-    return AuthorizationEngine(request).enforce(
-        permission_code,
-        resource=resource,
-        context=context,
-        error_message=error_message,
-    )
-
-
-def authorize_any(
-    permission_codes: Sequence[str],
-    request,
-    *,
-    resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
-    error_message: Optional[str] = None,
-) -> AuthorizationDecision:
-    """任一权限通过即可返回允许结果。"""
-    return AuthorizationEngine(request).authorize_any(
-        permission_codes,
-        resource=resource,
-        context=context,
-        error_message=error_message,
-    )
-
-
-def enforce_any(
-    permission_codes: Sequence[str],
-    request,
-    *,
-    resource: Optional[Any] = None,
-    context: Optional[dict[str, Any]] = None,
-    error_message: Optional[str] = None,
-) -> AuthorizationDecision:
-    """强制校验一组权限，只要其中一个通过即可。"""
-    return AuthorizationEngine(request).enforce_any(
-        permission_codes,
-        resource=resource,
-        context=context,
-        error_message=error_message,
-    )
-
-
-def scope_filter(
-    permission_code: str,
-    request,
-    *,
-    resource_model: Optional[Type[Any]] = None,
-    base_queryset: Optional[QuerySet] = None,
-    context: Optional[dict[str, Any]] = None,
-) -> QuerySet:
-    """按当前用户权限范围过滤列表查询。
-
-    业务列表不要手写“导师/团队/部门”过滤条件，统一通过模块
-    `authorization.py` 注册的 scope handler 收敛。
-    """
-    return AuthorizationEngine(request).scope_filter(
-        permission_code,
-        resource_model=resource_model,
-        base_queryset=base_queryset,
-        context=context,
-    )
+def get_engine(request) -> AuthorizationEngine:
+    cached = getattr(request, '_authorization_engine', None)
+    if cached is None:
+        cached = AuthorizationEngine(request)
+        setattr(request, '_authorization_engine', cached)
+    return cached

@@ -4,7 +4,6 @@ Endpoints:
 - POST /api/auth/login/ - User login
 - POST /api/auth/logout/ - User logout
 - POST /api/auth/refresh/ - Refresh token
-- POST /api/auth/switch-role/ - Switch user role
 - POST /api/auth/change-password/ - Admin change user password
 - POST /api/auth/me/password/ - Current user change own password
 - GET /api/auth/me/ - Get current user info
@@ -20,7 +19,6 @@ from apps.auth.views import (
     OneAccountAuthorizeUrlView,
     OneAccountCodeLoginView,
     RefreshTokenView,
-    SwitchRoleView,
 )
 
 urlpatterns = [
@@ -29,7 +27,6 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='auth-login'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
-    path('switch-role/', SwitchRoleView.as_view(), name='auth-switch-role'),
     path('me/', MeView.as_view(), name='auth-me'),
     path('me/password/', ChangeMyPasswordView.as_view(), name='auth-change-my-password'),
     path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),

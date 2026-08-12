@@ -8,13 +8,13 @@ from apps.authorization.roles import serialize_user_roles
 from core.exceptions import BusinessError
 
 from .avatar_constants import validate_avatar_key
-from .models import Department, Role, User
+from .models import Department, ROLE_CHOICES, ROLE_LABELS, User
 from .selectors import get_valid_mentor_by_id
 
 
 def validate_mentor(mentor_id):
     """
-    Validate mentor exists, has MENTOR role, and is active.
+    Validate mentor exists and is an active employee.
     Returns mentor User object if valid.
     Raises ValidationError if invalid.
     """
@@ -56,11 +56,15 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = ['id', 'name', 'code']
-class RoleSerializer(serializers.ModelSerializer):
+class RoleSerializer(serializers.Serializer):
     """Serializer for Role model."""
-    class Meta:
-        model = Role
-        fields = ['code', 'name']
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+    def to_representation(self, instance):
+        if hasattr(instance, 'name'):
+            return {'code': instance.name, 'name': ROLE_LABELS.get(instance.name, instance.name)}
+        return super().to_representation(instance)
 class MentorSerializer(serializers.ModelSerializer):
     """Serializer for mentor information."""
     class Meta:
@@ -87,11 +91,13 @@ class UserListSerializer(serializers.ModelSerializer):
     department = DepartmentSerializer(read_only=True)
     mentor = MentorSerializer(read_only=True)
     roles = serializers.SerializerMethodField()
+    is_department_manager = serializers.BooleanField(read_only=True)
     class Meta:
         model = User
         fields = [
             'id', 'employee_id', 'username', 'avatar_key',
-            'department', 'mentor', 'roles', 'is_active', 'is_superuser',
+            'department', 'mentor', 'roles', 'is_department_manager',
+            'is_active', 'is_superuser',
             'last_login', 'created_at', 'updated_at'
         ]
 
@@ -108,11 +114,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
     mentor = MentorSerializer(read_only=True)
     roles = serializers.SerializerMethodField()
     mentees_count = serializers.SerializerMethodField()
+    is_department_manager = serializers.BooleanField(read_only=True)
     class Meta:
         model = User
         fields = [
             'id', 'employee_id', 'username', 'avatar_key',
-            'department', 'mentor', 'roles', 'is_active', 'is_superuser',
+            'department', 'mentor', 'roles', 'is_department_manager',
+            'is_active', 'is_superuser',
             'last_login', 'mentees_count', 'created_at', 'updated_at'
         ]
 
@@ -148,22 +156,17 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='导师ID（可选）'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=ROLE_CHOICES),
         required=False,
         default=list,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='管理角色列表，最多一个；空表示普通员工',
     )
 
     class Meta:
         model = User
         fields = [
             'password', 'employee_id', 'username',
-            'department_id', 'mentor_id', 'role_codes'
+            'department_id', 'mentor_id', 'role_codes',
         ]
 
     def validate_username(self, value):
@@ -176,7 +179,6 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         return self.validate_department_id_field(value)
 
     def validate_mentor_id(self, value):
-        """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)
         return value
 
@@ -201,14 +203,9 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='工号'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=ROLE_CHOICES),
         required=False,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='管理角色列表，最多一个；空表示普通员工',
     )
 
     class Meta:
@@ -230,14 +227,9 @@ class AssignRolesSerializer(serializers.Serializer):
     Serializer for assigning roles to a user.
     """
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=[
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ]),
+        child=serializers.ChoiceField(choices=ROLE_CHOICES),
         required=True,
-        help_text='要分配的角色代码列表（不包含学员角色；学员以外系统角色最多一个；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
+        help_text='管理角色列表，最多一个；空表示普通员工',
     )
 class AssignMentorSerializer(serializers.Serializer):
     """
@@ -249,6 +241,5 @@ class AssignMentorSerializer(serializers.Serializer):
         help_text='导师用户ID，传入null解除绑定'
     )
     def validate_mentor_id(self, value):
-        """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)
         return value

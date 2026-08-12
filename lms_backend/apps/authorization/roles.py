@@ -1,65 +1,44 @@
-"""Role helpers shared by authorization and user modules."""
+"""管理角色序列化。人员范围见 get_managed_user_queryset，只读组织关系。"""
 
-from typing import Iterable, Optional
+from typing import Optional
 
+from django.db.models import Q, QuerySet
 
-SUPER_ADMIN_ROLE = 'SUPER_ADMIN'
-SUPER_ADMIN_ROLE_NAME = '超管'
-ADMIN_LIKE_ROLES = {'ADMIN', SUPER_ADMIN_ROLE}
-LEARNING_POOL_EXCLUDED_ROLE_CODES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+from apps.users.models import MANAGEMENT_ROLE_CODES, ROLE_LABELS
 
 
-def is_super_admin(user) -> bool:
-    return bool(
-        user
-        and getattr(user, 'is_authenticated', False)
-        and getattr(user, 'is_superuser', False)
+def get_management_role_code(user) -> Optional[str]:
+    if not user or not getattr(user, 'is_authenticated', False) or user.is_superuser:
+        return None
+    return next(
+        (code for code in getattr(user, 'role_codes', []) if code in MANAGEMENT_ROLE_CODES),
+        None,
     )
-
-
-def is_admin_like_role(role_code: Optional[str]) -> bool:
-    return role_code in ADMIN_LIKE_ROLES
 
 
 def serialize_user_roles(user) -> list[dict[str, str]]:
     if user.is_superuser:
-        return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
-    return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
+        return []
+    return [
+        {'code': group.name, 'name': ROLE_LABELS.get(group.name, group.name)}
+        for group in user.groups.all()
+        if group.name in ROLE_LABELS
+    ]
 
 
-def get_default_role(role_codes: Iterable[str]) -> str:
-    normalized_codes = {role_code for role_code in role_codes if role_code}
-    if SUPER_ADMIN_ROLE in normalized_codes:
-        return SUPER_ADMIN_ROLE
-
-    if 'STUDENT' in normalized_codes:
-        return 'STUDENT'
-
-    from apps.users.models import Role
-
-    for role_code in Role.ROLE_PRIORITY_ORDER:
-        if role_code != 'STUDENT' and role_code in normalized_codes:
-            return role_code
-    return 'STUDENT'
+def get_managed_user_queryset(user, base_queryset: QuerySet) -> QuerySet:
+    """人员范围 = 组织关系并集，与 Group / 权限码无关。"""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return base_queryset.none()
+    if user.is_admin:
+        return base_queryset
+    return base_queryset.filter(
+        Q(mentor=user) | (Q(department__manager=user) & ~Q(pk=user.pk))
+    ).distinct()
 
 
-def resolve_current_role(user, requested_role: Optional[str] = None) -> Optional[str]:
-    if not user or not user.is_authenticated:
-        return None
+def learning_member_queryset() -> QuerySet:
+    """可执行学习任务的人员：在职员工。超管是运维号，不进派发名单。"""
+    from apps.users.models import User
 
-    if is_super_admin(user):
-        return SUPER_ADMIN_ROLE
-
-    role_codes = {role_code for role_code in getattr(user, 'role_codes', []) if role_code}
-    if requested_role and requested_role in role_codes:
-        return requested_role
-
-    current_role = getattr(user, 'current_role', None)
-    if current_role and current_role in role_codes:
-        return current_role
-
-    return get_default_role(role_codes)
-
-
-def get_current_role(user):
-    return resolve_current_role(user)
+    return User.objects.filter(is_active=True, is_superuser=False)

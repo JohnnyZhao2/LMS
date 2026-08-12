@@ -1,22 +1,24 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
+import { ROUTES } from '@/config/routes';
 import type { StudentDashboardTask } from '@/types/dashboard';
 import type { LatestKnowledge } from '@/types/knowledge';
 import { sanitizeStepsHtml } from '@/features/knowledge/utils/content-utils';
 
 interface KnowledgeItemProps {
   knowledge: LatestKnowledge;
-  navigate: (path: string) => void;
 }
 
-export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigate }) => {
+export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge }) => {
+  const navigate = useNavigate();
   const previewHtml = sanitizeStepsHtml(knowledge.content_preview || '');
 
   return (
     <div
-      onClick={() => navigate(`knowledge/${knowledge.id}?from=dashboard`)}
+      onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${knowledge.id}?from=dashboard`)}
       className={cn(
         "group relative flex h-full min-h-[156px] cursor-pointer flex-col overflow-hidden rounded-xl p-4 transition-[box-shadow,border-color,background-color] duration-300",
         "bg-white border border-slate-200/70",

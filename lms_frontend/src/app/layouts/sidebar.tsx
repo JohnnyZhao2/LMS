@@ -23,21 +23,21 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { logout } = useAuth()
+  const { logout, managementRole } = useAuth()
   const {
-    currentRole,
+    workbench,
     handleMyAvatarSelect,
-    handleRoleChange,
+    handleWorkbenchChange,
     isUpdatingAvatar,
-    roleLabel,
-    roleOptions,
+    workbenchLabel,
+    workbenchOptions,
     user,
     userInitials,
     userLabel,
   } = useWorkspaceUserControls()
   const navigate = useNavigate()
   const location = useLocation()
-  const menuItems = useRoleMenu(currentRole)
+  const menuItems = useRoleMenu(workbench)
   const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
 
   const handleLogout = async () => {
@@ -284,17 +284,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 <div className="truncate text-[15px] font-medium leading-5 text-black">
                   {userLabel || 'LMS 用户'}
                 </div>
-                {roleOptions.length > 1 && currentRole ? (
+                {workbenchOptions.length > 1 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
                         className="mt-0.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-[12px] font-medium leading-4 text-text-muted outline-none transition-colors hover:bg-muted"
-                        aria-label="切换角色"
+                        aria-label="切换工作台"
                       >
                         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
-                        <span className="truncate">{roleLabel}</span>
-                        <RoleIndicatorDot role={currentRole} size="md" />
+                        <span className="truncate">{workbenchLabel}</span>
+                        <RoleIndicatorDot
+                          workbench={workbench}
+                          managementRole={managementRole}
+                          isSuperuser={Boolean(user?.is_superuser)}
+                          size="md"
+                        />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -302,13 +307,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       sideOffset={6}
                       className="min-w-[132px] rounded-lg border border-border bg-white p-1 shadow-sm"
                     >
-                      {roleOptions.map((option) => {
-                        const isActive = option.value === currentRole
+                      {workbenchOptions.map((option) => {
+                        const isActive = option.value === workbench
 
                         return (
                           <DropdownMenuItem
                             key={option.value}
-                            onClick={() => handleRoleChange(option.value)}
+                            onClick={() => handleWorkbenchChange(option.value)}
                             className={cn(
                               'mb-1 cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted focus:text-black last:mb-0',
                               isActive && 'bg-muted text-black'
@@ -322,8 +327,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                   </DropdownMenu>
                 ) : (
                   <div className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-medium leading-4 text-text-muted">
-                    <span className="truncate">{roleLabel}</span>
-                    <RoleIndicatorDot role={currentRole} size="md" />
+                    <span className="truncate">{workbenchLabel}</span>
+                    <RoleIndicatorDot
+                      workbench={workbench}
+                      managementRole={managementRole}
+                      isSuperuser={Boolean(user?.is_superuser)}
+                      size="md"
+                    />
                   </div>
                 )}
               </div>

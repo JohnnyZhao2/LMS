@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
@@ -45,7 +45,7 @@ const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
 export const useTaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
 
   const isEdit = !!id;
   const taskId = isEdit ? Number(id) : 0;
@@ -241,7 +241,7 @@ export const useTaskForm = () => {
         await createTask.mutateAsync(payload);
         toast.success('任务发布成功');
       }
-      roleNavigate('tasks');
+      navigate(ROUTES.TASKS);
     } catch (error) {
       showApiError(error, '操作失败');
     }
@@ -297,6 +297,6 @@ export const useTaskForm = () => {
     clearUsers,
     handleDragEnd,
     handleSubmit,
-    roleNavigate,
+    navigate,
   };
 };

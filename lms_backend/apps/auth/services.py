@@ -3,7 +3,6 @@ Authentication services for LMS.
 Implements:
 - Login/logout logic
 - JWT token generation and validation
-- Role switching
 - Inactive user login rejection
 """
 from typing import Any, Dict, NoReturn, Optional
@@ -17,15 +16,10 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.activity_logs.decorators import log_user_action
 from apps.activity_logs.registry import register_user_log_action
 from apps.auth.one_account import OneAccountClient
-from apps.authorization.engine import enforce
-from apps.authorization.roles import (
-    SUPER_ADMIN_ROLE,
-    resolve_current_role,
-    serialize_user_roles,
-)
+from apps.authorization.engine import get_engine
+from apps.authorization.roles import serialize_user_roles
 from apps.authorization.services import AuthorizationService
 from apps.users.models import User
 from apps.users.selectors import get_user_by_employee_id, get_user_by_id
@@ -42,7 +36,7 @@ register_user_log_action('password_change', group='账号管理', label='修改�
 
 class AuthenticationService(BaseService):
     """
-    Authentication service handling login, logout, and role switching.
+    Authentication service handling login and logout.
     """
     def __init__(self, request):
         super().__init__(request)
@@ -91,32 +85,19 @@ class AuthenticationService(BaseService):
             )
         raise BusinessError(code=code, message=message)
 
-    def _build_user_payload(
-        self,
-        user: User,
-        requested_role: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        available_roles = serialize_user_roles(user)
-        current_role = resolve_current_role(user, requested_role=requested_role)
+    def _build_user_payload(self, user: User) -> Dict[str, Any]:
         authorization_service = AuthorizationService(self.request)
-        capabilities = authorization_service.get_capability_map(
-            current_role=current_role,
-            user=user,
-        )
         return {
             'user': UserInfoSerializer(user).data,
-            'available_roles': available_roles,
-            'current_role': current_role,
-            'capabilities': capabilities,
+            'roles': serialize_user_roles(user),
+            'capabilities': sorted(
+                authorization_service.get_user_permission_codes(user=user)
+            ),
         }
 
-    def _build_auth_payload(
-        self,
-        user: User,
-        requested_role: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        user_payload = self._build_user_payload(user, requested_role=requested_role)
-        tokens = self._generate_tokens(user, current_role=user_payload['current_role'])
+    def _build_auth_payload(self, user: User) -> Dict[str, Any]:
+        user_payload = self._build_user_payload(user)
+        tokens = self._generate_tokens(user)
         return {
             'access_token': tokens['access'],
             'refresh_token': tokens['refresh'],
@@ -128,7 +109,6 @@ class AuthenticationService(BaseService):
         user: User,
         *,
         description: str,
-        requested_role: Optional[str] = None,
     ) -> Dict[str, Any]:
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
@@ -138,7 +118,7 @@ class AuthenticationService(BaseService):
             description=description,
             status='success',
         )
-        return self._build_auth_payload(user, requested_role=requested_role)
+        return self._build_auth_payload(user)
 
     def login(self, employee_id: str, password: str) -> Dict[str, Any]:
         """
@@ -238,11 +218,7 @@ class AuthenticationService(BaseService):
                 )
 
             user = self._validate_active_user(get_user_by_id(user_id))
-            requested_role = incoming_token.get('current_role')
-            tokens = self._generate_tokens(
-                user,
-                current_role=resolve_current_role(user, requested_role=requested_role),
-            )
+            tokens = self._generate_tokens(user)
 
             # 轮换 refresh token：生成新 token 后立刻失效旧 token
             incoming_token.blacklist()
@@ -258,50 +234,19 @@ class AuthenticationService(BaseService):
                 message='无效的刷新令牌',
             )
 
-    @log_user_action(
-        'switch_role',
-        '当前角色：{role_label}',
-        group='认证',
-        label='切换角色',
-    )
-    def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
-        """
-        Switch user's current active role.
-        Args:
-            user: The user switching roles
-            role_code: The role code to switch to
-        Returns:
-            Dict containing new tokens and updated role info
-        Raises:
-            BusinessError: If user doesn't have the requested role
-        """
+    def get_me(self, user: User) -> Dict[str, Any]:
         active_user = self._validate_active_user(get_user_by_id(user.id))
-        if active_user.is_superuser:
-            raise BusinessError(
-                code=ErrorCodes.AUTH_INVALID_ROLE,
-                message='超管账号为专有角色，不支持角色切换',
-            )
-        if not active_user.has_role(role_code):
-            raise BusinessError(
-                code=ErrorCodes.AUTH_INVALID_ROLE,
-                message=f'用户没有 {role_code} 角色权限',
-            )
-        return self._build_auth_payload(active_user, requested_role=role_code)
-
-    def get_me(self, user: User, requested_role: Optional[str] = None) -> Dict[str, Any]:
-        active_user = self._validate_active_user(get_user_by_id(user.id))
-        return self._build_user_payload(active_user, requested_role=requested_role)
+        return self._build_user_payload(active_user)
 
     def change_password(self, operator: User, target_user_id: int, password: str) -> None:
-        enforce(
-            'user.activate',
-            self.request,
-            error_message='只有管理员可以修改用户密码',
-        )
-
         target_user = self.validate_not_none(
             get_user_by_id(target_user_id),
             '用户不存在',
+        )
+        get_engine(self.request).enforce(
+            'users.change_user',
+            resource=target_user,
+            error_message='只有管理员可以修改用户密码',
         )
         target_user.set_password(password)
         target_user.save(update_fields=['password'])
@@ -334,22 +279,10 @@ class AuthenticationService(BaseService):
             description=f'账号自助修改密码：{active_user.username}（{active_user.employee_id}）',
             status='success',
         )
-        return self._build_auth_payload(active_user, requested_role=getattr(user, 'current_role', None))
+        return self._build_auth_payload(active_user)
 
-    def _generate_tokens(self, user: User, current_role: Optional[str] = None) -> Dict[str, str]:
-        """
-        Generate JWT tokens for user.
-        Args:
-            user: The user to generate tokens for
-            current_role: Optional current role to include in token
-        Returns:
-            Dict containing access and refresh tokens
-        """
+    def _generate_tokens(self, user: User) -> Dict[str, str]:
         refresh = RefreshToken.for_user(user)
-        refresh['employee_id'] = user.employee_id
-        refresh['username'] = user.username
-        refresh['roles'] = [SUPER_ADMIN_ROLE] if user.is_superuser else user.role_codes
-        refresh['current_role'] = resolve_current_role(user, requested_role=current_role)
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),

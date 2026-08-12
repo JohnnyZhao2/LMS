@@ -8,7 +8,9 @@
 /**
  * 角色代码
  */
-export type RoleCode = 'STUDENT' | 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN' | 'TEAM_MANAGER' | 'SUPER_ADMIN';
+export type RoleCode = 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN';
+
+export type Workbench = 'learn' | 'manage';
 
 /**
  * 任务状态
@@ -96,6 +98,7 @@ export interface UserInfo {
   avatar_key: string;
   department: Department;
   mentor?: Mentor;
+  is_department_manager?: boolean;
   is_active: boolean;
   is_superuser?: boolean;
 }

@@ -14,18 +14,10 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
 
     title = models.CharField(max_length=200, verbose_name='任务标题')
     description = models.TextField(blank=True, default='', verbose_name='任务描述')
-    created_role = models.CharField(
-        max_length=20,
-        choices=[
-            ('ADMIN', '管理员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('TEAM_MANAGER', '团队经理'),
-            ('STUDENT', '学员'),
-        ],
-        default='ADMIN',
+    created_by_admin = models.BooleanField(
+        default=False,
         db_index=True,
-        verbose_name='创建时角色',
+        verbose_name='管理员创建',
     )
     deadline = models.DateTimeField(verbose_name='截止时间')
     updated_by = models.ForeignKey(
@@ -54,6 +46,12 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
         verbose_name = '任务'
         verbose_name_plural = '任务'
         ordering = ['-created_at']
+        permissions = [
+            ('assign_task', '分配任务'),
+            ('view_task_analytics', '查看任务分析'),
+            ('view_grading', '查看阅卷中心'),
+            ('score_grading', '提交评分'),
+        ]
 
     def __str__(self):
         return self.title

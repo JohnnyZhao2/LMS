@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { useTags } from '@/entities/tag/api/tags';
@@ -7,13 +7,11 @@ import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/entit
 import { useQuestionDetail } from '@/entities/question/api/get-questions';
 import { QuestionBatchEditor } from '@/features/questions/components/question-batch-editor';
 import { createBlankEditableQuestion, questionToEditableItem } from '@/entities/question/components/question-editor-helpers';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
-
 export const QuestionFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const questionId = id ? Number(id) : null;
   const isEdit = Boolean(questionId);
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
   const { data: questionDetail, isLoading } = useQuestionDetail(questionId ?? 0);
   const createQuestion = useCreateQuestion();
@@ -41,7 +39,7 @@ export const QuestionFormPage: React.FC = () => {
               onDeleteQuestion={async (targetId) => {
                 await deleteQuestion.mutateAsync(targetId);
               }}
-              onEmpty={() => roleNavigate('/questions')}
+              onEmpty={() => navigate('/questions')}
             />
           )}
         </PageWorkbench>

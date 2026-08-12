@@ -29,9 +29,9 @@ import { ExamReportPanel } from './exam-report-panel';
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
 
-  const { availableRoles, currentRole } = useAuth();
+  const { roles, managementRole } = useAuth();
 
-  const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
+  const roleName = roles.find((r) => r.code === managementRole)?.name || '导师';
 
   if (isLoading) {
     return (

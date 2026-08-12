@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { SelectionIndicator } from '@/components/common/selection-indicator';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ROUTES } from '@/config/routes';
+import { useWorkbench } from '@/session/hooks/use-workbench';
 import {
     Inbox,
     Search,
@@ -124,16 +125,18 @@ function KnowledgeXlsxButton({
 }
 
 export const KnowledgeCenter: React.FC = () => {
-    const { roleNavigate } = useRoleNavigate();
     const navigate = useNavigate();
+    const workbench = useWorkbench();
     const location = useLocation();
     const { id: routeKnowledgeId } = useParams<{ id?: string }>();
     const incrementViewCount = useIncrementViewCount();
     const { hasCapability } = useAuth();
-    const canCreateKnowledge = hasCapability('knowledge.create');
-    const canUpdateKnowledge = hasCapability('knowledge.update');
-    const canDeleteKnowledge = hasCapability('knowledge.delete');
-    const isManagementView = canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge;
+    const canCreateKnowledge = hasCapability('knowledge.add_knowledge');
+    const canUpdateKnowledge = hasCapability('knowledge.change_knowledge');
+    const canDeleteKnowledge = hasCapability('knowledge.delete_knowledge');
+    const isManagementView = workbench === 'manage' && (
+        canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge
+    );
 
     const deleteKnowledge = useDeleteKnowledge();
     const createKnowledge = useCreateKnowledge();
@@ -179,7 +182,7 @@ export const KnowledgeCenter: React.FC = () => {
     const { data: knowledgeTags = [] } = useTags({
         tag_type: 'TAG',
         applicable_to: 'knowledge',
-        limit: 500,
+        limit: 200,
     });
     const selectedSpaceTag = React.useMemo(
         () => spaceTags.find((tag) => tag.id === selectedSpaceTagId),
@@ -261,15 +264,15 @@ export const KnowledgeCenter: React.FC = () => {
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
-            roleNavigate('dashboard');
+            navigate(ROUTES.DASHBOARD);
             return;
         }
         if (taskId > 0) {
-            roleNavigate(`tasks/${taskId}`);
+            navigate(`${ROUTES.TASKS}/${taskId}`);
             return;
         }
-        roleNavigate('knowledge');
-    }, [fromDashboard, taskId, roleNavigate]);
+        navigate(ROUTES.KNOWLEDGE);
+    }, [fromDashboard, taskId, navigate]);
 
     const handleView = (id: number) => {
         if (!isManagementView) {
@@ -552,7 +555,7 @@ export const KnowledgeCenter: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {canCreateKnowledge && (
+                        {isManagementView && canCreateKnowledge && (
                             <KnowledgeXlsxButton
                                 inputRef={importInputRef}
                                 progress={importProgress}
@@ -563,7 +566,7 @@ export const KnowledgeCenter: React.FC = () => {
                                 onFile={(file) => { void handleImportXlsx(file); }}
                             />
                         )}
-                        {canDeleteKnowledge && (
+                        {isManagementView && canDeleteKnowledge && (
                             <KnowledgeXlsxButton
                                 inputRef={bulkDeleteInputRef}
                                 progress={deleteProgress}
@@ -637,7 +640,7 @@ export const KnowledgeCenter: React.FC = () => {
                             }}
                             className="sm:[column-width:280px] [column-width:100%]"
                         >
-                            {canCreateKnowledge && (
+                            {isManagementView && canCreateKnowledge && (
                                 <AddKnowledgeCard
                                     onSave={handleQuickSave}
                                     onExpand={(payload) => {
@@ -749,13 +752,13 @@ export const KnowledgeCenter: React.FC = () => {
                     onClose={() => {
                         setModalState(null);
                         if (isCreateRoute) {
-                            roleNavigate('knowledge');
+                            navigate(ROUTES.KNOWLEDGE);
                         }
                     }}
                     onCreated={(id) => {
                         refetch();
                         if (isCreateRoute) {
-                            roleNavigate(`knowledge#${id}`);
+                            navigate(`${ROUTES.KNOWLEDGE}#${id}`);
                             return;
                         }
                         openDetailModal(id);

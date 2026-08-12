@@ -3,7 +3,7 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import get_engine
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
@@ -38,7 +38,7 @@ class QuestionListCreateView(BaseAPIView):
         tags=['题库管理'],
     )
     def get(self, request):
-        enforce('question.view', request, error_message='无权查看题目列表')
+        get_engine(request).require_permission('questions.view_question', error_message='无权查看题目列表')
         filters = {}
         if request.query_params.get('question_type'):
             filters['question_type'] = request.query_params.get('question_type')
@@ -75,7 +75,7 @@ class QuestionListCreateView(BaseAPIView):
         tags=['题库管理'],
     )
     def post(self, request):
-        enforce('question.create', request, error_message='无权创建题目')
+        get_engine(request).enforce('questions.add_question', error_message='无权创建题目')
         serializer = QuestionCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         question = self.service.create(data=serializer.validated_data)
@@ -96,8 +96,12 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理'],
     )
     def get(self, request, pk):
-        enforce('question.view', request, error_message='无权查看题目详情')
         question = self.service.get_by_id(pk)
+        get_engine(request).enforce(
+            'questions.view_question',
+            resource=question,
+            error_message='无权查看题目详情',
+        )
         return success_response(QuestionSerializer(question).data)
 
     @extend_schema(

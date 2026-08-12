@@ -3,7 +3,6 @@ Serializers for authentication.
 """
 from rest_framework import serializers
 
-from apps.users.models import Role
 from apps.users.serializers import RoleSerializer, UserInfoSerializer
 
 
@@ -25,11 +24,10 @@ class LoginRequestSerializer(serializers.Serializer):
 class AuthSessionSerializer(serializers.Serializer):
     """Shared session payload for authenticated responses."""
     user = UserInfoSerializer(help_text='用户信息')
-    available_roles = RoleSerializer(many=True, help_text='可用角色列表')
-    current_role = serializers.CharField(help_text='当前生效角色')
-    capabilities = serializers.DictField(
-        child=serializers.DictField(),
-        help_text='当前生效角色下的能力映射',
+    roles = RoleSerializer(many=True, help_text='管理角色列表，普通员工为空')
+    capabilities = serializers.ListField(
+        child=serializers.CharField(),
+        help_text='当前已授权的 Django 权限码列表',
     )
 
 
@@ -63,16 +61,6 @@ class RefreshTokenRequestSerializer(serializers.Serializer):
 class RefreshTokenResponseSerializer(TokenPairSerializer):
     """Serializer for token refresh response."""
 
-
-class SwitchRoleRequestSerializer(serializers.Serializer):
-    """
-    Serializer for role switch request.
-    """
-    role_code = serializers.ChoiceField(
-        choices=Role.ROLE_CHOICES,
-        required=True,
-        help_text='要切换到的角色代码'
-    )
 
 class ChangePasswordRequestSerializer(serializers.Serializer):
     """

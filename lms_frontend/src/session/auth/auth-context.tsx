@@ -1,39 +1,37 @@
 /* eslint-disable react-refresh/only-export-components */
 /**
- * 登录态和角色态上下文。
+ * 登录态上下文。
  *
- * 后端会按当前角色返回 capabilities；前端只消费这份能力表，不在页面里重复实现
- * 角色权限规则。
+ * 权限来自 capabilities；工作台只是前端导航，不换 token。
  */
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient } from '@/lib/api-client';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiClient, ApiError } from '@/lib/api-client';
 import type {
   AuthSessionPayload,
   ChangeOwnPasswordRequest,
   ChangeOwnPasswordResponse,
   LoginRequest,
   LoginResponse,
-  SwitchRoleResponse,
 } from '@/types/auth';
-import type { CapabilityMap } from '@/types/authorization';
+import type { CapabilityCodes } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
 import { tokenStorage } from '@/lib/token-storage';
+import { MANAGEMENT_ROLE_CODES } from '@/entities/authorization/constants/access';
 
 interface AuthState {
   user: UserInfo | null;
-  currentRole: RoleCode | null;
-  availableRoles: Role[];
-  capabilities: CapabilityMap;
+  roles: Role[];
+  capabilities: CapabilityCodes;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isSwitching: boolean;
 }
 
 interface AuthContextValue extends AuthState {
-  login: (data: LoginRequest) => Promise<RoleCode>;
-  loginByOneAccountCode: (code: string) => Promise<RoleCode>;
+  managementRole: RoleCode | null;
+  canAccessManage: boolean;
+  login: (data: LoginRequest) => Promise<void>;
+  loginByOneAccountCode: (code: string) => Promise<void>;
   logout: () => Promise<void>;
-  switchRole: (roleCode: RoleCode) => Promise<void>;
   changeOwnPassword: (data: ChangeOwnPasswordRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasCapability: (permissionCode: string) => boolean;
@@ -41,41 +39,25 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-const MIN_ROLE_SWITCH_DURATION_MS = 220;
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
 
 const buildLoggedOutState = (): AuthState => ({
   user: null,
-  currentRole: null,
-  availableRoles: [],
-  capabilities: {},
+  roles: [],
+  capabilities: [],
   isAuthenticated: false,
   isLoading: false,
-  isSwitching: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 同一角色的连续切换请求复用同一个 promise，避免快速点击时产生并发状态覆盖。
-  const activeRoleSwitchRequestRef = useRef<{
-    roleCode: RoleCode;
-    startedAt: number;
-    promise: Promise<SwitchRoleResponse>;
-  } | null>(null);
   const [state, setState] = useState<AuthState>(() => {
-    const hasTokens = tokenStorage.hasTokens();
+    const hasTokens = Boolean(tokenStorage.getAccessToken() || tokenStorage.getRefreshToken());
 
     return {
       user: null,
-      currentRole: null,
-      availableRoles: [],
-      capabilities: {},
+      roles: [],
+      capabilities: [],
       isAuthenticated: false,
       isLoading: hasTokens,
-      isSwitching: false,
     };
   });
 
@@ -84,45 +66,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(buildLoggedOutState());
   }, []);
 
-  const applyAuthSession = useCallback(
-    (session: AuthSessionPayload, options?: { isSwitching?: boolean }) => {
-      setState((prev) => ({
-        ...prev,
-        user: session.user,
-        currentRole: session.current_role,
-        availableRoles: session.available_roles,
-        capabilities: session.capabilities,
-        isAuthenticated: true,
-        isLoading: false,
-        isSwitching: options?.isSwitching ?? prev.isSwitching,
-      }));
-    },
-    [],
-  );
+  const applyAuthSession = useCallback((session: AuthSessionPayload) => {
+    setState({
+      user: session.user,
+      roles: session.roles ?? [],
+      capabilities: session.capabilities ?? [],
+      isAuthenticated: true,
+      isLoading: false,
+    });
+  }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!tokenStorage.hasTokens()) {
+    if (!tokenStorage.getAccessToken() && !tokenStorage.getRefreshToken()) {
       setState(buildLoggedOutState());
       return;
     }
 
     try {
       const response = await apiClient.get<AuthSessionPayload>('/auth/me/');
-      applyAuthSession(response, { isSwitching: false });
-    } catch {
-      resetAuthState();
+      applyAuthSession(response);
+    } catch (error) {
+      if (!tokenStorage.getAccessToken() && !tokenStorage.getRefreshToken()) {
+        setState(buildLoggedOutState());
+        return;
+      }
+      if (error instanceof ApiError && error.status === 401) {
+        resetAuthState();
+        return;
+      }
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+      }));
     }
   }, [applyAuthSession, resetAuthState]);
 
   const completeLogin = useCallback((response: LoginResponse) => {
     tokenStorage.setTokenPair(response);
-    applyAuthSession(response, { isSwitching: false });
-    return response.current_role;
+    applyAuthSession(response);
   }, [applyAuthSession]);
 
   const login = useCallback(async (data: LoginRequest) => {
     const response = await apiClient.post<LoginResponse>('/auth/login/', data, { skipAuth: true });
-    return completeLogin(response);
+    completeLogin(response);
   }, [completeLogin]);
 
   const loginByOneAccountCode = useCallback(async (code: string) => {
@@ -131,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       { code },
       { skipAuth: true },
     );
-    return completeLogin(response);
+    completeLogin(response);
   }, [completeLogin]);
 
   const logout = useCallback(async () => {
@@ -143,66 +129,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetAuthState();
   }, [resetAuthState]);
 
-  const switchRole = useCallback(async (roleCode: RoleCode) => {
-    setState((prev) => ({ ...prev, isSwitching: true }));
-
-    const existingRequest = activeRoleSwitchRequestRef.current;
-    const sharedRequest = existingRequest && existingRequest.roleCode === roleCode
-      ? existingRequest
-      : (() => {
-          const request = {
-            roleCode,
-            startedAt: Date.now(),
-            promise: apiClient.post<SwitchRoleResponse>('/auth/switch-role/', { role_code: roleCode }),
-          };
-          activeRoleSwitchRequestRef.current = request;
-          return request;
-        })();
-
-    try {
-      const response = await sharedRequest.promise;
-      const elapsed = Date.now() - sharedRequest.startedAt;
-      if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
-        await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
-      }
-      tokenStorage.setTokenPair(response);
-      applyAuthSession(response, { isSwitching: false });
-    } catch (error) {
-      const elapsed = Date.now() - sharedRequest.startedAt;
-      if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
-        await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
-      }
-      setState((prev) => ({ ...prev, isSwitching: false }));
-      throw error;
-    } finally {
-      if (activeRoleSwitchRequestRef.current?.promise === sharedRequest.promise) {
-        activeRoleSwitchRequestRef.current = null;
-      }
-    }
-  }, [applyAuthSession]);
-
   const changeOwnPassword = useCallback(async (data: ChangeOwnPasswordRequest) => {
     const response = await apiClient.post<ChangeOwnPasswordResponse>('/auth/me/password/', data);
     tokenStorage.setTokenPair(response);
-    applyAuthSession(response, { isSwitching: false });
+    applyAuthSession(response);
   }, [applyAuthSession]);
 
   const hasCapability = useCallback((permissionCode: string) => {
     if (!permissionCode) {
       return false;
     }
-    return !!state.capabilities[permissionCode]?.allowed;
+    return state.capabilities.includes(permissionCode);
   }, [state.capabilities]);
 
   const hasAnyCapability = useCallback((permissionCodes: string[]) => {
     if (!permissionCodes.length) {
       return false;
     }
-    return permissionCodes.some((permissionCode) => !!state.capabilities[permissionCode]?.allowed);
+    return permissionCodes.some((permissionCode) => state.capabilities.includes(permissionCode));
   }, [state.capabilities]);
 
   useEffect(() => {
-    refreshUser();
+    void refreshUser();
   }, [refreshUser]);
 
   useEffect(() => {
@@ -210,27 +158,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const syncSession = () => {
+    const syncIfVisible = () => {
       if (document.visibilityState === 'visible') {
         void refreshUser();
       }
     };
 
-    window.addEventListener('focus', syncSession);
-    document.addEventListener('visibilitychange', syncSession);
-
+    document.addEventListener('visibilitychange', syncIfVisible);
     return () => {
-      window.removeEventListener('focus', syncSession);
-      document.removeEventListener('visibilitychange', syncSession);
+      document.removeEventListener('visibilitychange', syncIfVisible);
     };
   }, [refreshUser, state.isAuthenticated]);
 
+  const managementRole = state.roles.find((role) => (
+    MANAGEMENT_ROLE_CODES.includes(role.code)
+  ))?.code ?? null;
+  const canAccessManage = Boolean(state.user?.is_superuser || managementRole);
+
   const value: AuthContextValue = {
     ...state,
+    managementRole,
+    canAccessManage,
     login,
     loginByOneAccountCode,
     logout,
-    switchRole,
     changeOwnPassword,
     refreshUser,
     hasCapability,

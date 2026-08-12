@@ -2,19 +2,17 @@ import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tansta
 import { apiClient } from '@/lib/api-client';
 import { invalidateAfterGradingMutation } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
 
 /**
  * 获取任务分析数据
  */
 export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } = {}) => {
-  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: queryKeys.grading.taskAnalytics({ currentRole, taskId }),
+    queryKey: queryKeys.grading.taskAnalytics({ taskId }),
     queryFn: () => apiClient.get<TaskAnalytics>(`/tasks/${taskId}/analytics/`),
-    enabled: Boolean(taskId) && currentRole !== null && enabled,
+    enabled: Boolean(taskId) && enabled,
   });
 };
 
@@ -22,12 +20,11 @@ export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } 
  * 获取学员执行情况
  */
 export const useStudentExecutions = (taskId: number, options: { enabled?: boolean } = {}) => {
-  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: queryKeys.grading.studentExecutions({ currentRole, taskId }),
+    queryKey: queryKeys.grading.studentExecutions({ taskId }),
     queryFn: () => apiClient.get<StudentExecution[]>(`/tasks/${taskId}/student-executions/`),
-    enabled: Boolean(taskId) && currentRole !== null && enabled,
+    enabled: Boolean(taskId) && enabled,
   });
 };
 
@@ -39,12 +36,11 @@ export const useGradingQuestions = (
   quizId: number | null,
   options: { enabled?: boolean } = {}
 ) => {
-  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: queryKeys.grading.questions({ currentRole, taskId, quizId }),
+    queryKey: queryKeys.grading.questions({ taskId, quizId }),
     queryFn: () => apiClient.get<GradingQuestion[]>(`/grading/tasks/${taskId}/questions/?quiz_id=${quizId}`),
-    enabled: Boolean(taskId) && Boolean(quizId) && currentRole !== null && enabled,
+    enabled: Boolean(taskId) && Boolean(quizId) && enabled,
     placeholderData: keepPreviousData,
   });
 };
@@ -58,15 +54,14 @@ export const useGradingAnswers = (
   quizId: number | null,
   options: { enabled?: boolean } = {}
 ) => {
-  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: queryKeys.grading.answers({ currentRole, taskId, quizId, questionId }),
+    queryKey: queryKeys.grading.answers({ taskId, quizId, questionId }),
     queryFn: () =>
       apiClient.get<GradingAnswerResponse>(
         `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
       ),
-    enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && currentRole !== null && enabled,
+    enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && enabled,
   });
 };
 

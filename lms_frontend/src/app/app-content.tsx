@@ -1,20 +1,18 @@
-import { AppLayout } from '@/app/layouts/app-layout';
 import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';
-import { getWorkspaceConfig } from './workspace-config';
+import { AppLayout } from '@/app/layouts/app-layout';
+import { StudentLayout } from '@/app/layouts/student-layout';
+import { useWorkbench } from '@/session/hooks/use-workbench';
 
 /**
  * 应用内容组件（在 Provider 内部）
  */
 export const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading, isSwitching } = useAuth();
-  const currentRole = useCurrentRole();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const workbench = useWorkbench();
 
-  // 只有在既没有登录信息，又正在加载时，才显示全屏加载
   if (isLoading && !isAuthenticated) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-muted">
@@ -27,20 +25,15 @@ export const AppContent: React.FC = () => {
   }
 
   const isLoginPage = location.pathname === ROUTES.LOGIN;
-  const Layout = getWorkspaceConfig(currentRole)?.layout ?? AppLayout;
+  const Layout = workbench === 'learn' ? StudentLayout : AppLayout;
 
-  const content = (isAuthenticated && !isLoginPage) ? (
-    <Layout>
-      <Outlet />
-    </Layout>
-  ) : (
-    <Outlet />
-  );
+  if (isAuthenticated && !isLoginPage) {
+    return (
+      <Layout>
+        <Outlet />
+      </Layout>
+    );
+  }
 
-  return (
-    <>
-      {content}
-      <RoleSwitchOverlay isSwitching={isSwitching || false} />
-    </>
-  );
+  return <Outlet />;
 };

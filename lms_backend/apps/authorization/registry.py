@@ -1,392 +1,227 @@
-"""从各业务模块收集权限声明。
+"""权限依赖与资源策略的显式注册（无插件扫描、无自建 catalog）。"""
 
-权限系统的真相源在每个 app 自己的 `authorization.py`。本文件只负责发现、
-合并、去重和构建运行时常量，不直接写死业务权限。
-"""
+from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import dataclass, field
 from functools import lru_cache
-from importlib import import_module
-from typing import Any, Callable, Iterable, Optional
+from typing import Iterable, Optional
 
-from django.conf import settings
-from django.utils.module_loading import import_string, module_has_submodule
+# 自定义依赖；写权限 → view 在 expand 时自动补齐
+PERMISSION_IMPLIES: dict[str, tuple[str, ...]] = {
+    'tasks.assign_task': ('tasks.view_task',),
+    'tasks.view_task_analytics': ('tasks.view_task',),
+    'tasks.view_grading': ('tasks.view_task',),
+    'tasks.score_grading': ('tasks.view_grading',),
+    'users.assign_user_role': ('users.view_user',),
+    'users.change_user_avatar': ('users.view_user',),
+}
 
+# 主业务模型：权限目录可配置 + 写权限自动推 view 共用这一份
+ASSIGNABLE_MODEL_BY_APP: dict[str, str] = {
+    'tasks': 'task',
+    'knowledge': 'knowledge',
+    'tags': 'tag',
+    'quizzes': 'quiz',
+    'questions': 'question',
+    'spot_checks': 'spotcheck',
+    'users': 'user',
+}
 
-@dataclass(frozen=True)
-class PermissionDefinition:
-    """单个权限点的声明。"""
-
-    code: str
-    name: str
-    description: str
-    scope_group_key: Optional[str] = None
-    allowed_scope_types: Optional[tuple[str, ...]] = None
-    implies: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class DefaultScopeRuleDefinition:
-    """某个角色默认拥有的对象范围。"""
-
-    permission_code: str
-    role_code: str
-    scope_type: str
-
-
-@dataclass(frozen=True)
-class ResourceAuthorizationHandler:
-    """单对象资源约束处理器。"""
-
-    key: str
-    permission_codes: tuple[str, ...]
-    authorize: Callable[..., Any]
-    constraint_summaries: dict[str, str] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class ScopeFilterHandler:
-    """列表 queryset 范围过滤处理器。"""
-
-    key: str
-    permission_code: str
-    resource_model: type
-    filter_queryset: Callable[..., Any]
-    constraint_summary: str = ''
+# 主模型默认 CRUD 之外、业务真正消费的自定义权限
+ASSIGNABLE_CUSTOM_CODES = frozenset({
+    'tasks.assign_task',
+    'tasks.view_task_analytics',
+    'tasks.view_grading',
+    'tasks.score_grading',
+    'users.assign_user_role',
+    'users.change_user_avatar',
+    'users.view_user_permission',
+    'users.change_user_permission',
+    'activity_logs.view_activitylog',
+    'activity_logs.change_activitylogpolicy',
+})
 
 
-@dataclass(frozen=True)
-class AuthorizationSpec:
-    """一个业务模块导出的完整权限规格。"""
-
-    key: str
-    module: Optional[str] = None
-    permissions: tuple[PermissionDefinition, ...] = ()
-    system_managed_codes: tuple[str, ...] = ()
-    role_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    role_system_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    scope_rules: tuple[DefaultScopeRuleDefinition, ...] = ()
-    resource_authorization_handlers: tuple[ResourceAuthorizationHandler, ...] = ()
-    scope_filter_handlers: tuple[ScopeFilterHandler, ...] = ()
-
-
-CRUD_ACTIONS = ('view', 'create', 'update', 'delete')
-
-
-def perm(code: str, name: str, description: str, **kwargs: Any) -> PermissionDefinition:
-    return PermissionDefinition(code=code, name=name, description=description, **kwargs)
-
-
-def crud_permissions(
-    prefix: str,
-    label: str,
-    *,
-    names: Optional[dict[str, str]] = None,
-    descriptions: Optional[dict[str, str]] = None,
-    kwargs_by_action: Optional[dict[str, dict[str, Any]]] = None,
-) -> tuple[PermissionDefinition, ...]:
-    resolved_names = {
-        'view': f'查看{label}',
-        'create': f'创建{label}',
-        'update': f'更新{label}',
-        'delete': f'删除{label}',
-    } | (names or {})
-    resolved_descriptions = {
-        'view': f'查看{label}列表和详情',
-        'create': f'创建{label}',
-        'update': f'编辑{label}',
-        'delete': f'删除{label}',
-    } | (descriptions or {})
-    return tuple(
-        perm(
-            code=f'{prefix}.{action}',
-            name=resolved_names[action],
-            description=resolved_descriptions[action],
-            **(kwargs_by_action or {}).get(action, {}),
-        )
-        for action in CRUD_ACTIONS
-    )
-
-
-def permission_codes(prefix: str, *actions: str) -> tuple[str, ...]:
-    return tuple(f'{prefix}.{action}' for action in actions)
-
-
-def crud_codes(prefix: str) -> tuple[str, ...]:
-    return permission_codes(prefix, *CRUD_ACTIONS)
-
-
-def scope_rules(permission_code: str, **role_scopes: str) -> tuple[DefaultScopeRuleDefinition, ...]:
-    return tuple(
-        DefaultScopeRuleDefinition(permission_code, role_code, scope_type)
-        for role_code, scope_type in role_scopes.items()
-    )
-
-
-def crud_authorization_spec(
-    key: str,
-    module: str,
-    prefix: str,
-    label: str,
-    *,
-    view_roles: tuple[str, ...] = (),
-    full_roles: tuple[str, ...] = (),
-    extra_role_defaults: Optional[dict[str, tuple[str, ...]]] = None,
-    names: Optional[dict[str, str]] = None,
-    descriptions: Optional[dict[str, str]] = None,
-    kwargs_by_action: Optional[dict[str, dict[str, Any]]] = None,
-    **kwargs: Any,
-) -> AuthorizationSpec:
-    full_role_codes = crud_codes(prefix)
-    return AuthorizationSpec(
-        key=key,
-        module=module,
-        permissions=crud_permissions(
-            prefix,
-            label,
-            names=names,
-            descriptions=descriptions,
-            kwargs_by_action=kwargs_by_action,
+ASSIGNABLE_PERMISSION_CODES = frozenset(
+    {
+        *ASSIGNABLE_CUSTOM_CODES,
+        *(
+            f'{app_label}.{action}_{model}'
+            for app_label, model in ASSIGNABLE_MODEL_BY_APP.items()
+            for action in ('view', 'add', 'change', 'delete')
         ),
-        role_defaults={
-            **{role: (f'{prefix}.view',) for role in view_roles},
-            **{role: full_role_codes for role in full_roles},
-            **(extra_role_defaults or {}),
-        },
-        **kwargs,
+    }
+)
+
+
+def _write_to_view(code: str) -> Optional[str]:
+    app, _, codename = code.partition('.')
+    if not app or not codename:
+        return None
+    model = ASSIGNABLE_MODEL_BY_APP.get(app)
+    if not model:
+        return None
+    for prefix in ('add_', 'change_', 'delete_'):
+        if codename == f'{prefix}{model}':
+            return f'{app}.view_{model}'
+    return None
+
+
+def permission_implies(code: str) -> list[str]:
+    """单码直接依赖（含写→view），供 catalog API / 前端联动。"""
+    result: list[str] = list(PERMISSION_IMPLIES.get(code, ()))
+    view_code = _write_to_view(code)
+    if view_code and view_code not in result:
+        result.append(view_code)
+    return result
+
+
+def expand_permission_codes(permission_codes: Iterable[str]) -> list[str]:
+    """保存时补齐依赖权限。"""
+    expanded: list[str] = []
+    seen: set[str] = set()
+    pending = [code for code in permission_codes if code]
+    while pending:
+        code = pending.pop()
+        if code in seen:
+            continue
+        seen.add(code)
+        expanded.append(code)
+        pending.extend(permission_implies(code))
+    return expanded
+
+
+# ---------------------------------------------------------------------------
+# 资源 / 范围策略：permission_code（+ model）→ 函数
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _resource_authorizers() -> dict:
+    from functools import partial
+
+    from apps.authorization.owner_scope import authorize_owned_resource
+    from apps.questions.models import Question
+    from apps.quizzes.models import Quiz
+    from apps.spot_checks.authorization import authorize_spot_check
+    from apps.tasks.authorization import authorize_task_resource
+    from apps.users.authorization import authorize_user_resource
+
+    mapping = {}
+    for code in (
+        'tasks.view_task',
+        'tasks.change_task',
+        'tasks.delete_task',
+        'tasks.view_task_analytics',
+        'tasks.view_grading',
+        'tasks.score_grading',
+    ):
+        mapping[code] = authorize_task_resource
+    for code in (
+        'users.view_user',
+        'users.change_user',
+        'users.delete_user',
+        'users.assign_user_role',
+        'users.change_user_avatar',
+        'users.view_user_permission',
+        'users.change_user_permission',
+    ):
+        mapping[code] = authorize_user_resource
+    authorize_question = partial(
+        authorize_owned_resource,
+        resource_model=Question,
+        write_codes=frozenset({'questions.change_question', 'questions.delete_question'}),
+        write_message='无权操作此题目',
+        read_message='无权访问此题目',
     )
-
-
-def _resolve_installed_app_module(app_entry: str) -> str:
-    if '.apps.' not in app_entry:
-        return app_entry
-    return getattr(import_string(app_entry), 'name', app_entry)
-
-
-@lru_cache(maxsize=1)
-def discover_authorization_spec_modules() -> tuple[str, ...]:
-    """按 INSTALLED_APPS 自动发现 `apps.*.authorization` 模块。"""
-    module_paths: list[str] = []
-    for app_entry in settings.INSTALLED_APPS:
-        app_module_path = _resolve_installed_app_module(app_entry)
-        if not app_module_path.startswith('apps.'):
-            continue
-        app_module = import_module(app_module_path)
-        if not module_has_submodule(app_module, 'authorization'):
-            continue
-        module_paths.append(f'{app_module_path}.authorization')
-    return tuple(module_paths)
-
-
-def _merge_sequence_map(specs: Iterable[AuthorizationSpec], attr_name: str) -> dict[str, list[str]]:
-    merged: dict[str, list[str]] = {}
-    for spec in specs:
-        values = getattr(spec, attr_name)
-        for key, codes in values.items():
-            bucket = merged.setdefault(key, [])
-            for code in codes:
-                if code not in bucket:
-                    bucket.append(code)
-    return merged
-
-
-def _append_unique(target: list[str], value: str) -> None:
-    if value not in target:
-        target.append(value)
+    for code in (
+        'questions.view_question',
+        'questions.change_question',
+        'questions.delete_question',
+    ):
+        mapping[code] = authorize_question
+    authorize_quiz = partial(
+        authorize_owned_resource,
+        resource_model=Quiz,
+        write_codes=frozenset({'quizzes.change_quiz', 'quizzes.delete_quiz'}),
+        write_message='无权操作此试卷',
+        read_message='无权访问此试卷',
+    )
+    for code in (
+        'quizzes.view_quiz',
+        'quizzes.change_quiz',
+        'quizzes.delete_quiz',
+    ):
+        mapping[code] = authorize_quiz
+    for code in (
+        'spot_checks.view_spotcheck',
+        'spot_checks.add_spotcheck',
+        'spot_checks.change_spotcheck',
+        'spot_checks.delete_spotcheck',
+    ):
+        mapping[code] = authorize_spot_check
+    return mapping
 
 
 @lru_cache(maxsize=1)
-def load_authorization_specs() -> tuple[AuthorizationSpec, ...]:
-    specs: list[AuthorizationSpec] = []
-    for module_path in discover_authorization_spec_modules():
-        module = import_module(module_path)
-        specs.extend(getattr(module, 'AUTHORIZATION_SPECS', ()))
-    return tuple(specs)
+def _scope_filters() -> dict:
+    from apps.authorization.owner_scope import filter_queryset_by_owner_scope
+    from apps.questions.models import Question
+    from apps.quizzes.models import Quiz
+    from apps.spot_checks.authorization import (
+        filter_spot_check_queryset,
+        filter_writable_spot_check_queryset,
+    )
+    from apps.spot_checks.models import SpotCheck
+    from apps.tasks.authorization import filter_scoped_learning_members
+    from apps.tasks.models import Task
+    from apps.users.authorization import filter_viewable_users
+    from apps.users.models import User
 
-
-def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None) -> list[dict[str, Any]]:
-    """生成同步到数据库和前端展示的权限目录。"""
-    resolved_specs = tuple(specs or load_authorization_specs())
-    catalog: list[dict[str, str]] = []
-    seen_codes: set[str] = set()
-    for spec in resolved_specs:
-        for permission in spec.permissions:
-            if permission.code in seen_codes:
-                raise ValueError(f'重复权限编码: {permission.code}')
-            if not spec.module:
-                raise ValueError(f'权限 {permission.code} 缺少模块归属')
-            seen_codes.add(permission.code)
-            catalog.append(
-                {
-                    'code': permission.code,
-                    'name': permission.name,
-                    'module': spec.module,
-                    'description': permission.description,
-                    'scope_group_key': permission.scope_group_key,
-                    'allowed_scope_types': list(permission.allowed_scope_types or ()),
-                    'implies': [],
-                }
-            )
-    implication_map = build_permission_implication_map(resolved_specs)
-    for item in catalog:
-        item['implies'] = implication_map.get(item['code'], [])
-    return catalog
-
-
-def build_permission_implication_map(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> dict[str, list[str]]:
-    """生成隐含权限关系。
-
-    例如 create/update/delete 自动隐含 view，避免页面拥有写权限却无法读取详情。
-    """
-    resolved_specs = tuple(specs or load_authorization_specs())
-    registered_codes = {
-        permission.code
-        for spec in resolved_specs
-        for permission in spec.permissions
+    mapping = {
+        ('tasks.assign_task', User): filter_scoped_learning_members,
+        ('tasks.view_task_analytics', User): filter_scoped_learning_members,
+        ('spot_checks.view_spotcheck', User): filter_scoped_learning_members,
+        ('spot_checks.add_spotcheck', User): filter_scoped_learning_members,
+        ('spot_checks.view_spotcheck', SpotCheck): filter_spot_check_queryset,
     }
-    implication_map: dict[str, list[str]] = {code: [] for code in registered_codes}
-
-    for spec in resolved_specs:
-        for permission in spec.permissions:
-            for implied_code in permission.implies:
-                if implied_code not in registered_codes:
-                    raise ValueError(f'权限 {permission.code} 依赖了未注册权限 {implied_code}')
-                _append_unique(implication_map[permission.code], implied_code)
-
-    for permission_code in registered_codes:
-        if not permission_code.endswith(('.create', '.update', '.delete')):
-            continue
-        view_code = f"{permission_code.rsplit('.', 1)[0]}.view"
-        if view_code in registered_codes:
-            _append_unique(implication_map[permission_code], view_code)
-
-    return {
-        permission_code: implied_codes
-        for permission_code, implied_codes in implication_map.items()
-        if implied_codes
-    }
-
-
-def build_system_managed_permission_codes(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> list[str]:
-    resolved_specs = tuple(specs or load_authorization_specs())
-    codes: list[str] = []
-    for spec in resolved_specs:
-        for code in spec.system_managed_codes:
-            if code not in codes:
-                codes.append(code)
-    return codes
-
-
-def build_role_permission_defaults(specs: Optional[Iterable[AuthorizationSpec]] = None) -> dict[str, list[str]]:
-    return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_defaults')
+    for code in (
+        'tasks.view_task',
+        'tasks.view_task_analytics',
+        'tasks.view_grading',
+        'tasks.score_grading',
+        'tasks.change_task',
+        'tasks.delete_task',
+    ):
+        mapping[(code, Task)] = filter_queryset_by_owner_scope
+    for code in (
+        'users.view_user',
+        'users.change_user',
+        'users.delete_user',
+        'users.assign_user_role',
+        'users.change_user_avatar',
+        'users.view_user_permission',
+        'users.change_user_permission',
+    ):
+        mapping[(code, User)] = filter_viewable_users
+    for code in (
+        'questions.view_question',
+        'questions.change_question',
+        'questions.delete_question',
+    ):
+        mapping[(code, Question)] = filter_queryset_by_owner_scope
+    for code in (
+        'quizzes.view_quiz',
+        'quizzes.change_quiz',
+        'quizzes.delete_quiz',
+    ):
+        mapping[(code, Quiz)] = filter_queryset_by_owner_scope
+    for code in ('spot_checks.change_spotcheck', 'spot_checks.delete_spotcheck'):
+        mapping[(code, SpotCheck)] = filter_writable_spot_check_queryset
+    return mapping
 
 
-def build_role_system_permission_defaults(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> dict[str, list[str]]:
-    return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_system_defaults')
+def get_resource_authorizer(permission_code: str):
+    return _resource_authorizers().get(permission_code)
 
 
-def build_permission_scope_rules(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> list[DefaultScopeRuleDefinition]:
-    resolved_specs = tuple(specs or load_authorization_specs())
-    rules: list[DefaultScopeRuleDefinition] = []
-    seen_keys: set[tuple[str, str, str]] = set()
-    for spec in resolved_specs:
-        for rule in spec.scope_rules:
-            cache_key = (rule.permission_code, rule.role_code, rule.scope_type)
-            if cache_key in seen_keys:
-                continue
-            seen_keys.add(cache_key)
-            rules.append(rule)
-    return rules
-
-
-def build_scope_aware_permission_codes(specs: Optional[Iterable[AuthorizationSpec]] = None) -> set[str]:
-    return {rule.permission_code for rule in build_permission_scope_rules(specs)}
-
-
-def build_scope_group_rules(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> list[dict[str, str]]:
-    resolved_specs = tuple(specs or load_authorization_specs())
-    permission_catalog = build_permission_catalog(resolved_specs)
-    permission_scope_group_map = {
-        item['code']: item.get('scope_group_key')
-        for item in permission_catalog
-        if item.get('scope_group_key')
-    }
-    rules: list[dict[str, str]] = []
-    seen_keys: set[tuple[str, str, str]] = set()
-    for rule in build_permission_scope_rules(resolved_specs):
-        scope_group_key = permission_scope_group_map.get(rule.permission_code)
-        if not scope_group_key:
-            continue
-        cache_key = (scope_group_key, rule.role_code, rule.scope_type)
-        if cache_key in seen_keys:
-            continue
-        seen_keys.add(cache_key)
-        rules.append(
-            {
-                'scope_group_key': scope_group_key,
-                'role_code': rule.role_code,
-                'scope_type': rule.scope_type,
-            }
-        )
-    return rules
-
-
-def build_resource_authorization_handlers(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> tuple[ResourceAuthorizationHandler, ...]:
-    resolved_specs = tuple(specs or load_authorization_specs())
-    handlers: list[ResourceAuthorizationHandler] = []
-    seen_keys: set[str] = set()
-    for spec in resolved_specs:
-        for handler in spec.resource_authorization_handlers:
-            if handler.key in seen_keys:
-                continue
-            seen_keys.add(handler.key)
-            handlers.append(handler)
-    return tuple(handlers)
-
-
-def build_scope_filter_handlers(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> tuple[ScopeFilterHandler, ...]:
-    resolved_specs = tuple(specs or load_authorization_specs())
-    handlers: list[ScopeFilterHandler] = []
-    seen_keys: set[str] = set()
-    for spec in resolved_specs:
-        for handler in spec.scope_filter_handlers:
-            if handler.key in seen_keys:
-                continue
-            seen_keys.add(handler.key)
-            handlers.append(handler)
-    return tuple(handlers)
-
-
-def build_permission_constraint_summaries(
-    specs: Optional[Iterable[AuthorizationSpec]] = None,
-) -> dict[str, str]:
-    summaries: dict[str, str] = {}
-    for handler in build_resource_authorization_handlers(specs):
-        summaries.update(handler.constraint_summaries)
-    for handler in build_scope_filter_handlers(specs):
-        if handler.constraint_summary and handler.permission_code not in summaries:
-            summaries[handler.permission_code] = handler.constraint_summary
-
-    scope_rules_by_permission: dict[str, list[DefaultScopeRuleDefinition]] = defaultdict(list)
-    for rule in build_permission_scope_rules(specs):
-        scope_rules_by_permission[rule.permission_code].append(rule)
-    for permission_code, rules in scope_rules_by_permission.items():
-        if permission_code in summaries:
-            continue
-        summaries[permission_code] = '对象范围'
-    return summaries
+def get_scope_filter(permission_code: str, model):
+    return _scope_filters().get((permission_code, model))

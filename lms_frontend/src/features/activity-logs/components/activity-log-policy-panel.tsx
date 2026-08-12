@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<ActivityLogType, React.ComponentType<{ className?: 
 
 export const ActivityLogPolicyPanel: React.FC = () => {
   const { hasCapability } = useAuth();
-  const canUpdatePolicies = hasCapability('activity_log.policy.update');
+  const canUpdatePolicies = hasCapability('activity_logs.change_activitylogpolicy');
   const { data: policies = [], isLoading } = useActivityLogPolicies(canUpdatePolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
 

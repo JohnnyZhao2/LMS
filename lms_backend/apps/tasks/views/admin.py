@@ -13,7 +13,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import authorize, enforce, scope_filter
+from apps.authorization.engine import get_engine
 from apps.tasks.serializers import (
     TaskCreateSerializer,
     TaskDetailSerializer,
@@ -72,10 +72,9 @@ class AssignableUserListView(APIView):
     @extend_schema(
         summary='获取可分配人员列表',
         description='''
-        根据当前用户的角色和数据范围返回可分配的执行人员列表。
-        - 管理员：全平台所有可执行任务人员
-        - 导师：仅名下可执行任务人员
-        - 室经理：仅本室可执行任务人员
+        按组织关系返回可分配的执行人员。
+        - 管理员：全平台
+        - 名下学员 ∪ 分管部门成员
         ''',
         parameters=[
             OpenApiParameter(name='search', type=str, description='按姓名或工号搜索'),
@@ -85,14 +84,12 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        enforce('task.assign', request, error_message='无权查看可分配人员列表')
-        queryset = scope_filter(
-            'task.assign',
-            request,
+        get_engine(request).require_permission('tasks.assign_task', error_message='无权查看可分配人员列表')
+        queryset = get_engine(request).scope_filter('tasks.assign_task',
             resource_model=User,
         ).select_related(
             'department', 'mentor'
-        ).prefetch_related('roles').distinct()
+        ).prefetch_related('groups').distinct()
 
         department_id = parse_int_query_param(
             request=request,
@@ -132,14 +129,10 @@ class TaskResourceOptionListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        if not (
-            authorize('task.create', request).allowed
-            or authorize('task.update', request).allowed
-        ):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权查看任务资源库'
-            )
+        get_engine(request).enforce_any(
+            ('tasks.add_task', 'tasks.change_task'),
+            error_message='无权查看任务资源库',
+        )
         resource_type = (request.query_params.get('resource_type') or 'ALL').strip().upper()
         if resource_type not in {'ALL', 'DOCUMENT', 'QUIZ'}:
             raise BusinessError(
@@ -217,7 +210,6 @@ class TaskCreateView(APIView):
         tags=['任务管理']
     )
     def post(self, request):
-        enforce('task.create', request, error_message='无权创建任务')
         serializer = TaskCreateSerializer(
             data=request.data,
             context={'request': request}
@@ -236,11 +228,7 @@ class TaskListView(BaseAPIView):
     @extend_schema(
         summary='获取任务列表',
         description='''
-        获取任务列表，根据用户角色返回不同范围的数据：
-        - 管理员：全平台所有任务
-        - 导师：自己创建的任务
-        - 室经理：自己创建的任务
-        - 学员：分配给自己的任务
+        获取任务列表：管理员看全部，其余只看自己创建的。
         ''',
         parameters=[
             OpenApiParameter(
@@ -256,14 +244,14 @@ class TaskListView(BaseAPIView):
             OpenApiParameter(
                 name='creator_side',
                 type=str,
-                description='任务来源筛选（仅管理员有效）：all / management(ADMIN角色创建) / non_management(非ADMIN角色创建)'
+                description='任务来源筛选（仅管理员有效）：all / management(管理员创建) / non_management(非管理员创建)'
             ),
         ],
         responses={200: TaskListSerializer(many=True)},
         tags=['任务管理']
     )
     def get(self, request):
-        enforce('task.view', request, error_message='无权查看任务列表')
+        get_engine(request).require_permission('tasks.view_task', error_message='无权查看任务列表')
         # Use TaskService to get queryset based on user role
         queryset = self.service.get_task_queryset_for_user()
 
@@ -329,7 +317,7 @@ class TaskDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task, 'task.update', '无权更新任务')
+        self.service.check_task_edit_permission(task, 'tasks.change_task', '无权更新任务')
 
         if task.deadline <= timezone.now():
             raise BusinessError(
@@ -360,6 +348,6 @@ class TaskDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task, 'task.delete', '无权删除任务')
+        self.service.check_task_edit_permission(task, 'tasks.delete_task', '无权删除任务')
         self.service.delete_task(task)
         return no_content_response()

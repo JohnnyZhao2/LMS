@@ -4,7 +4,6 @@ import { invalidateAfterTagMutation } from '@/lib/cache-invalidation';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import { useAuth } from '@/session/auth/auth-context';
 import type { Tag, TagType } from '@/types/common';
 
@@ -36,16 +35,13 @@ interface ReorderSpaceTagsPayload {
 }
 
 export const useTags = (params: GetTagsParams = {}) => {
-  const currentRole = useCurrentRole();
-  const { hasCapability, isLoading: isAuthLoading } = useAuth();
+  const { hasCapability, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { tag_type, search, limit = 50, applicable_to } = params;
-  const canViewTags = hasCapability('tag.view');
-  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasCapability('knowledge.view');
-  const canQueryTags = canViewTags || canViewKnowledgeSpaces;
+  const canQueryTags = hasCapability('tags.view_tag')
+    || (tag_type === 'SPACE' && isAuthenticated);
 
   return useQuery({
     queryKey: queryKeys.tags.list({
-      currentRole,
       canQueryTags,
       tagType: tag_type,
       search,
@@ -62,7 +58,7 @@ export const useTags = (params: GetTagsParams = {}) => {
       return apiClient.get<Tag[]>(`/tags/${queryString}`);
     },
     staleTime: 2 * 60 * 1000,
-    enabled: currentRole !== null && !isAuthLoading && canQueryTags,
+    enabled: !isAuthLoading && canQueryTags,
   });
 };
 

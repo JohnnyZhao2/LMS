@@ -6,14 +6,12 @@ from typing import Any, Callable, List, Optional, Tuple
 from django.db import transaction
 from django.db.models import QuerySet
 
-from apps.authorization.engine import authorize, enforce, scope_filter
-from apps.authorization.roles import SUPER_ADMIN_ROLE, resolve_current_role
+from apps.authorization.engine import get_engine
 from apps.activity_logs.decorators import log_operation
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
 from apps.quizzes.services import ensure_quiz_revision
-from apps.users.models import User
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
@@ -29,11 +27,9 @@ class TaskService(BaseService):
     列表读取尽量走 selectors，权限范围统一走 authorization engine。
     """
 
-    MANAGEMENT_SIDE_ROLES = ['ADMIN', SUPER_ADMIN_ROLE]
-
     def get_task_queryset_for_user(self) -> QuerySet:
         qs = task_list_queryset()
-        return scope_filter('task.view', self.request, base_queryset=qs)
+        return get_engine(self.request).scope_filter('tasks.view_task', base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(
         self,
@@ -42,12 +38,12 @@ class TaskService(BaseService):
     ) -> QuerySet:
         if not creator_side or creator_side == 'all':
             return queryset
-        if not authorize('user.view', self.request).allowed:
+        if not get_engine(self.request).has_permission('users.view_user'):
             return queryset
         if creator_side == 'management':
-            return queryset.filter(created_role__in=self.MANAGEMENT_SIDE_ROLES)
+            return queryset.filter(created_by_admin=True)
         if creator_side == 'non_management':
-            return queryset.exclude(created_role__in=self.MANAGEMENT_SIDE_ROLES)
+            return queryset.filter(created_by_admin=False)
         raise BusinessError(
             code=ErrorCodes.INVALID_INPUT,
             message='creator_side 参数无效，仅支持 all、management、non_management',
@@ -59,11 +55,11 @@ class TaskService(BaseService):
         return task
 
     def check_task_read_permission(self, task: Task) -> bool:
-        enforce('task.view', self.request, resource=task, error_message='无权访问此任务')
+        get_engine(self.request).enforce('tasks.view_task', resource=task, error_message='无权访问此任务')
         return True
 
     def check_task_edit_permission(self, task: Task, permission_code: str, error_message: str) -> bool:
-        enforce(permission_code, self.request, resource=task, error_message=error_message)
+        get_engine(self.request).enforce(permission_code, resource=task, error_message=error_message)
         return True
 
     @transaction.atomic
@@ -88,16 +84,14 @@ class TaskService(BaseService):
         knowledge_ids = knowledge_ids or []
         quiz_ids = quiz_ids or []
         assignee_ids = assignee_ids or []
-        enforce('task.create', self.request, error_message='无权创建任务')
+        get_engine(self.request).enforce('tasks.add_task', error_message='无权创建任务')
         self._validate_create_payload(knowledge_ids, quiz_ids, assignee_ids)
 
-        current_role = resolve_current_role(self.user)
-        created_role = 'ADMIN' if current_role == SUPER_ADMIN_ROLE else (current_role or 'ADMIN')
         task = Task.objects.create(
             title=title,
             description=description,
             deadline=deadline,
-            created_role=created_role,
+            created_by_admin=self.user.is_admin,
             created_by=self.user,
             updated_by=self.user,
         )
@@ -158,9 +152,7 @@ class TaskService(BaseService):
         valid_ids = self._dedupe_resource_ids(quiz_ids)
         quiz_map = {
             quiz.id: quiz
-            for quiz in scope_filter(
-                'quiz.view',
-                self.request,
+            for quiz in get_engine(self.request).scope_filter('quizzes.view_quiz',
                 base_queryset=Quiz.objects.filter(id__in=valid_ids),
             ).prefetch_related(
                 'quiz_questions__question_options',
@@ -349,7 +341,7 @@ class TaskService(BaseService):
         normalized_ids = self._dedupe_resource_ids(resource_ids)
         queryset = resource_model.objects.all()
         if resource_model is Quiz:
-            queryset = scope_filter('quiz.view', self.request, base_queryset=queryset)
+            queryset = get_engine(self.request).scope_filter('quizzes.view_quiz', base_queryset=queryset)
         is_valid, invalid_ids = self._validate_current_resources(normalized_ids, queryset)
         if not is_valid:
             raise BusinessError(
@@ -432,11 +424,10 @@ class TaskService(BaseService):
     def validate_assignee_ids(assignee_ids: List[int]) -> Tuple[bool, List[int]]:
         if not assignee_ids:
             return False, []
-        existing = User.objects.filter(
-            id__in=assignee_ids,
-            is_active=True,
-            roles__code__in=('STUDENT', 'DEPT_MANAGER'),
-        ).distinct()
-        existing_ids = set(existing.values_list('id', flat=True))
+        from apps.authorization.roles import learning_member_queryset
+
+        existing_ids = set(
+            learning_member_queryset().filter(id__in=assignee_ids).values_list('id', flat=True)
+        )
         invalid_ids = list(set(assignee_ids) - existing_ids)
         return len(invalid_ids) == 0, invalid_ids

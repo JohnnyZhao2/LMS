@@ -1,25 +1,35 @@
 import * as React from 'react'
-import { ROLE_INDICATOR_CLASSES } from '@/config/role-constants'
+import { LEARNING_WORKSPACE_VISUAL, ROLE_VISUALS, SUPERUSER_VISUAL } from '@/lib/role-config'
 import { cn } from '@/lib/utils'
-import type { RoleCode } from '@/types/common';
+import type { RoleCode, Workbench } from '@/types/common';
 
 const FALLBACK_ROLE_INDICATOR_CLASSES = {
   bar: 'bg-slate-400',
   glow: 'bg-slate-400/70',
 }
 
-interface RoleIndicatorDotProps {
-  role: RoleCode | null
+interface WorkspaceIndicatorDotProps {
+  workbench: Workbench
+  managementRole?: RoleCode | null
+  isSuperuser?: boolean
   size?: 'sm' | 'md'
 }
 
-export const RoleIndicatorDot: React.FC<RoleIndicatorDotProps> = ({
-  role,
+export const RoleIndicatorDot: React.FC<WorkspaceIndicatorDotProps> = ({
+  workbench,
+  managementRole = null,
+  isSuperuser = false,
   size = 'sm',
 }) => {
-  const indicatorClasses = role ? ROLE_INDICATOR_CLASSES[role] : FALLBACK_ROLE_INDICATOR_CLASSES
+  const indicatorClasses = workbench === 'learn'
+    ? LEARNING_WORKSPACE_VISUAL
+    : isSuperuser
+      ? SUPERUSER_VISUAL
+      : managementRole
+        ? ROLE_VISUALS[managementRole]
+        : FALLBACK_ROLE_INDICATOR_CLASSES
   const containerClassName = size === 'md' ? 'h-2 w-2' : 'h-1.5 w-1.5'
-  const dotClassName = size === 'md' ? 'h-1.5 w-1.5' : 'h-1.5 w-1.5'
+  const dotClassName = 'h-1.5 w-1.5'
 
   return (
     <span className={cn('relative inline-flex shrink-0 items-center justify-center', containerClassName)}>

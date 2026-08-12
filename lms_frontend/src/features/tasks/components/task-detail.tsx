@@ -23,8 +23,8 @@ import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell'
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { ROUTES } from '@/config/routes';
+import { useWorkbench } from '@/session/hooks/use-workbench';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
@@ -180,38 +180,40 @@ const TaskNodeCard: React.FC<{
 };
 
 export const TaskDetail: React.FC = () => {
-  const { id } = useParams<{ id: string; role: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { roleNavigate, getRolePath } = useRoleNavigate();
-  const currentRole = useCurrentRole();
+  const workbench = useWorkbench();
   const { user, isLoading: authLoading } = useAuth();
 
   const searchParams = new URLSearchParams(location.search);
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
-  const isStudent = !authLoading && currentRole === 'STUDENT';
+  const roleReady = !authLoading && user !== null;
+  const isStudent = workbench === 'learn';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
 
-  const {
-    data: task,
-    isLoading: taskLoading,
-    isError: taskError,
-  } = useTaskDetail(taskId, { enabled: isValidTaskId && !authLoading });
-
-  const { data: learningDetail, isLoading: learningLoading } = useStudentLearningTaskDetail(taskId, {
-    enabled: Boolean(taskId) && isValidTaskId && isStudent,
+  // 管理态 / 执行态严格分流：学员只打 /detail/，管理只打 /{id}/，禁止双请求
+  const managementQuery = useTaskDetail(taskId, {
+    enabled: isValidTaskId && roleReady && !isStudent,
+  });
+  const studentQuery = useStudentLearningTaskDetail(taskId, {
+    enabled: isValidTaskId && roleReady && isStudent,
   });
 
-  const isLoading = authLoading || !isValidTaskId || taskLoading || (isStudent && learningLoading);
+  const task = managementQuery.data;
+  const learningDetail = studentQuery.data;
+  const isLoading = !roleReady
+    || !isValidTaskId
+    || (isStudent ? studentQuery.isLoading : managementQuery.isLoading);
+  const isError = isStudent ? studentQuery.isError : managementQuery.isError;
+  const hasDetail = isStudent ? Boolean(learningDetail) : Boolean(task);
 
   const knowledgeList: KnowledgeListViewItem[] = useMemo(() => {
-    if (!task) return [];
-
-    if (isStudent && learningDetail) {
-      return learningDetail.knowledge_items.map((item) => ({
+    if (isStudent) {
+      return (learningDetail?.knowledge_items ?? []).map((item) => ({
         id: item.id,
         knowledgeId: item.knowledge_id,
         title: item.title || '无标题',
@@ -219,7 +221,7 @@ export const TaskDetail: React.FC = () => {
       }));
     }
 
-    return (task.knowledge_items ?? []).map((item) => ({
+    return (task?.knowledge_items ?? []).map((item) => ({
       id: item.id,
       knowledgeId: item.knowledge,
       title: item.knowledge_title || '无标题',
@@ -263,7 +265,7 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  if (taskError || !task) {
+  if (isError || !hasDetail) {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
@@ -273,7 +275,7 @@ export const TaskDetail: React.FC = () => {
             </div>
             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">任务不存在</h3>
             <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看。</p>
-            <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
+            <Button variant="outline" onClick={() => navigate(ROUTES.TASKS)} className="w-full">
               返回任务中心
             </Button>
           </div>
@@ -282,39 +284,47 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  const myAssignment = task.assignments?.find((assignment) => assignment.assignee === user?.id);
+  const title = isStudent ? learningDetail!.task_title : task!.title;
+  const rawDescription = isStudent ? learningDetail!.task_description : task!.description;
+  const deadline = isStudent ? learningDetail!.deadline : task!.deadline;
+  const updatedAt = isStudent ? learningDetail!.updated_at : task!.updated_at;
+  const updatedByLabel = isStudent
+    ? learningDetail!.created_by_name
+    : (task!.updated_by_name || task!.created_by_name);
+
+  const myAssignment = !isStudent
+    ? task!.assignments?.find((assignment) => assignment.assignee === user?.id)
+    : undefined;
   const studentStatus = learningDetail?.status;
   const studentStatusDisplay = learningDetail?.status_display;
 
   const canStartExam = isStudent
     ? studentStatus === 'NOT_STARTED' || studentStatus === 'IN_PROGRESS'
-    : Boolean(myAssignment && myAssignment.status === 'IN_PROGRESS');
-  const canEditTask = !isStudent && Boolean(task.actions.update) && dayjs(task.deadline).isAfter(dayjs());
+    : false;
+  const canEditTask = !isStudent && Boolean(task!.actions.update) && dayjs(task!.deadline).isAfter(dayjs());
 
   const displayQuizzes: TaskQuizViewItem[] = isStudent
-    ? (learningDetail?.quiz_items ?? [])
-    : (task.quizzes ?? []);
+    ? (learningDetail!.quiz_items ?? [])
+    : (task!.quizzes ?? []);
   const practiceQuizzes = displayQuizzes.filter((item) => item.quiz_type !== 'EXAM');
   const examQuizzes = displayQuizzes.filter((item) => item.quiz_type === 'EXAM');
   const hasKnowledge = knowledgeList.length > 0;
   const hasPractice = practiceQuizzes.length > 0;
   const hasExam = examQuizzes.length > 0;
-  const descriptionText = task.description ? richTextToPlainText(task.description).trim() : '';
+  const descriptionText = rawDescription ? richTextToPlainText(rawDescription).trim() : '';
   const hasDescription = Boolean(descriptionText);
-  const statusValue = isStudent
-    ? studentStatus
-    : myAssignment?.status;
+  const statusValue = isStudent ? studentStatus : myAssignment?.status;
   const statusLabel = isStudent
     ? studentStatusDisplay
     : (statusValue ? TASK_EXECUTION_STATUS_META[statusValue].label : undefined);
   const totalNodeCount = knowledgeList.length + practiceQuizzes.length + examQuizzes.length;
 
   const handleStartQuiz = (quizId: number, quizType?: string) => {
-    if (!isStudent) return;
-    const assignmentId = learningDetail?.id;
+    if (!isStudent || !learningDetail) return;
+    const assignmentId = learningDetail.id;
     if (!assignmentId || !quizId) return;
     if (quizType === 'EXAM' && !canStartExam) return;
-    navigate(getRolePath(`quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`));
+    navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
   const getQuizMetaText = (item: TaskQuizViewItem) =>
@@ -333,7 +343,7 @@ export const TaskDetail: React.FC = () => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
+          onClick={() => navigate(fromDashboard ? ROUTES.DASHBOARD : ROUTES.TASKS)}
           className="flex h-8 w-8 shrink-0 rounded-full p-0 text-text-muted hover:bg-background hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -341,7 +351,7 @@ export const TaskDetail: React.FC = () => {
 
         <div className={cn('min-w-0', hasDescription ? 'space-y-1' : '')}>
           <h1 className="truncate text-[18px] font-semibold tracking-tight text-foreground">
-            {task.title}
+            {title}
           </h1>
           {descriptionText && (
             <p className="line-clamp-2 max-w-4xl text-sm leading-6 text-text-muted">
@@ -393,7 +403,7 @@ export const TaskDetail: React.FC = () => {
                             ) : null
                           }
                           tone={item.isCompleted ? 'success' : 'default'}
-                          onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId ?? item.id}?taskKnowledgeId=${item.id}&task=${taskId}`))}
+                          onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId ?? item.id}?taskKnowledgeId=${item.id}&task=${taskId}`)}
                         />
                       ))}
                     </div>
@@ -583,15 +593,15 @@ export const TaskDetail: React.FC = () => {
                   <div className="space-y-0">
                     <TaskInfoRow
                       label="截止日期"
-                      value={dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}
+                      value={dayjs(deadline).format('YYYY-MM-DD HH:mm')}
                     />
                     <TaskInfoRow
                       label="最后更新"
-                      value={task.updated_by_name || task.created_by_name}
+                      value={updatedByLabel}
                     />
                     <TaskInfoRow
                       label="更新时间"
-                      value={formatListDateTime(task.updated_at)}
+                      value={formatListDateTime(updatedAt)}
                     />
                   </div>
                 </section>
@@ -601,7 +611,7 @@ export const TaskDetail: React.FC = () => {
                     <Button
                       variant="outline"
                       className="w-full rounded-xl border-border/80 hover:bg-muted"
-                      onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))}
+                      onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)}
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       编辑任务配置

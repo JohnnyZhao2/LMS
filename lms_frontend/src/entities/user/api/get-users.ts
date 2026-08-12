@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { queryKeys } from '@/lib/query-keys';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { UserList, Mentor, Role, Department } from '@/types/common';
 
 export const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
@@ -46,13 +45,11 @@ interface UseUsersOptions {
  * 获取用户列表
  */
 export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions = {}) => {
-  const currentRole = useCurrentRole();
   const { departmentId, mentorId, isActive, search } = params;
   const { enabled = true } = options;
 
   return useQuery({
     queryKey: queryKeys.users.list({
-      currentRole,
       departmentId,
       mentorId,
       isActive,
@@ -68,7 +65,7 @@ export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions =
       const queryString = buildQueryString(queryParams);
       return apiClient.get<UserList[]>(`/users${queryString}`);
     },
-    enabled: currentRole !== null && enabled,
+    enabled: enabled,
   });
 };
 
@@ -76,24 +73,20 @@ export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions =
  * 获取用户详情
  */
 export const useUserDetail = (id: number) => {
-  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.users.detail({ currentRole, id }),
+    queryKey: queryKeys.users.detail({ id }),
     queryFn: () => apiClient.get<UserList>(`/users/${id}/`),
-    enabled: !!id && currentRole !== null,
+    enabled: !!id,
   });
 };
 
 /**
- * 获取导师列表（管理员使用）
- * 用于指定导师时选择可用的导师
+ * 可指定为导师的在职员工
  */
 export const useMentors = () => {
-  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.users.mentors(currentRole),
+    queryKey: queryKeys.users.mentors(),
     queryFn: () => apiClient.get<Mentor[]>('/users/mentors/'),
-    enabled: currentRole !== null,
   });
 };
 
@@ -103,11 +96,9 @@ export const useMentors = () => {
  * 不包含学员角色，学员角色自动保留
  */
 export const useRoles = () => {
-  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.users.roles(currentRole),
+    queryKey: queryKeys.users.roles(),
     queryFn: () => apiClient.get<Role[]>('/users/roles/'),
-    enabled: currentRole !== null,
   });
 };
 
@@ -116,11 +107,9 @@ export const useRoles = () => {
  * 用于创建和编辑用户时选择部门
  */
 export const useDepartments = () => {
-  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: queryKeys.users.departments(currentRole),
+    queryKey: queryKeys.users.departments(),
     queryFn: () => apiClient.get<Department[]>('/users/departments/'),
     select: normalizeDepartments,
-    enabled: currentRole !== null,
   });
 };

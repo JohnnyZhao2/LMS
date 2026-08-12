@@ -1,6 +1,6 @@
 import React from 'react';
 import { type LucideIcon } from 'lucide-react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight } from 'lucide-react';
 
@@ -29,11 +29,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   actionColor = 'indigo',
   className,
 }) => {
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
 
   const handleClick = () => {
     if (route) {
-      roleNavigate(route);
+      navigate(route);
     } else if (onClick) {
       onClick();
     }

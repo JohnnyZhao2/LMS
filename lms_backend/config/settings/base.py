@@ -143,7 +143,7 @@ LOGGING_VERBOSE_FORMATTER = {
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'apps.users.authentication.RoleAwareJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -180,7 +180,7 @@ SPECTACULAR_SETTINGS = {
 # 学习管理系统 (LMS) API 文档
 企业级学习管理系统后端 API，实现"学、练、考、评"的能力闭环。
 ## 核心功能模块
-- **用户认证** - JWT 认证、角色切换
+- **用户认证** - JWT 认证
 - **用户管理** - 用户 CRUD、角色分配、师徒关系
 - **知识文档** - 知识库管理、分类管理
 - **题库管理** - 题目 CRUD、批量导入
@@ -191,11 +191,12 @@ SPECTACULAR_SETTINGS = {
 - **统计分析** - 仪表盘
 - **通知服务** - 任务通知、截止提醒
 ## 角色权限
-- **学员 (STUDENT)** - 执行任务、查看知识
-- **导师 (MENTOR)** - 管理名下学员、创建任务
-- **室经理 (DEPT_MANAGER)** - 管理本室人员
-- **管理员 (ADMIN)** - 全平台管理
-- **团队经理 (TEAM_MANAGER)** - 知识查看
+- **在职员工** - 默认可学习
+- **导师 (MENTOR)** - 导师常用权限包
+- **室经理 (DEPT_MANAGER)** - 室经理常用权限包
+- **管理员 (ADMIN)** - 全平台管理；人员范围为全部
+- **人员范围** - 组织关系：名下学员 ∪ 分管部门；与角色配置无关
+- **超管 (is_superuser)** - 全部权限
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -207,9 +208,9 @@ SPECTACULAR_SETTINGS = {
     # Tags configuration
     'TAGS': [
         # 认证与用户
-        {'name': '认证', 'description': '用户登录、登出、角色切换'},
+        {'name': '认证', 'description': '用户登录、登出'},
         {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
-        {'name': '授权管理', 'description': '角色权限模板与用户级权限覆盖'},
+        {'name': '基础权限', 'description': '管理角色 Group 基础权限配置'},
         # 内容管理
         {'name': '知识管理', 'description': '知识库管理、分类管理'},
         {'name': '题库管理', 'description': '题目管理、批量导入'},

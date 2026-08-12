@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Eye, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,7 +22,7 @@ import {
   questionToEditableItem,
 } from '@/entities/question/components/question-editor-helpers';
 import { useAuth } from '@/session/auth/auth-context';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
@@ -73,7 +73,7 @@ export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const { hasCapability } = useAuth();
   const isEdit = !!id;
   const isPreviewRoute = location.pathname.endsWith('/preview');
@@ -286,7 +286,7 @@ export const QuizForm: React.FC = () => {
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data });
         toast.success('试卷更新成功');
-        roleNavigate(ROUTES.QUIZZES);
+        navigate(ROUTES.QUIZZES);
       } else {
         await createQuiz.mutateAsync(data);
         setSuccessModalOpen(true);
@@ -312,8 +312,8 @@ export const QuizForm: React.FC = () => {
             quizId={Number(id)}
             quizDraft={quizDraft}
             onEdit={
-              hasCapability('quiz.update')
-                ? (targetQuizId) => roleNavigate(`${ROUTES.QUIZZES}/${targetQuizId}/edit`, {
+              hasCapability('quizzes.change_quiz')
+                ? (targetQuizId) => navigate(`${ROUTES.QUIZZES}/${targetQuizId}/edit`, {
                   state: quizDraft ? { quizDraft } : undefined,
                 })
                 : undefined
@@ -379,7 +379,7 @@ export const QuizForm: React.FC = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${id}/preview`, {
+                    onClick={() => navigate(`${ROUTES.QUIZZES}/${id}/preview`, {
                       state: { quizDraft: buildQuizDraft() },
                     })}
                     className="h-9 rounded-lg px-3 text-[12px] font-semibold"
@@ -438,7 +438,7 @@ export const QuizForm: React.FC = () => {
         </div>
       </PageWorkbench>
 
-      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate(ROUTES.QUIZZES); }}>
+      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) navigate(ROUTES.QUIZZES); }}>
         <DialogContent className="max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-bold">
@@ -450,7 +450,7 @@ export const QuizForm: React.FC = () => {
             <p className="text-sm leading-relaxed text-text-muted">
               恭喜！试卷 <span className="font-bold text-foreground">「{title}」</span> 已成功保存至系统库。
             </p>
-            <Button variant="outline" onClick={() => roleNavigate(ROUTES.QUIZZES)}>返回列表</Button>
+            <Button variant="outline" onClick={() => navigate(ROUTES.QUIZZES)}>返回列表</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -465,7 +465,7 @@ export const QuizForm: React.FC = () => {
         }}
         onEdit={(question) => {
           setPreviewQuestion(null);
-          roleNavigate(`/questions/${question.id}/edit`);
+          navigate(`/questions/${question.id}/edit`);
         }}
         onDelete={() => {
           setPreviewQuestion(null);

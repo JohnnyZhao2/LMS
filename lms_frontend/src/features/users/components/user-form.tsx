@@ -25,11 +25,11 @@ import {
 } from '@/components/ui/select';
 import { UserAvatar } from '@/entities/user/components/user-avatar';
 import { cn } from '@/lib/utils';
-import { ROLE_COLORS } from '@/lib/role-config';
+import { getRoleColor } from '@/lib/role-config';
 import { useAuth } from '@/session/auth/auth-context';
 import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
 import {
-  getNextAssignableRoleCodes,
+  getNextFormRoleCodes,
   isAssignableRoleCode,
 } from '@/entities/authorization/utils/user-role-assignment';
 
@@ -149,8 +149,8 @@ const UserFormContent: React.FC<{
   onSuccess,
 }) => {
     const { hasCapability } = useAuth();
-    const canCreateUser = hasCapability('user.create');
-    const canUpdateUser = hasCapability('user.update');
+    const canCreateUser = hasCapability('users.add_user');
+    const canUpdateUser = hasCapability('users.change_user');
     const canAssignUserRole = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
     const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
 
@@ -164,7 +164,11 @@ const UserFormContent: React.FC<{
         ? (
           userDetail.is_superuser
             ? []
-            : userDetail.roles.map((role) => role.code).filter(isAssignableRoleCode)
+            : userDetail.roles
+              .map((role) => role.code)
+              .filter((code): code is RoleCode => (
+                isAssignableRoleCode(code)
+              ))
         )
         : [],
     );
@@ -257,21 +261,18 @@ const UserFormContent: React.FC<{
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
-          if (formData.role_codes.length > 0 && !canAssignUserRole) {
+          if (!canAssignUserRole) {
             toast.error('当前账号没有用户角色分配权限，无法分配角色');
             return;
           }
-          const newUser = await createUser.mutateAsync({
+          await createUser.mutateAsync({
             username: formData.username,
             employee_id: formData.employee_id,
             password: formData.password,
             department_id: formData.department_id!,
             mentor_id: formData.mentor_id,
+            role_codes: formData.role_codes,
           });
-          // 创建成功后分配额外角色
-          if (formData.role_codes.length > 0) {
-            await assignRoles.mutateAsync({ id: newUser.id, roles: formData.role_codes });
-          }
           toast.success("新账号已创建");
         }
         onClose();
@@ -284,12 +285,10 @@ const UserFormContent: React.FC<{
     };
 
     const toggleRole = (code: RoleCode) => {
-      setFormData((prev) => {
-        return {
-          ...prev,
-          role_codes: isSuperuserAccount ? [] : getNextAssignableRoleCodes(prev.role_codes, code),
-        };
-      });
+      setFormData((prev) => ({
+        ...prev,
+        role_codes: isSuperuserAccount ? [] : getNextFormRoleCodes(prev.role_codes, code),
+      }));
     };
 
     const isRoleToggleDisabled = (): boolean => {
@@ -483,15 +482,15 @@ const UserFormContent: React.FC<{
               <div className="flex items-center gap-2 pb-1 text-slate-400">
                 <Shield className="w-4 h-4" />
                 <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
-                <span className="text-xs text-slate-400">学员角色默认保留，扩展角色单选</span>
+                <span className="text-xs text-slate-400">管理角色单选，可不选（默认可学习）</span>
               </div>
 
               <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
-                {roles.filter((role) => isAssignableRoleCode(role.code)).map(role => {
+                {roles.map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
                   const disabled = !canAssignUserRole || isRoleToggleDisabled();
-                  const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
+                  const colorConfig = getRoleColor(role.code);
 
                   return (
                     <div
@@ -505,15 +504,13 @@ const UserFormContent: React.FC<{
                           : "border-border/60 bg-white hover:bg-muted/35"
                       )}
                     >
-                      {/* Background Minimal Icon */}
                       <div className={cn(
                         "absolute -right-3 -bottom-5 transition-all duration-700",
                         active ? cn("opacity-[0.2] scale-110", colorConfig.mutedTextClass) : "opacity-[0.3] scale-100 text-slate-200"
                       )}>
-                        {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
+                        {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
                           role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
-                            role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
-                              <User className="w-24 h-24" strokeWidth={0.5} />}
+                            <Users className="w-24 h-24" strokeWidth={0.5} />}
                       </div>
 
                       <div className="relative z-10 flex flex-col gap-1">
@@ -525,10 +522,9 @@ const UserFormContent: React.FC<{
                           "text-[10px] font-bold transition-all duration-300 opacity-60",
                           active ? colorConfig.mutedTextClass : "text-slate-300"
                         )}>
-                          {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? '全系统最高管理权限' :
-                            role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
-                              role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
-                                '职能岗位权限'}
+                          {role.code === 'ADMIN' ? '全系统管理权限' :
+                            role.code === 'DEPT_MANAGER' ? '本室人员与常用权限' :
+                              '导师常用权限'}
                         </p>
                       </div>
                     </div>

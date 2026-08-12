@@ -26,6 +26,6 @@ class AdminDashboardView(MentorScopedDashboardView):
     管理员仪表盘 API 端点
     GET /api/dashboard/admin/
     """
-    permission_code = 'dashboard.admin.view'
+    allowed_roles = frozenset({'ADMIN'})
     permission_error_message = '只有管理员或超管可以访问此仪表盘'
     service_class = AdminDashboardService

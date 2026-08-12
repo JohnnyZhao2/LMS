@@ -6,6 +6,7 @@ import type { UserSelectPanelItem } from '@/components/common/user-select-list';
 import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
@@ -59,7 +60,7 @@ export const TaskForm: React.FC = () => {
     toggleUsers,
     handleDragEnd,
     handleSubmit,
-    roleNavigate,
+    navigate,
   } = useTaskForm();
 
   const userPanelItems: UserSelectPanelItem[] = filteredUsers.map((user) => ({
@@ -78,7 +79,7 @@ export const TaskForm: React.FC = () => {
       <div className="flex h-full min-h-[32rem] flex-col items-center justify-center rounded-2xl border border-border bg-background py-16">
         <FileText className="mb-4 h-12 w-12 text-text-muted" />
         <span className="mb-4 text-sm font-medium text-text-muted">加载任务失败</span>
-        <Button onClick={() => roleNavigate('tasks')}>返回</Button>
+        <Button onClick={() => navigate(ROUTES.TASKS)}>返回</Button>
       </div>
     );
   }

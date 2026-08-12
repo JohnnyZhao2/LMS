@@ -9,6 +9,7 @@ interface CreateUserRequest {
   username: string;
   department_id?: number;
   mentor_id?: number | null;
+  role_codes?: RoleCode[];
 }
 
 interface UpdateUserRequest {
@@ -67,30 +68,6 @@ export const useUpdateUserAvatar = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateAvatarRequest }) =>
       apiClient.patch<UserList>(`/users/${id}/avatar/`, data),
-    onSuccess: () => invalidateAfterUserMutation(queryClient, {
-      includeMentors: true,
-      includeAssignableUsers: true,
-    }),
-  });
-};
-
-export const useActivateUser = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/activate/`),
-    onSuccess: () => invalidateAfterUserMutation(queryClient, {
-      includeMentors: true,
-      includeAssignableUsers: true,
-    }),
-  });
-};
-
-export const useDeactivateUser = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/deactivate/`),
     onSuccess: () => invalidateAfterUserMutation(queryClient, {
       includeMentors: true,
       includeAssignableUsers: true,

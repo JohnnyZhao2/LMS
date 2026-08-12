@@ -2,8 +2,8 @@
  * 认证相关类型定义
  */
 
-import type { RoleCode, UserInfo, Role } from './common';
-import type { CapabilityMap } from './authorization';
+import type { Role, UserInfo } from './common';
+import type { CapabilityCodes } from './authorization';
 
 /**
  * 登录请求
@@ -19,13 +19,12 @@ export interface ChangeOwnPasswordRequest {
 }
 
 /**
- * 登录响应
+ * 登录 / 会话响应
  */
 export interface AuthSessionPayload {
   user: UserInfo;
-  available_roles: Role[];
-  current_role: RoleCode;
-  capabilities: CapabilityMap;
+  roles: Role[];
+  capabilities: CapabilityCodes;
 }
 
 /**
@@ -36,15 +35,7 @@ export interface TokenPair {
   refresh_token: string;
 }
 
-/**
- * 切换角色响应
- */
 export interface LoginResponse extends AuthSessionPayload, TokenPair {}
-
-/**
- * 切换角色响应
- */
-export type SwitchRoleResponse = LoginResponse;
 
 export type ChangeOwnPasswordResponse = LoginResponse;
 

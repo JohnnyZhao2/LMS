@@ -2,42 +2,35 @@ import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { routeAllowsWorkbench } from '@/app/route-match';
+import { LEARNING_WORKSPACE_LABEL, ROLE_FULL_LABELS } from '@/config/role-constants';
+import { ROUTES } from '@/config/routes';
 import { useUpdateMyAvatar } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
-import { getWorkspacePath, stripWorkspacePathPrefix } from '@/session/workspace/role-paths';
-import { ROLE_FULL_LABELS, ROLE_ORDER } from '@/config/role-constants';
-import type { RoleCode } from '@/types/common';
+import { useSetWorkbench, useWorkbench } from '@/session/hooks/use-workbench';
 import { showApiError } from '@/utils/error-handler';
+import type { Workbench } from '@/types/common';
 
 export const useWorkspaceUserControls = () => {
-  const { user, availableRoles, switchRole, refreshUser } = useAuth();
-  const currentRole = useCurrentRole();
+  const { user, canAccessManage, managementRole, refreshUser } = useAuth();
+  const workbench = useWorkbench();
+  const setWorkbench = useSetWorkbench();
   const updateMyAvatar = useUpdateMyAvatar();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleRoleChange = React.useCallback(async (roleCode: RoleCode) => {
-    if (roleCode === currentRole) {
+  const handleWorkbenchChange = React.useCallback((nextWorkbench: Workbench) => {
+    if (nextWorkbench === workbench) {
       return;
     }
-
-    try {
-      await switchRole(roleCode);
-      const currentPath = stripWorkspacePathPrefix(location.pathname);
-      const suffix = `${location.search}${location.hash}`;
-      navigate(`${getWorkspacePath(roleCode, currentPath) ?? '/'}${suffix}`);
-    } catch (error) {
-      showApiError(error, '角色切换失败');
+    if (nextWorkbench === 'manage' && !canAccessManage) {
+      return;
     }
-  }, [
-    currentRole,
-    location.hash,
-    location.pathname,
-    location.search,
-    navigate,
-    switchRole,
-  ]);
+    setWorkbench(nextWorkbench);
+    if (!routeAllowsWorkbench(location.pathname, nextWorkbench)) {
+      navigate(ROUTES.DASHBOARD);
+    }
+  }, [canAccessManage, location.pathname, navigate, setWorkbench, workbench]);
 
   const handleMyAvatarSelect = React.useCallback(async (avatarKey: string) => {
     try {
@@ -49,29 +42,30 @@ export const useWorkspaceUserControls = () => {
     }
   }, [refreshUser, updateMyAvatar]);
 
-  const roleLabel = currentRole ? (ROLE_FULL_LABELS[currentRole] ?? '未知角色') : '未登录';
+  const manageWorkbenchLabel = user?.is_superuser
+    ? '超管'
+    : (managementRole ? ROLE_FULL_LABELS[managementRole] : '管理员');
+  const workbenchLabel = workbench === 'manage'
+    ? manageWorkbenchLabel
+    : LEARNING_WORKSPACE_LABEL;
   const userLabel = user?.username || '';
   const userInitials = React.useMemo(() => {
-    const source = (user?.username || roleLabel || 'L').trim();
+    const source = (user?.username || workbenchLabel || 'L').trim();
     return source.slice(0, 2).toUpperCase();
-  }, [roleLabel, user?.username]);
+  }, [user?.username, workbenchLabel]);
 
-  const roleOptions = React.useMemo(() => (
-    [...availableRoles]
-      .sort((a, b) => ROLE_ORDER.indexOf(a.code) - ROLE_ORDER.indexOf(b.code))
-      .map((role) => ({
-        label: ROLE_FULL_LABELS[role.code] ?? role.name,
-        value: role.code,
-      }))
-  ), [availableRoles]);
+  const workbenchOptions: Array<{ label: string; value: Workbench }> = [
+    { label: LEARNING_WORKSPACE_LABEL, value: 'learn' },
+    ...(canAccessManage ? [{ label: manageWorkbenchLabel, value: 'manage' as const }] : []),
+  ];
 
   return {
-    currentRole,
+    workbench,
     handleMyAvatarSelect,
-    handleRoleChange,
+    handleWorkbenchChange,
     isUpdatingAvatar: updateMyAvatar.isPending,
-    roleLabel,
-    roleOptions,
+    workbenchLabel,
+    workbenchOptions,
     user,
     userInitials,
     userLabel,

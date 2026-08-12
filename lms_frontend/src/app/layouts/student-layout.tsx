@@ -25,21 +25,21 @@ interface StudentLayoutProps {
 const STUDENT_FRAME_CLASS = 'mx-auto w-full max-w-[1680px] px-6 md:px-8 xl:px-10'
 
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
-  const { logout } = useAuth()
+  const { logout, managementRole } = useAuth()
   const {
-    currentRole,
+    workbench,
     handleMyAvatarSelect,
-    handleRoleChange,
+    handleWorkbenchChange,
     isUpdatingAvatar,
-    roleLabel,
-    roleOptions,
+    workbenchLabel,
+    workbenchOptions,
     user,
     userInitials,
     userLabel,
   } = useWorkspaceUserControls()
   const navigate = useNavigate()
   const location = useLocation()
-  const menuItems = useRoleMenu(currentRole)
+  const menuItems = useRoleMenu(workbench)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
 
@@ -143,7 +143,11 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                     className="inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] text-black/88 transition-colors outline-none hover:bg-black/[0.04]"
                   >
                     <span className="max-w-[96px] truncate font-medium">{userLabel || 'LMS 用户'}</span>
-                    {currentRole && <RoleIndicatorDot role={currentRole} />}
+                    <RoleIndicatorDot
+                      workbench={workbench}
+                      managementRole={managementRole}
+                      isSuperuser={Boolean(user?.is_superuser)}
+                    />
                     <ChevronDown className="h-3 w-3 shrink-0 text-black/40" />
                   </button>
                 </DropdownMenuTrigger>
@@ -152,31 +156,36 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                   sideOffset={8}
                   className="w-[188px] rounded-[14px] border border-black/[0.06] bg-white/96 p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl"
                 >
-                  {currentRole && (
-                    <>
-                      <div className="rounded-[10px] px-3 pb-1 pt-2">
-                        <div className="text-[11px] text-text-muted">当前身份</div>
-                        <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-black">
-                          <RoleIndicatorDot role={currentRole} />
-                          <span>{roleLabel}</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {roleOptions.filter((option) => option.value !== currentRole).length > 0 && (
+                  <div className="rounded-[10px] px-3 pb-1 pt-2">
+                    <div className="text-[11px] text-text-muted">当前工作台</div>
+                    <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-black">
+                      <RoleIndicatorDot
+                        workbench={workbench}
+                        managementRole={managementRole}
+                        isSuperuser={Boolean(user?.is_superuser)}
+                      />
+                      <span>{workbenchLabel}</span>
+                    </div>
+                  </div>
+                  {workbenchOptions.filter((option) => option.value !== workbench).length > 0 && (
                     <div className="space-y-1">
-                      {roleOptions
-                        .filter((option) => option.value !== currentRole)
+                      {workbenchOptions
+                        .filter((option) => option.value !== workbench)
                         .map((option) => (
                         <DropdownMenuItem
                           key={option.value}
-                          onClick={() => handleRoleChange(option.value)}
+                          onClick={() => handleWorkbenchChange(option.value)}
+                          aria-label={option.label}
                           className={cn(
                             'mb-1 rounded-[10px] px-3 py-2 text-[13px] text-text-muted last:mb-0 focus:bg-black/[0.04] focus:text-black',
-                            option.value === currentRole && 'bg-black/[0.04] text-black'
+                            option.value === workbench && 'bg-black/[0.04] text-black'
                           )}
                         >
-                          <RoleIndicatorDot role={option.value} />
+                          <RoleIndicatorDot
+                            workbench={option.value}
+                            managementRole={managementRole}
+                            isSuperuser={Boolean(user?.is_superuser)}
+                          />
                           {option.label}
                         </DropdownMenuItem>
                         ))}

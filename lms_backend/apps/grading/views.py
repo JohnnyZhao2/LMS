@@ -9,7 +9,7 @@ from apps.grading.selectors import (
     get_latest_quiz_answers,
     has_answer_content,
 )
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import get_engine
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -31,9 +31,7 @@ class GradingBaseView(BaseAPIView):
 
     def _get_task(self, task_id, permission_code: str, error_message: str):
         task = self.service.get_task_by_id(task_id)
-        enforce(
-            permission_code,
-            self.request,
+        get_engine(self.request).enforce(permission_code,
             resource=task,
             error_message=error_message,
         )
@@ -60,7 +58,7 @@ class GradingQuestionsView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
+        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
 
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
@@ -120,7 +118,7 @@ class GradingAnswersView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
+        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
@@ -274,7 +272,7 @@ class GradingSubmitView(GradingBaseView):
         tags=['阅卷中心']
     )
     def post(self, request, task_id):
-        task = self._get_task(task_id, 'grading.score', '无权提交评分')
+        task = self._get_task(task_id, 'tasks.score_grading', '无权提交评分')
 
         serializer = GradingSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -344,12 +342,10 @@ class PendingQuizzesView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request):
-        enforce('grading.view', request, error_message='无权访问阅卷中心')
+        get_engine(request).require_permission('tasks.view_grading', error_message='无权访问阅卷中心')
         quiz_type = request.query_params.get('quiz_type')
 
-        tasks = scope_filter(
-            'task.view',
-            request,
+        tasks = get_engine(request).scope_filter('tasks.view_task',
             base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
                 task_quizzes__isnull=False,
             ),

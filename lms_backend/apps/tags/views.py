@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce
+from apps.authorization.engine import get_engine
 from core.query_params import parse_int_query_param
 from core.responses import created_response, list_response, no_content_response, success_response
 
@@ -61,7 +61,7 @@ class TagListCreateView(APIView):
         tags=['标签管理'],
     )
     def post(self, request):
-        enforce('tag.create', request, error_message='无权创建标签')
+        get_engine(request).enforce('tags.add_tag', error_message='无权创建标签')
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
@@ -79,7 +79,7 @@ class TagDetailView(APIView):
         tags=['标签管理'],
     )
     def patch(self, request, pk):
-        enforce('tag.update', request, error_message='无权更新标签')
+        get_engine(request).enforce('tags.change_tag', error_message='无权更新标签')
         serializer = TagSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
@@ -92,7 +92,7 @@ class TagDetailView(APIView):
         tags=['标签管理'],
     )
     def delete(self, request, pk):
-        enforce('tag.delete', request, error_message='无权删除标签')
+        get_engine(request).enforce('tags.delete_tag', error_message='无权删除标签')
         service = TagService(request)
         service.delete(pk)
         return no_content_response()
@@ -123,7 +123,7 @@ class TagMergeView(APIView):
         tags=['标签管理'],
     )
     def post(self, request):
-        enforce('tag.update', request, error_message='无权合并标签')
+        get_engine(request).enforce('tags.change_tag', error_message='无权合并标签')
         serializer = TagMergeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
@@ -144,7 +144,7 @@ class TagReorderView(APIView):
         tags=['标签管理'],
     )
     def post(self, request):
-        enforce('tag.update', request, error_message='无权调整空间标签顺序')
+        get_engine(request).enforce('tags.change_tag', error_message='无权调整空间标签顺序')
         serializer = TagReorderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)

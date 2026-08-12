@@ -2,7 +2,7 @@ import { LoginForm } from '@/features/auth/components/login-form';
 import { AuthLayout } from '@/components/layouts/auth-layout';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/session/auth/auth-context';
-import { getAccessibleWorkspaceHome } from '@/session/workspace/role-paths';
+import { ROUTES } from '@/config/routes';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
 /**
@@ -10,7 +10,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
  * 使用 AuthLayout 提供统一且精致的视觉背景
  */
 export const LoginPage: React.FC = () => {
-  const { isAuthenticated, isLoading, availableRoles, currentRole } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const callbackCode = searchParams.get('code');
 
@@ -23,14 +23,7 @@ export const LoginPage: React.FC = () => {
   }
 
   if (!callbackCode && isAuthenticated) {
-    const workspaceHome = getAccessibleWorkspaceHome(
-      availableRoles.map((role) => role.code),
-      currentRole,
-    );
-
-    if (workspaceHome) {
-      return <Navigate to={workspaceHome} replace />;
-    }
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
 
   return (

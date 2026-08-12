@@ -5,7 +5,6 @@ from django.db.models import Max
 from django.db import IntegrityError, transaction
 
 from apps.activity_logs.decorators import log_content_action, log_operation
-from apps.authorization.engine import authorize
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from core.base_service import BaseService
@@ -440,11 +439,10 @@ def enforce_tag_view_permission(
     *,
     tag_type: Optional[str] = None,
 ) -> None:
-    if authorize('tag.view', request).allowed:
+    from apps.authorization.engine import get_engine
+
+    if get_engine(request).authorize('tags.view_tag').allowed:
         return
-    if (
-        tag_type == 'SPACE'
-        and authorize('knowledge.view', request).allowed
-    ):
+    if tag_type == 'SPACE' and getattr(request.user, 'is_authenticated', False):
         return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)

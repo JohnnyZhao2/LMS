@@ -1,26 +1,18 @@
 import type { PermissionCatalogItem } from '@/types/authorization';
 
-const appendUnique = (target: string[], value: string) => {
-  if (!target.includes(value)) {
-    target.push(value);
-  }
-};
-
 const buildDependencyMaps = (permissionCatalog: PermissionCatalogItem[]) => {
-  const impliesMap = new Map<string, string[]>();
+  const impliesMap = new Map(
+    permissionCatalog.map((permission) => [permission.code, permission.implies ?? []] as const),
+  );
   const requiredByMap = new Map<string, string[]>();
 
-  permissionCatalog.forEach((permission) => {
-    impliesMap.set(permission.code, permission.implies ?? []);
-  });
-
-  permissionCatalog.forEach((permission) => {
-    (permission.implies ?? []).forEach((impliedCode) => {
-      const currentDependents = requiredByMap.get(impliedCode) ?? [];
-      appendUnique(currentDependents, permission.code);
-      requiredByMap.set(impliedCode, currentDependents);
-    });
-  });
+  for (const permission of permissionCatalog) {
+    for (const impliedCode of permission.implies ?? []) {
+      const dependents = requiredByMap.get(impliedCode) ?? [];
+      dependents.push(permission.code);
+      requiredByMap.set(impliedCode, dependents);
+    }
+  }
 
   return { impliesMap, requiredByMap };
 };
@@ -38,7 +30,7 @@ const collectReachableCodes = (
       continue;
     }
     collectedCodes.add(currentCode);
-    (adjacencyMap.get(currentCode) ?? []).forEach((nextCode) => pendingCodes.push(nextCode));
+    pendingCodes.push(...(adjacencyMap.get(currentCode) ?? []));
   }
 
   return collectedCodes;

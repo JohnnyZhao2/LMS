@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import { useQuizzes } from '@/entities/quiz/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
@@ -41,7 +41,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
 
   const { data, isLoading } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -166,7 +166,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                 variant="ghost"
                 size="icon"
                 className={LIST_ACTION_ICON_EDIT_CLASS}
-                onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/edit`)}
+                onClick={() => navigate(`${ROUTES.QUIZZES}/${record.id}/edit`)}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -204,7 +204,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           onPageSizeChange,
         }}
         rowClassName="group"
-        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/preview`)}
+        onRowClick={(row: QuizListItem) => navigate(`${ROUTES.QUIZZES}/${row.id}/preview`)}
       />
 
       {/* 删除确认对话框 */}

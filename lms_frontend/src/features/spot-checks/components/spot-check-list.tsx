@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/session/auth/auth-context';
-import { useCurrentRole } from '@/session/hooks/use-current-role';
 import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
@@ -39,13 +38,11 @@ export const SpotCheckList: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<SpotCheck | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SpotCheck | null>(null);
 
-  const currentRole = useCurrentRole();
   const deferredStudentSearch = useDeferredValue(studentSearch.trim());
   const { hasCapability } = useAuth();
   const deleteSpotCheck = useDeleteSpotCheck();
 
   const { data: students = [], isLoading: studentsLoading } = useSpotCheckStudents({
-    role: currentRole,
     search: deferredStudentSearch || undefined,
   });
   const filteredStudents = students.filter((student) => matchDepartmentFilter(student, departmentFilter));
@@ -66,7 +63,6 @@ export const SpotCheckList: React.FC = () => {
   const { data: recordsData, isLoading: recordsLoading } = useSpotChecks({
     page,
     pageSize,
-    role: currentRole,
     studentId: resolvedSelectedStudentId ?? undefined,
     enabled: resolvedSelectedStudentId !== null,
   });
@@ -74,7 +70,7 @@ export const SpotCheckList: React.FC = () => {
   const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
   const records = recordsData?.results ?? [];
 
-  const canCreateSpotCheck = hasCapability('spot_check.create');
+  const canCreateSpotCheck = hasCapability('spot_checks.add_spotcheck');
 
   const handleDelete = async () => {
     if (!deleteTarget) {

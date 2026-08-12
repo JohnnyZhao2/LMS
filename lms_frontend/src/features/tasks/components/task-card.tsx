@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { useRoleNavigate } from '@/session/hooks/use-role-navigate';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
@@ -56,7 +57,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => (
 );
 
 const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
-  const { roleNavigate } = useRoleNavigate();
+  const navigate = useNavigate();
   const hasQuiz = task.has_quiz;
   const hasKnowledge = task.has_knowledge;
   const progressBarClass = hasQuiz && hasKnowledge
@@ -100,7 +101,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
         'group relative flex h-[188px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background px-5 pb-5 pt-4 transition-all duration-200 hover:-translate-y-0.5',
         task.status === 'COMPLETED' && 'border-transparent bg-muted'
       )}
-      onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
+      onClick={() => navigate(`${ROUTES.TASKS}/${targetTaskId}`)}
     >
       <div className="mb-5 flex min-w-0 items-center justify-between gap-3">
         <span className={cn(
