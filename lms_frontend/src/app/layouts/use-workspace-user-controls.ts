@@ -1,10 +1,7 @@
 import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { routeAllowsWorkbench } from '@/app/route-match';
 import { LEARNING_WORKSPACE_LABEL, ROLE_FULL_LABELS } from '@/config/role-constants';
-import { ROUTES } from '@/config/routes';
 import { useUpdateMyAvatar } from '@/entities/user/api/manage-users';
 import { useAuth } from '@/session/auth/auth-context';
 import { useSetWorkbench, useWorkbench } from '@/session/hooks/use-workbench';
@@ -16,8 +13,6 @@ export const useWorkspaceUserControls = () => {
   const workbench = useWorkbench();
   const setWorkbench = useSetWorkbench();
   const updateMyAvatar = useUpdateMyAvatar();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const handleWorkbenchChange = React.useCallback((nextWorkbench: Workbench) => {
     if (nextWorkbench === workbench) {
@@ -27,10 +22,7 @@ export const useWorkspaceUserControls = () => {
       return;
     }
     setWorkbench(nextWorkbench);
-    if (!routeAllowsWorkbench(location.pathname, nextWorkbench)) {
-      navigate(ROUTES.DASHBOARD);
-    }
-  }, [canAccessManage, location.pathname, navigate, setWorkbench, workbench]);
+  }, [canAccessManage, setWorkbench, workbench]);
 
   const handleMyAvatarSelect = React.useCallback(async (avatarKey: string) => {
     try {

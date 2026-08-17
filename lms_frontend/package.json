@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . && npm run docs:check",
-    "docs:generate": "node ./scripts/generate-architecture-docs.mjs",
-    "docs:check": "node ./scripts/generate-architecture-docs.mjs --check",
+    "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview"
   },

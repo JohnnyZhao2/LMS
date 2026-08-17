@@ -8,7 +8,7 @@
 - `lms_frontend/`：React 19 + Vite + TypeScript + Tailwind CSS 4
 
 后续如果继续精简文档，以本文件为主，其他 README/说明文档建议逐步归档或删除。
-前后端说明文档现分别归档在 `lms_backend/docs/` 与 `lms_frontend/docs/`。
+前端说明文档归档在 `lms_frontend/docs/`。
 
 ## 核心能力
 
@@ -24,13 +24,12 @@
 ```text
 LMS/
 ├── lms_backend/
-│   ├── docs/         # 后端维护/设计文档
 │   ├── apps/         # 业务模块
 │   ├── config/       # Django 配置、路由、settings
 │   ├── core/         # 共享基类、异常、响应、分页
 │   └── tests/        # 集成测试
 ├── lms_frontend/
-│   ├── docs/         # 前端规范/ADR/生成文档
+│   ├── docs/         # 前端规范
 │   ├── src/app/      # 应用壳、路由
 │   ├── src/features/ # 按业务拆分的前端模块
 │   ├── src/components/ui/
@@ -125,8 +124,6 @@ npm run dev
 ```bash
 npm run build
 npm run lint
-npm run docs:generate
-npm run docs:check
 npm run preview
 ```
 
@@ -159,36 +156,6 @@ python -m pytest tests/integration/test_dashboard.py -q -x
 - 前端按 `features` 组织业务代码
 - 后端复杂读查询优先抽到 `selectors.py`
 - 复杂业务链路优先补模块级、流程级注释，不写“逐行翻译式”注释
-- 事实型文档统一自动生成，不手改 `docs/generated/` 下的文件
-
-## 文档维护
-
-手写文档负责解释原则和业务语义，生成文档负责反映代码事实。更新代码后执行：
-
-```bash
-cd lms_frontend
-npm run docs:generate
-```
-
-当前生成内容：
-
-- `lms_frontend/docs/generated/component-inventory.md`：前端组件清单
-- `lms_frontend/docs/generated/feature-dependency-graph.md`：前端分层依赖图
-- `lms_backend/docs/generated/backend-module-map.md`：后端模块地图
-- `lms_frontend/docs/generated/project-update-log.md`：最近 30 条 git commit 更新记录
-
-校验文档是否漂移：
-
-```bash
-cd lms_frontend
-npm run docs:check
-```
-
-说明：
-
-- `npm run lint` 已包含 `docs:check`
-- 项目更新记录来自 git commit；未提交改动不会进入自动记录
-- 如果新增迁移，先执行后端 `migrate` 验证，再更新生成文档
 
 ## 改动同步
 查看本次提交改了哪些文件：

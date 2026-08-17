@@ -3,7 +3,7 @@
  * 业务路由注册表。
  *
  * 路径、权限、菜单元数据集中声明在这里。
- * workbenches 只影响菜单和手动切台，不参与路由访问控制。
+ * workbenches 只决定菜单在哪个界面模式出现，不参与路由访问控制。
  */
 import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -143,7 +143,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     key: 'task-detail',
     path: 'tasks/:id',
-    workbenches: ['learn', 'manage'],
     component: TaskDetail,
   },
   {
@@ -183,7 +182,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     key: 'knowledge-detail',
     path: 'knowledge/:id',
-    workbenches: ['learn', 'manage'],
     component: KnowledgeCenter,
   },
   {
@@ -354,19 +352,16 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     key: 'quiz-player',
     path: 'quiz/:id',
-    workbenches: ['learn'],
     component: QuizPlayer,
   },
   {
     key: 'review-practice',
     path: 'review/practice',
-    workbenches: ['learn'],
     render: () => <AnswerReview type="practice" />,
   },
   {
     key: 'review-exam',
     path: 'review/exam',
-    workbenches: ['learn'],
     render: () => <AnswerReview type="exam" />,
   },
   {
