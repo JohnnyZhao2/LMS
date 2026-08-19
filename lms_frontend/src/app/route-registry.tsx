@@ -5,7 +5,7 @@
  * 路径、权限、菜单元数据集中声明在这里。
  * workbenches 只决定菜单在哪个界面模式出现，不参与路由访问控制。
  */
-import { lazy, type ComponentType, type ReactElement, type ReactNode } from 'react';
+import { lazy, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
@@ -14,7 +14,6 @@ import { PageFillShell, PageShell } from '@/components/ui/page-shell';
 import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
 import { useWorkbench } from '@/session/hooks/use-workbench';
 import type { Workbench } from '@/types/common';
-import type { DashboardVariant } from './workspace-config';
 
 export type PermissionMode = 'all' | 'any';
 export type MenuLabelResolver = string | ((workbench: Workbench) => string);
@@ -32,31 +31,13 @@ export type MenuMeta = {
 };
 
 export type BusinessRouteMeta = {
-  key: string;
   path: string;
   workbenches?: Workbench[];
   requiredPermissions?: string[];
   permissionMode?: PermissionMode;
   menu?: MenuMeta;
-  component?: ComponentType;
-  render?: () => ReactElement;
+  element: ReactElement;
 };
-
-export interface MenuItem {
-  key?: string;
-  icon?: ReactNode;
-  label: string;
-  children?: MenuItem[];
-}
-
-export type OrderedMenuItem = {
-  order: number;
-  item: MenuItem;
-};
-
-const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
-const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
-const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
@@ -86,14 +67,25 @@ const AnswerReview = lazy(() => import('@/features/submissions/components/answer
 
 const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
 
-export const getDashboardElement = (variant: DashboardVariant): ReactElement => {
-  if (variant === 'student') {
-    return <StudentDashboard />;
-  }
-  if (variant === 'mentor') {
-    return <MentorDashboard />;
-  }
-  return <AdminDashboard />;
+const ASSESSMENT_GROUP = {
+  key: 'assessment',
+  label: '测评管理',
+  icon: HelpCircle,
+  order: 40,
+};
+
+const USERS_GROUP = {
+  key: 'users',
+  label: '用户管理',
+  icon: Users,
+  order: 70,
+};
+
+const LOG_GROUP = {
+  key: 'log-management',
+  label: '日志管理',
+  icon: SquareTerminal,
+  order: 80,
 };
 
 const TaskRoutePage = () => {
@@ -106,12 +98,8 @@ const TaskRoutePage = () => {
   return <TaskManagement />;
 };
 
-/** 发起抽查统一走列表弹窗，独立 create 路由重定向 */
-const SpotCheckCreateRedirect = () => <Navigate to="/spot-checks" replace />;
-
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
-    key: 'tasks',
     path: 'tasks',
     workbenches: ['learn', 'manage'],
     menu: {
@@ -119,34 +107,29 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       icon: ListTodo,
       order: 50,
     },
-    render: () => <TaskRoutePage />,
+    element: <TaskRoutePage />,
   },
   {
-    key: 'task-create',
     path: 'tasks/create',
     requiredPermissions: ['tasks.add_task'],
-    component: TaskForm,
+    element: <TaskForm />,
   },
   {
-    key: 'task-edit',
     path: 'tasks/:id/edit',
     requiredPermissions: ['tasks.change_task'],
-    component: TaskForm,
+    element: <TaskForm />,
   },
   {
-    key: 'task-preview',
     path: 'tasks/:id/preview',
     requiredPermissions: ['tasks.change_task', 'tasks.view_grading'],
     permissionMode: 'any',
-    component: TaskPreviewPage,
+    element: <TaskPreviewPage />,
   },
   {
-    key: 'task-detail',
     path: 'tasks/:id',
-    component: TaskDetail,
+    element: <TaskDetail />,
   },
   {
-    key: 'tags',
     path: 'tags',
     requiredPermissions: ['tags.view_tag'],
     menu: {
@@ -154,10 +137,9 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       icon: Tags,
       order: 20,
     },
-    component: TagManagementPage,
+    element: <TagManagementPage />,
   },
   {
-    key: 'knowledge',
     path: 'knowledge',
     workbenches: ['learn', 'manage'],
     menu: {
@@ -165,146 +147,109 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       icon: BookOpen,
       order: 10,
     },
-    component: KnowledgeCenter,
+    element: <KnowledgeCenter />,
   },
   {
-    key: 'knowledge-create',
     path: 'knowledge/create',
     requiredPermissions: ['knowledge.add_knowledge'],
-    component: KnowledgeCenter,
+    element: <KnowledgeCenter />,
   },
   {
-    key: 'knowledge-edit',
     path: 'knowledge/:id/edit',
     requiredPermissions: ['knowledge.change_knowledge'],
-    component: KnowledgeCenter,
+    element: <KnowledgeCenter />,
   },
   {
-    key: 'knowledge-detail',
     path: 'knowledge/:id',
-    component: KnowledgeCenter,
+    element: <KnowledgeCenter />,
   },
   {
-    key: 'quizzes',
     path: 'quizzes',
     requiredPermissions: ['quizzes.view_quiz', 'quizzes.add_quiz', 'quizzes.change_quiz', 'quizzes.delete_quiz'],
     permissionMode: 'any',
     menu: {
       label: '试卷管理',
-      group: {
-        key: 'assessment',
-        label: '测评管理',
-        icon: HelpCircle,
-        order: 40,
-      },
+      group: ASSESSMENT_GROUP,
       order: 10,
     },
-    component: QuizManagementPage,
+    element: <QuizManagementPage />,
   },
   {
-    key: 'quiz-create',
     path: 'quizzes/create',
     requiredPermissions: ['quizzes.add_quiz'],
-    component: QuizForm,
+    element: <QuizForm />,
   },
   {
-    key: 'quiz-preview',
     path: 'quizzes/:id/preview',
     requiredPermissions: ['quizzes.view_quiz', 'questions.view_question'],
-    component: QuizForm,
+    element: <QuizForm />,
   },
   {
-    key: 'quiz-edit',
     path: 'quizzes/:id/edit',
     requiredPermissions: ['quizzes.change_quiz'],
-    component: QuizForm,
+    element: <QuizForm />,
   },
   {
-    key: 'questions',
     path: 'questions',
     requiredPermissions: ['questions.view_question', 'questions.add_question', 'questions.change_question', 'questions.delete_question'],
     permissionMode: 'any',
     menu: {
       label: '题目管理',
-      group: {
-        key: 'assessment',
-        label: '测评管理',
-        icon: HelpCircle,
-        order: 40,
-      },
+      group: ASSESSMENT_GROUP,
       order: 20,
     },
-    component: QuestionManagementPage,
+    element: <QuestionManagementPage />,
   },
   {
-    key: 'question-create',
     path: 'questions/create',
     requiredPermissions: ['questions.add_question'],
-    component: QuestionFormPage,
+    element: <QuestionFormPage />,
   },
   {
-    key: 'question-edit',
     path: 'questions/:id/edit',
     requiredPermissions: ['questions.change_question'],
-    component: QuestionFormPage,
+    element: <QuestionFormPage />,
   },
   {
-    key: 'spot-checks',
     path: 'spot-checks',
-    // 学员抽查看/提交走任务中心 Tab + /spot-checks/mine；
-    // 管理端菜单不挂学习入口。
+    // 学员抽查看/提交走任务中心 Tab；管理端菜单不挂学习入口。
     requiredPermissions: ['spot_checks.view_spotcheck'],
     menu: {
       label: '抽查管理',
       icon: FileSearch,
       order: 60,
     },
-    component: SpotCheckList,
+    element: <SpotCheckList />,
   },
   {
-    key: 'spot-check-create',
     path: 'spot-checks/create',
     requiredPermissions: ['spot_checks.add_spotcheck'],
-    // 发起统一在列表弹窗完成（左侧选人/勾选）
-    render: () => <SpotCheckCreateRedirect />,
+    element: <Navigate to="/spot-checks" replace />,
   },
   {
-    key: 'spot-check-edit',
     path: 'spot-checks/:id/edit',
     requiredPermissions: ['spot_checks.view_spotcheck', 'spot_checks.change_spotcheck'],
-    component: SpotCheckForm,
+    element: <SpotCheckForm />,
   },
   {
-    key: 'users',
     path: 'users',
     requiredPermissions: ['users.view_user'],
     menu: {
       label: '用户列表',
-      group: {
-        key: 'users',
-        label: '用户管理',
-        icon: Users,
-        order: 70,
-      },
+      group: USERS_GROUP,
       order: 10,
     },
-    component: UserList,
+    element: <UserList />,
   },
   {
-    key: 'audit-log-policy',
     path: 'audit-logs/policy',
     requiredPermissions: ['activity_logs.change_activitylogpolicy'],
     menu: {
       label: '日志策略',
-      group: {
-        key: 'log-management',
-        label: '日志管理',
-        icon: SquareTerminal,
-        order: 80,
-      },
+      group: LOG_GROUP,
       order: 20,
     },
-    render: () => (
+    element: (
       <PageShell>
         <PageHeader title="日志策略" icon={<Settings />} />
         <ActivityLogPolicyPanel />
@@ -312,20 +257,14 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     ),
   },
   {
-    key: 'audit-logs',
     path: 'audit-logs',
     requiredPermissions: ['activity_logs.view_activitylog'],
     menu: {
       label: '日志审计',
-      group: {
-        key: 'log-management',
-        label: '日志管理',
-        icon: SquareTerminal,
-        order: 80,
-      },
+      group: LOG_GROUP,
       order: 10,
     },
-    render: () => (
+    element: (
       <PageFillShell>
         <PageHeader title="日志审计" icon={<Activity />} />
         <ActivityLogsPanel />
@@ -333,64 +272,36 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     ),
   },
   {
-    key: 'authorization-center',
     path: 'authorization',
     requiredPermissions: AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
     permissionMode: 'any',
     menu: {
       label: '用户授权',
-      group: {
-        key: 'users',
-        label: '用户管理',
-        icon: Users,
-        order: 70,
-      },
+      group: USERS_GROUP,
       order: 20,
     },
-    component: AuthorizationCenterPage,
+    element: <AuthorizationCenterPage />,
   },
   {
-    key: 'quiz-player',
     path: 'quiz/:id',
-    component: QuizPlayer,
+    element: <QuizPlayer />,
   },
   {
-    key: 'review-practice',
     path: 'review/practice',
-    render: () => <AnswerReview type="practice" />,
+    element: <AnswerReview type="practice" />,
   },
   {
-    key: 'review-exam',
     path: 'review/exam',
-    render: () => <AnswerReview type="exam" />,
+    element: <AnswerReview type="exam" />,
   },
   {
-    key: 'grading-center',
     path: 'grading-center',
     requiredPermissions: ['tasks.view_grading'],
     menu: {
       label: '阅卷中心',
-      group: {
-        key: 'assessment',
-        label: '测评管理',
-        icon: HelpCircle,
-        order: 40,
-      },
+      group: ASSESSMENT_GROUP,
       order: 30,
     },
-    component: GradingCenterPage,
+    element: <GradingCenterPage />,
   },
 ];
-
-export const getBusinessRouteElement = (route: BusinessRouteMeta): ReactElement => {
-  if (route.render) {
-    return route.render();
-  }
-
-  if (!route.component) {
-    throw new Error(`路由 ${route.key} 缺少 component/render`);
-  }
-
-  const Component = route.component;
-  return <Component />;
-};

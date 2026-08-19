@@ -55,10 +55,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       return item.children.some((child) => checkMenuItemActive(child))
     }
 
-    if (!item.key) {
-      return false
-    }
-
     const [path, search = ''] = item.key.split('?')
     if (location.pathname !== path) {
       return false
@@ -80,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             return childKey
           }
         }
-        if (item.key && isMenuItemActive(item)) {
+        if (isMenuItemActive(item)) {
           return item.key
         }
       }
@@ -98,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     setExpandedMenuKeys((current) => {
       const next = { ...current }
       menuItems.forEach((item) => {
-        const key = item.key ?? item.label
+        const key = item.key
         if (item.children?.length && isMenuItemActive(item) && next[key] !== true) {
           next[key] = true
         }
@@ -139,13 +135,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   )
 
   const renderSubMenuTree = (
-    items: { key?: string; label: string; isActive: boolean; onClick: () => void }[]
+    items: { key: string; label: string; isActive: boolean; onClick: () => void }[]
   ) => (
     <div className="relative ml-[26px] space-y-0.5 pt-1.5">
       <div className="absolute left-0 top-[10px] bottom-[22px] w-[1.5px] bg-border" />
       {items.map((child) => (
         <button
-          key={child.key ?? child.label}
+          key={child.key}
           type="button"
           onClick={child.onClick}
           className={cn(
@@ -168,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   )
 
   const renderWorkspaceItem = (item: MenuItem) => {
-    const itemIdentity = item.key ?? item.label
+    const itemIdentity = item.key
     const isActive = isMenuItemActive(item)
 
     if (!item.children?.length) {
@@ -176,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         <button
           key={itemIdentity}
           type="button"
-          onClick={() => item.key && handleNavClick(item.key)}
+          onClick={() => handleNavClick(item.key)}
           className={navItemClassName(selectedNavKey === item.key)}
         >
           <span className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -233,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 key: child.key,
                 label: child.label,
                 isActive: isMenuItemActive(child),
-                onClick: () => child.key && handleNavClick(child.key),
+                onClick: () => handleNavClick(child.key),
               }))
             )}
           </div>

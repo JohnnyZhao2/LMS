@@ -35,7 +35,6 @@ interface AuthContextValue extends AuthState {
   changeOwnPassword: (data: ChangeOwnPasswordRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasCapability: (permissionCode: string) => boolean;
-  hasAnyCapability: (permissionCodes: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -142,13 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.capabilities.includes(permissionCode);
   }, [state.capabilities]);
 
-  const hasAnyCapability = useCallback((permissionCodes: string[]) => {
-    if (!permissionCodes.length) {
-      return false;
-    }
-    return permissionCodes.some((permissionCode) => state.capabilities.includes(permissionCode));
-  }, [state.capabilities]);
-
   useEffect(() => {
     void refreshUser();
   }, [refreshUser]);
@@ -185,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     changeOwnPassword,
     refreshUser,
     hasCapability,
-    hasAnyCapability,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

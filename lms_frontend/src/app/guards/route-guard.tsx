@@ -10,17 +10,15 @@ interface ProtectedRouteProps {
   permissionMode?: 'all' | 'any';
 }
 
-const RouteLoadingState = () => (
-  <div className="flex min-h-screen items-center justify-center">
-    <Spinner size="lg" />
-  </div>
-);
-
 export const RequireAuth: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <RouteLoadingState />;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -35,29 +33,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermissions,
   permissionMode = 'all',
 }) => {
-  const {
-    isAuthenticated,
-    isLoading,
-    hasAnyCapability,
-    hasCapability,
-  } = useAuth();
-
-  if (isLoading) {
-    return <RouteLoadingState />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
+  const { hasCapability } = useAuth();
 
   const hasRequiredPermissions = !requiredPermissions?.length
     || (permissionMode === 'any'
-      ? hasAnyCapability(requiredPermissions)
+      ? requiredPermissions.some(hasCapability)
       : requiredPermissions.every((permissionCode) => hasCapability(permissionCode)));
 
   if (!hasRequiredPermissions) {
     return <Navigate to={ROUTES.FORBIDDEN} replace />;
   }
 
-  return <>{children}</>;
+  return children;
 };

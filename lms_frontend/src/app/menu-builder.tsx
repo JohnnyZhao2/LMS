@@ -1,38 +1,23 @@
+import type { ReactNode } from 'react';
 import { LayoutGrid } from 'lucide-react';
 import type { Workbench } from '@/types/common';
 import {
   BUSINESS_ROUTE_META,
-  type BusinessRouteMeta,
-  type MenuItem,
-  type MenuLabelResolver,
-  type OrderedMenuItem,
+  type MenuMeta,
 } from './route-registry';
 
-const resolveMenuLabel = (
-  label: MenuLabelResolver,
-  workbench: Workbench,
-): string => (typeof label === 'function' ? label(workbench) : label);
-
-const isPermissionGranted = (
-  route: BusinessRouteMeta,
-  hasCapability: (permissionCode: string) => boolean,
-  hasAnyCapability: (permissionCodes: string[]) => boolean,
-): boolean => {
-  if (!route.requiredPermissions?.length) {
-    return true;
-  }
-
-  return route.permissionMode === 'any'
-    ? hasAnyCapability(route.requiredPermissions)
-    : route.requiredPermissions.every((permissionCode) => hasCapability(permissionCode));
-};
+export interface MenuItem {
+  key: string;
+  icon?: ReactNode;
+  label: string;
+  children?: MenuItem[];
+}
 
 export const getMenuItemsBySection = (
   workbench: Workbench,
   hasCapability: (permissionCode: string) => boolean,
-  hasAnyCapability: (permissionCodes: string[]) => boolean,
 ): MenuItem[] => {
-  const items: Array<MenuItem & { order: number; group?: string }> = [
+  const items: Array<MenuItem & { order: number; group?: MenuMeta['group'] }> = [
     {
       key: '/dashboard',
       icon: <LayoutGrid className="h-4 w-4" />,
@@ -48,78 +33,49 @@ export const getMenuItemsBySection = (
     if (!(route.workbenches ?? ['manage']).includes(workbench)) {
       return;
     }
-    if (!isPermissionGranted(route, hasCapability, hasAnyCapability)) {
+    if (route.requiredPermissions?.length && !(
+      route.permissionMode === 'any'
+        ? route.requiredPermissions.some(hasCapability)
+        : route.requiredPermissions.every(hasCapability)
+    )) {
       return;
     }
 
     items.push({
       key: `/${route.path}`,
       icon: route.menu.icon ? <route.menu.icon className="h-4 w-4" /> : undefined,
-      label: resolveMenuLabel(route.menu.label, workbench),
+      label: typeof route.menu.label === 'function'
+        ? route.menu.label(workbench)
+        : route.menu.label,
       order: route.menu.order,
-      group: route.menu.group?.key,
+      group: route.menu.group,
     });
   });
 
-  const directItems: OrderedMenuItem[] = items
-    .filter((item) => !item.group)
+  const groupItems = Object.values(items.reduce<Record<string, typeof items>>((groups, item) => {
+    if (item.group) {
+      (groups[item.group.key] ??= []).push(item);
+    }
+    return groups;
+  }, {})).map((children) => {
+    const group = children[0].group!;
+    return {
+      key: `/${group.key}`,
+      icon: <group.icon className="h-4 w-4" />,
+      label: group.label,
+      order: group.order,
+      children: children
+        .sort((left, right) => left.order - right.order)
+        .map(({ key, icon, label, children: nestedChildren }) => ({
+          key,
+          icon,
+          label,
+          children: nestedChildren,
+        })),
+    };
+  });
+
+  return [...items.filter((item) => !item.group), ...groupItems]
     .sort((left, right) => left.order - right.order)
-    .map((item) => ({
-      order: item.order,
-      item: {
-        key: item.key,
-        icon: item.icon,
-        label: item.label,
-        children: item.children,
-      },
-    }));
-
-  const groupedLeafItems = items.filter(
-    (item): item is MenuItem & { order: number; group: string } => typeof item.group === 'string',
-  );
-
-  const groupedItems = groupedLeafItems.reduce<Record<string, Array<MenuItem & { order: number; group: string }>>>(
-    (result, item) => {
-      if (!result[item.group]) {
-        result[item.group] = [];
-      }
-      result[item.group].push(item);
-      return result;
-    },
-    {},
-  );
-
-  const groupItems = Object.entries(groupedItems).reduce<OrderedMenuItem[]>(
-    (result, [groupKey, groupChildren]) => {
-      const groupMeta = BUSINESS_ROUTE_META.find(
-        (route) => route.menu?.group?.key === groupKey,
-      )?.menu?.group;
-      if (!groupMeta) {
-        return result;
-      }
-
-      result.push({
-        order: groupMeta.order,
-        item: {
-          key: `/${groupKey}`,
-          icon: <groupMeta.icon className="h-4 w-4" />,
-          label: groupMeta.label,
-          children: groupChildren
-            .sort((left, right) => left.order - right.order)
-            .map((item) => ({
-              key: item.key,
-              icon: item.icon,
-              label: item.label,
-              children: item.children,
-            })),
-        },
-      });
-      return result;
-    },
-    [],
-  );
-
-  return [...directItems, ...groupItems]
-    .sort((left, right) => left.order - right.order)
-    .map(({ item }) => item);
+    .map(({ key, icon, label, children }) => ({ key, icon, label, children }));
 };

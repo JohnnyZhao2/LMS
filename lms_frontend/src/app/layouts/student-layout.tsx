@@ -50,7 +50,6 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
 
   const isMenuItemActive = React.useCallback(function checkActive(item: MenuItem): boolean {
     if (item.children?.length) return item.children.some((c) => checkActive(c))
-    if (!item.key) return false
     const [path, search = ''] = item.key.split('?')
     if (location.pathname !== path) return false
     return !search || location.search.replace(/^\?/, '') === search
@@ -66,9 +65,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
     if (!item.children?.length) {
       return (
         <button
-          key={item.key ?? item.label}
+          key={item.key}
           type="button"
-          onClick={() => item.key && handleNavClick(item.key)}
+          onClick={() => handleNavClick(item.key)}
           className={cn(
             'relative inline-flex h-14 items-center px-2.5 text-[14px] font-medium tracking-[-0.015em] transition-colors whitespace-nowrap',
             isActive ? 'text-black' : 'text-text-muted hover:text-black'
@@ -80,7 +79,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
       )
     }
     return (
-      <DropdownMenu key={item.key ?? item.label} modal={false}>
+      <DropdownMenu key={item.key} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -96,8 +95,8 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         <DropdownMenuContent align="start" className="min-w-[140px] rounded-lg border border-border bg-white p-1 shadow-sm">
           {item.children.map((child) => (
             <DropdownMenuItem
-              key={child.key ?? child.label}
-              onClick={() => child.key && handleNavClick(child.key)}
+              key={child.key}
+              onClick={() => handleNavClick(child.key)}
               className={cn(
                 'cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted focus:text-black mb-1 last:mb-0',
                 isMenuItemActive(child) && 'bg-muted text-black'
@@ -227,13 +226,13 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
               const isActive = isMenuItemActive(item)
               if (item.children?.length) {
                 return (
-                  <div key={item.key ?? item.label}>
+                  <div key={item.key}>
                     <div className="px-3 py-1 text-[11px] font-semibold text-text-muted uppercase tracking-wider">{item.label}</div>
                     {item.children.map((child) => (
                       <button
-                        key={child.key ?? child.label}
+                        key={child.key}
                         type="button"
-                        onClick={() => child.key && handleNavClick(child.key)}
+                        onClick={() => handleNavClick(child.key)}
                         className={cn(
                           'w-full text-left px-5 py-2 text-[14px] rounded-lg transition-colors',
                           isMenuItemActive(child) ? 'bg-muted text-black font-medium' : 'text-text-muted hover:bg-muted'
@@ -247,9 +246,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
               }
               return (
                 <button
-                  key={item.key ?? item.label}
+                  key={item.key}
                   type="button"
-                  onClick={() => item.key && handleNavClick(item.key)}
+                  onClick={() => handleNavClick(item.key)}
                   className={cn(
                     'w-full text-left px-3 py-2 text-[14px] rounded-lg transition-colors',
                     isActive ? 'bg-muted text-black font-medium' : 'text-text-muted hover:bg-muted'
