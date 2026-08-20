@@ -25,7 +25,7 @@ const featureBoundaryConfigs = featureNames.map((featureName) => ({
             `!@/features/${featureName}`,
             `!@/features/${featureName}/*`,
           ],
-          message: '禁止跨 feature 直接依赖，请下沉到 entities/session 或在 app 层组合。',
+          message: '禁止跨 feature 直接依赖，请下沉到共享层或在 app 层组合。',
         },
         {
           group: ['@/app', '@/app/*'],
@@ -53,6 +53,7 @@ export default defineConfig([
   },
   {
     files: [
+      'src/api/**/*.{ts,tsx}',
       'src/components/**/*.{ts,tsx}',
       'src/hooks/**/*.{ts,tsx}',
       'src/lib/**/*.{ts,tsx}',
@@ -70,23 +71,6 @@ export default defineConfig([
           {
             group: ['@/app', '@/app/*'],
             message: '共享层不应依赖 app。',
-          },
-        ],
-      }],
-    },
-  },
-  {
-    files: ['src/session/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@/features/*'],
-            message: 'session 层不应依赖 feature。',
-          },
-          {
-            group: ['@/app', '@/app/*'],
-            message: 'session 层不应依赖 app。',
           },
         ],
       }],

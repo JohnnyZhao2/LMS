@@ -4,19 +4,17 @@ import { CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTags } from '@/entities/tag/api/tags';
+import { useTags } from '@/api/tags';
 import { useKnowledgeDetail, useCreateKnowledge, useUpdateKnowledge } from '../../api/knowledge';
 import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
-import { useCompleteLearning } from '@/entities/task/api/complete-learning';
-import { useStudentLearningTaskDetail } from '@/entities/task/api/get-task-detail';
-import { useAuth } from '@/session/auth/auth-context';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { useAuth } from '@/lib/auth';
+import { useWorkbench } from '@/hooks/use-workbench';
 import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeWriteRequest, RelatedLink } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import { StepsEditor } from '../shared/steps-editor';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
-import { buildDocUrl, sanitizeStepsHtml } from '../../utils/content-utils';
+import { buildDocUrl, sanitizeStepsHtml } from '@/lib/knowledge-content';
 import { showApiError } from '@/utils/error-handler';
 import { sanitizeRelatedLinks } from '../../utils/related-links';
 import './knowledge-detail-modal.css';
@@ -68,6 +66,12 @@ function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
   return null;
 }
 
+export type KnowledgeLearning = {
+  isCompleted: boolean;
+  isMarking?: boolean;
+  onMarkLearned: () => void | Promise<void>;
+};
+
 interface KnowledgeDetailModalProps {
   knowledgeId?: number;
   startEditing?: boolean;
@@ -78,8 +82,8 @@ interface KnowledgeDetailModalProps {
   initialContent?: string;
   initialExternalDocUrl?: string;
   initialSpaceTagId?: number;
-  taskId?: number;
   taskKnowledgeId?: number;
+  learning?: KnowledgeLearning;
   onClose: () => void;
   onCreated?: (id: number) => void;
   onDelete?: (id: number) => void;
@@ -95,8 +99,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   initialContent = '',
   initialExternalDocUrl = '',
   initialSpaceTagId,
-  taskId,
   taskKnowledgeId,
+  learning,
   onClose,
   onCreated,
   onDelete,
@@ -116,7 +120,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const { data, isLoading } = useKnowledgeDetail({ knowledgeId, taskKnowledgeId });
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
-  const completeLearning = useCompleteLearning();
 
   const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
   const [localKnowledgeSnapshot, setLocalKnowledgeSnapshot] = useState<{
@@ -124,9 +127,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     detail: KnowledgeDetailType;
   } | undefined>(undefined);
 
-  const { data: learningDetail } = useStudentLearningTaskDetail(taskId || 0, {
-    enabled: isStudent && !!taskId,
-  });
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
   const [isFocusMode, setIsFocusMode] = useState(startInFocus);
@@ -200,14 +200,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     ? knowledge?.space_tag?.id ?? null
     : editSpaceTagId;
   const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
-
-  const taskKnowledgeItem = useMemo(() => {
-    if (!learningDetail) return undefined;
-    return learningDetail.knowledge_items.find((item) => (
-      taskKnowledgeId ? item.id === taskKnowledgeId : item.knowledge_id === knowledgeId
-    ));
-  }, [learningDetail, taskKnowledgeId, knowledgeId]);
-  const isCompleted = taskKnowledgeItem?.is_completed;
 
   const hasChanges = isCreateMode || Boolean(knowledge && (
     (editContent !== undefined && editContent !== knowledge.content)
@@ -564,19 +556,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [activeSpaceTagId, commitPatch, isCreateMode]);
 
   const handleComplete = useCallback(async () => {
-    if (!taskId || !taskKnowledgeId) return;
+    if (!learning) return;
     try {
-      await completeLearning.mutateAsync({ taskId, taskKnowledgeId });
-      toast.success('已标记为完成');
+      await learning.onMarkLearned();
       onUpdated?.();
     } catch (error) {
       showApiError(error, '操作失败，请稍后重试');
     }
-  }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
+  }, [learning, onUpdated]);
 
   const learningAction = (() => {
-    if (!isStudent || !taskId || !taskKnowledgeId) return null;
-    if (isCompleted) {
+    if (!learning) return null;
+    if (learning.isCompleted) {
       return (
         <div className="kd-complete-done kd-complete-done-docked">
           <CheckCircle style={{ width: 14, height: 14 }} />
@@ -587,11 +578,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     return (
       <button
         type="button"
-        onClick={handleComplete}
-        disabled={completeLearning.isPending}
+        onClick={() => { void handleComplete(); }}
+        disabled={learning.isMarking}
         className="kab-btn kd-complete-btn-docked"
       >
-        {completeLearning.isPending ? '处理中…' : '标记已学习'}
+        {learning.isMarking ? '处理中…' : '标记已学习'}
       </button>
     );
   })();

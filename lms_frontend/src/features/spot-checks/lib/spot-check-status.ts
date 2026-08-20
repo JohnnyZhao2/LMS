@@ -1,4 +1,4 @@
-import type { SpotCheckStatus } from '@/types/spot-check';
+import type { SpotCheckStatus } from '@/features/spot-checks/types';
 
 export const SPOT_CHECK_STATUS_META: Record<
   SpotCheckStatus,

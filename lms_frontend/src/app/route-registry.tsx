@@ -11,8 +11,8 @@ import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareT
 import { Navigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageShell } from '@/components/ui/page-shell';
-import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/entities/authorization/constants/access';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/authorization';
+import { useWorkbench } from '@/hooks/use-workbench';
 import type { Workbench } from '@/types/common';
 
 export type PermissionMode = 'all' | 'any';
@@ -42,14 +42,14 @@ export type BusinessRouteMeta = {
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
 const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
-const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
-const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview/task-preview-page').then(m => ({ default: m.TaskPreviewPage })));
+const TaskForm = lazy(() => import('@/app/routes/tasks/task-form').then(m => ({ default: m.TaskForm })));
+const TaskPreviewPage = lazy(() => import('@/app/routes/tasks/task-preview').then(m => ({ default: m.TaskPreviewPage })));
 
-const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
+const KnowledgeCenter = lazy(() => import('@/app/routes/knowledge/knowledge-page').then(m => ({ default: m.KnowledgeCenterPage })));
 const TagManagementPage = lazy(() => import('@/features/tags/components/tag-management-page').then(m => ({ default: m.TagManagementPage })));
 
-const QuizManagementPage = lazy(() => import('@/features/quiz-center/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
-const QuizForm = lazy(() => import('@/features/quiz-center/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
+const QuizManagementPage = lazy(() => import('@/features/quizzes/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
+const QuizForm = lazy(() => import('@/features/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
 const QuestionManagementPage = lazy(() => import('@/features/questions/components/question-management-page').then(m => ({ default: m.QuestionManagementPage })));
 const QuestionFormPage = lazy(() => import('@/features/questions/components/question-form-page').then(m => ({ default: m.QuestionFormPage })));
 
@@ -58,12 +58,12 @@ const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-
 
 const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
 
-const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
+const AuthorizationCenterPage = lazy(() => import('@/app/routes/authorization/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 const ActivityLogsPanel = lazy(() => import('@/features/activity-logs/components/activity-logs-panel').then(m => ({ default: m.ActivityLogsPanel })));
 const ActivityLogPolicyPanel = lazy(() => import('@/features/activity-logs/components/activity-log-policy-panel').then(m => ({ default: m.ActivityLogPolicyPanel })));
 
-const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
-const AnswerReview = lazy(() => import('@/features/submissions/components/answer-review').then(m => ({ default: m.AnswerReview })));
+const QuizPlayer = lazy(() => import('@/features/quiz-attempts/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
+const AnswerReview = lazy(() => import('@/features/quiz-attempts/components/answer-review').then(m => ({ default: m.AnswerReview })));
 
 const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
 

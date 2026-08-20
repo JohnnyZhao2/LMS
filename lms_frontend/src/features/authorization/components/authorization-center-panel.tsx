@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KeyRound } from 'lucide-react';
 import { ROLE_FULL_LABELS } from '@/config/role-constants';
-import type { PermissionCatalogItem } from '@/types/authorization';
+import type { PermissionCatalogItem } from '@/features/authorization/types';
 import type { RoleCode, UserList } from '@/types/common';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
-import { UserPermissionSection } from '@/entities/authorization/components/user-permission-section';
-import { isAllowedDepartmentCode, useUserDetail, useUsers } from '@/entities/user/api/get-users';
-import { useAssignRoles } from '@/entities/user/api/manage-users';
-import { useAuth } from '@/session/auth/auth-context';
+import { UserPermissionSection } from '@/features/authorization/components/user-permission-section';
+import { isAllowedDepartmentCode, useUserDetail, useUsers } from '@/api/users/get-users';
+import { useAssignRoles } from '@/api/users/manage-users';
+import { useAuth } from '@/lib/auth';
 import { showApiError } from '@/utils/error-handler';
 import {
   getManagedRoleCodes,
   isAssignableRoleCode,
-} from '@/entities/authorization/utils/user-role-assignment';
+} from '@/lib/user-role-assignment';
 import {
   MANAGEMENT_ROLE_CODES,
   USER_PERMISSION_ACCESS_PERMISSIONS,
   USER_PERMISSION_UPDATE_PERMISSION,
   USER_ROLE_ASSIGN_PERMISSION,
-} from '@/entities/authorization/constants/access';
+} from '@/config/authorization';
 import { RoleMemberPanel } from './role-member-panel';
 
 interface AuthorizationCenterPanelProps {

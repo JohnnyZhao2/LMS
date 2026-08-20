@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useAuth } from '@/session/auth/auth-context';
-import type { MentorDashboard } from '@/types/dashboard';
+import { useAuth } from '@/lib/auth';
+import type { MentorDashboard } from '@/features/dashboard/types';
 
 /**
  * 获取导师/室经理仪表盘数据

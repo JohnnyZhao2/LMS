@@ -23,18 +23,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { cn } from '@/lib/utils';
 import { getRoleColor } from '@/lib/role-config';
-import { useAuth } from '@/session/auth/auth-context';
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { useAuth } from '@/lib/auth';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
 import {
   getNextFormRoleCodes,
   isAssignableRoleCode,
-} from '@/entities/authorization/utils/user-role-assignment';
+} from '@/lib/user-role-assignment';
 
-import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/entities/user/api/manage-users';
-import { useUserDetail, useMentors, useDepartments, useRoles } from '@/entities/user/api/get-users';
+import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/api/users/manage-users';
+import { useUserDetail, useMentors, useDepartments, useRoles } from '@/api/users/get-users';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/common';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';

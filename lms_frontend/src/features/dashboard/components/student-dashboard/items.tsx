@@ -4,9 +4,9 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/config/routes';
-import type { StudentDashboardTask } from '@/types/dashboard';
+import type { StudentDashboardTask } from '@/features/dashboard/types';
 import type { LatestKnowledge } from '@/types/knowledge';
-import { sanitizeStepsHtml } from '@/features/knowledge/utils/content-utils';
+import { sanitizeStepsHtml } from '@/lib/knowledge-content';
 
 interface KnowledgeItemProps {
   knowledge: LatestKnowledge;

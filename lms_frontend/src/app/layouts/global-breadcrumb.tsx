@@ -2,7 +2,7 @@ import React from 'react';
 import { matchPath, useLocation } from 'react-router-dom';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { ROUTES } from '@/config/routes';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { useWorkbench } from '@/hooks/use-workbench';
 import type { Workbench } from '@/types/common';
 
 const resolveTaskLabel = (workbench: Workbench) =>
@@ -21,7 +21,6 @@ const resolveTaskPreviewLabel = (tab: string | null) => {
 const createBreadcrumbs = (
   pathname: string,
   workbench: Workbench,
-  entry: string | null,
   taskPreviewTab: string | null,
 ): BreadcrumbItem[] => {
   const taskLabel = resolveTaskLabel(workbench);
@@ -45,12 +44,7 @@ const createBreadcrumbs = (
     { pattern: '/questions/create', items: [{ title: '测评管理', path: ROUTES.QUIZZES }, { title: '题目管理', path: ROUTES.QUESTIONS }, { title: '新建题目' }] },
     { pattern: '/questions/:id/edit', items: [{ title: '测评管理', path: ROUTES.QUIZZES }, { title: '题目管理', path: ROUTES.QUESTIONS }, { title: '编辑题目' }] },
     { pattern: '/questions', items: [{ title: '测评管理', path: ROUTES.QUIZZES }, { title: '题目管理' }] },
-    {
-      pattern: '/grading-center',
-      items: entry === 'task-management'
-        ? [{ title: taskLabel, path: ROUTES.TASKS }, { title: '阅卷中心' }]
-        : [{ title: '测评管理', path: ROUTES.QUIZZES }, { title: '阅卷中心' }],
-    },
+    { pattern: '/grading-center', items: [{ title: '测评管理', path: ROUTES.QUIZZES }, { title: '阅卷中心' }] },
     { pattern: '/tasks/create', items: [{ title: taskLabel, path: ROUTES.TASKS }, { title: '新建任务' }] },
     { pattern: '/tasks/:id/edit', items: [{ title: taskLabel, path: ROUTES.TASKS }, { title: '编辑任务' }] },
     { pattern: '/tasks/:id/preview', items: [{ title: taskLabel, path: ROUTES.TASKS }, { title: taskPreviewLabel }] },
@@ -75,16 +69,13 @@ const createBreadcrumbs = (
 export const GlobalBreadcrumb: React.FC = () => {
   const location = useLocation();
   const workbench = useWorkbench();
-  const { entry, taskPreviewTab } = React.useMemo(() => {
-    const searchParams = new URLSearchParams(location.search);
-    return {
-      entry: searchParams.get('entry'),
-      taskPreviewTab: searchParams.get('tab'),
-    };
-  }, [location.search]);
+  const taskPreviewTab = React.useMemo(
+    () => new URLSearchParams(location.search).get('tab'),
+    [location.search],
+  );
   const items = React.useMemo(
-    () => createBreadcrumbs(location.pathname, workbench, entry, taskPreviewTab),
-    [entry, location.pathname, taskPreviewTab, workbench],
+    () => createBreadcrumbs(location.pathname, workbench, taskPreviewTab),
+    [location.pathname, taskPreviewTab, workbench],
   );
 
   if (items.length === 0) {

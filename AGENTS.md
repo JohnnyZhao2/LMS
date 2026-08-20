@@ -1,4 +1,5 @@
 # 仓库指南
+超管账号 admin 密码 123
 migrate不要漏掉
 后端环境 conda activate lms
 用中文回复，言简意赅，不要废话

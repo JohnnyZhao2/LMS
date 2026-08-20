@@ -20,14 +20,14 @@ import {
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type {
   ExamReportDetailRow,
   ExamReportStudentRow,
   ExamReportView,
-} from '@/types/dashboard';
+} from '@/features/dashboard/types';
 
 import { useExamReport } from '../api/exam-report';
 import { ExamReportExportDialog } from './exam-report-export-dialog';

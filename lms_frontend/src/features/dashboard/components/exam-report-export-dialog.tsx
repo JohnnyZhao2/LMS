@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { ExamReportFiltersState, ExamReportView } from '@/types/dashboard';
+import type { ExamReportFiltersState, ExamReportView } from '@/features/dashboard/types';
 
 import { downloadExamReport } from '../api/exam-report';
 import { VIEW_META } from './exam-report-view-meta';

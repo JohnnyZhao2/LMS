@@ -11,7 +11,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
+import type { SpotCheck, SpotCheckItem } from '@/features/spot-checks/types';
 import { showApiError } from '@/utils/error-handler';
 import { useSubmitSpotCheck } from '../api/create-spot-check';
 import { useMySpotChecks, useSpotCheckDetail } from '../api/get-spot-checks';

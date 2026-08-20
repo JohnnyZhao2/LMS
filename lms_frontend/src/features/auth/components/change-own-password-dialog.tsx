@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/session/auth/auth-context'
+import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

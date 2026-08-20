@@ -10,13 +10,13 @@ import {
   Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
-import { useUsers, useDepartments, useMentors } from '@/entities/user/api/get-users'
-import { useChangePassword, useDeleteUser, useUpdateUserAvatar } from '@/entities/user/api/manage-users'
+import { useUsers, useDepartments, useMentors } from '@/api/users/get-users'
+import { useChangePassword, useDeleteUser, useUpdateUserAvatar } from '@/api/users/manage-users'
 import { UserForm } from "./user-form"
-import { AvatarPickerPopover } from '@/entities/user/components/avatar-picker-popover'
+import { AvatarPickerPopover } from '@/components/users/avatar-picker-popover'
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor, SUPERUSER_VISUAL } from "@/lib/role-config"
-import { useAuth } from "@/session/auth/auth-context"
+import { useAuth } from "@/lib/auth"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
@@ -37,7 +37,7 @@ import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/entities/authorization/constants/access';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()

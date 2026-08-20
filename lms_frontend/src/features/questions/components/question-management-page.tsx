@@ -6,8 +6,8 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/sea
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTags } from '@/entities/tag/api/tags';
-import { QUESTION_TYPE_CONFIG } from '@/entities/question/constants';
+import { useTags } from '@/api/tags';
+import { QUESTION_TYPE_CONFIG } from '@/config/questions';
 import { useNavigate } from 'react-router-dom';
 import type { QuestionType } from '@/types/common';
 import { QuestionTab } from './question-tab';

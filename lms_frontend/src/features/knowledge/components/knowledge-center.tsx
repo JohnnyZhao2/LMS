@@ -2,7 +2,7 @@ import * as React from 'react';
 import { SelectionIndicator } from '@/components/common/selection-indicator';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { useWorkbench } from '@/hooks/use-workbench';
 import {
     Inbox,
     Search,
@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/common';
 
@@ -26,20 +26,20 @@ import {
     useDeleteKnowledge,
     useIncrementViewCount,
     type KnowledgeBulkDeleteItem,
-} from '../api/knowledge';
-import { useCreateTag, useDeleteTag, useTags } from '@/entities/tag/api/tags';
-import { SpaceTagQuickCreateDialog } from '@/entities/tag/components/space-tag-quick-create-dialog';
+} from '@/features/knowledge/api/knowledge';
+import { useCreateTag, useDeleteTag, useTags } from '@/api/tags';
+import { SpaceTagQuickCreateDialog } from '@/components/tags/space-tag-quick-create-dialog';
 import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
-import { KnowledgeCardMymind } from './cards/knowledge-card';
-import { AddKnowledgeCard } from './cards/knowledge-add-card';
-import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
+import { KnowledgeCardMymind } from '@/features/knowledge/components/cards/knowledge-card';
+import { AddKnowledgeCard } from '@/features/knowledge/components/cards/knowledge-add-card';
+import { KnowledgeDetailModal, type KnowledgeLearning } from '@/features/knowledge/components/modals/knowledge-detail-modal';
 import {
     parseKnowledgeImportXlsx,
     collectKnowledgeImportNames,
     resolveKnowledgeImportRows,
     KNOWLEDGE_IMPORT_HEADERS,
-} from '../utils/import-knowledge-xlsx';
+} from '@/features/knowledge/utils/import-knowledge-xlsx';
 import { SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 
 type KnowledgeModalState =
@@ -124,7 +124,7 @@ function KnowledgeXlsxButton({
   );
 }
 
-export const KnowledgeCenter: React.FC = () => {
+export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ learning }) => {
     const navigate = useNavigate();
     const workbench = useWorkbench();
     const location = useLocation();
@@ -732,8 +732,8 @@ export const KnowledgeCenter: React.FC = () => {
                     knowledgeId={detailModalState.knowledgeId}
                     startEditing={detailModalState.startEditing}
                     startInFocus={detailModalState.startInFocus}
-                    taskId={taskId || undefined}
                     taskKnowledgeId={taskKnowledgeId || undefined}
+                    learning={learning}
                     onClose={dismissDetailModal}
                     onDelete={(id) => {
                         setDeleteTarget(id);

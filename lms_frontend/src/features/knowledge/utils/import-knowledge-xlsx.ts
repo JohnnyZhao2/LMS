@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { KnowledgeWriteRequest, RelatedLink } from '@/types/knowledge';
-import { sanitizeStepsHtml } from './content-utils';
+import { sanitizeStepsHtml } from '@/lib/knowledge-content';
 import { sanitizeRelatedLinks } from './related-links';
 
 /** 导入表头（必须完全一致） */

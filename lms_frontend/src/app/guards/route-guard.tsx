@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 
 import { Spinner } from '@/components/ui/spinner';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

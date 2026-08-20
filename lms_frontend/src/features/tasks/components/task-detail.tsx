@@ -22,19 +22,19 @@ import { MicroLabel } from '@/components/common/micro-label';
 import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import { ROUTES } from '@/config/routes';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { useWorkbench } from '@/hooks/use-workbench';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 import { cn } from '@/lib/utils';
 import type { TaskStatus } from '@/types/common';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
-import { useStudentLearningTaskDetail, useTaskDetail } from '@/entities/task/api/get-task-detail';
+import { useStudentLearningTaskDetail, useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 interface KnowledgeListViewItem {
   id: number;

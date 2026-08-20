@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { sanitizeStepsHtml } from '../../utils/content-utils';
+import { sanitizeStepsHtml } from '@/lib/knowledge-content';
 
 interface StepsEditorProps {
   value: string;

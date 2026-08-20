@@ -5,7 +5,7 @@ import { TaskCard } from './task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SearchInput } from '@/components/ui/search-input';
-import { STUDENT_TASK_STATUS_OPTIONS } from '@/lib/task-status';
+import { STUDENT_TASK_STATUS_OPTIONS } from '@/features/tasks/lib/task-status';
 import type { TaskStatus } from '@/types/common';
 
 const statusOptions = [

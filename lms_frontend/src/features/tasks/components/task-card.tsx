@@ -8,7 +8,7 @@ import type { StudentTaskCenterItem } from '@/types/task';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { ListTag } from '@/components/ui/list-tag';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 
 interface TaskCardProps {
   task: StudentTaskCenterItem;

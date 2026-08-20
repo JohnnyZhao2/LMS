@@ -4,7 +4,7 @@ import { ListChecks, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -15,10 +15,10 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
+import { useAssignableUsers } from '@/api/users/get-assignable-users';
 import { ApiError } from '@/lib/api-client';
 import { invalidateAfterSpotCheckMutation } from '@/lib/cache-invalidation';
-import type { SpotCheck, SpotCheckItem } from '@/types/spot-check';
+import type { SpotCheck, SpotCheckItem } from '@/features/spot-checks/types';
 import { showApiError } from '@/utils/error-handler';
 import {
   useCreateSpotCheck,

@@ -1,7 +1,7 @@
 import { LoginForm } from '@/features/auth/components/login-form';
 import { AuthLayout } from '@/components/layouts/auth-layout';
 import { Spinner } from '@/components/ui/spinner';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import { ROUTES } from '@/config/routes';
 import { Navigate, useSearchParams } from 'react-router-dom';
 

@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { queryKeys } from '@/lib/query-keys';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import type { PaginatedResponse } from '@/types/common';
-import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
+import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types';
 
 interface GetSpotChecksParams {
   page?: number;

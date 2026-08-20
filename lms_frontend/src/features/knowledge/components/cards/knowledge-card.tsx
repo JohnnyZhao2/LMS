@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Link as LinkGlyph } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/knowledge';
-import { plain, sanitizeStepsHtml } from '../../utils/content-utils';
+import { plain, sanitizeStepsHtml } from '@/lib/knowledge-content';
 import { FocusOrbIcon } from '../shared/focus-icon';
 
 interface KnowledgeCardMymindProps {

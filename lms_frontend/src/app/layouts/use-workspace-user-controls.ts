@@ -2,9 +2,9 @@ import * as React from 'react';
 import { toast } from 'sonner';
 
 import { LEARNING_WORKSPACE_LABEL, ROLE_FULL_LABELS } from '@/config/role-constants';
-import { useUpdateMyAvatar } from '@/entities/user/api/manage-users';
-import { useAuth } from '@/session/auth/auth-context';
-import { useSetWorkbench, useWorkbench } from '@/session/hooks/use-workbench';
+import { useUpdateMyAvatar } from '@/api/users/manage-users';
+import { useAuth } from '@/lib/auth';
+import { useSetWorkbench, useWorkbench } from '@/hooks/use-workbench';
 import { showApiError } from '@/utils/error-handler';
 import type { Workbench } from '@/types/common';
 

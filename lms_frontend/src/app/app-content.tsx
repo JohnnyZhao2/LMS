@@ -1,9 +1,9 @@
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { AppLayout } from '@/app/layouts/app-layout';
 import { StudentLayout } from '@/app/layouts/student-layout';
-import { useWorkbench } from '@/session/hooks/use-workbench';
+import { useWorkbench } from '@/hooks/use-workbench';
 
 /**
  * 应用内容组件（在 Provider 内部）

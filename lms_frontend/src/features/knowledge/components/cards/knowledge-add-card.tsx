@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { StepsEditor } from '../shared/steps-editor';
-import { plain } from '../../utils/content-utils';
+import { plain } from '@/lib/knowledge-content';
 
 interface AddKnowledgeCardProps {
   onSave: (payload: { title: string; externalDocUrl: string; content: string }) => Promise<void> | void;

@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
-import { useAuth } from "@/session/auth/auth-context"
+import { useAuth } from "@/lib/auth"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
@@ -316,40 +316,34 @@ export const TaskManagement: React.FC = () => {
             meta: columnMeta.actions,
             cell: ({ row }) => {
                 const canEdit = row.original.actions.update || row.original.actions.delete;
-                const canPreview = row.original.actions.analytics;
+                const canViewProgress = row.original.actions.update || row.original.actions.analytics;
+                const canViewGrading = row.original.actions.view && hasCapability('tasks.view_grading');
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
                     <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {canPreview && (
-                            <>
-                                <Tooltip title="进度监控">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={LIST_ACTION_ICON_ANALYTICS_CLASS}
-                                        onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
-                                    >
-                                        <BarChart3 className="h-4 w-4" />
-                                    </Button>
-                                </Tooltip>
-                                <Tooltip title="阅卷中心">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={LIST_ACTION_ICON_VIEW_CLASS}
-                                        onClick={() => {
-                                            const searchParams = new URLSearchParams({
-                                                task: String(row.original.id),
-                                                entry: 'task-management',
-                                                taskTitle: row.original.title,
-                                            })
-                                            navigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`)
-                                        }}
-                                    >
-                                        <FileCheck className="h-4 w-4" />
-                                    </Button>
-                                </Tooltip>
-                            </>
+                        {canViewProgress && (
+                            <Tooltip title="进度监控">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={LIST_ACTION_ICON_ANALYTICS_CLASS}
+                                    onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
+                                >
+                                    <BarChart3 className="h-4 w-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
+                        {canViewGrading && (
+                            <Tooltip title="阅卷中心">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={LIST_ACTION_ICON_VIEW_CLASS}
+                                    onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=grading&entry=task-management`)}
+                                >
+                                    <FileCheck className="h-4 w-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {canEdit && (
                             <>

@@ -15,7 +15,7 @@ import { ROUTES } from '@/config/routes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import type { StudentDashboardTask } from '@/types/dashboard';
+import type { StudentDashboardTask } from '@/features/dashboard/types';
 import { cn } from '@/lib/utils';
 
 import { MiniCalendar } from './student-dashboard/mini-calendar';

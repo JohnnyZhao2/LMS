@@ -2,11 +2,11 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { useTags } from '@/entities/tag/api/tags';
-import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/entities/question/api/create-question';
-import { useQuestionDetail } from '@/entities/question/api/get-questions';
+import { useTags } from '@/api/tags';
+import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/api/questions/create-question';
+import { useQuestionDetail } from '@/api/questions/get-questions';
 import { QuestionBatchEditor } from '@/features/questions/components/question-batch-editor';
-import { createBlankEditableQuestion, questionToEditableItem } from '@/entities/question/components/question-editor-helpers';
+import { createBlankEditableQuestion, questionToEditableItem } from '@/lib/question-editor';
 export const QuestionFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const questionId = id ? Number(id) : null;

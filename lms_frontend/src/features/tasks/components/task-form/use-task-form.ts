@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
 
@@ -7,11 +7,10 @@ import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 import type { PaginatedResponse } from '@/types/common';
 import type { TaskResourceOption } from '@/types/task';
-import { useQuizDetail } from '@/entities/quiz/api/get-quizzes';
-import { useTaskDetail } from '@/entities/task/api/get-task-detail';
+import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
-import { useAssignableUsers } from '@/entities/user/api/get-assignable-users';
+import { useAssignableUsers } from '@/api/users/get-assignable-users';
 import { useTaskResourceOptions } from '../../api/get-task-resources';
 import { useUpdateTask } from '../../api/update-task';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
@@ -42,14 +41,13 @@ const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
   return updater;
 };
 
-export const useTaskForm = () => {
+export const useTaskForm = (options?: { initialResources?: SelectedResource[] }) => {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const initialResources = options?.initialResources;
 
   const isEdit = !!id;
   const taskId = isEdit ? Number(id) : 0;
-  const paramQuizId = Number(searchParams.get('quiz_id'));
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
@@ -66,7 +64,6 @@ export const useTaskForm = () => {
   const { data: task, isLoading: taskLoading, isError: taskError } = useTaskDetail(taskId, {
     enabled: isEdit && Number.isFinite(taskId) && taskId > 0,
   });
-  const { data: quizDetail } = useQuizDetail(paramQuizId);
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   const hasProgress = task?.has_progress || false;
@@ -81,10 +78,9 @@ export const useTaskForm = () => {
     return buildTaskFormInitialSelectedResources({
       isEdit,
       task,
-      quizDetail,
-      paramQuizId,
+      initialResources,
     });
-  }, [isEdit, task, quizDetail, paramQuizId]);
+  }, [isEdit, initialResources, task]);
 
   const initialSelectedUserIds = useMemo<number[]>(
     () => (isEdit && task ? (task.assignments?.map((item) => item.assignee) || []) : []),

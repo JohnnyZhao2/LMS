@@ -1,6 +1,6 @@
 import { CalendarDays, ListChecks, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
 
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
@@ -8,7 +8,7 @@ import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import dayjs from '@/lib/dayjs';
-import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
+import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types';
 import { SpotCheckStarChip } from './spot-check-item-editor';
 
 interface SpotCheckRecordListProps {

@@ -6,7 +6,7 @@ import type {
   SpotCheck,
   SpotCheckScoreRequest,
   SpotCheckSubmitRequest,
-} from '@/types/spot-check';
+} from '@/features/spot-checks/types';
 
 export const useCreateSpotCheck = () => {
   const queryClient = useQueryClient();

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Workbench } from '@/types/common';
 import { getMenuItemsBySection, type MenuItem } from '@/app/menu-builder';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 
 export type { MenuItem };
 

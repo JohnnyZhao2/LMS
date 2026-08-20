@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import { showApiError } from '@/utils/error-handler';
 import { ApiError } from '@/lib/api-client';
 import { beginOneAccountLogin } from '../utils/one-account';

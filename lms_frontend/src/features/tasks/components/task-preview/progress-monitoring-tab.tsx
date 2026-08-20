@@ -13,15 +13,15 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { cn } from '@/lib/utils';
-import { TASK_EXECUTION_STATUS_META } from '@/lib/task-status';
+import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
   TaskAnalytics,
 } from '@/types/task-analytics';
-import { useTaskAnalytics, useStudentExecutions } from '@/entities/grading/api/task-analytics';
+import { useTaskAnalytics, useStudentExecutions } from '@/api/grading/task-analytics';
 import { IconBox } from '@/components/common/icon-box';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { StatCard } from '@/components/ui/stat-card';
 import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
 

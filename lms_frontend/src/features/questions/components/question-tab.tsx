@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
-import { useQuestions } from '@/entities/question/api/get-questions';
-import { useDeleteQuestion } from '@/entities/question/api/create-question';
-import { QuestionDetailDialog } from '@/entities/question/components/question-detail-dialog';
+import { useQuestions } from '@/api/questions/get-questions';
+import { useDeleteQuestion } from '@/api/questions/create-question';
+import { QuestionDetailDialog } from '@/components/questions/question-detail-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/entities/question/constants';
+import { getQuestionTypeLabel, getQuestionTypePresentation } from '@/config/questions';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

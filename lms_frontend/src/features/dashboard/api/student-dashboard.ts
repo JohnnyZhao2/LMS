@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useWorkbench } from '@/session/hooks/use-workbench';
-import type { StudentDashboard, TaskParticipant } from '@/types/dashboard';
+import { useWorkbench } from '@/hooks/use-workbench';
+import type { StudentDashboard, TaskParticipant } from '@/features/dashboard/types';
 
 /**
  * 获取学员仪表盘数据

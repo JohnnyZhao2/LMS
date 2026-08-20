@@ -1,4 +1,3 @@
-import type { QuizDetail } from '@/types/quiz';
 import type { TaskCreateRequest } from '@/features/tasks/api/create-task';
 import type { TaskDetail } from '@/types/task';
 
@@ -15,13 +14,11 @@ export const buildStableUid = (seed: string, fallback: number): number => {
 export const buildTaskFormInitialSelectedResources = ({
   isEdit,
   task,
-  quizDetail,
-  paramQuizId,
+  initialResources,
 }: {
   isEdit: boolean;
   task?: TaskDetail;
-  quizDetail?: QuizDetail;
-  paramQuizId?: number;
+  initialResources?: SelectedResource[];
 }): SelectedResource[] => {
   if (isEdit && task) {
     const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => {
@@ -69,15 +66,8 @@ export const buildTaskFormInitialSelectedResources = ({
     return [...knowledgeResources, ...practiceResources, ...examResources];
   }
 
-  if (!isEdit && quizDetail && paramQuizId) {
-    return [{
-      uid: buildStableUid(`QUIZ:${quizDetail.id}:prefill`, quizDetail.id),
-      id: quizDetail.id,
-      title: quizDetail.title,
-      resourceType: 'QUIZ',
-      category: `${quizDetail.question_count || 0} 个题目`,
-      quizType: quizDetail.quiz_type,
-    }];
+  if (!isEdit && initialResources && initialResources.length > 0) {
+    return initialResources;
   }
 
   return [];

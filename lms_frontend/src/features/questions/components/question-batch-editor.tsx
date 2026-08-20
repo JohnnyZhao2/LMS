@@ -3,12 +3,12 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { QuizOutlinePanel } from '@/entities/quiz/components/quiz-outline-panel';
+import { QuizOutlinePanel } from '@/components/quizzes/quiz-outline-panel';
 import { showApiError } from '@/utils/error-handler';
 import type { QuestionType, Tag } from '@/types/common';
 import type { Question, QuestionCreateRequest } from '@/types/question';
 
-import { QuestionDocumentList } from '@/entities/question/components/question-document-list';
+import { QuestionDocumentList } from '@/components/questions/question-document-list';
 import {
   buildQuestionCreatePayload,
   buildQuestionPatchPayload,
@@ -16,7 +16,7 @@ import {
   hasQuestionAnswer,
   syncEditableQuestionItem,
   type EditableQuestionItem,
-} from '@/entities/question/components/question-editor-helpers';
+} from '@/lib/question-editor';
 
 interface QuestionBatchEditorProps {
   initialItems: EditableQuestionItem[];
@@ -165,8 +165,6 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
             showScoreSummary={false}
             onSelectItem={setActiveKey}
             onReorderItems={handleReorderItems}
-            onDurationChange={() => undefined}
-            onPassScoreChange={() => undefined}
           />
         </div>
 
@@ -176,9 +174,8 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
             activeKey={activeKey}
             spaceTags={spaceTags}
             showScore={false}
-            onChangeItem={(key, patch) => replaceItem(key, (current) => ({ ...current, ...patch, saved: false }))}
+            onChangeItem={(key, patch) => replaceItem(key, (current) => ({ ...current, ...patch }))}
             onSelectItem={setActiveKey}
-            onReorderItems={handleReorderItems}
             onSaveItem={handleSaveByKey}
             onDeleteItem={setConfirmDeleteKey}
             itemSavingKey={savingKey}

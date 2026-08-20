@@ -1,12 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import { useAuth } from '@/session/auth/auth-context';
+import { useAuth } from '@/lib/auth';
 import type {
   ExamReportExportTemplate,
   ExamReportFiltersState,
   ExamReportResponse,
-} from '@/types/dashboard';
+} from '@/features/dashboard/types';
 
 const EXAM_REPORT_ROLES = new Set(['MENTOR', 'DEPT_MANAGER', 'ADMIN']);
 

@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Loader2, Plus, Search, UserPlus, X } from 'lucide-react';
 import { ROLE_FULL_LABELS } from '@/config/role-constants';
-import { UserAvatar } from '@/entities/user/components/user-avatar';
+import { UserAvatar } from '@/components/users/user-avatar';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { RoleCode, UserList } from '@/types/common';
 import { cn } from '@/lib/utils';
-import { MANAGEMENT_ROLE_CODES } from '@/entities/authorization/constants/access';
+import { MANAGEMENT_ROLE_CODES } from '@/config/authorization';
 
 interface RoleMemberPanelProps {
   activeRole: RoleCode;
