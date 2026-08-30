@@ -186,16 +186,7 @@ class ExamReportService(BaseService):
         filtered_student_ids = self._apply_student_filters(student_ids, student_map, filters)
         filtered_student_id_set = set(filtered_student_ids)
 
-        # 以任务分配驱动：只处理真实 (考试任务, 学员) 对，避免 E×S 空扫
-        assignees_by_task: dict[int, list[int]] = defaultdict(list)
-        if student_ids and exams:
-            task_ids = {exam['task_id'] for exam in exams}
-            for row in TaskAssignment.objects.filter(
-                task_id__in=task_ids,
-                assignee_id__in=student_ids,
-            ).only('task_id', 'assignee_id'):
-                assignees_by_task[row.task_id].append(row.assignee_id)
-
+        assignees_by_task = self._load_assignees_by_task(student_ids, exams)
         cohort_student_ids = list({
             sid
             for exam in exams
@@ -205,15 +196,70 @@ class ExamReportService(BaseService):
             student_ids=cohort_student_ids,
             exam_ids=[exam['id'] for exam in exams],
         )
+        rank_by_exam, score_info_by_exam = self._build_exam_score_context(
+            exams,
+            assignees_by_task,
+            student_map,
+            by_pair,
+        )
+        eligible_student_ids, summary_record_count = self._summarize_assignments(
+            exams,
+            assignees_by_task,
+            filtered_student_id_set,
+            student_map,
+        )
 
-        # 每场考试在权限全量参与者上轻量算分/排名；筛选只影响返回行
+        return {
+            'all_students': all_students,
+            'all_exams': all_exams,
+            'student_map': student_map,
+            'exams': exams,
+            'departments': departments,
+            'filtered_student_ids': filtered_student_ids,
+            'filtered_student_id_set': filtered_student_id_set,
+            'eligible_student_ids': eligible_student_ids,
+            'assignees_by_task': assignees_by_task,
+            'rank_by_exam': rank_by_exam,
+            'score_info_by_exam': score_info_by_exam,
+            'summary_student_count': len(eligible_student_ids),
+            'summary_record_count': summary_record_count,
+        }
+
+    @staticmethod
+    def _load_assignees_by_task(
+        student_ids: list[int],
+        exams: list[dict[str, Any]],
+    ) -> dict[int, list[int]]:
+        """加载真实考试任务与学员的分配关系，避免 E×S 空扫。"""
+        assignees_by_task: dict[int, list[int]] = defaultdict(list)
+        if not student_ids or not exams:
+            return assignees_by_task
+
+        task_ids = {exam['task_id'] for exam in exams}
+        for row in TaskAssignment.objects.filter(
+            task_id__in=task_ids,
+            assignee_id__in=student_ids,
+        ).only('task_id', 'assignee_id'):
+            assignees_by_task[row.task_id].append(row.assignee_id)
+        return assignees_by_task
+
+    def _build_exam_score_context(
+        self,
+        exams: list[dict[str, Any]],
+        assignees_by_task: dict[int, list[int]],
+        student_map: dict[int, dict[str, Any]],
+        by_pair: dict[tuple[int, int], Submission],
+    ) -> tuple[
+        dict[int, dict[int, Optional[int]]],
+        dict[int, dict[int, dict[str, Any]]],
+    ]:
+        """按考试生成学员成绩信息和排名。"""
         rank_by_exam: dict[int, dict[int, Optional[int]]] = {}
         score_info_by_exam: dict[int, dict[int, dict[str, Any]]] = {}
         for exam in exams:
-            assignee_ids = assignees_by_task.get(exam['task_id'], [])
             info_by_student: dict[int, dict[str, Any]] = {}
             rank_inputs: list[dict[str, Any]] = []
-            for sid in assignee_ids:
+            for sid in assignees_by_task.get(exam['task_id'], []):
                 student = student_map.get(sid)
                 if not student:
                     continue
@@ -237,8 +283,16 @@ class ExamReportService(BaseService):
                     })
             rank_by_exam[exam['id']] = self._compute_rank_map(rank_inputs)
             score_info_by_exam[exam['id']] = info_by_student
+        return rank_by_exam, score_info_by_exam
 
-        # 筛选后仍有分配记录的学员 / 明细条数（不物化完整 record）
+    @staticmethod
+    def _summarize_assignments(
+        exams: list[dict[str, Any]],
+        assignees_by_task: dict[int, list[int]],
+        filtered_student_id_set: set[int],
+        student_map: dict[int, dict[str, Any]],
+    ) -> tuple[list[int], int]:
+        """统计筛选后仍有考试分配的学员与明细条数。"""
         eligible_student_ids: list[int] = []
         summary_record_count = 0
         seen_students: set[int] = set()
@@ -251,22 +305,7 @@ class ExamReportService(BaseService):
                     seen_students.add(sid)
                     eligible_student_ids.append(sid)
         eligible_student_ids.sort(key=lambda sid: student_map[sid]['employee_id'])
-
-        return {
-            'all_students': all_students,
-            'all_exams': all_exams,
-            'student_map': student_map,
-            'exams': exams,
-            'departments': departments,
-            'filtered_student_ids': filtered_student_ids,
-            'filtered_student_id_set': filtered_student_id_set,
-            'eligible_student_ids': eligible_student_ids,
-            'assignees_by_task': assignees_by_task,
-            'rank_by_exam': rank_by_exam,
-            'score_info_by_exam': score_info_by_exam,
-            'summary_student_count': len(eligible_student_ids),
-            'summary_record_count': summary_record_count,
-        }
+        return eligible_student_ids, summary_record_count
 
     def _accessible_students(self):
         """按当前管理角色获取可查看的学员。"""
