@@ -6,6 +6,7 @@ from typing import Optional
 from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
+from apps.activity_logs.text import format_number, preview_text
 from apps.authorization.engine import get_engine
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
@@ -20,6 +21,39 @@ from .selectors import (
     apply_question_filters,
     question_base_queryset,
 )
+
+
+_QUESTION_UPDATE_FIELD_LABELS = {
+    'content': '题干',
+    'question_type': '题型',
+    'options': '选项',
+    'answer': '答案',
+    'explanation': '解析',
+    'score': '分值',
+    'space_tag_id': '所属空间',
+}
+
+
+def _question_log_description(ctx: dict) -> str:
+    question = ctx['result']
+    return f'{question.get_question_type_display()}，{format_number(question.score)} 分'
+
+
+def _question_update_log_description(ctx: dict) -> str:
+    question = ctx['result']
+    preview = preview_text(question.content)
+    identity = f'题目#{question.id}（{preview}）' if preview else f'题目#{question.id}'
+    payload = ctx.get('data')
+    if not isinstance(payload, dict):
+        return f'{identity}，更新了题目信息'
+
+    changed_fields = [
+        label for key, label in _QUESTION_UPDATE_FIELD_LABELS.items() if key in payload
+    ]
+    if 'tag_ids' in payload:
+        changed_fields.append(f'标签（{len(payload.get("tag_ids") or [])} 个）')
+    summary = f'更新了{"、".join(changed_fields)}' if changed_fields else '更新了题目信息'
+    return f'{identity}，{summary}'
 
 
 class QuestionService(BaseService):
@@ -46,7 +80,7 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'create',
-        '{question_type_label}，{score_text} 分',
+        _question_log_description,
         group='题目',
         label='创建题目',
     )
@@ -76,7 +110,7 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'update',
-        '{question_identity}，{question_update_summary}',
+        _question_update_log_description,
         group='题目',
         label='更新题目',
     )
@@ -133,7 +167,7 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'delete',
-        '{question_type_label}，{score_text} 分',
+        _question_log_description,
         group='题目',
         label='删除题目',
     )

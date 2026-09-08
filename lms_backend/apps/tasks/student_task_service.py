@@ -44,7 +44,7 @@ class StudentTaskService(BaseService):
     @log_operation(
         'learning',
         'complete_knowledge',
-        '任务：{task_title}',
+        '任务：{assignment.task.title}',
         target_type='knowledge',
         target_title_template='{result.task_knowledge.knowledge.title}',
         group='学习进度',

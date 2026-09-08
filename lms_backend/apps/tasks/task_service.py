@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 
 from apps.authorization.engine import get_engine
 from apps.activity_logs.decorators import log_operation
+from apps.activity_logs.text import format_datetime
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
@@ -18,6 +19,31 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from .policies import enforce_assignable_students_scope
 from .selectors import task_detail_queryset, task_list_queryset
+
+
+def _create_task_log_description(ctx: dict) -> str:
+    task = ctx['result']
+    return (
+        f'截止 {format_datetime(ctx.get("deadline"))}，'
+        f'{task.knowledge_count} 篇知识，{task.quiz_count} 份试卷，{task.assignee_count} 名人员'
+    )
+
+
+def _update_task_log_description(ctx: dict) -> str:
+    parts = []
+    if 'title' in ctx:
+        parts.append('任务标题')
+    if 'description' in ctx:
+        parts.append('任务说明')
+    if 'deadline' in ctx:
+        parts.append(f'截止时间调整为 {format_datetime(ctx.get("deadline"))}')
+    if ctx.get('knowledge_ids') is not None:
+        parts.append(f'关联知识调整为 {len(ctx["knowledge_ids"])} 篇')
+    if ctx.get('quiz_ids') is not None:
+        parts.append(f'关联试卷调整为 {len(ctx["quiz_ids"])} 份')
+    if ctx.get('assignee_ids') is not None:
+        parts.append(f'分配学员调整为 {len(ctx["assignee_ids"])} 名')
+    return '；'.join(parts) if parts else '任务配置已调整'
 
 
 class TaskService(BaseService):
@@ -66,7 +92,7 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'create_and_assign',
-        '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名人员',
+        _create_task_log_description,
         target_type='task',
         target_title_template='{title}',
         group='任务管理',
@@ -185,7 +211,7 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'update_task',
-        '{task_update_summary}',
+        _update_task_log_description,
         target_type='task',
         target_title_template='{task.title}',
         group='任务管理',

@@ -3,7 +3,6 @@ User services for LMS.
 """
 from typing import List, Optional
 
-from apps.activity_logs.decorators import log_user_action
 from apps.activity_logs.registry import register_user_log_action
 from apps.activity_logs.services import ActivityLogService
 from django.contrib.auth.models import Group

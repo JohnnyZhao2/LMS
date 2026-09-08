@@ -11,6 +11,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.activity_logs.decorators import log_operation
+from apps.activity_logs.text import format_number, format_user_label, preview_text
 from apps.authorization.engine import get_engine
 from apps.users.models import User
 from core.base_service import BaseService
@@ -18,6 +19,23 @@ from core.exceptions import BusinessError, ErrorCodes
 
 from .image_utils import normalize_images
 from .models import SpotCheck, SpotCheckItem
+
+
+def _spot_check_student_title(ctx: dict) -> str:
+    return format_user_label(ctx['result'].student)
+
+
+def _submit_spot_check_log_description(ctx: dict) -> str:
+    return preview_text(ctx['result'].topic_summary)
+
+
+def _score_spot_check_log_description(ctx: dict) -> str:
+    spot_check = ctx['result']
+    return f'{format_number(spot_check.average_score)} 分，{preview_text(spot_check.topic_summary)}'
+
+
+def _delete_spot_check_log_description(ctx: dict) -> str:
+    return f'{format_number(ctx["result"].average_score)} 分'
 
 
 class SpotCheckService(BaseService):
@@ -134,9 +152,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'submit_spot_check',
-        '{topic_summary_preview}',
+        _submit_spot_check_log_description,
         target_type='spot_check',
-        target_title_template='{student_label}',
+        target_title_template=_spot_check_student_title,
         group='抽查记录',
         label='提交抽查',
     )
@@ -213,9 +231,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'score_spot_check',
-        '{average_score_text} 分，{topic_summary_preview}',
+        _score_spot_check_log_description,
         target_type='spot_check',
-        target_title_template='{student_label}',
+        target_title_template=_spot_check_student_title,
         group='抽查记录',
         label='抽查评分',
     )
@@ -238,9 +256,9 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'delete_spot_check',
-        '{average_score_text} 分',
+        _delete_spot_check_log_description,
         target_type='spot_check',
-        target_title_template='{student_label}',
+        target_title_template=_spot_check_student_title,
         group='抽查记录',
         label='删除抽查记录',
     )

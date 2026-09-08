@@ -2,6 +2,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 
 from apps.activity_logs.decorators import log_operation
+from apps.activity_logs.text import format_number, format_user_label
 from apps.grading.selectors import (
     OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
     REVIEWABLE_SUBMISSION_STATUSES,
@@ -23,6 +24,12 @@ from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
 from apps.submissions.workflows import grade_subjective_answer
+
+
+def _manual_grade_log_description(ctx: dict) -> str:
+    answer = ctx['result']
+    student = answer.submission.task_assignment.assignee
+    return f'{format_user_label(student)}，{ctx["score"]}/{format_number(answer.max_score)} 分'
 
 
 class GradingBaseView(BaseAPIView):
@@ -293,9 +300,9 @@ class GradingSubmitView(GradingBaseView):
     @log_operation(
         'grading',
         'manual_grade',
-        '{student_label}，{score}/{max_score_text} 分',
+        _manual_grade_log_description,
         target_type='quiz',
-        target_title_template='{quiz_title}',
+        target_title_template='{result.submission.quiz.title}',
         group='阅卷中心',
         label='提交评分',
     )

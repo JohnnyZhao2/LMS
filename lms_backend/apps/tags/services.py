@@ -13,6 +13,18 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Tag
 
 
+def _tag_type_log_description(ctx: dict) -> str:
+    return ctx['result'].get_tag_type_display()
+
+
+def _reorder_spaces_log_description(ctx: dict) -> str:
+    return f'{len(ctx["ordered_tag_ids"])} 个空间标签'
+
+
+def _merge_tags_log_description(ctx: dict) -> str:
+    return f'{len(ctx["source_tag_ids"])} 个标签合并为《{ctx["result"].name}》'
+
+
 class TagService(BaseService):
     def list(self, *, tag_type=None, search=None, applicable_to=None, limit=50):
         queryset = Tag.objects.all()
@@ -32,7 +44,7 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'create',
-        '{tag_type_label}',
+        _tag_type_log_description,
         group='标签管理',
         label='创建标签',
     )
@@ -78,7 +90,7 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'update',
-        '{tag_type_label}',
+        _tag_type_log_description,
         group='标签管理',
         label='更新标签',
     )
@@ -146,7 +158,7 @@ class TagService(BaseService):
     @log_operation(
         'tag_management',
         'reorder_spaces',
-        '{ordered_tag_count} 个空间标签',
+        _reorder_spaces_log_description,
         group='标签管理',
         label='调整空间标签顺序',
     )
@@ -182,7 +194,7 @@ class TagService(BaseService):
     @log_operation(
         'tag_management',
         'merge_tags',
-        '{source_tag_count} 个标签合并为《{result.name}》',
+        _merge_tags_log_description,
         target_type='tag',
         target_title_template='{result.name}',
         group='标签管理',
@@ -264,7 +276,7 @@ class TagService(BaseService):
     @log_content_action(
         'tag',
         'delete',
-        '{tag_type_label}',
+        _tag_type_log_description,
         group='标签管理',
         label='删除标签',
     )

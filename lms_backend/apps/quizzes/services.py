@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any, List
 
 from apps.activity_logs.decorators import log_content_action
+from apps.activity_logs.text import format_number
 from django.db import transaction
 from django.db.models import Count, DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
@@ -113,6 +114,11 @@ def ensure_quiz_revision(quiz: Quiz, *, actor) -> QuizRevision:
     return revision
 
 
+def _quiz_log_description(ctx: dict) -> str:
+    quiz = ctx['result']
+    return f'{quiz.get_quiz_type_display()}，{quiz.question_count} 题，{format_number(quiz.total_score)} 分'
+
+
 class QuizService(BaseService):
     """试卷应用服务。"""
 
@@ -169,7 +175,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'create',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        _quiz_log_description,
         group='试卷',
         label='创建试卷',
     )
@@ -186,7 +192,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'update',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        _quiz_log_description,
         group='试卷',
         label='更新试卷',
     )
@@ -211,7 +217,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'delete',
-        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
+        _quiz_log_description,
         group='试卷',
         label='删除试卷',
     )

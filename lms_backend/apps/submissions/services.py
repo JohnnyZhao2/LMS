@@ -3,6 +3,7 @@
 from typing import Any, List, Optional, Tuple
 
 from apps.activity_logs.decorators import log_operation
+from apps.activity_logs.text import format_number
 from django.db import transaction
 from django.db.models import Prefetch, QuerySet
 from django.utils import timezone
@@ -17,6 +18,23 @@ from .scoring import calculate_submission_obtained_score, refresh_assignment_sco
 
 # 区分“调用方未传字段”和“调用方传了空值”的哨兵对象。
 UNSET = object()
+
+
+def _start_quiz_log_description(ctx: dict) -> str:
+    submission = ctx['result']
+    return (
+        f'第 {submission.attempt_number} 次，'
+        f'{submission.quiz.get_quiz_type_display()}，'
+        f'{format_number(submission.total_score)} 分'
+    )
+
+
+def _submit_quiz_log_description(ctx: dict) -> str:
+    submission = ctx['result']
+    return (
+        f'{submission.get_status_display()}，'
+        f'{format_number(submission.obtained_score)}/{format_number(submission.total_score)}'
+    )
 
 
 class SubmissionService(BaseService):
@@ -226,9 +244,9 @@ class SubmissionService(BaseService):
     @log_operation(
         'submission',
         'start_quiz',
-        '第 {attempt_number} 次，{quiz_type_label}，{total_score_text} 分',
+        _start_quiz_log_description,
         target_type='quiz',
-        target_title_template='{quiz_title}',
+        target_title_template='{result.quiz.title}',
         group='答题/考试',
         label='开始答题',
     )
@@ -290,9 +308,9 @@ class SubmissionService(BaseService):
     @log_operation(
         'submission',
         'submit_quiz',
-        '{status_display}，{obtained_score_text}/{total_score_text}',
+        _submit_quiz_log_description,
         target_type='quiz',
-        target_title_template='{quiz_title}',
+        target_title_template='{result.quiz.title}',
         group='答题/考试',
         label='提交答卷',
     )
