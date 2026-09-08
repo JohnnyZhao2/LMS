@@ -62,6 +62,7 @@ export const useGradingAnswers = (
         `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
       ),
     enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && enabled,
+    placeholderData: keepPreviousData,
   });
 };
 

@@ -22,7 +22,7 @@ import { formatScore } from '@/lib/score';
 import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
-import type { GradingAnswerResponse, GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
+import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import type { PendingTask, PendingQuiz } from '@/features/grading/api/pending-quizzes';
 import {
   useGradingAnswers,
@@ -89,9 +89,6 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
 }) => {
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
-  const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
-  const [displayedQuestion, setDisplayedQuestion] = React.useState<GradingQuestion | null>(null);
-  const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
   const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
 
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
@@ -152,54 +149,31 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     () => questions?.find((question) => question.question_id === effectiveQuestionId) ?? null,
     [effectiveQuestionId, questions]
   );
+  const displayedQuestion = React.useMemo<GradingQuestion | null>(
+    () => questions?.find((question) => question.question_id === questionDetail?.question_id) ?? null,
+    [questionDetail, questions]
+  );
+  const isShowingPreviousQuestion = Boolean(
+    questionDetail
+    && effectiveQuestionId !== null
+    && questionDetail.question_id !== effectiveQuestionId
+  );
+  const selectedQuestion = isShowingPreviousQuestion
+    ? displayedQuestion
+    : (effectiveQuestion ?? displayedQuestion ?? undefined);
+  const activeQuestionDetail = (
+    selectedQuestion
+    && questionDetail
+    && questionDetail.question_id === selectedQuestion.question_id
+  ) ? questionDetail : null;
 
   React.useEffect(() => {
-    if (questionDetail && effectiveQuestionId !== null && effectiveQuestion) {
-      setDisplayedQuestionId(effectiveQuestionId);
-      setDisplayedQuestion(effectiveQuestion);
-      setDisplayedQuestionDetail(questionDetail);
-    }
-  }, [effectiveQuestion, effectiveQuestionId, questionDetail]);
-
-  React.useEffect(() => {
-    if (filteredQuestions.length === 0) {
-      setDisplayedQuestionId(null);
-      setDisplayedQuestion(null);
-      setDisplayedQuestionDetail(null);
-    }
-  }, [filteredQuestions.length]);
-
-  React.useEffect(() => {
-    if (displayedQuestionDetail?.subjective_answers) {
-      setScoresByStudent(buildScoreMap(displayedQuestionDetail.subjective_answers));
+    if (activeQuestionDetail?.subjective_answers) {
+      setScoresByStudent(buildScoreMap(activeQuestionDetail.subjective_answers));
       return;
     }
     setScoresByStudent({});
-  }, [displayedQuestionDetail]);
-
-  const shouldHoldPreviousDetail =
-    detailLoading
-    && displayedQuestionId !== null
-    && displayedQuestionDetail !== null
-    && displayedQuestionId !== effectiveQuestionId;
-  const selectedQuestion = React.useMemo<GradingQuestion | undefined>(() => {
-    if (shouldHoldPreviousDetail && displayedQuestion) {
-      return displayedQuestion;
-    }
-    return effectiveQuestion ?? displayedQuestion ?? undefined;
-  }, [displayedQuestion, effectiveQuestion, shouldHoldPreviousDetail]);
-  const activeQuestionDetail = React.useMemo(() => {
-    if (shouldHoldPreviousDetail) {
-      return displayedQuestionDetail;
-    }
-    if (questionDetail) {
-      return questionDetail;
-    }
-    if (displayedQuestionId !== null && displayedQuestionId === effectiveQuestionId) {
-      return displayedQuestionDetail;
-    }
-    return null;
-  }, [displayedQuestionDetail, displayedQuestionId, effectiveQuestionId, questionDetail, shouldHoldPreviousDetail]);
+  }, [activeQuestionDetail]);
 
   const sortedOptions = React.useMemo(() => {
     if (!activeQuestionDetail?.options) return [];
@@ -213,7 +187,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   };
 
   const commitScore = async (studentId: number, rawScore: string) => {
-    if (!selectedQuestion || effectiveQuestionId === null || rawScore === '' || !quizId) return;
+    if (!selectedQuestion || rawScore === '' || !quizId) return;
     const parsedScore = Number(rawScore);
     if (Number.isNaN(parsedScore)) return;
     const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
@@ -224,7 +198,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     try {
       await submitGrading.mutateAsync({
         quiz_id: quizId,
-        question_id: effectiveQuestionId,
+        question_id: selectedQuestion.question_id,
         student_id: studentId,
         score: normalizedScore,
         comments: '',

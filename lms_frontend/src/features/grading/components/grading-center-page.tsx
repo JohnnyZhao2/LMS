@@ -10,7 +10,6 @@ import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/g
 
 export const GradingCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
   const preferredTaskId = Number(searchParams.get('task') || 0);
 
@@ -22,16 +21,12 @@ export const GradingCenterPage: React.FC = () => {
       return null;
     }
 
-    if (selectedTaskId !== null && selectorTasks.some((task) => task.task_id === selectedTaskId)) {
-      return selectedTaskId;
-    }
-
     if (preferredTaskId > 0 && selectorTasks.some((task) => task.task_id === preferredTaskId)) {
       return preferredTaskId;
     }
 
     return selectorTasks[0].task_id;
-  }, [preferredTaskId, selectedTaskId, selectorTasks]);
+  }, [preferredTaskId, selectorTasks]);
 
   const selectedTask = selectorTasks.find((task) => task.task_id === resolvedTaskId) ?? null;
   const resolvedQuizId = React.useMemo(() => {
@@ -61,12 +56,13 @@ export const GradingCenterPage: React.FC = () => {
   }, [resolvedTaskId, searchParams, setSearchParams]);
 
   const handleTaskSelect = (task: PendingTask) => {
-    setSelectedTaskId(task.task_id);
-    if (task.quizzes.length > 0) {
-      setSelectedQuizId(task.quizzes[0].quiz_id);
-    } else {
-      setSelectedQuizId(null);
+    setSelectedQuizId(task.quizzes[0]?.quiz_id ?? null);
+    if (Number(searchParams.get('task') || 0) === task.task_id) {
+      return;
     }
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('task', String(task.task_id));
+    setSearchParams(nextSearchParams, { replace: true });
   };
 
   const handleQuizSelect = (quiz: PendingQuiz) => {
