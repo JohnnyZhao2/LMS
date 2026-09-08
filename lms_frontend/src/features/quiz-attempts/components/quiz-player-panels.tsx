@@ -16,7 +16,7 @@ import { isAnswerEmpty } from './quiz-player-utils';
 interface QuizProgressPanelProps {
   submission: SubmissionDetail;
   sections: QuestionSection<SubmissionDetail['answers'][number]>[];
-  answers: Record<number, unknown>;
+  answers: Record<number, string | string[]>;
   markedQuestions: Record<number, boolean>;
   answeredCount: number;
   markedCount: number;

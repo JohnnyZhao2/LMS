@@ -5,6 +5,14 @@
 import type { QuestionType, SubmissionStatus } from '@/types/common';
 import type { QuizType } from '@/types/quiz';
 
+export interface AnswerOption {
+  key: string;
+  value: string;
+}
+
+/** 简答/单选/判断为字符串，多选为字符串数组；未作答为 null。 */
+export type UserAnswerValue = string | string[] | null;
+
 /**
  * 答案
  */
@@ -14,11 +22,11 @@ export interface Answer {
   question_content: string;
   question_type: QuestionType;
   question_type_display?: string;
-  question_options?: Record<string, string> | Array<{ key?: string; value?: string }>;
+  question_options?: AnswerOption[];
   question_score?: string;
-  user_answer?: Record<string, unknown>;
+  user_answer?: UserAnswerValue;
   is_marked?: boolean;
-  correct_answer?: Record<string, unknown>;
+  correct_answer?: string | string[];
   is_correct?: boolean;
   obtained_score?: string;
   explanation?: string;
@@ -35,7 +43,7 @@ export interface Answer {
  */
 export interface SaveAnswerRequest {
   question_id: number;
-  user_answer?: unknown;
+  user_answer?: UserAnswerValue;
   is_marked?: boolean;
 }
 

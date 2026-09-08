@@ -6,15 +6,12 @@ import { QuestionDocumentReadMode } from '@/components/questions/question-docume
 import { richTextToPlainText } from '@/lib/rich-text';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
-import type { Answer } from '@/features/quiz-attempts/types';
-
-const hasValueProp = (data: unknown): data is { value?: unknown } =>
-  typeof data === 'object' && data !== null && 'value' in data;
+import type { Answer, UserAnswerValue } from '@/features/quiz-attempts/types';
 
 interface QuestionCardProps {
   answer: Answer;
-  userAnswer?: unknown;
-  onAnswerChange: (value: unknown) => void;
+  userAnswer?: UserAnswerValue;
+  onAnswerChange: (value: string | string[]) => void;
   disabled?: boolean;
   showResult?: boolean;
   questionNumber?: number;
@@ -22,56 +19,11 @@ interface QuestionCardProps {
   onToggleMark?: () => void;
 }
 
-const normalizeChoiceOptions = (questionOptions?: Answer['question_options']) => {
-  if (!questionOptions) {
-    return [];
+const toDocumentResponse = (questionType: Answer['question_type'], userAnswer?: UserAnswerValue) => {
+  if (questionType === 'MULTIPLE_CHOICE') {
+    return Array.isArray(userAnswer) ? userAnswer : [];
   }
-
-  if (Array.isArray(questionOptions)) {
-    return questionOptions
-      .filter((item): item is { key?: string; value?: string } => Boolean(item))
-      .map((item, index) => ({
-        key: item.key ?? String.fromCharCode(65 + index),
-        value: item.value ?? '',
-      }));
-  }
-
-  return Object.entries(questionOptions).map(([key, value]) => ({
-    key,
-    value: typeof value === 'string' ? value : String(value ?? ''),
-  }));
-};
-
-const normalizeStringValue = (value: unknown): string => {
-  if (value == null) {
-    return '';
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (Array.isArray(value) && value.length > 0) {
-    return String(value[0] ?? '');
-  }
-  if (hasValueProp(value) && typeof value.value === 'string') {
-    return value.value;
-  }
-  return '';
-};
-
-const normalizeMultipleValue = (value: unknown): string[] => {
-  if (value == null) {
-    return [];
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item));
-  }
-  if (hasValueProp(value) && Array.isArray(value.value)) {
-    return value.value.map((item) => String(item));
-  }
-  if (typeof value === 'string' && value) {
-    return [value];
-  }
-  return [];
+  return typeof userAnswer === 'string' ? userAnswer : '';
 };
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -84,11 +36,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   isMarked = false,
   onToggleMark,
 }) => {
-  const options = normalizeChoiceOptions(answer.question_options);
-  const normalizedResponse =
-    answer.question_type === 'MULTIPLE_CHOICE'
-      ? normalizeMultipleValue(userAnswer)
-      : normalizeStringValue(userAnswer);
+  const options = answer.question_options ?? [];
+  const response = toDocumentResponse(answer.question_type, userAnswer);
 
   return (
     <div className="space-y-5">
@@ -101,7 +50,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         content={answer.question_content}
         options={options}
         answer=""
-        response={normalizedResponse as string | string[]}
+        response={response}
         explanation=""
         showExplanation={false}
         disabled={disabled}

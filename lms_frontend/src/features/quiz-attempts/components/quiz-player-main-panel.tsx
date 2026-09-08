@@ -11,11 +11,11 @@ interface QuizPlayerMainPanelProps {
   sections: QuestionSection<SubmissionDetail['answers'][number]>[];
   displayEntries: QuestionSectionEntry<SubmissionDetail['answers'][number]>[];
   activeQuestionIndex: number;
-  answers: Record<number, unknown>;
+  answers: Record<number, string | string[]>;
   markedQuestions: Record<number, boolean>;
   questionRefs: MutableRefObject<Record<number, HTMLElement | null>>;
   scrollViewportRef: MutableRefObject<HTMLDivElement | null>;
-  onAnswerChange: (questionId: number, value: unknown) => void;
+  onAnswerChange: (questionId: number, value: string | string[]) => void;
   onToggleMark: (questionId: number) => void;
 }
 

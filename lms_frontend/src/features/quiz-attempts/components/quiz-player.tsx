@@ -25,7 +25,7 @@ export const QuizPlayer: React.FC = () => {
   const quizId = Number(quizIdStr ?? NaN);
 
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
-  const [answers, setAnswers] = useState<Record<number, unknown>>({});
+  const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
   const [markedQuestions, setMarkedQuestions] = useState<Record<number, boolean>>({});
   const [showAbandonDialog, setShowAbandonDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
@@ -66,7 +66,7 @@ export const QuizPlayer: React.FC = () => {
         const result = await startQuizMutation({ assignmentId, quizId });
         setSubmission(result);
 
-        const existingAnswers: Record<number, unknown> = {};
+        const existingAnswers: Record<number, string | string[]> = {};
         const existingMarkedQuestions: Record<number, boolean> = {};
         result.answers.forEach((a) => {
           if (a.user_answer !== null && a.user_answer !== undefined) {
@@ -95,7 +95,7 @@ export const QuizPlayer: React.FC = () => {
     start();
   }, [assignmentId, navigate, quizId, startQuizMutation]);
 
-  const handleAnswerChange = async (questionId: number, value: unknown) => {
+  const handleAnswerChange = async (questionId: number, value: string | string[]) => {
     if (!submission) {
       return;
     }
