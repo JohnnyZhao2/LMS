@@ -210,37 +210,6 @@ export const CellReferenceTag: React.FC<CellReferenceTagProps> = ({
     </div>
 );
 
-/**
- * Cell 状态标签
- * 用于：活跃/已停用、进行中/已结束等状态显示
- */
-interface CellStatusProps {
-    isActive: boolean;
-    activeText?: string;
-    inactiveText?: string;
-    className?: string;
-}
-
-export const CellStatus: React.FC<CellStatusProps> = ({
-    isActive,
-    activeText = '活跃',
-    inactiveText = '已停用',
-    className,
-}) => (
-    <div className={cn('inline-flex', className)}>
-        <ListTag
-            className={cn(
-                '',
-                isActive
-                    ? 'bg-secondary-50 text-text-muted'
-                    : 'bg-muted/70 text-text-muted'
-            )}
-        >
-            {isActive ? activeText : inactiveText}
-        </ListTag>
-    </div>
-);
-
 interface CellMutedTimestampProps {
     icon?: React.ReactNode;
     value?: string | Date | null;

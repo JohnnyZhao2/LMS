@@ -1,7 +1,5 @@
 """Question selectors."""
 
-from typing import Optional
-
 from django.db.models import Count, Exists, OuterRef, Prefetch, QuerySet
 
 from apps.quizzes.models import QuizQuestion
@@ -25,10 +23,6 @@ def question_base_queryset() -> QuerySet:
         usage_count=Count('quiz_copies', distinct=True),
         is_referenced=Exists(QuizQuestion.objects.filter(question_id=OuterRef('pk'))),
     )
-
-
-def get_question_by_id(pk: int) -> Optional[Question]:
-    return question_base_queryset().filter(pk=pk).first()
 
 
 def apply_question_filters(

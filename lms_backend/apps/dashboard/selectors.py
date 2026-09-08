@@ -10,7 +10,6 @@ from .common_queries import (
 )
 from .mentor_dashboard_queries import (
     get_assignments_by_students,
-    get_student_dashboard_metrics,
 )
 from .student_dashboard_queries import (
     calculate_assignment_progress,
@@ -31,7 +30,6 @@ __all__ = [
     'get_monthly_tasks_count',
     'get_student_all_tasks',
     'get_student_assignments',
-    'get_student_dashboard_metrics',
     'get_student_exam_avg_score',
     'get_task_participants_progress',
     'get_urgent_tasks_count',

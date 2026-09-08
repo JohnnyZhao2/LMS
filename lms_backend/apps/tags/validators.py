@@ -78,9 +78,3 @@ def assign_space_tag(resource, space_tag_id: Optional[int], *, clear_when_none: 
 
     resource.space_tag = get_space_tag_or_error(space_tag_id)
     resource.save(update_fields=['space_tag'])
-
-
-def assign_scoped_tags(resource, tag_ids: list[int], *, scope: TagScope) -> list[int]:
-    normalized_tag_ids = get_scoped_tag_ids_or_error(tag_ids, scope=scope)
-    resource.tags.set(normalized_tag_ids)
-    return normalized_tag_ids

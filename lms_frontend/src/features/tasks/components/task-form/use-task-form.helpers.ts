@@ -1,7 +1,7 @@
 import type { TaskCreateRequest } from '@/features/tasks/api/create-task';
 import type { TaskDetail } from '@/types/task';
 
-import type { ResourceGroup, ResourceType, SelectedResource } from './task-form.types';
+import type { ResourceGroup, SelectedResource } from './task-form.types';
 
 export const buildStableUid = (seed: string, fallback: number): number => {
   let hash = 0;
@@ -85,11 +85,6 @@ export const getTaskResourceGroup = (resource: Pick<SelectedResource, 'resourceT
   return resource.quizType === 'EXAM' ? 'EXAM' : 'PRACTICE';
 };
 
-export const isTaskResourceCompatibleWithGroup = (
-  resource: Pick<SelectedResource, 'resourceType' | 'quizType'>,
-  group: ResourceGroup,
-) => getTaskResourceGroup(resource) === group;
-
 export const insertSelectedResourceByGroup = (resources: SelectedResource[], resource: SelectedResource): SelectedResource[] => {
   const targetGroup = getTaskResourceGroup(resource);
 
@@ -123,39 +118,6 @@ export const sortSelectedResourcesByGroup = (resources: SelectedResource[]): Sel
     const rightOrder = TASK_RESOURCE_GROUP_ORDER.indexOf(getTaskResourceGroup(right));
     return leftOrder - rightOrder;
   });
-};
-
-export const moveSelectedResourceWithinGroup = (
-  resources: SelectedResource[],
-  uid: number,
-  direction: 'up' | 'down',
-): SelectedResource[] => {
-  const currentIndex = resources.findIndex((item) => item.uid === uid);
-  if (currentIndex === -1) {
-    return resources;
-  }
-
-  const currentItem = resources[currentIndex];
-  const currentGroup = getTaskResourceGroup(currentItem);
-  const groupIndexes = resources
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => getTaskResourceGroup(item) === currentGroup)
-    .map(({ index }) => index);
-
-  const groupPosition = groupIndexes.indexOf(currentIndex);
-  if (groupPosition === -1) {
-    return resources;
-  }
-
-  const targetPosition = direction === 'up' ? groupPosition - 1 : groupPosition + 1;
-  if (targetPosition < 0 || targetPosition >= groupIndexes.length) {
-    return resources;
-  }
-
-  const targetIndex = groupIndexes[targetPosition];
-  const nextResources = [...resources];
-  [nextResources[currentIndex], nextResources[targetIndex]] = [nextResources[targetIndex], nextResources[currentIndex]];
-  return nextResources;
 };
 
 export const reorderSelectedResourcesWithinGroup = (
@@ -212,5 +174,3 @@ export const buildTaskSubmitPayload = ({
     assignee_ids: selectedUserIds,
   };
 };
-
-export const buildResourceKey = (resourceType: ResourceType, id: number) => `${resourceType}:${id}`;

@@ -413,14 +413,6 @@ class TaskService(BaseService):
         return len(invalid_ids) == 0, invalid_ids
 
     @staticmethod
-    def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int]]:
-        return TaskService._validate_current_resources(knowledge_ids, Knowledge.objects.all())
-
-    @staticmethod
-    def validate_quiz_ids(quiz_ids: List[int]) -> Tuple[bool, List[int]]:
-        return TaskService._validate_current_resources(quiz_ids, Quiz.objects.all())
-
-    @staticmethod
     def validate_assignee_ids(assignee_ids: List[int]) -> Tuple[bool, List[int]]:
         if not assignee_ids:
             return False, []

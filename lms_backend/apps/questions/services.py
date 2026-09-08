@@ -144,18 +144,6 @@ class QuestionService(BaseService):
         return question
 
     @classmethod
-    def validate_question_ids(cls, question_ids: list[int]) -> None:
-        if not question_ids:
-            return
-        existing_ids = set(Question.objects.filter(id__in=question_ids).values_list('id', flat=True))
-        invalid_ids = sorted(set(question_ids) - existing_ids)
-        if invalid_ids:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message=f'题目不存在: {invalid_ids}',
-            )
-
-    @classmethod
     def validate_question_payload(
         cls,
         data: dict,
