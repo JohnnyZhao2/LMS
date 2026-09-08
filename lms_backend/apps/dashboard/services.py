@@ -11,18 +11,20 @@ from apps.authorization.engine import get_engine
 from core.base_service import BaseService
 from apps.users.models import User
 
-from .selectors import (
+from .common_queries import (
     calculate_avg_score,
     calculate_task_stats,
     get_assignments_by_students,
     get_latest_knowledge,
     get_monthly_tasks_count,
+    get_weekly_active_users_count,
+)
+from .student_dashboard_queries import (
     get_student_all_tasks,
     get_student_assignments,
     get_student_exam_avg_score,
     get_task_participants_progress,
     get_urgent_tasks_count,
-    get_weekly_active_users_count,
 )
 
 MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE = 'tasks.view_task_analytics'

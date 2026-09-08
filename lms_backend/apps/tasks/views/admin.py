@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.authorization.engine import get_engine
-from apps.tasks.serializers import (
+from apps.tasks.management_serializers import (
     TaskCreateSerializer,
     TaskDetailSerializer,
     TaskListSerializer,

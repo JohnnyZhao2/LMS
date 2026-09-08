@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.activity_logs.models import ActivityLog
 from apps.knowledge.models import Knowledge
 from apps.submissions.models import Submission
+from apps.tasks.models import TaskAssignment
 
 
 def get_latest_knowledge(limit: int = 6) -> QuerySet:
@@ -84,3 +85,7 @@ def get_monthly_tasks_count() -> int:
     from apps.tasks.models import Task
 
     return Task.objects.filter(created_at__gte=get_month_start_datetime()).count()
+
+
+def get_assignments_by_students(student_ids: List[int]) -> QuerySet:
+    return TaskAssignment.objects.filter(assignee_id__in=student_ids).select_related('task')

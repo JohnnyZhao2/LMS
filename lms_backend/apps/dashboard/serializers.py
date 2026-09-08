@@ -10,7 +10,7 @@ from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.tasks.models import TaskAssignment
 from apps.tasks.status_serializers import AssignmentExecutionStatusSerializerMixin
 
-from .selectors import calculate_assignment_progress
+from .student_dashboard_queries import calculate_assignment_progress
 
 
 class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):

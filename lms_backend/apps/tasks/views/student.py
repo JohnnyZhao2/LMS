@@ -8,7 +8,7 @@ Implements:
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.tasks.serializers import (
+from apps.tasks.student_serializers import (
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
     StudentAssignmentListSerializer,

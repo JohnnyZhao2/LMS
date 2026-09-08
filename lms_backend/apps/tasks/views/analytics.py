@@ -12,7 +12,7 @@ from apps.tasks.selectors import (
     task_analytics_payload,
     task_student_executions,
 )
-from apps.tasks.serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
+from apps.tasks.analytics_serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
 from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
 from core.responses import list_response, success_response

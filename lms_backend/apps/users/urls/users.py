@@ -14,17 +14,10 @@ Endpoints:
 """
 from django.urls import path
 
-from apps.users.views import (
-    DepartmentsListView,
-    MentorsListView,
-    RolesListView,
-    UserAvatarUpdateView,
-    UserAssignMentorView,
-    UserAssignRolesView,
-    UserDetailView,
-    UserListCreateView,
-    UserSelfAvatarView,
-)
+from apps.users.views.assignment import UserAssignMentorView, UserAssignRolesView
+from apps.users.views.avatar import UserAvatarUpdateView, UserSelfAvatarView
+from apps.users.views.crud import UserDetailView, UserListCreateView
+from apps.users.views.reference import DepartmentsListView, MentorsListView, RolesListView
 
 urlpatterns = [
     path('', UserListCreateView.as_view(), name='user-list-create'),
