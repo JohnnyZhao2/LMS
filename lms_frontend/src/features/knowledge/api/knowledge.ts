@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import {
   invalidateAfterKnowledgeMutation,
+  invalidateAfterKnowledgeUpdate,
   invalidateAfterKnowledgeViewMutation,
 } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
@@ -117,15 +118,11 @@ export const useUpdateKnowledge = () => {
     mutationFn: ({ id, data }: { id: number; data: KnowledgeWriteRequest }) =>
       apiClient.patch<KnowledgeDetail>(`/knowledge/${id}/`, data),
     onSuccess: (updatedKnowledge) => {
-      queryClient.setQueriesData<KnowledgeDetail>(
-        { queryKey: queryKeys.knowledge.detailRoot() },
-        (cached) => (
-          cached?.id === updatedKnowledge.id
-            ? { ...cached, ...updatedKnowledge }
-            : cached
-        ),
+      queryClient.setQueryData(
+        queryKeys.knowledge.detail({ knowledgeId: updatedKnowledge.id }),
+        updatedKnowledge,
       );
-      return invalidateAfterKnowledgeMutation(queryClient);
+      return invalidateAfterKnowledgeUpdate(queryClient);
     },
   });
 };
@@ -146,9 +143,9 @@ export const useIncrementViewCount = () => {
       return { id, view_count: response.view_count };
     },
     onSuccess: (result) => {
-      queryClient.setQueriesData<KnowledgeDetail>(
-        { queryKey: queryKeys.knowledge.detailRoot() },
-        (old) => (old?.id === result.id ? { ...old, view_count: result.view_count } : old),
+      queryClient.setQueryData<KnowledgeDetail>(
+        queryKeys.knowledge.detail({ knowledgeId: result.id }),
+        (old) => (old ? { ...old, view_count: result.view_count } : old),
       );
       return invalidateAfterKnowledgeViewMutation(queryClient);
     },

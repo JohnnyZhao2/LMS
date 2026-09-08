@@ -37,11 +37,18 @@ export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
     queryKeys.grading.studentExecutionsRoot(),
   ]);
 
+const knowledgeCollectionKeys = [
+  queryKeys.knowledge.listRoot(),
+  queryKeys.tasks.resourceOptionsRoot(),
+] as const;
+
+export const invalidateAfterKnowledgeUpdate = (queryClient: QueryClient) =>
+  invalidateMany(queryClient, knowledgeCollectionKeys);
+
 export const invalidateAfterKnowledgeMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
-    queryKeys.knowledge.listRoot(),
+    ...knowledgeCollectionKeys,
     queryKeys.knowledge.detailRoot(),
-    queryKeys.tasks.resourceOptionsRoot(),
   ]);
 
 export const invalidateAfterKnowledgeViewMutation = (queryClient: QueryClient) =>

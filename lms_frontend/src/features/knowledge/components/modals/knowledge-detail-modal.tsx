@@ -86,7 +86,6 @@ interface KnowledgeDetailModalProps {
   onClose: () => void;
   onCreated?: (id: number) => void;
   onDelete?: (id: number) => void;
-  onUpdated?: () => void;
 }
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
@@ -102,7 +101,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   onClose,
   onCreated,
   onDelete,
-  onUpdated,
 }) => {
   const isCreateMode = typeof knowledgeId !== 'number';
   const { hasCapability } = useAuth();
@@ -218,13 +216,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         data,
       });
       onSuccess?.();
-      onUpdated?.();
       return updatedKnowledge;
     } catch (error) {
       showApiError(error, errorMessage);
       return null;
     }
-  }, [isCreateMode, knowledgeId, onUpdated, updateKnowledge]);
+  }, [isCreateMode, knowledgeId, updateKnowledge]);
 
   const clearLocalEdits = useCallback(() => {
     setEditContent(undefined);
@@ -545,11 +542,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     if (!learning) return;
     try {
       await learning.onMarkLearned();
-      onUpdated?.();
     } catch (error) {
       showApiError(error, '操作失败，请稍后重试');
     }
-  }, [learning, onUpdated]);
+  }, [learning]);
 
   const learningAction = (() => {
     if (!learning) return null;
