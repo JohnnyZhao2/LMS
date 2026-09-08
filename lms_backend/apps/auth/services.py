@@ -17,6 +17,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.activity_logs.registry import register_user_log_action
+from apps.activity_logs.services import ActivityLogService
 from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import get_engine
 from apps.authorization.roles import serialize_user_roles
@@ -25,7 +26,6 @@ from apps.users.models import User
 from apps.users.selectors import get_user_by_employee_id, get_user_by_id
 from apps.users.serializers import UserInfoSerializer
 from core.base_service import BaseService
-from core.audit import audit_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
 register_user_log_action('login', group='认证', label='登录成功')
@@ -51,7 +51,7 @@ class AuthenticationService(BaseService):
         operator: Optional[User] = None,
         status: str = 'success',
     ) -> None:
-        audit_user_action(
+        ActivityLogService.log_user_action(
             user=user,
             operator=operator,
             action=action,

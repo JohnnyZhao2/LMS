@@ -50,7 +50,7 @@ type KnowledgeModalState =
         initialExternalDocUrl?: string;
         initialSpaceTagId?: number;
       }
-    | { kind: 'detail'; knowledgeId: number; startEditing: boolean; startInFocus?: boolean };
+    | { kind: 'detail'; knowledgeId: number; startInFocus?: boolean };
 
 type BulkRowFailure = { row: number; reason: string };
 
@@ -168,7 +168,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
     const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
     const fromDashboard = searchParams.get('from') === 'dashboard';
     const isCreateRoute = location.pathname.endsWith('/knowledge/create');
-    const isEditRoute = location.pathname.endsWith('/edit');
 
     /** 非 null 表示进行中，文案直接显示在对应按钮上 */
     const [importProgress, setImportProgress] = React.useState<string | null>(null);
@@ -193,7 +192,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
     const {
         data,
         isLoading,
-        refetch,
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
@@ -212,10 +210,9 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
 
     const openDetailModal = React.useCallback((
         knowledgeId: number,
-        startEditing = false,
         startInFocus = false,
     ) => {
-        setModalState({ kind: 'detail', knowledgeId, startEditing, startInFocus });
+        setModalState({ kind: 'detail', knowledgeId, startInFocus });
     }, []);
 
     const syncDetailHash = React.useCallback((knowledgeId: number | null) => {
@@ -233,13 +230,9 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
 
     const handleFocusView = (id: number) => {
         if (!isManagementView) {
-            incrementViewCount.mutate(id, {
-                onSuccess: () => {
-                    refetch();
-                },
-            });
+            incrementViewCount.mutate(id);
         }
-        openDetailModal(id, false, true);
+        openDetailModal(id, true);
         syncDetailHash(id);
     };
     React.useEffect(() => {
@@ -252,7 +245,7 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
             return;
         }
         if (routeKnowledgeIdNumber && Number.isFinite(routeKnowledgeIdNumber)) {
-            openDetailModal(routeKnowledgeIdNumber, isEditRoute);
+            openDetailModal(routeKnowledgeIdNumber);
             return;
         }
         if (hashKnowledgeId && Number.isFinite(hashKnowledgeId)) {
@@ -260,7 +253,7 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
             return;
         }
         setModalState(null);
-    }, [hashKnowledgeId, isCreateRoute, isEditRoute, openDetailModal, routeKnowledgeIdNumber, selectedSpaceTagId]);
+    }, [hashKnowledgeId, isCreateRoute, openDetailModal, routeKnowledgeIdNumber, selectedSpaceTagId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
@@ -276,11 +269,7 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
 
     const handleView = (id: number) => {
         if (!isManagementView) {
-            incrementViewCount.mutate(id, {
-                onSuccess: () => {
-                    refetch();
-                },
-            });
+            incrementViewCount.mutate(id);
         }
         openDetailModal(id);
         syncDetailHash(id);
@@ -325,12 +314,11 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
             });
 
             toast.success('知识创建成功');
-            refetch();
         } catch (error) {
             showApiError(error, '创建失败');
             throw error;
         }
-    }, [createKnowledge, selectedSpaceTagId, refetch]);
+    }, [createKnowledge, selectedSpaceTagId]);
 
     const handleImportXlsx = React.useCallback(async (file: File) => {
         if (importProgress) return;
@@ -385,8 +373,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
                     row_number: rowNumber,
                 })),
             );
-            setImportProgress('刷新中…');
-            await refetch();
 
             const allFailures: BulkRowFailure[] = [
                 ...failures.map((item) => ({ row: item.rowNumber, reason: item.reason })),
@@ -406,7 +392,7 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
                 importInputRef.current.value = '';
             }
         }
-    }, [bulkImportKnowledge, createTag, importProgress, knowledgeTags, refetch, spaceTags]);
+    }, [bulkImportKnowledge, createTag, importProgress, knowledgeTags, spaceTags]);
 
     const handleBulkDeleteXlsx = React.useCallback(async (file: File) => {
         if (deleteProgress) return;
@@ -440,8 +426,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
         setDeleteProgress(`删除 ${bulkDeleteItems.length} 条…`);
         try {
             const result = await bulkDeleteKnowledge.mutateAsync(bulkDeleteItems);
-            setDeleteProgress('刷新中…');
-            await refetch();
             setBulkDeleteItems(null);
 
             toastBulkOutcome(
@@ -458,7 +442,7 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
         } finally {
             setDeleteProgress(null);
         }
-    }, [bulkDeleteItems, bulkDeleteKnowledge, deleteProgress, refetch]);
+    }, [bulkDeleteItems, bulkDeleteKnowledge, deleteProgress]);
 
     const handleCreateSpaceTag = React.useCallback(async ({ name, color }: { name: string; color: string }) => {
         try {
@@ -728,9 +712,8 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
 
             {detailModalState && (
                 <KnowledgeDetailModal
-                    key={`${detailModalState.knowledgeId}-${detailModalState.startEditing ? 'edit' : 'view'}-${detailModalState.startInFocus ? 'focus' : 'modal'}`}
+                    key={`${detailModalState.knowledgeId}-${detailModalState.startInFocus ? 'focus' : 'modal'}`}
                     knowledgeId={detailModalState.knowledgeId}
-                    startEditing={detailModalState.startEditing}
                     startInFocus={detailModalState.startInFocus}
                     taskKnowledgeId={taskKnowledgeId || undefined}
                     learning={learning}
@@ -739,7 +722,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
                         setDeleteTarget(id);
                         dismissDetailModal();
                     }}
-                    onUpdated={() => refetch()}
                 />
             )}
 
@@ -756,7 +738,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
                         }
                     }}
                     onCreated={(id) => {
-                        refetch();
                         if (isCreateRoute) {
                             navigate(`${ROUTES.KNOWLEDGE}#${id}`);
                             return;

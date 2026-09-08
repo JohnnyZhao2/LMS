@@ -14,18 +14,6 @@ class ResourceTagPayload:
     tag_ids_provided: bool
 
 
-@dataclass(frozen=True)
-class ResourceUpdatePlan:
-    changed_fields: dict
-    space_tag_id: Optional[int]
-    tag_ids: list[int]
-    space_tag_provided: bool
-    tag_ids_provided: bool
-    space_changed: bool
-    tags_changed: bool
-    has_changes: bool
-
-
 def pop_resource_tag_payload(
     data: dict,
     *,
@@ -51,44 +39,6 @@ def pop_resource_tag_payload(
         tag_ids=tag_ids,
         space_tag_provided=space_tag_provided,
         tag_ids_provided=tag_ids_provided,
-    )
-
-
-def build_resource_update_plan(
-    resource,
-    data: dict,
-    *,
-    scope: str,
-    current_tag_ids: list[int],
-) -> ResourceUpdatePlan:
-    payload = pop_resource_tag_payload(
-        data,
-        scope=scope,
-        default_space_tag_id=resource.space_tag_id,
-        default_tag_ids=current_tag_ids,
-    )
-    changed_fields = {
-        key: value
-        for key, value in data.items()
-        if getattr(resource, key, None) != value
-    }
-    space_changed = (
-        payload.space_tag_provided
-        and payload.space_tag_id != resource.space_tag_id
-    )
-    tags_changed = (
-        payload.tag_ids_provided
-        and set(payload.tag_ids) != set(current_tag_ids)
-    )
-    return ResourceUpdatePlan(
-        changed_fields=changed_fields,
-        space_tag_id=payload.space_tag_id,
-        tag_ids=payload.tag_ids,
-        space_tag_provided=payload.space_tag_provided,
-        tag_ids_provided=payload.tag_ids_provided,
-        space_changed=space_changed,
-        tags_changed=tags_changed,
-        has_changes=bool(changed_fields or space_changed or tags_changed),
     )
 
 

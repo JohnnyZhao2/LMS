@@ -200,16 +200,11 @@ export const queryKeys = {
   submissions: {
     detailRoot: () => ['submission'] as const,
     detail: (submissionId: number) => ['submission', submissionId] as const,
-    examResult: ({
+    result: ({
       submissionId,
     }: {
       submissionId?: number;
-    }) => ['exam-result', submissionId] as const,
-    practiceResult: ({
-      submissionId,
-    }: {
-      submissionId?: number;
-    }) => ['practice-result', submissionId] as const,
+    }) => ['submission-result', submissionId] as const,
   },
   tags: {
     all: () => ['tags'] as const,

@@ -6,13 +6,12 @@ from copy import deepcopy
 from functools import wraps
 from typing import Any, Callable, Optional
 
-from core.audit import audit_content_action, audit_operation, audit_user_action
-
 from .registry import (
     register_content_log_action,
     register_operation_log_action,
     register_user_log_action,
 )
+from .services import ActivityLogService
 
 
 SUBMISSION_STATUS_DETAILS = {
@@ -285,7 +284,7 @@ def log_user_action(
             )
             operator = _resolve_operator(self, kwargs)
 
-            audit_user_action(
+            ActivityLogService.log_user_action(
                 user=user,
                 operator=operator,
                 action=action,
@@ -339,7 +338,7 @@ def log_content_action(
                 or '内容'
             )
 
-            audit_content_action(
+            ActivityLogService.log_content_action(
                 content_type=content_type,
                 content_id=content_id,
                 content_title=content_title,
@@ -397,7 +396,7 @@ def log_operation(
             if result is not None and hasattr(result, 'id'):
                 resolved_target_id = str(result.id)
 
-            audit_operation(
+            ActivityLogService.log_operation(
                 operator=_resolve_operator(self, kwargs),
                 operation_type=operation_type,
                 action=action,

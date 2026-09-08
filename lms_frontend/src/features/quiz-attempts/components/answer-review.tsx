@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatScore } from '@/lib/score';
-import { usePracticeResult, useExamResult } from '../api/get-result';
+import { useSubmissionResult } from '../api/get-result';
 import { QuestionCard } from './question-card';
 
 interface AnswerReviewProps {
@@ -19,9 +19,7 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   const submissionId = Number.isNaN(parsedSubmissionId ?? NaN) ? undefined : parsedSubmissionId;
   const isPractice = type === 'practice';
 
-  const practiceResultQuery = usePracticeResult(submissionId, isPractice);
-  const examResultQuery = useExamResult(submissionId, !isPractice);
-  const { data, isLoading } = isPractice ? practiceResultQuery : examResultQuery;
+  const { data, isLoading } = useSubmissionResult(submissionId);
   const reviewContainerClass = 'space-y-4 pb-4';
 
   if (!submissionId) {

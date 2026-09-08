@@ -3,15 +3,9 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState,
-  type ColumnFiltersState,
   type PaginationState,
-  type VisibilityState,
-  type RowSelectionState,
 } from "@tanstack/react-table"
 
 import {
@@ -50,8 +44,6 @@ interface DataTableProps<TData, TValue> {
     onPageChange: (page: number) => void
     onPageSizeChange: (size: number) => void
   }
-  enableRowSelection?: boolean
-  onRowSelectionChange?: (selection: RowSelectionState) => void
   onRowClick?: (row: TData) => void
   rowClassName?: string
   minHeight?: string | number
@@ -68,17 +60,11 @@ export function DataTable<TData, TValue>({
   shellClassName,
   tableContainerClassName,
   pagination,
-  enableRowSelection = false,
-  onRowSelectionChange,
   onRowClick,
   rowClassName,
   minHeight = "320px",
   fillHeight = false,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
   const paginationState = React.useMemo<PaginationState | undefined>(
     () => (
       pagination
@@ -100,32 +86,14 @@ export function DataTable<TData, TValue>({
       || pagination.pageSize !== (pagination.defaultPageSize ?? pagination.pageSize)
     )
 
-  // Sync row selection with parent
-  React.useEffect(() => {
-    if (onRowSelectionChange) {
-      onRowSelectionChange(rowSelection)
-    }
-  }, [rowSelection, onRowSelectionChange])
-
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: shouldUsePagination ? getPaginationRowModel() : undefined,
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: enableRowSelection ? setRowSelection : undefined,
-    enableRowSelection,
     state: {
       ...(paginationState ? { pagination: paginationState } : {}),
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
     },
     manualPagination: isServerPagination,
     pageCount: pagination?.pageCount ?? -1,

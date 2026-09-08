@@ -1,7 +1,7 @@
 """Task management service."""
 
 from types import SimpleNamespace
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import QuerySet
@@ -235,59 +235,30 @@ class TaskService(BaseService):
             self._update_assignments(task, assignee_ids)
         return task
 
-    def _update_associations(
-        self,
-        task: Task,
-        resource_ids: List[int],
-        get_existing_ids: Callable[[int], List[int]],
-        delete_by_task: Callable[[int], None],
-        create_method: Callable[[Task, List[int]], None],
-    ) -> None:
-        existing_ids = get_existing_ids(task.id)
-        normalized_ids = self._dedupe_resource_ids(resource_ids)
-        if existing_ids != normalized_ids:
-            # 资源顺序也是业务状态。只要集合或顺序变化，就重建关联并重新冻结快照。
-            delete_by_task(task.id)
-            if normalized_ids:
-                create_method(task, normalized_ids)
-
-    def _get_task_knowledge_ids(self, task_id: int) -> List[int]:
-        return list(
-            TaskKnowledge.objects.filter(task_id=task_id)
+    def _update_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
+        existing_ids = list(
+            TaskKnowledge.objects.filter(task_id=task.id)
             .order_by('order')
             .values_list('source_knowledge_id', flat=True)
         )
+        normalized_ids = self._dedupe_resource_ids(knowledge_ids)
+        if existing_ids != normalized_ids:
+            # 资源顺序也是业务状态。只要集合或顺序变化，就重建关联并重新冻结快照。
+            TaskKnowledge.objects.filter(task_id=task.id).delete()
+            if normalized_ids:
+                self._create_knowledge_associations(task, normalized_ids)
 
-    def _delete_task_knowledge_by_task(self, task_id: int) -> None:
-        TaskKnowledge.objects.filter(task_id=task_id).delete()
-
-    def _get_task_quiz_ids(self, task_id: int) -> List[int]:
-        return list(
-            TaskQuiz.objects.filter(task_id=task_id)
+    def _update_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
+        existing_ids = list(
+            TaskQuiz.objects.filter(task_id=task.id)
             .order_by('order')
             .values_list('source_quiz_id', flat=True)
         )
-
-    def _delete_task_quiz_by_task(self, task_id: int) -> None:
-        TaskQuiz.objects.filter(task_id=task_id).delete()
-
-    def _update_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
-        self._update_associations(
-            task=task,
-            resource_ids=knowledge_ids,
-            get_existing_ids=self._get_task_knowledge_ids,
-            delete_by_task=self._delete_task_knowledge_by_task,
-            create_method=self._create_knowledge_associations,
-        )
-
-    def _update_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
-        self._update_associations(
-            task=task,
-            resource_ids=quiz_ids,
-            get_existing_ids=self._get_task_quiz_ids,
-            delete_by_task=self._delete_task_quiz_by_task,
-            create_method=self._create_quiz_associations,
-        )
+        normalized_ids = self._dedupe_resource_ids(quiz_ids)
+        if existing_ids != normalized_ids:
+            TaskQuiz.objects.filter(task_id=task.id).delete()
+            if normalized_ids:
+                self._create_quiz_associations(task, normalized_ids)
 
     def _update_assignments(self, task: Task, assignee_ids: List[int]) -> None:
         existing_assignments = TaskAssignment.objects.filter(task_id=task.id)

@@ -9,7 +9,6 @@ from django.db import transaction
 
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
-    build_resource_update_plan,
     pop_resource_tag_payload,
 )
 from core.base_service import BaseService
@@ -117,13 +116,28 @@ class KnowledgeService(BaseService):
         """返回 (knowledge, changed)。"""
         knowledge = self.get_by_id(pk)
         current_tag_ids = list(knowledge.tags.values_list('id', flat=True))
-        update_plan = build_resource_update_plan(
-            knowledge, data, scope='knowledge', current_tag_ids=current_tag_ids,
+        payload = pop_resource_tag_payload(
+            data,
+            scope='knowledge',
+            default_space_tag_id=knowledge.space_tag_id,
+            default_tag_ids=current_tag_ids,
         )
-        if not update_plan.has_changes:
+        changed_fields = {
+            key: value
+            for key, value in data.items()
+            if getattr(knowledge, key, None) != value
+        }
+        space_changed = (
+            payload.space_tag_provided
+            and payload.space_tag_id != knowledge.space_tag_id
+        )
+        tags_changed = (
+            payload.tag_ids_provided
+            and set(payload.tag_ids) != set(current_tag_ids)
+        )
+        if not changed_fields and not space_changed and not tags_changed:
             return knowledge, False
 
-        changed_fields = dict(update_plan.changed_fields)
         changed_fields['updated_by'] = self.user
         for key, value in changed_fields.items():
             setattr(knowledge, key, value)
@@ -131,10 +145,10 @@ class KnowledgeService(BaseService):
         knowledge.save(update_fields=[*changed_fields.keys(), 'updated_at'])
         apply_resource_tag_changes(
             knowledge,
-            space_tag_id=update_plan.space_tag_id,
-            tag_ids=update_plan.tag_ids,
-            space_tag_provided=update_plan.space_changed,
-            tag_ids_provided=update_plan.tags_changed,
+            space_tag_id=payload.space_tag_id,
+            tag_ids=payload.tag_ids,
+            space_tag_provided=space_changed,
+            tag_ids_provided=tags_changed,
         )
         return knowledge, True
 

@@ -74,7 +74,6 @@ export type KnowledgeLearning = {
 
 interface KnowledgeDetailModalProps {
   knowledgeId?: number;
-  startEditing?: boolean;
   /** 打开时直接全屏专注（仍是同一弹窗） */
   startInFocus?: boolean;
   previewOnly?: boolean;
@@ -92,7 +91,6 @@ interface KnowledgeDetailModalProps {
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
-  startEditing: _startEditing = false,
   startInFocus = false,
   previewOnly = false,
   initialTitle = '',
@@ -122,10 +120,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const updateKnowledge = useUpdateKnowledge();
 
   const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
-  const [localKnowledgeSnapshot, setLocalKnowledgeSnapshot] = useState<{
-    knowledgeId: number;
-    detail: KnowledgeDetailType;
-  } | undefined>(undefined);
 
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
@@ -146,10 +140,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   );
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
 
-  const hasLocalSnapshot = Boolean(localKnowledgeSnapshot && localKnowledgeSnapshot.knowledgeId === knowledgeId);
   const knowledge = useMemo(() => {
     if (!isCreateMode) {
-      return hasLocalSnapshot ? localKnowledgeSnapshot!.detail : knowledgeFromQuery;
+      return knowledgeFromQuery;
     }
     const preferredSpaceId = editSpaceTagId === undefined ? initialSpaceTagId : editSpaceTagId;
     const spaceTag = typeof preferredSpaceId === 'number'
@@ -169,14 +162,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     } satisfies KnowledgeDetailType;
   }, [
     editSpaceTagId,
-    hasLocalSnapshot,
     initialContent,
     initialExternalDocUrl,
     initialSpaceTagId,
     initialTitle,
     isCreateMode,
     knowledgeFromQuery,
-    localKnowledgeSnapshot,
     spaces,
   ]);
 
@@ -210,10 +201,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     || (editRelatedLinks !== undefined)
   ));
 
-  const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
-    setLocalKnowledgeSnapshot({ knowledgeId: knowledgeId!, detail: updatedKnowledge });
-  }, [knowledgeId]);
-
   const isSaving = isCreateMode ? createKnowledge.isPending : updateKnowledge.isPending;
 
   /**
@@ -230,7 +217,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         id: knowledgeId,
         data,
       });
-      applyKnowledgeSnapshot(updatedKnowledge);
       onSuccess?.();
       onUpdated?.();
       return updatedKnowledge;
@@ -238,7 +224,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       showApiError(error, errorMessage);
       return null;
     }
-  }, [applyKnowledgeSnapshot, isCreateMode, knowledgeId, onUpdated, updateKnowledge]);
+  }, [isCreateMode, knowledgeId, onUpdated, updateKnowledge]);
 
   const clearLocalEdits = useCallback(() => {
     setEditContent(undefined);

@@ -5,8 +5,6 @@ import type { DragEndEvent } from '@dnd-kit/core';
 
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
-import type { PaginatedResponse } from '@/types/common';
-import type { TaskResourceOption } from '@/types/task';
 import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
@@ -25,12 +23,6 @@ import {
 } from './use-task-form.helpers';
 
 const PAGE_SIZE = 9;
-
-const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  return data.results;
-};
 
 type Updater<T> = T | ((prev: T) => T);
 
@@ -130,7 +122,7 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   });
 
   const availableResources = useMemo(
-    () => getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource),
+    () => (resourceQuery.data?.results ?? []).map(mapTaskResourceOptionToResource),
     [resourceQuery.data],
   );
 
