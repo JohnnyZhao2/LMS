@@ -99,22 +99,25 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
   };
 
   if (questionType === 'SHORT_ANSWER') {
-    if (interactive) {
+    const responseText = typeof response === 'string' ? response : '';
+    const displayText = (interactive ? responseText : String(answer || '')).replace(/\r\n/g, '\n').trim();
+
+    if (interactive && !disabled) {
       return (
         <Textarea
-          value={typeof response === 'string' ? response : ''}
+          autoResize
+          value={responseText}
           onChange={(event) => onResponseChange?.(event.target.value)}
-          rows={8}
+          rows={6}
           placeholder="请填写答案"
-          disabled={disabled}
-          className="min-h-[190px] resize-none rounded-[14px] border-border bg-background px-4 py-3 text-[14px] leading-6"
+          className="min-h-[168px] resize-none rounded-[14px] border-border bg-background px-4 py-3 text-[15px] leading-7"
         />
       );
     }
 
     return (
-      <div className="min-h-[190px] rounded-[14px] border border-border bg-background px-4 py-3 text-[14px] leading-6 text-foreground">
-        {String(answer || '').trim() || '暂无参考答案'}
+      <div className="min-h-[120px] whitespace-pre-wrap break-words rounded-[14px] border border-border bg-background px-4 py-3 text-[15px] leading-7 text-foreground">
+        {displayText || (interactive ? '未作答' : '暂无参考答案')}
       </div>
     );
   }

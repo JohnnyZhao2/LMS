@@ -17,6 +17,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPE_CONFIG } from '@/config/questions';
 import { QuestionTypeBadge } from '@/components/questions/question-type-badge';
+import { richTextToPlainText, richTextToPreviewText } from '@/lib/rich-text';
 import { buildQuestionSections } from '@/lib/question-sections';
 import { formatScore } from '@/lib/score';
 import { showApiError } from '@/utils/error-handler';
@@ -68,8 +69,9 @@ const getPassRateColor = (rate?: number | null) => {
 };
 
 const formatAnswerText = (answer?: string | null) => {
-  if (!answer) return <span className="text-text-muted italic">(未作答)</span>;
-  return answer;
+  const text = (answer || '').replace(/\r\n/g, '\n').trim();
+  if (!text) return <span className="text-text-muted italic">(未作答)</span>;
+  return text;
 };
 
 const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
@@ -380,7 +382,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                           {number}
                         </span>
                         <h3 className="min-w-0 line-clamp-2 text-[13px] font-medium leading-5 text-foreground">
-                          {question.question_text}
+                          {richTextToPreviewText(question.question_text)}
                         </h3>
                         <span className={cn('w-[4.5rem] justify-self-end text-right text-[11px] font-semibold leading-5 tabular-nums', passRateColor)}>
                           {formatPassRate(question.pass_rate)}
@@ -411,8 +413,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                         分值: {formatScore(selectedQuestion?.max_score)}
                       </span>
                     </div>
-                    <h2 className="text-lg font-semibold leading-snug text-foreground break-words">
-                      {selectedQuestion?.question_text}
+                    <h2 className="whitespace-pre-wrap break-words text-lg font-semibold leading-7 text-foreground">
+                      {richTextToPlainText(selectedQuestion?.question_text || '')}
                     </h2>
                   </div>
                   <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
@@ -426,9 +428,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                 </div>
 
                 {selectedQuestion?.question_analysis && (
-                  <div className="mt-4 rounded-xl border border-border bg-background p-3 text-sm leading-relaxed text-text-muted sm:p-4">
+                  <div className="mt-4 whitespace-pre-wrap break-words rounded-xl border border-border bg-background p-3 text-sm leading-7 text-text-muted sm:p-4">
                     <span className="font-semibold text-foreground mr-2">解析:</span>
-                    {selectedQuestion.question_analysis}
+                    {richTextToPlainText(selectedQuestion.question_analysis)}
                   </div>
                 )}
               </div>
@@ -582,7 +584,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
-                                  <div className="min-h-[80px] rounded-xl border border-dashed border-border bg-background p-4 text-sm leading-relaxed text-foreground">
+                                  <div className="min-h-[80px] whitespace-pre-wrap break-words rounded-xl border border-dashed border-border bg-background p-4 text-[15px] leading-7 text-foreground">
                                     {formatAnswerText(answer.answer_text)}
                                   </div>
                                 </div>
