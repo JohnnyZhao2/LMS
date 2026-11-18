@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BookOpen, ClipboardList, GripVertical, Repeat, Trash2, Trophy } from 'lucide-react';
+import { ArrowLeftRight, BookOpen, ClipboardList, GripVertical, Trash2, Trophy } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CompactNumberInput } from '@/components/ui/compact-number-input';
@@ -46,16 +46,19 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
       icon: BookOpen,
       label: '资料',
       iconClassName: 'bg-secondary-50 text-secondary',
+      labelClassName: 'text-secondary',
     },
     PRACTICE: {
       icon: ClipboardList,
       label: '测验',
       iconClassName: 'bg-primary-50 text-primary',
+      labelClassName: 'text-primary',
     },
     EXAM: {
       icon: Trophy,
       label: '考试',
       iconClassName: 'bg-destructive-50 text-destructive',
+      labelClassName: 'text-destructive',
     },
   }[group];
   const Icon = config.icon;
@@ -107,16 +110,15 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
 
       <div
         className={cn(
-          'w-full rounded-2xl border border-border bg-background px-5 pt-6 text-left',
-          group === 'EXAM' ? 'pb-5' : 'pb-6',
+          'w-full rounded-2xl border border-border bg-background px-6 py-5 text-left',
           !isOverlay && 'hover:border-interaction-border hover:bg-interaction-surface',
           isOverlay && 'shadow-[0_10px_24px_rgba(15,23,42,0.1)]',
           item.isMissingSource && 'border-warning-300 bg-warning-50/30',
         )}
       >
-        <div className="flex w-full items-center gap-4">
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-3.5">
+        <div className="flex w-full items-center justify-between gap-5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-5 gap-y-3">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
               {canFlipQuiz ? (
                 <Tooltip title={group === 'EXAM' ? '点击切换为测验' : '点击切换为考试'}>
                   <button
@@ -155,11 +157,8 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
                         <BackIcon className="h-5 w-5" />
                       </span>
                     </span>
-                    <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-4 w-[22px] items-center justify-center rounded-full bg-muted text-text-muted ring-[2.5px] ring-background transition-[scale,background-color,color] duration-200 ease-out group-hover/flip-icon:scale-105 group-hover/flip-icon:bg-muted-hover group-hover/flip-icon:text-foreground group-active/flip-icon:scale-90">
-                      <Repeat
-                        style={{ transform: `rotateY(${flipStep * 180}deg)` }}
-                        className="h-3 w-3 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                      />
+                    <span className="pointer-events-none absolute -bottom-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-border bg-background text-text-muted shadow-2xs transition-[scale,border-color,color] duration-200 ease-out group-hover/flip-icon:scale-105 group-hover/flip-icon:border-primary/40 group-hover/flip-icon:text-primary group-active/flip-icon:scale-90">
+                      <ArrowLeftRight className="h-2.5 w-2.5" />
                     </span>
                   </button>
                 </Tooltip>
@@ -170,14 +169,11 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
               )}
 
               <div className="flex min-h-[48px] min-w-0 flex-1 flex-col justify-center">
-                <div className="flex items-center gap-2">
-                  <div className="truncate text-[15px] font-semibold leading-tight text-foreground">{item.title}</div>
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium leading-none text-text-muted">
-                    {config.label}
-                  </span>
-                </div>
-                <div className="mt-1.5 truncate text-[12px] font-medium leading-tight text-text-muted">
-                  {item.category || '-'}
+                <div className="truncate text-[15px] font-semibold leading-tight text-foreground">{item.title}</div>
+                <div className="mt-1.5 flex items-center gap-1.5 truncate text-[12px] font-medium leading-tight text-text-muted">
+                  <span className={cn('shrink-0 font-semibold', config.labelClassName)}>{config.label}</span>
+                  <span className="h-0.5 w-0.5 shrink-0 rounded-full bg-border" />
+                  <span className="truncate">{item.category || '-'}</span>
                 </div>
               </div>
 
@@ -187,36 +183,40 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
             </div>
 
             {group === 'EXAM' ? (
-              <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                <CompactNumberInput
-                  prefixLabel="参考时间"
-                  unit="分"
-                  mode="integer"
-                  min={1}
-                  step={1}
-                  placeholder="必填"
-                  value={item.duration ?? ''}
-                  disabled={isEdit || isOverlay}
-                  onChange={(value) => onUpdateExamConfig?.(item.uid, { duration: value })}
-                  inputWidthClassName="w-9"
-                  inputClassName="text-[12px] font-semibold"
-                  className="h-8 w-auto gap-x-2 rounded-lg px-2.5 py-1"
-                />
-                <CompactNumberInput
-                  prefixLabel="及格分数"
-                  unit="分"
-                  mode="decimal"
-                  min={0.5}
-                  max={item.totalScore && item.totalScore > 0 ? item.totalScore : undefined}
-                  step={0.5}
-                  placeholder="必填"
-                  value={item.passScore ?? ''}
-                  disabled={isOverlay}
-                  onChange={(value) => onUpdateExamConfig?.(item.uid, { passScore: value })}
-                  inputWidthClassName="w-10"
-                  inputClassName="text-[12px] font-semibold"
-                  className="h-8 w-auto gap-x-2 rounded-lg px-2.5 py-1"
-                />
+              <div className="flex shrink-0 items-center gap-4 text-[12px] text-text-muted">
+                <label className="flex items-center gap-1.5">
+                  <span>参考时间</span>
+                  <CompactNumberInput
+                    mode="integer"
+                    min={1}
+                    step={1}
+                    placeholder="必填"
+                    value={item.duration ?? ''}
+                    disabled={isEdit || isOverlay}
+                    onChange={(value) => onUpdateExamConfig?.(item.uid, { duration: value })}
+                    inputWidthClassName="w-full"
+                    inputClassName="text-[12px] font-semibold"
+                    className="h-7 w-12 justify-center rounded-md border border-border bg-muted/20 px-1.5 py-0 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+                  />
+                  <span>分</span>
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <span>及格分</span>
+                  <CompactNumberInput
+                    mode="decimal"
+                    min={0.5}
+                    max={item.totalScore && item.totalScore > 0 ? item.totalScore : undefined}
+                    step={0.5}
+                    placeholder="必填"
+                    value={item.passScore ?? ''}
+                    disabled={isOverlay}
+                    onChange={(value) => onUpdateExamConfig?.(item.uid, { passScore: value })}
+                    inputWidthClassName="w-full"
+                    inputClassName="text-[12px] font-semibold"
+                    className="h-7 w-12 justify-center rounded-md border border-border bg-muted/20 px-1.5 py-0 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+                  />
+                  <span>分</span>
+                </label>
               </div>
             ) : null}
           </div>

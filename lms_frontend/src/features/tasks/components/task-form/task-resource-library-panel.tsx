@@ -2,7 +2,6 @@ import {
   BookOpen,
   FileCheck,
   Layers,
-  Plus,
   X,
 } from 'lucide-react';
 
@@ -12,7 +11,6 @@ import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
-  GHOST_ACCENT_HOVER_CLASSNAME,
   QUIET_OUTLINE_FIELD_CLASSNAME,
   SUBTLE_SURFACE_HOVER_CLASSNAME,
 } from '@/components/ui/interactive-styles';
@@ -32,8 +30,6 @@ interface TaskResourceLibraryPanelProps {
   onResourceSearchChange: (value: string) => void;
   onResourceAdd: (resource: ResourceItem) => void;
   onResourceRemove: (uid: number) => void;
-  onDocumentPreview: (documentId: number) => void;
-  onQuizPreview: (quizId: number) => void;
   onDone?: () => void;
   totalResourceCount: number;
   pageSize: number;
@@ -56,35 +52,25 @@ const EMPTY_COPY: Record<ResourceFilterType, string> = {
 
 interface ResourceOptionRowProps {
   resource: ResourceItem;
-  onPreview: () => void;
-  action: React.ReactNode;
+  onClick?: () => void;
+  action?: React.ReactNode;
   badge?: React.ReactNode;
   className?: string;
 }
 
 function ResourceOptionRow({
   resource,
-  onPreview,
+  onClick,
   action,
   badge,
   className,
 }: ResourceOptionRowProps) {
-  return (
-    <div
-      className={cn(
-        'group flex h-[64px] w-full items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
-        SUBTLE_SURFACE_HOVER_CLASSNAME,
-        className,
-      )}
-    >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-        onClick={onPreview}
-      >
+  const content = (
+    <>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
         <div
           className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-transform group-hover:scale-105',
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
             resource.resourceType === 'DOCUMENT'
               ? 'bg-secondary-50 text-secondary'
               : 'bg-primary-50 text-primary',
@@ -110,9 +96,35 @@ function ResourceOptionRow({
             <span className="truncate text-text-muted">{resource.category}</span>
           </div>
         </div>
-      </button>
+      </div>
 
-      <div className="flex shrink-0 items-center gap-1">{action}</div>
+      {action ? <div className="flex shrink-0 items-center gap-1">{action}</div> : null}
+    </>
+  );
+
+  const rowClassName = cn(
+    'group flex h-[64px] w-full items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
+    SUBTLE_SURFACE_HOVER_CLASSNAME,
+    onClick && 'cursor-pointer transition-colors hover:border-primary/40 active:scale-[0.995]',
+    className,
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={`加入${resource.title}`}
+        className={rowClassName}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={rowClassName}>
+      {content}
     </div>
   );
 }
@@ -127,8 +139,6 @@ export function TaskResourceLibraryPanel({
   onResourceSearchChange,
   onResourceAdd,
   onResourceRemove,
-  onDocumentPreview,
-  onQuizPreview,
   onDone,
   totalResourceCount,
   pageSize,
@@ -138,14 +148,6 @@ export function TaskResourceLibraryPanel({
 }: TaskResourceLibraryPanelProps) {
   const selectedDocumentCount = selectedResources.filter((item) => item.resourceType === 'DOCUMENT').length;
   const selectedQuizCount = selectedResources.length - selectedDocumentCount;
-
-  const handlePreview = (resource: ResourceItem) => {
-    if (resource.resourceType === 'DOCUMENT') {
-      onDocumentPreview(resource.id);
-      return;
-    }
-    onQuizPreview(resource.id);
-  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -205,24 +207,7 @@ export function TaskResourceLibraryPanel({
                     <ResourceOptionRow
                       key={`${resource.resourceType}-${resource.id}-${resource.title}`}
                       resource={resource}
-                      onPreview={() => handlePreview(resource)}
-                      action={(
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            'h-7 w-7 rounded-full text-text-muted',
-                            GHOST_ACCENT_HOVER_CLASSNAME,
-                          )}
-                          aria-label={`加入${resource.title}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onResourceAdd(resource);
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      )}
+                      onClick={() => onResourceAdd(resource)}
                     />
                   ))}
                 </div>
@@ -272,7 +257,7 @@ export function TaskResourceLibraryPanel({
                   </div>
                   <span className="text-sm font-medium text-foreground/80">暂无已选资源</span>
                   <span className="mt-1 text-[11px] text-text-muted">
-                    从左侧点击 + 加入学习资料或试卷
+                    点击左侧学习资料或试卷即可加入
                   </span>
                 </div>
               ) : (
@@ -281,7 +266,6 @@ export function TaskResourceLibraryPanel({
                     <ResourceOptionRow
                       key={resource.uid}
                       resource={resource}
-                      onPreview={() => handlePreview(resource)}
                       badge={resource.resourceType === 'QUIZ' ? (
                         <Badge
                           variant="secondary"
@@ -314,10 +298,7 @@ export function TaskResourceLibraryPanel({
       </div>
 
       {onDone ? (
-        <div className="flex items-center justify-between border-t border-border bg-background px-4 py-2.5">
-          <span className="text-[11px] text-text-muted">
-            点击任意资源可预览详情
-          </span>
+        <div className="flex items-center justify-end border-t border-border bg-background px-4 py-2.5">
           <Button size="sm" onClick={onDone}>
             完成
           </Button>

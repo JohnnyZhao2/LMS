@@ -14,6 +14,7 @@ interface SegmentedControlProps {
   options: SegmentedOption[];
   value: string | null;
   onChange: (value: string) => void;
+  onOptionDoubleClick?: (value: string) => void;
   onClear?: () => void;
   label?: string;
   className?: string;
@@ -31,6 +32,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   options,
   value,
   onChange,
+  onOptionDoubleClick,
   onClear,
   label,
   className,
@@ -81,6 +83,12 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
                 return;
               }
               onChange(opt.value);
+            }}
+            onDoubleClick={() => {
+              if (opt.disabled) {
+                return;
+              }
+              onOptionDoubleClick?.(opt.value);
             }}
             title={opt.label}
             disabled={opt.disabled}

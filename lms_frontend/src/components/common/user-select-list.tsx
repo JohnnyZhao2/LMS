@@ -36,6 +36,7 @@ interface UserSelectListProps {
   listClassName?: string;
   itemsClassName?: string;
   showGridSelectionIndicator?: boolean;
+  minimalGridCard?: boolean;
 }
 
 function renderTrailing(
@@ -142,6 +143,7 @@ export function UserSelectList({
   listClassName,
   itemsClassName,
   showGridSelectionIndicator = true,
+  minimalGridCard = false,
 }: UserSelectListProps) {
   const dualSelect = typeof onToggleCheck === 'function';
 
@@ -175,8 +177,10 @@ export function UserSelectList({
         )
       ) : items.length === 0 ? (
         appearance === 'panel' ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[12px] text-text-muted">
-            {emptyText}
+          <div className={listClassName}>
+            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[12px] text-text-muted">
+              {emptyText}
+            </div>
           </div>
         ) : (
           <div className="py-6 text-center text-[11px] text-slate-400">
@@ -243,6 +247,24 @@ export function UserSelectList({
                 )}
               >
                 {layout === 'grid' ? (
+                  minimalGridCard ? (
+                    <div className="flex w-full items-center gap-2.5">
+                      <UserAvatar
+                        avatarKey={item.avatarKey}
+                        name={item.name}
+                        size="sm"
+                        className="h-8 w-8 shrink-0 ring-1 ring-border/60"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 truncate text-[11px] font-medium leading-tight text-text-muted">
+                          {item.meta || '未填写工号'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
                   <>
                     <div className="flex w-full items-center gap-2.5">
                       <UserAvatar
@@ -317,6 +339,7 @@ export function UserSelectList({
                       ))}
                     </div>
                   </>
+                  )
                 ) : (
                   <>
                     <UserAvatar

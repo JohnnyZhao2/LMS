@@ -144,16 +144,16 @@ export function TaskPipelinePanel({
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={selectedResources.map((item) => String(item.uid))} strategy={verticalListSortingStrategy}>
-              <div className="mx-auto flex w-full max-w-[676px] flex-col px-7">
+              <div className="mx-auto flex w-full max-w-[740px] flex-col px-7">
                 {selectedResources.map((item, index) => (
                   <React.Fragment key={item.uid}>
                     {index > 0 ? (
-                      <div className="flex flex-col items-center py-0.5" aria-hidden={resourcesDisabled ? 'true' : undefined}>
+                      <div className="flex flex-col items-center py-1" aria-hidden={resourcesDisabled ? 'true' : undefined}>
                         {resourcesDisabled ? (
-                          <div className="h-5 w-px border-l border-dashed border-border" />
+                          <div className="h-7 w-px border-l border-dashed border-border" />
                         ) : (
                           <>
-                            <div className="h-2.5 w-px border-l border-dashed border-border" />
+                            <div className="h-3.5 w-px border-l border-dashed border-border" />
                             <Tooltip title="在此处插入资源">
                               <button
                                 type="button"
@@ -164,7 +164,7 @@ export function TaskPipelinePanel({
                                 <Plus className="h-3.5 w-3.5" />
                               </button>
                             </Tooltip>
-                            <div className="h-2.5 w-px border-l border-dashed border-border" />
+                            <div className="h-3.5 w-px border-l border-dashed border-border" />
                           </>
                         )}
                       </div>
@@ -181,18 +181,18 @@ export function TaskPipelinePanel({
                 ))}
 
                 {resourcesDisabled ? null : (
-                  <div className="flex flex-col items-center pt-0.5">
-                    <div className="h-4 w-px border-l border-dashed border-border" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-full bg-background px-4 text-[12px] font-semibold text-text-muted hover:border-interaction-border hover:bg-interaction-surface hover:text-foreground"
-                      onClick={() => onAddResource?.('ALL', selectedResources.length)}
-                    >
-                      <Plus className="mr-1.5 h-3.5 w-3.5" />
-                      添加资源
-                    </Button>
+                  <div className="flex flex-col items-center pt-1">
+                    <div className="h-3.5 w-px border-l border-dashed border-border" />
+                    <Tooltip title="添加资源">
+                      <button
+                        type="button"
+                        aria-label="添加资源"
+                        onClick={() => onAddResource?.('ALL', selectedResources.length)}
+                        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-background text-text-muted transition-[scale,border-color,background-color,color] duration-150 hover:scale-110 hover:border-primary/40 hover:bg-primary-50 hover:text-primary active:scale-95"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </Tooltip>
                   </div>
                 )}
               </div>
