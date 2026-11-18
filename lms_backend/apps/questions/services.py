@@ -6,7 +6,7 @@ from typing import Optional
 from django.db import transaction
 
 from apps.activity_logs.decorators import log_content_action
-from apps.activity_logs.text import format_number, preview_text
+from apps.activity_logs.text import preview_text
 from apps.authorization.engine import get_engine
 from apps.tags.resource_sync import (
     apply_resource_tag_changes,
@@ -16,7 +16,6 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Question, QuestionOption
-from .question_like import DEFAULT_QUESTION_SCORE
 from .selectors import (
     apply_question_filters,
     question_base_queryset,
@@ -29,14 +28,13 @@ _QUESTION_UPDATE_FIELD_LABELS = {
     'options': '选项',
     'answer': '答案',
     'explanation': '解析',
-    'score': '分值',
     'space_tag_id': '所属空间',
 }
 
 
 def _question_log_description(ctx: dict) -> str:
     question = ctx['result']
-    return f'{question.get_question_type_display()}，{format_number(question.score)} 分'
+    return question.get_question_type_display()
 
 
 def _question_update_log_description(ctx: dict) -> str:
@@ -115,6 +113,7 @@ class QuestionService(BaseService):
         label='更新题目',
     )
     def update(self, pk: int, data: dict) -> Question:
+        Question.objects.select_for_update().filter(pk=pk).first()
         question = self.get_by_id(pk)
         get_engine(self.request).enforce('questions.change_question', resource=question, error_message='无权编辑此题目')
 
@@ -174,6 +173,11 @@ class QuestionService(BaseService):
     def delete(self, pk: int) -> Question:
         question = self.get_by_id(pk)
         get_engine(self.request).enforce('questions.delete_question', resource=question, error_message='无权删除此题目')
+        if question.quiz_uses.exists():
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='题目仍被当前试卷引用，请先从试卷移除',
+            )
         question.delete()
         return question
 
@@ -272,7 +276,6 @@ class QuestionService(BaseService):
             'options': data.get('options', source.options if source else []),
             'answer': data.get('answer', source.answer if source else None),
             'explanation': data.get('explanation', source.explanation if source else ''),
-            'score': data.get('score', source.score if source else DEFAULT_QUESTION_SCORE),
         }
 
     def _build_storage_payload(self, merged_payload: dict) -> tuple[dict, list[dict]]:
@@ -284,7 +287,6 @@ class QuestionService(BaseService):
                 'question_type': question_type,
                 'reference_answer': answer if question_type == 'SHORT_ANSWER' else '',
                 'explanation': merged_payload.get('explanation', ''),
-                'score': merged_payload.get('score', DEFAULT_QUESTION_SCORE),
             },
             self._build_option_definitions(
                 question_type=question_type,
@@ -337,15 +339,12 @@ class QuestionService(BaseService):
             'options': question.options,
             'answer': question.answer,
             'explanation': question.explanation,
-            'score': question.score,
         }
 
     def _has_question_content_changes(self, question: Question, merged_payload: dict) -> bool:
         current_payload = self._serialize_question_payload(question)
-        comparable_current = {**current_payload, 'score': str(current_payload['score'])}
-        comparable_next = {**merged_payload, 'score': str(merged_payload['score'])}
-        return json.dumps(comparable_current, sort_keys=True, default=str) != json.dumps(
-            comparable_next,
+        return json.dumps(current_payload, sort_keys=True, default=str) != json.dumps(
+            merged_payload,
             sort_keys=True,
             default=str,
         )

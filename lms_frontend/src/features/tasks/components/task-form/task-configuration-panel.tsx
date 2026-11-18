@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Calendar, FileText, UserPlus } from 'lucide-react';
+import { format } from 'date-fns';
+import { BookOpen, Calendar, FileText, Loader2, Send, Type, UserPlus } from 'lucide-react';
 
 import { MicroLabel } from '@/components/common/micro-label';
 import { UserSelectList, type UserSelectPanelItem } from '@/components/common/user-select-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GHOST_ACCENT_HOVER_CLASSNAME, QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,8 +23,11 @@ import {
 } from './task-form.constants';
 
 interface TaskConfigurationPanelProps {
+  title: string;
+  onTitleChange: (value: string) => void;
   deadline: Date | undefined;
-  onDeadlineChange: (value: Date | undefined) => void;
+  deadlineDays: string;
+  onDeadlineDaysChange: (value: string) => void;
   description: string;
   onDescriptionChange: (value: string) => void;
   selectedUserIds: number[];
@@ -34,9 +38,15 @@ interface TaskConfigurationPanelProps {
   onToggleUsers: (userIds: number[], checked: boolean) => void;
   isUsersLoading: boolean;
   canRemoveAssignee: boolean;
+  isEdit: boolean;
+  isSubmitting: boolean;
+  canSubmit: boolean;
+  onSubmit: () => void;
 }
 
 type TaskAssigneeDepartmentFilter = 'all' | 'room1' | 'room2';
+
+const DEADLINE_DAY_PRESETS = ['7', '14', '20'] as const;
 
 function matchesDepartmentFilter(
   item: UserSelectPanelItem,
@@ -53,8 +63,11 @@ function matchesDepartmentFilter(
 }
 
 export function TaskConfigurationPanel({
+  title,
+  onTitleChange,
   deadline,
-  onDeadlineChange,
+  deadlineDays,
+  onDeadlineDaysChange,
   description,
   onDescriptionChange,
   selectedUserIds,
@@ -65,6 +78,10 @@ export function TaskConfigurationPanel({
   onToggleUsers,
   isUsersLoading,
   canRemoveAssignee,
+  isEdit,
+  isSubmitting,
+  canSubmit,
+  onSubmit,
 }: TaskConfigurationPanelProps) {
   const [departmentFilter, setDepartmentFilter] = useState<TaskAssigneeDepartmentFilter>('all');
   const filteredUserPanelItems = useMemo(
@@ -86,16 +103,73 @@ export function TaskConfigurationPanel({
 
           <div className="space-y-3 px-4 py-3">
             <div className="space-y-2">
+              <MicroLabel icon={<Type className="h-3.5 w-3.5" />} asLabel>
+                任务标题
+              </MicroLabel>
+              <Input
+                value={title}
+                onChange={(event) => onTitleChange(event.target.value)}
+                placeholder="输入任务标题..."
+                className={cn(
+                  'h-9 rounded-lg px-3 text-[13px] placeholder:text-text-muted/50',
+                  QUIET_OUTLINE_FIELD_CLASSNAME,
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
               <MicroLabel icon={<Calendar className="h-3.5 w-3.5" />} asLabel>
                 截止时间
               </MicroLabel>
-              <DatePicker
-                date={deadline}
-                onDateChange={onDeadlineChange}
-                placeholder="选择截止日期"
-                className="h-9 rounded-lg px-3 text-[12px]"
-                hideLeadingIcon
-              />
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    'flex h-9 shrink-0 items-center justify-center rounded-lg border px-4 text-[12px] font-medium tabular-nums',
+                    deadline
+                      ? 'border-border/70 bg-white text-foreground'
+                      : 'border-warning-300 bg-warning-50/50 text-warning-700',
+                  )}
+                >
+                  <span>{deadline ? format(deadline, 'yyyy-MM-dd HH:mm') : '无效天数'}</span>
+                </div>
+
+                <SegmentedControl
+                  size="sm"
+                  fill
+                  className="min-w-0 flex-1 [&>div]:h-9 [&>div]:rounded-lg [&>div]:p-0.5 [&>div>button]:rounded-md [&>div>button]:px-1.5"
+                  options={DEADLINE_DAY_PRESETS.map((preset) => ({
+                    label: preset,
+                    value: preset,
+                  }))}
+                  value={DEADLINE_DAY_PRESETS.includes(deadlineDays as (typeof DEADLINE_DAY_PRESETS)[number]) ? deadlineDays : null}
+                  onChange={onDeadlineDaysChange}
+                  trailing={(
+                    <div className="flex shrink-0 items-center">
+                      <div className="mx-1 h-4 w-px bg-border/80" />
+                      <div
+                        className={cn(
+                          'flex h-full w-16 items-center rounded-md border border-border/70 bg-white px-2 transition-[border-color,box-shadow] duration-200',
+                          'focus-within:border-primary-300 focus-within:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]',
+                        )}
+                      >
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          interactionStyle="minimal"
+                          value={deadlineDays}
+                          onChange={(event) => onDeadlineDaysChange(event.target.value)}
+                          placeholder="天数"
+                          className="h-6 w-full border-0 bg-transparent p-0 text-center text-[12px] tabular-nums shadow-none placeholder:text-[11px] placeholder:text-text-muted/50"
+                        />
+                        <span className="ml-0.5 shrink-0 text-[11px] font-medium text-text-muted">
+                          天
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -131,7 +205,7 @@ export function TaskConfigurationPanel({
             </div>
           ) : null}
 
-          <div className="min-h-0 flex-1 pb-4">
+          <div className="min-h-0 flex-1 pb-2">
             <div className="flex h-full min-h-0 flex-col">
               <div className={cn('space-y-2.5 px-4 pb-2', canRemoveAssignee ? 'pt-3' : 'pt-0.5')}>
                 <SegmentedControl
@@ -186,6 +260,17 @@ export function TaskConfigurationPanel({
               />
             </div>
           </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end px-4 py-3">
+          <Button
+            onClick={onSubmit}
+            disabled={!canSubmit || isSubmitting}
+            className="h-9 shrink-0 rounded-lg bg-foreground px-3.5 text-[12px] font-semibold text-background hover:bg-foreground/90"
+          >
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+            {isEdit ? '保存修改' : '发布任务'}
+          </Button>
         </div>
       </div>
     </div>

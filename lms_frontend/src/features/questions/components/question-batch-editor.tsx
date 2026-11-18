@@ -160,7 +160,7 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
             title="题目结构"
             items={items}
             activeKey={activeKey}
-            quizType="PRACTICE"
+
             itemDisplayMode="plain"
             showScoreSummary={false}
             onSelectItem={setActiveKey}

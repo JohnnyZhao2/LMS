@@ -5,7 +5,7 @@ import {
   useReplaceUserPermissions,
   useUserPermissions,
 } from '@/features/authorization/api/authorization';
-import { getModulePresentation } from '@/features/authorization/lib/permission-presentation';
+import { getModulePresentation, getPermissionLabel } from '@/features/authorization/lib/permission-presentation';
 import { applyPermissionSelectionChange } from '@/features/authorization/lib/permission-dependencies';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/lib/utils';
@@ -140,7 +140,7 @@ export function UserPermissionSection({
                     )}
                   >
                     <p className="line-clamp-1 min-w-0 flex-1 text-sm font-semibold leading-6 text-slate-800">
-                      {permission.name}
+                      {getPermissionLabel(permission.code, permission.name)}
                     </p>
                     <ToggleSwitch
                       checked={checked}

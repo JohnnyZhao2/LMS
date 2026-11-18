@@ -8,6 +8,7 @@ from apps.activity_logs.services import ActivityLogService
 from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
+from django.db.models import Q
 
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
@@ -140,6 +141,18 @@ class UserManagementService(BaseService):
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         self._validate_user_can_be_deleted(user)
+
+        from apps.submissions.models import Submission
+
+        if Submission.objects.filter(
+            Q(user_id=user.id)
+            | Q(task_assignment__task__created_by_id=user.id)
+            | Q(task_quiz__source_quiz__created_by_id=user.id)
+        ).exists():
+            raise BusinessError(
+                code=ErrorCodes.USER_HAS_DATA,
+                message='用户关联的答卷或阅卷历史仍存在，不能删除账号',
+            )
 
         with transaction.atomic():
             hard_delete_user_business_data(user.id)

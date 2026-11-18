@@ -7,6 +7,7 @@
 from django.db import models
 from django.utils import timezone
 
+from apps.quizzes.models import QuizDefinitionMixin
 from core.mixins import CreatorMixin, TimestampMixin
 
 class Task(TimestampMixin, CreatorMixin, models.Model):
@@ -14,6 +15,7 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
 
     title = models.CharField(max_length=200, verbose_name='任务标题')
     description = models.TextField(blank=True, default='', verbose_name='任务描述')
+    is_archived = models.BooleanField(default=False, db_index=True, verbose_name='已从任务列表移除')
     created_by_admin = models.BooleanField(
         default=False,
         db_index=True,
@@ -33,12 +35,6 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
         through='TaskKnowledge',
         related_name='tasks',
         verbose_name='关联知识快照',
-    )
-    quizzes = models.ManyToManyField(
-        'quizzes.QuizRevision',
-        through='TaskQuiz',
-        related_name='tasks',
-        verbose_name='关联试卷快照',
     )
 
     class Meta:
@@ -63,14 +59,6 @@ class Task(TimestampMixin, CreatorMixin, models.Model):
     @property
     def knowledge_count(self):
         return self.task_knowledge.count()
-
-    @property
-    def exam_count(self):
-        return self.task_quizzes.filter(quiz__quiz_type='EXAM').count()
-
-    @property
-    def practice_count(self):
-        return self.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
 
     @property
     def assignee_count(self):
@@ -218,23 +206,14 @@ class TaskKnowledge(TimestampMixin, models.Model):
         return f'{self.task.title} - {self.knowledge.title}'
 
 
-class TaskQuiz(TimestampMixin, models.Model):
-    """任务与试卷快照的关联。
-
-    答题、评分、统计都读 `quiz` 指向的快照，避免资源中心后续编辑影响已发布任务。
-    """
+class TaskQuiz(TimestampMixin, QuizDefinitionMixin, models.Model):
+    """任务创建时冻结的一份试卷。答题和阅卷只读这里的内容。"""
 
     task = models.ForeignKey(
         Task,
         on_delete=models.CASCADE,
         related_name='task_quizzes',
         verbose_name='任务',
-    )
-    quiz = models.ForeignKey(
-        'quizzes.QuizRevision',
-        on_delete=models.PROTECT,
-        related_name='quiz_tasks',
-        verbose_name='试卷快照',
     )
     source_quiz = models.ForeignKey(
         'quizzes.Quiz',
@@ -243,6 +222,15 @@ class TaskQuiz(TimestampMixin, models.Model):
         blank=True,
         related_name='task_bindings',
         verbose_name='来源试卷',
+    )
+    allow_retry = models.BooleanField(default=False, verbose_name='允许重做')
+    duration = models.PositiveIntegerField(null=True, blank=True, verbose_name='考试时长(分钟)')
+    pass_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='及格分数',
     )
     order = models.PositiveIntegerField(default=1, verbose_name='顺序')
 
@@ -259,7 +247,11 @@ class TaskQuiz(TimestampMixin, models.Model):
         ]
 
     def __str__(self):
-        return f'{self.task.title} - {self.quiz.title}'
+        return f'{self.task.title} - {self.title}'
+
+    @property
+    def kind_label(self) -> str:
+        return '测验' if self.allow_retry else '考试'
 
 
 class KnowledgeLearningProgress(TimestampMixin, models.Model):

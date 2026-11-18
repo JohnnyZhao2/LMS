@@ -110,14 +110,13 @@ class StudentTaskService(BaseService):
         submissions = Submission.objects.filter(
             task_assignment_id=assignment.id,
             status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-        ).select_related('quiz')
+        )
         submission_map = {}
         for submission in submissions:
             submission_map.setdefault(submission.task_quiz_id, []).append(submission)
 
         result = []
         for tq in task_quiz_items:
-            quiz = tq.quiz
             quiz_subs = submission_map.get(tq.id, [])
             is_completed = len(quiz_subs) > 0
             best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
@@ -128,14 +127,13 @@ class StudentTaskService(BaseService):
                     'quiz': tq.id,
                     'quiz_id': tq.id,
                     'task_quiz_id': tq.id,
-                    'quiz_revision_id': tq.quiz_id,
-                    'quiz_title': quiz.title,
-                    'quiz_type': quiz.quiz_type,
-                    'quiz_type_display': quiz.get_quiz_type_display(),
-                    'question_count': quiz.question_count,
-                    'total_score': float(quiz.total_score) if quiz.total_score else 0,
-                    'duration': quiz.duration,
-                    'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
+                    'quiz_title': tq.title,
+                    'allow_retry': tq.allow_retry,
+                    'kind_label': tq.kind_label,
+                    'question_count': tq.question_count,
+                    'total_score': float(tq.total_score) if tq.total_score else 0,
+                    'duration': tq.duration,
+                    'pass_score': float(tq.pass_score) if tq.pass_score is not None else None,
                     'order': tq.order,
                     'is_completed': is_completed,
                     'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,

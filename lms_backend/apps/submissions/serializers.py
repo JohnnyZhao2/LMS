@@ -16,6 +16,13 @@ class AnswerSerializer(serializers.ModelSerializer):
     explanation = serializers.CharField(source='question.explanation', read_only=True)
     graded_by_name = serializers.CharField(source='graded_by.username', read_only=True)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.submission.status == 'IN_PROGRESS':
+            data.pop('correct_answer', None)
+            data.pop('explanation', None)
+        return data
+
     class Meta:
         model = Answer
         fields = [
@@ -43,10 +50,10 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 
 class SubmissionDetailSerializer(serializers.ModelSerializer):
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    quiz_type = serializers.CharField(source='quiz.quiz_type', read_only=True)
-    quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
-    quiz_duration = serializers.IntegerField(source='quiz.duration', read_only=True)
+    quiz_title = serializers.CharField(source='task_quiz.title', read_only=True)
+    allow_retry = serializers.BooleanField(source='task_quiz.allow_retry', read_only=True)
+    kind_label = serializers.CharField(source='task_quiz.kind_label', read_only=True)
+    quiz_duration = serializers.IntegerField(source='task_quiz.duration', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -61,10 +68,9 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'task_quiz_id',
-            'quiz',
             'quiz_title',
-            'quiz_type',
-            'quiz_type_display',
+            'allow_retry',
+            'kind_label',
             'quiz_duration',
             'user',
             'user_name',

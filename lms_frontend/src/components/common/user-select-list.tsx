@@ -9,6 +9,7 @@ export interface UserSelectPanelItem {
   name: string;
   avatarKey?: string | null;
   meta?: string | null;
+  tags?: string[];
   count?: number;
   disabled?: boolean;
 }
@@ -215,16 +216,16 @@ export function UserSelectList({
                   onSelect(item.id);
                 }}
                 className={cn(
-                  'group relative flex w-full items-center text-left transition-all duration-150',
+                  'group relative flex w-full text-left transition-all duration-150',
                   layout === 'grid'
                     ? density === 'compact'
-                      ? 'min-h-[56px] rounded-lg border border-border/70 px-2.5 py-2'
-                      : 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
+                      ? 'flex-col rounded-xl border border-border/70 px-3 py-2.5'
+                      : 'flex-col rounded-xl border border-border/70 px-3.5 py-3'
                     : appearance === 'panel'
                       ? density === 'compact'
-                        ? 'gap-2.5 rounded-md px-2.5 py-1.5'
-                        : 'gap-3 rounded-lg px-3 py-2.5'
-                      : 'rounded-lg border px-2.5 py-2',
+                        ? 'items-center gap-2.5 rounded-md px-2.5 py-1.5'
+                        : 'items-center gap-3 rounded-lg px-3 py-2.5'
+                      : 'items-center rounded-lg border px-2.5 py-2',
                   appearance === 'panel'
                     ? layout === 'grid'
                       ? (
@@ -243,66 +244,78 @@ export function UserSelectList({
               >
                 {layout === 'grid' ? (
                   <>
-                    <UserAvatar
-                      avatarKey={item.avatarKey}
-                      name={item.name}
-                      size="sm"
-                      className={cn(
-                        'mt-0.5 shrink-0 ring-1 ring-border/60',
-                        density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
-                      )}
-                    />
+                    <div className="flex w-full items-center gap-2.5">
+                      <UserAvatar
+                        avatarKey={item.avatarKey}
+                        name={item.name}
+                        size="sm"
+                        className={cn(
+                          'shrink-0 ring-1 ring-border/60',
+                          density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
+                        )}
+                      />
 
-                    <div className="min-w-0 flex-1">
-                      <p className={cn(
-                        'truncate font-semibold leading-tight text-foreground',
-                        density === 'compact' ? 'text-[12px]' : 'text-[12px]',
-                      )}>
+                      <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-foreground">
                         {item.name}
                       </p>
-                      <p className={cn(
-                        'mt-0.5 truncate leading-tight text-text-muted',
-                        density === 'compact' ? 'text-[10px]' : 'text-[10px]',
-                      )}>
-                        {item.meta ?? '未填写工号'}
-                      </p>
+
+                      {showGridSelectionIndicator ? (
+                        dualSelect && !disabled ? (
+                          <button
+                            type="button"
+                            aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
+                            className={cn(
+                              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                              checked
+                                ? 'border-primary bg-primary text-white opacity-100'
+                                : 'border-border bg-background text-transparent opacity-70 hover:border-primary/40 hover:bg-primary-50/80 hover:text-primary',
+                            )}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              onToggleCheck?.(item.id);
+                            }}
+                          >
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </button>
+                        ) : (
+                          <div
+                            aria-hidden="true"
+                            className={cn(
+                              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                              disabled
+                                ? 'opacity-0'
+                                : checked
+                                  ? 'border-primary bg-primary text-white opacity-100'
+                                  : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
+                            )}
+                          >
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </div>
+                        )
+                      ) : null}
                     </div>
 
-                    {showGridSelectionIndicator ? (
-                      dualSelect && !disabled ? (
-                        <button
-                          type="button"
-                          aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
+                    <div className="my-2 w-full border-t border-border/60" />
+
+                    <div className="flex w-full flex-wrap items-center gap-1.5">
+                      {(item.tags && item.tags.length > 0
+                        ? item.tags
+                        : (item.meta ? item.meta.split(' · ').filter(Boolean) : ['未填写工号'])
+                      ).map((tag) => (
+                        <span
+                          key={tag}
                           className={cn(
-                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                            checked
-                              ? 'border-primary bg-primary text-white opacity-100'
-                              : 'border-border bg-background text-transparent opacity-70 hover:border-primary/40 hover:bg-primary-50/80 hover:text-primary',
-                          )}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onToggleCheck?.(item.id);
-                          }}
-                        >
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        </button>
-                      ) : (
-                        <div
-                          aria-hidden="true"
-                          className={cn(
-                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                            disabled
-                              ? 'opacity-0'
-                              : checked
-                                ? 'border-primary bg-primary text-white opacity-100'
-                                : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
+                            'inline-flex max-w-full items-center truncate rounded-full px-2 py-0.5 text-[10px] font-medium leading-tight',
+                            active
+                              ? 'bg-primary-100/70 text-primary-700'
+                              : 'bg-muted/70 text-text-muted',
                           )}
                         >
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        </div>
-                      )
-                    ) : null}
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </>
                 ) : (
                   <>

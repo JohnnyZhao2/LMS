@@ -16,6 +16,7 @@ interface QuizPlayerMainPanelProps {
   questionRefs: MutableRefObject<Record<number, HTMLElement | null>>;
   scrollViewportRef: MutableRefObject<HTMLDivElement | null>;
   onAnswerChange: (questionId: number, value: string | string[]) => void;
+  onAnswerBlur: (questionId: number) => void;
   onToggleMark: (questionId: number) => void;
 }
 
@@ -28,6 +29,7 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
   questionRefs,
   scrollViewportRef,
   onAnswerChange,
+  onAnswerBlur,
   onToggleMark,
 }) => {
   return (
@@ -78,6 +80,7 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
                       userAnswer={answers[answer.question]}
                       isMarked={Boolean(markedQuestions[answer.question])}
                       onAnswerChange={(value) => onAnswerChange(answer.question, value)}
+                      onAnswerBlur={() => onAnswerBlur(answer.question)}
                       onToggleMark={() => onToggleMark(answer.question)}
                       questionNumber={number}
                     />

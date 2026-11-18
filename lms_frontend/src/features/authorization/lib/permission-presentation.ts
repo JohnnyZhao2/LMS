@@ -45,3 +45,28 @@ export const getModulePresentation = (moduleCode: string): ModulePresentationMet
     order: 999,
   }
 );
+
+const ACTION_LABELS: Record<string, string> = {
+  view: '查看',
+  add: '创建',
+  change: '更新',
+  delete: '删除',
+};
+
+const RESOURCE_LABELS: Record<string, string> = {
+  'tasks.task': '任务',
+  'knowledge.knowledge': '知识',
+  'tags.tag': '标签',
+  'quizzes.quiz': '试卷',
+  'questions.question': '题目',
+  'spot_checks.spotcheck': '抽查',
+  'users.user': '用户',
+  'activity_logs.activitylog': '活动日志',
+  'activity_logs.activitylogpolicy': '日志策略',
+};
+
+export const getPermissionLabel = (code: string, name: string): string => {
+  const match = code.match(/^([^.]+)\.(view|add|change|delete)_(.+)$/);
+  const resource = match && RESOURCE_LABELS[`${match[1]}.${match[3]}`];
+  return resource ? `${ACTION_LABELS[match[2]]}${resource}` : name;
+};

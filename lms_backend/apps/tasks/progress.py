@@ -38,10 +38,6 @@ def build_assignment_progress(
             'knowledge_completed': 0,
             'quiz_total': 0,
             'quiz_completed': 0,
-            'exam_total': 0,
-            'exam_completed': 0,
-            'practice_total': 0,
-            'practice_completed': 0,
         }
 
     completed_knowledge = (
@@ -57,8 +53,6 @@ def build_assignment_progress(
     )
     completed = completed_knowledge + completed_quizzes
 
-    exam_total, practice_total = _count_task_quizzes_by_type(task, task_quiz_items)
-
     return {
         'completed': completed,
         'total': total,
@@ -67,10 +61,6 @@ def build_assignment_progress(
         'knowledge_completed': completed_knowledge,
         'quiz_total': total_quizzes,
         'quiz_completed': completed_quizzes,
-        'exam_total': exam_total,
-        'exam_completed': completed_quiz_progress['exam_completed'],
-        'practice_total': practice_total,
-        'practice_completed': completed_quiz_progress['practice_completed'],
     }
 
 
@@ -85,63 +75,26 @@ def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dic
     progress_map = {
         assignment_id: {
             'completed': 0,
-            'exam_completed': 0,
-            'practice_completed': 0,
         }
         for assignment_id in assignment_ids
     }
     if not assignment_ids:
         return progress_map
 
-    grouped_quiz_ids: dict[int, dict[str, set[int]]] = {}
+    grouped_quiz_ids: dict[int, set[int]] = {}
     rows = Submission.objects.filter(
         task_assignment_id__in=assignment_ids,
         status__in=QUIZ_COMPLETION_STATUSES,
-    ).values_list('task_assignment_id', 'task_quiz_id', 'quiz__quiz_type').distinct()
-    for assignment_id, task_quiz_id, quiz_type in rows:
-        bucket = grouped_quiz_ids.setdefault(
-            assignment_id,
-            {
-                'all': set(),
-                'EXAM': set(),
-                'PRACTICE': set(),
-            },
-        )
-        bucket['all'].add(task_quiz_id)
-        if quiz_type in ('EXAM', 'PRACTICE'):
-            bucket[quiz_type].add(task_quiz_id)
+    ).values_list('task_assignment_id', 'task_quiz_id').distinct()
+    for assignment_id, task_quiz_id in rows:
+        grouped_quiz_ids.setdefault(assignment_id, set()).add(task_quiz_id)
 
     for assignment_id, quiz_ids in grouped_quiz_ids.items():
         progress_map[assignment_id] = {
-            'completed': len(quiz_ids['all']),
-            'exam_completed': len(quiz_ids['EXAM']),
-            'practice_completed': len(quiz_ids['PRACTICE']),
+            'completed': len(quiz_ids),
         }
 
     return progress_map
-
-
-def _count_task_quizzes_by_type(task, prefetched_task_quizzes) -> tuple[int, int]:
-    if prefetched_task_quizzes is not None:
-        if any('quiz' not in task_quiz.__dict__ for task_quiz in prefetched_task_quizzes):
-            return (
-                task.task_quizzes.filter(quiz__quiz_type='EXAM').count(),
-                task.task_quizzes.filter(quiz__quiz_type='PRACTICE').count(),
-            )
-        exam_total = 0
-        practice_total = 0
-        for task_quiz in prefetched_task_quizzes:
-            quiz = task_quiz.__dict__['quiz']
-            if quiz.quiz_type == 'EXAM':
-                exam_total += 1
-            elif quiz.quiz_type == 'PRACTICE':
-                practice_total += 1
-        return exam_total, practice_total
-
-    return (
-        task.task_quizzes.filter(quiz__quiz_type='EXAM').count(),
-        task.task_quizzes.filter(quiz__quiz_type='PRACTICE').count(),
-    )
 
 
 def _get_prefetched_related(instance, relation_name: str):
@@ -153,7 +106,5 @@ def _get_completed_quiz_progress(assignment) -> dict[str, int]:
         assignment.id,
         {
             'completed': 0,
-            'exam_completed': 0,
-            'practice_completed': 0,
         },
     )

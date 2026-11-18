@@ -27,8 +27,8 @@ const toPendingTask = (task: TaskDetail): PendingTask => ({
   quizzes: task.quizzes.map((quiz) => ({
     quiz_id: quiz.task_quiz_id,
     quiz_title: quiz.quiz_title,
-    quiz_type: quiz.quiz_type,
-    quiz_type_display: quiz.quiz_type_display,
+    allow_retry: quiz.allow_retry,
+    kind_label: quiz.kind_label,
     question_count: quiz.question_count,
     duration: quiz.duration ?? null,
     pending_count: 0,

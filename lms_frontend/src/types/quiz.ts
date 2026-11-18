@@ -5,19 +5,18 @@
 import type { SimpleTag } from './common';
 import type { QuestionType } from './common';
 
-export type QuizType = 'PRACTICE' | 'EXAM';
-
 export interface QuizQuestionInput {
   id?: number;
   source_question_id?: number | null;
-  content: string;
-  question_type: QuestionType;
+  content?: string;
+  question_type?: QuestionType;
   options?: Array<{ key: string; value: string }>;
   answer?: string | string[];
   explanation?: string;
   score: string | number;
   space_tag_id?: number | null;
   tag_ids?: number[];
+  question_changes?: Partial<Omit<QuizQuestionInput, 'id' | 'source_question_id' | 'question_changes'>>;
 }
 
 export interface QuizQuestion {
@@ -41,10 +40,6 @@ export interface QuizListItem {
   question_count: number;
   total_score: string;
   usage_count: number;
-  quiz_type: QuizType;
-  quiz_type_display: string;
-  duration?: number | null;
-  pass_score?: string | null;
   created_by_name?: string;
   updated_by_name?: string;
   created_at: string;
@@ -57,10 +52,6 @@ export interface QuizDetail {
   questions: QuizQuestion[];
   question_count?: number;
   total_score: string;
-  quiz_type: QuizType;
-  quiz_type_display: string;
-  duration?: number | null;
-  pass_score?: number | null;
   created_by_name?: string;
   updated_by_name?: string;
   created_at: string;
@@ -69,8 +60,5 @@ export interface QuizDetail {
 
 export interface QuizCreateRequest {
   title: string;
-  quiz_type: QuizType;
-  duration?: number | null;
-  pass_score?: number | null;
   questions?: QuizQuestionInput[];
 }

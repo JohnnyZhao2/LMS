@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { FileCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/features/grading/api/pending-quizzes';
 import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/grading/components/grading-center-tab';
 
@@ -93,14 +92,8 @@ export const GradingCenterPage: React.FC = () => {
   }
 
   return (
-    <PageFillShell>
-      <PageHeader
-        title="阅卷中心"
-        icon={<FileCheck />}
-      />
-
-      <PageWorkbench>
-        {selectorTasks.length === 0 ? (
+    <PageWorkbench>
+      {selectorTasks.length === 0 ? (
           <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
             <EmptyState
               icon={FileCheck}
@@ -115,7 +108,6 @@ export const GradingCenterPage: React.FC = () => {
             selectorConfig={selectorConfig}
           />
         )}
-      </PageWorkbench>
-    </PageFillShell>
+    </PageWorkbench>
   );
 };

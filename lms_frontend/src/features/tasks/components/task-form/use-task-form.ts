@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -10,19 +10,41 @@ import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
 import { useAssignableUsers } from '@/api/users/get-assignable-users';
 import { useTaskResourceOptions } from '../../api/get-task-resources';
-import { useUpdateTask } from '../../api/update-task';
-import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
+import { useUpdateTask, type TaskUpdateRequest } from '../../api/update-task';
+import { formatScore } from '@/lib/score';
+import type { ResourceFilterType, ResourceItem, SelectedResource } from './task-form.types';
 import { mapTaskResourceOptionToResource } from './task-form.types';
 import {
   buildStableUid,
   buildTaskFormInitialSelectedResources,
   buildTaskSubmitPayload,
+  getExamResourcesValidationError,
   hasMissingTaskResourceSources,
-  insertSelectedResourceByGroup,
   reorderSelectedResourcesWithinGroup,
+  sortSelectedResourcesByGroup,
 } from './use-task-form.helpers';
 
 const PAGE_SIZE = 9;
+const DEFAULT_DEADLINE_DAYS = '7';
+const MS_PER_DAY = 86_400_000;
+
+const parsePositiveDays = (value: string): number | null => {
+  if (!/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const buildDeadlineFromDays = (days: number): Date => {
+  const target = new Date();
+  target.setDate(target.getDate() + days);
+  target.setHours(23, 59, 59, 0);
+  return target;
+};
+
+const computeRemainingDays = (deadlineDate: Date): string => {
+  const diffDays = Math.ceil((deadlineDate.getTime() - Date.now()) / MS_PER_DAY);
+  return String(Math.max(1, diffDays));
+};
 
 type Updater<T> = T | ((prev: T) => T);
 
@@ -43,13 +65,15 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
 
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
-  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(null);
+  const [deadlineDaysDraft, setDeadlineDaysDraft] = useState<string | null>(null);
   const [selectedResourcesDraft, setSelectedResourcesDraft] = useState<SelectedResource[] | null>(null);
   const [resourceSearch, setResourceSearch] = useState('');
-  const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
+  const [resourceTypeFilter, setResourceTypeFilter] = useState<ResourceFilterType>('ALL');
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<number[] | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const pendingInsertIndexRef = useRef<number | null>(null);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -59,12 +83,16 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   const hasProgress = task?.has_progress || false;
-  const resourcesDisabled = isEdit && hasProgress;
+  const resourcesDisabled = isEdit;
   const canRemoveAssignee = !(isEdit && hasProgress);
 
   const initialTitle = isEdit && task ? task.title : '';
   const initialDescription = isEdit && task ? (task.description || '') : '';
-  const initialDeadline = isEdit && task?.deadline ? new Date(task.deadline) : undefined;
+  const initialDeadline = useMemo(
+    () => (isEdit && task?.deadline ? new Date(task.deadline) : undefined),
+    [isEdit, task],
+  );
+  const initialDeadlineDays = initialDeadline ? computeRemainingDays(initialDeadline) : DEFAULT_DEADLINE_DAYS;
 
   const initialSelectedResources = useMemo<SelectedResource[]>(() => {
     return buildTaskFormInitialSelectedResources({
@@ -82,13 +110,22 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
 
   const title = titleDraft ?? initialTitle;
   const description = descriptionDraft ?? initialDescription;
-  const deadline = deadlineDraft === null ? initialDeadline : deadlineDraft;
+  const deadlineDays = deadlineDaysDraft ?? initialDeadlineDays;
+  const parsedDeadlineDays = parsePositiveDays(deadlineDays);
+  const deadline = useMemo(() => {
+    if (deadlineDaysDraft === null && isEdit && initialDeadline) {
+      return initialDeadline;
+    }
+    return parsedDeadlineDays ? buildDeadlineFromDays(parsedDeadlineDays) : undefined;
+  }, [deadlineDaysDraft, initialDeadline, isEdit, parsedDeadlineDays]);
   const selectedResources = selectedResourcesDraft ?? initialSelectedResources;
   const selectedUserIds = selectedUserIdsDraft ?? initialSelectedUserIds;
 
   const setTitle = (nextTitle: string) => setTitleDraft(nextTitle);
   const setDescription = (nextDescription: string) => setDescriptionDraft(nextDescription);
-  const setDeadline = (nextDeadline: Date | undefined) => setDeadlineDraft(nextDeadline);
+  const setDeadlineDays = (nextValue: string) => {
+    setDeadlineDaysDraft(nextValue.replace(/[^\d]/g, ''));
+  };
   const setSelectedResources = (updater: Updater<SelectedResource[]>) => {
     setSelectedResourcesDraft((prev) => applyUpdater(updater, prev ?? initialSelectedResources));
   };
@@ -116,9 +153,10 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     search: resourceSearch,
     page: currentPage,
     page_size: PAGE_SIZE,
-    resource_type: resourceType,
+    resource_type: resourceTypeFilter,
     exclude_document_ids: excludedDocumentIds,
     exclude_quiz_ids: excludedQuizIds,
+    enabled: isPickerOpen,
   });
 
   const availableResources = useMemo(
@@ -138,17 +176,87 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     ));
   }, [users, userSearch]);
 
+  const openPicker = (initialType: ResourceFilterType = 'ALL', insertIndex?: number) => {
+    if (resourcesDisabled) return;
+    pendingInsertIndexRef.current = insertIndex ?? null;
+    setResourceSearch('');
+    setResourceTypeFilter(initialType);
+    setCurrentPage(1);
+    setIsPickerOpen(true);
+  };
+
+  const closePicker = () => {
+    pendingInsertIndexRef.current = null;
+    setIsPickerOpen(false);
+  };
+
   const addResource = (resource: ResourceItem) => {
     if (resourcesDisabled) return;
+    const quizType = resource.resourceType === 'QUIZ' ? 'PRACTICE' : undefined;
+    const insertAt = pendingInsertIndexRef.current;
+    const alreadyExists = selectedResources.some(
+      (item) => item.resourceType === resource.resourceType && item.id === resource.id,
+    );
+    if (alreadyExists) {
+      return;
+    }
+    if (insertAt !== null) {
+      pendingInsertIndexRef.current = insertAt + 1;
+    }
     setSelectedResources((prev) => {
       if (prev.some((item) => item.resourceType === resource.resourceType && item.id === resource.id)) {
         return prev;
       }
-      return insertSelectedResourceByGroup(prev, {
+      const nextItem: SelectedResource = {
         ...resource,
+        quizType,
         uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
-      });
+      };
+      const nextList = [...prev];
+      const clampedIndex = insertAt === null ? nextList.length : Math.max(0, Math.min(insertAt, nextList.length));
+      nextList.splice(clampedIndex, 0, nextItem);
+      return sortSelectedResourcesByGroup(nextList);
     });
+  };
+
+  const toggleQuizType = (uid: number, nextQuizType: 'PRACTICE' | 'EXAM') => {
+    if (resourcesDisabled) return;
+    setSelectedResources((prev) => sortSelectedResourcesByGroup(prev.map((item) => {
+      if (item.uid !== uid || item.resourceType !== 'QUIZ') {
+        return item;
+      }
+      if (nextQuizType === 'PRACTICE') {
+        return {
+          ...item,
+          quizType: 'PRACTICE',
+        };
+      }
+      const defaultPassScore =
+        item.totalScore && item.totalScore > 0
+          ? formatScore(Math.round(item.totalScore * 0.6 * 10) / 10)
+          : '';
+      return {
+        ...item,
+        quizType: 'EXAM',
+        duration: item.duration || '60',
+        passScore: item.passScore || defaultPassScore,
+      };
+    })));
+  };
+
+  const updateResourceExamConfig = (
+    uid: number,
+    patch: { duration?: string; passScore?: string },
+  ) => {
+    setSelectedResources((prev) => prev.map((item) => (
+      item.uid === uid && item.quizType === 'EXAM'
+        ? {
+          ...item,
+          ...(patch.duration !== undefined && !isEdit ? { duration: patch.duration } : {}),
+          ...(patch.passScore !== undefined ? { passScore: patch.passScore } : {}),
+        }
+        : item
+    )));
   };
 
   const removeResource = (uid: number) => {
@@ -184,6 +292,7 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (resourcesDisabled) return;
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setSelectedResources((currentItems) => {
@@ -200,7 +309,7 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
       return;
     }
     if (!deadline) {
-      toast.error('请选择截止时间');
+      toast.error('请输入有效的截止天数');
       return;
     }
     if (selectedResources.length === 0 || selectedUserIds.length === 0) {
@@ -211,9 +320,14 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
       toast.error('存在已删除的原始资源，请先移除或替换');
       return;
     }
+    const examConfigError = getExamResourcesValidationError(selectedResources, { isEdit });
+    if (examConfigError) {
+      toast.error(examConfigError);
+      return;
+    }
 
     try {
-      const payload: TaskCreateRequest = buildTaskSubmitPayload({
+      const payload = buildTaskSubmitPayload({
         title,
         description,
         deadline,
@@ -223,10 +337,10 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
       });
 
       if (isEdit) {
-        await updateTask.mutateAsync({ taskId, data: payload });
+        await updateTask.mutateAsync({ taskId, data: payload as TaskUpdateRequest });
         toast.success('任务更新成功');
       } else {
-        await createTask.mutateAsync(payload);
+        await createTask.mutateAsync(payload as TaskCreateRequest);
         toast.success('任务发布成功');
       }
       navigate(ROUTES.TASKS);
@@ -254,12 +368,16 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     description,
     setDescription,
     deadline,
-    setDeadline,
+    deadlineDays,
+    setDeadlineDays,
     selectedResources,
     resourceSearch,
     setResourceSearch,
-    resourceType,
-    setResourceType,
+    resourceTypeFilter,
+    setResourceTypeFilter,
+    isPickerOpen,
+    openPicker,
+    closePicker,
     selectedUserIds,
     userSearch,
     setUserSearch,
@@ -279,6 +397,8 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     resourcesDisabled,
     canRemoveAssignee,
     addResource,
+    toggleQuizType,
+    updateResourceExamConfig,
     removeResource,
     toggleUser,
     toggleUsers,

@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner';
 interface QuizSubmitDialogProps {
   open: boolean;
   unansweredCount: number;
-  isExam: boolean;
+  allowRetry: boolean;
   isPending: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -20,7 +20,7 @@ interface QuizAbandonDialogProps {
 export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
   open,
   unansweredCount,
-  isExam,
+  allowRetry,
   isPending,
   onOpenChange,
   onConfirm,
@@ -37,7 +37,7 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
               </div>
             )}
             <div>
-              {isExam ? '考试提交后无法重做，确定要提交吗？' : '确定要提交吗？'}
+              {allowRetry ? '确定要提交吗？' : '提交后无法重做，确定要提交吗？'}
             </div>
           </div>
         </DialogDescription>
@@ -47,7 +47,7 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
           继续答题
         </Button>
         <Button
-          variant={isExam ? 'destructive' : 'default'}
+          variant={allowRetry ? 'default' : 'destructive'}
           onClick={onConfirm}
           disabled={isPending}
         >

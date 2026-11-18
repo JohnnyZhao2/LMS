@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ListChecks, Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { UserAvatar } from '@/components/users/user-avatar';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import {
   Select,
@@ -67,7 +66,6 @@ const averageScoreOf = (items: SpotCheckItem[]) => {
 interface SpotCheckFormProps {
   spotCheckId?: number;
   studentIds?: number[];
-  hidePageHeader?: boolean;
   onCancel?: () => void;
   onSuccess?: () => void;
   onSwitchRecord?: (record: SpotCheck) => void;
@@ -178,7 +176,6 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
   resolvedSpotCheckId,
   isEdit,
   studentIds = [],
-  hidePageHeader = false,
   onCancel,
   onSuccess,
   onSwitchRecord,
@@ -368,13 +365,6 @@ const SpotCheckFormInner: React.FC<SpotCheckFormProps & {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {!hidePageHeader ? (
-        <PageHeader
-          title={isEdit ? (mode === 'score' ? '抽查评分' : '抽查详情') : '发起抽查'}
-          icon={<ListChecks className="h-5 w-5" />}
-        />
-      ) : null}
-
       <div className="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-8 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="flex h-full min-h-0 flex-col gap-5 rounded-2xl bg-[#f6f7fb] p-5">
           <div className="space-y-2">

@@ -80,18 +80,11 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
       variant: 'knowledge' as const,
     },
     {
-      key: 'practice',
-      total: progress.practice_total ?? 0,
-      completed: progress.practice_completed ?? 0,
-      label: '测验',
+      key: 'quiz',
+      total: progress.quiz_total ?? 0,
+      completed: progress.quiz_completed ?? 0,
+      label: '试卷',
       variant: 'practice' as const,
-    },
-    {
-      key: 'exam',
-      total: progress.exam_total ?? 0,
-      completed: progress.exam_completed ?? 0,
-      label: '考试',
-      variant: 'exam' as const,
     },
   ].filter((item) => item.total > 0);
 

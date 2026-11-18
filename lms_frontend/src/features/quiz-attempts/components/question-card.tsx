@@ -12,6 +12,7 @@ interface QuestionCardProps {
   answer: Answer;
   userAnswer?: UserAnswerValue;
   onAnswerChange: (value: string | string[]) => void;
+  onAnswerBlur?: () => void;
   disabled?: boolean;
   showResult?: boolean;
   questionNumber?: number;
@@ -30,6 +31,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   answer,
   userAnswer,
   onAnswerChange,
+  onAnswerBlur,
   disabled = false,
   showResult = false,
   questionNumber,
@@ -54,6 +56,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         explanation=""
         showExplanation={false}
         disabled={disabled}
+        onResponseBlur={onAnswerBlur}
         headerActions={onToggleMark ? (
           <Button
             type="button"

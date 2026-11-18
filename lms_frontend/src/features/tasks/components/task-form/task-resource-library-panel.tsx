@@ -1,43 +1,40 @@
 import {
   BookOpen,
   FileCheck,
-  LayoutGrid,
+  Layers,
   Plus,
+  X,
 } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   GHOST_ACCENT_HOVER_CLASSNAME,
   QUIET_OUTLINE_FIELD_CLASSNAME,
   SUBTLE_SURFACE_HOVER_CLASSNAME,
 } from '@/components/ui/interactive-styles';
 import { SearchInput } from '@/components/ui/search-input';
-import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 
-import {
-  TASK_FORM_PANEL_CLASSNAME,
-  TASK_FORM_PANEL_HEADER_CLASSNAME,
-  TASK_FORM_SEGMENTED_CONTROL_CLASSNAME,
-  TASK_FORM_WARNING_ALERT_CLASSNAME,
-  TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
-} from './task-form.constants';
-import type { ResourceItem, ResourceType } from './task-form.types';
+import { TASK_FORM_SEGMENTED_CONTROL_CLASSNAME } from './task-form.constants';
+import type { ResourceFilterType, ResourceItem, SelectedResource } from './task-form.types';
 
 interface TaskResourceLibraryPanelProps {
+  resourceTypeFilter: ResourceFilterType;
+  onResourceTypeFilterChange: (value: ResourceFilterType) => void;
   availableResources: ResourceItem[];
+  selectedResources: SelectedResource[];
   isLoading: boolean;
   resourceSearch: string;
   onResourceSearchChange: (value: string) => void;
-  resourceType: 'ALL' | ResourceType;
-  onResourceTypeChange: (value: 'ALL' | ResourceType) => void;
   onResourceAdd: (resource: ResourceItem) => void;
+  onResourceRemove: (uid: number) => void;
   onDocumentPreview: (documentId: number) => void;
   onQuizPreview: (quizId: number) => void;
-  resourcesDisabled: boolean;
+  onDone?: () => void;
   totalResourceCount: number;
   pageSize: number;
   safeCurrentPage: number;
@@ -45,175 +42,287 @@ interface TaskResourceLibraryPanelProps {
   onPageChange: (page: number) => void;
 }
 
+const FILTER_OPTIONS: Array<{ label: string; value: ResourceFilterType }> = [
+  { label: '全部', value: 'ALL' },
+  { label: '学习资料', value: 'DOCUMENT' },
+  { label: '试卷', value: 'QUIZ' },
+];
+
+const EMPTY_COPY: Record<ResourceFilterType, string> = {
+  ALL: '暂无匹配资源',
+  DOCUMENT: '暂无匹配文档',
+  QUIZ: '暂无匹配试卷',
+};
+
+interface ResourceOptionRowProps {
+  resource: ResourceItem;
+  onPreview: () => void;
+  action: React.ReactNode;
+  badge?: React.ReactNode;
+  className?: string;
+}
+
+function ResourceOptionRow({
+  resource,
+  onPreview,
+  action,
+  badge,
+  className,
+}: ResourceOptionRowProps) {
+  return (
+    <div
+      className={cn(
+        'group flex h-[64px] w-full items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
+        SUBTLE_SURFACE_HOVER_CLASSNAME,
+        className,
+      )}
+    >
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+        onClick={onPreview}
+      >
+        <div
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-transform group-hover:scale-105',
+            resource.resourceType === 'DOCUMENT'
+              ? 'bg-secondary-50 text-secondary'
+              : 'bg-primary-50 text-primary',
+          )}
+        >
+          {resource.resourceType === 'DOCUMENT' ? (
+            <BookOpen className="h-5 w-5" />
+          ) : (
+            <FileCheck className="h-5 w-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-1.5">
+            <span className="truncate text-[13px] font-semibold text-foreground">{resource.title}</span>
+            {badge}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-medium text-text-muted">
+            <span className="text-text-muted">
+              {resource.resourceType === 'DOCUMENT' ? '文档' : '试卷'}
+            </span>
+            <span className="h-0.5 w-0.5 rounded-full bg-border" />
+            <span className="truncate text-text-muted">{resource.category}</span>
+          </div>
+        </div>
+      </button>
+
+      <div className="flex shrink-0 items-center gap-1">{action}</div>
+    </div>
+  );
+}
+
 export function TaskResourceLibraryPanel({
+  resourceTypeFilter,
+  onResourceTypeFilterChange,
   availableResources,
+  selectedResources,
   isLoading,
   resourceSearch,
   onResourceSearchChange,
-  resourceType,
-  onResourceTypeChange,
   onResourceAdd,
+  onResourceRemove,
   onDocumentPreview,
   onQuizPreview,
-  resourcesDisabled,
+  onDone,
   totalResourceCount,
   pageSize,
   safeCurrentPage,
   showPagination,
   onPageChange,
 }: TaskResourceLibraryPanelProps) {
+  const selectedDocumentCount = selectedResources.filter((item) => item.resourceType === 'DOCUMENT').length;
+  const selectedQuizCount = selectedResources.length - selectedDocumentCount;
+
+  const handlePreview = (resource: ResourceItem) => {
+    if (resource.resourceType === 'DOCUMENT') {
+      onDocumentPreview(resource.id);
+      return;
+    }
+    onQuizPreview(resource.id);
+  };
+
   return (
-    <div className={TASK_FORM_PANEL_CLASSNAME}>
-      <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
-        <LayoutGrid className="h-4 w-4 text-primary-500" />
-        <span>资源库</span>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 pr-11">
+        <span className="text-[13px] font-semibold text-foreground">添加任务资源</span>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="space-y-3 px-4 py-3">
-          <SearchInput
-            placeholder="搜索文档/测验..."
-            value={resourceSearch}
-            onChange={onResourceSearchChange}
-            inputClassName={cn(
-              'h-9 rounded-lg text-[11px] placeholder:text-text-muted/50',
-              QUIET_OUTLINE_FIELD_CLASSNAME,
-            )}
-          />
+      <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border md:grid-cols-2 md:divide-x md:divide-y-0">
+        {/* 左栏：可选资源库 */}
+        <div className="flex min-h-0 flex-col">
+          <div className="space-y-2.5 px-4 py-3">
+            <SegmentedControl
+              options={FILTER_OPTIONS}
+              value={resourceTypeFilter}
+              onChange={(value) => onResourceTypeFilterChange(value as ResourceFilterType)}
+              size="sm"
+              className={`${TASK_FORM_SEGMENTED_CONTROL_CLASSNAME} [&>div]:grid-cols-3`}
+            />
+            <SearchInput
+              placeholder="搜索资料或试卷..."
+              value={resourceSearch}
+              onChange={onResourceSearchChange}
+              inputClassName={cn(
+                'h-9 rounded-lg text-[11px] placeholder:text-text-muted/50',
+                QUIET_OUTLINE_FIELD_CLASSNAME,
+              )}
+            />
+          </div>
 
-          <SegmentedControl
-            value={resourceType}
-            onChange={(value) => onResourceTypeChange(value as 'ALL' | ResourceType)}
-            options={[
-              { label: '全部', value: 'ALL' },
-              { label: '文档', value: 'DOCUMENT' },
-              { label: '试卷', value: 'QUIZ' },
-            ]}
-            size="sm"
-            className={`${TASK_FORM_SEGMENTED_CONTROL_CLASSNAME} [&>div]:grid-cols-3`}
-          />
+          <div className="min-h-0 flex-1 pl-4 pr-0 pb-3">
+            <ScrollContainer className="h-full overflow-y-auto pr-4">
+              {isLoading ? (
+                <div className="space-y-2.5">
+                  {Array.from({ length: pageSize }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="flex h-[64px] items-center gap-3 rounded-lg border border-border bg-muted/70 px-3 animate-pulse"
+                    >
+                      <div className="h-9 w-9 rounded-md bg-background" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-3/4 rounded bg-background" />
+                        <div className="h-2 w-1/2 rounded bg-background" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : availableResources.length === 0 ? (
+                <div className="flex h-full min-h-[160px] flex-col items-center justify-center text-text-muted">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                    <FileCheck className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm font-medium">{EMPTY_COPY[resourceTypeFilter]}</span>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {availableResources.map((resource) => (
+                    <ResourceOptionRow
+                      key={`${resource.resourceType}-${resource.id}-${resource.title}`}
+                      resource={resource}
+                      onPreview={() => handlePreview(resource)}
+                      action={(
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            'h-7 w-7 rounded-full text-text-muted',
+                            GHOST_ACCENT_HOVER_CLASSNAME,
+                          )}
+                          aria-label={`加入${resource.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onResourceAdd(resource);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </ScrollContainer>
+          </div>
 
-          {resourcesDisabled ? (
-            <Alert variant="warning" className={TASK_FORM_WARNING_ALERT_CLASSNAME}>
-              <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
-                任务已有人员开始执行，无法修改资源
-              </AlertDescription>
-            </Alert>
+          {showPagination && totalResourceCount > pageSize ? (
+            <div className="border-t border-border px-4 py-2.5">
+              <Pagination
+                current={safeCurrentPage}
+                total={totalResourceCount}
+                pageSize={pageSize}
+                onChange={(page) => onPageChange(page)}
+                variant="compact"
+                className="text-[11px]"
+              />
+            </div>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 pl-4 pr-0 pb-3">
-          <ScrollContainer className="h-full overflow-y-auto pr-4">
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: pageSize }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-[72px] items-center gap-3 rounded-xl border border-border bg-muted/70 px-4 animate-pulse"
-                  >
-                    <div className="h-10 w-10 rounded-lg bg-background" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-3/4 rounded bg-background" />
-                      <div className="h-2 w-1/2 rounded bg-background" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : availableResources.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-text-muted">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                  <FileCheck className="h-5 w-5" />
-                  </div>
-                  <span className="text-sm font-medium">暂无匹配资源</span>
-                </div>
-            ) : (
-              <div className="space-y-3">
-                {availableResources.map((resource) => (
-                  <button
-                    key={`${resource.resourceType}-${resource.id}-${resource.title}`}
-                    type="button"
-                    className={cn(
-                      'group flex h-[64px] w-full items-center gap-2.5 rounded-lg border border-border bg-background p-2.5 text-left',
-                      SUBTLE_SURFACE_HOVER_CLASSNAME,
-                      'cursor-pointer',
-                      resourcesDisabled && 'bg-muted/15',
-                    )}
-                    onClick={() => {
-                      if (resource.resourceType === 'DOCUMENT') {
-                        onDocumentPreview(resource.id);
-                        return;
-                      }
-
-                      onQuizPreview(resource.id);
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-transform group-hover:scale-105',
-                        resource.resourceType === 'DOCUMENT'
-                          ? 'bg-secondary-50 text-secondary'
-                          : resource.quizType === 'EXAM'
-                            ? 'bg-destructive-50 text-destructive'
-                            : 'bg-primary-50 text-primary',
-                      )}
-                    >
-                      {resource.resourceType === 'DOCUMENT' ? (
-                        <BookOpen className="h-5 w-5" />
-                      ) : (
-                        <FileCheck className="h-5 w-5" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-0.5 truncate text-[13px] font-semibold text-foreground">{resource.title}</div>
-                      <div className="flex items-center gap-2 text-[10px] font-medium text-text-muted">
-                        <span className="text-text-muted">
-                          {resource.resourceType === 'DOCUMENT' ? '文档' : resource.quizType === 'EXAM' ? '考试' : '测验'}
-                        </span>
-                        <span className="h-0.5 w-0.5 rounded-full bg-border" />
-                        <span className="truncate text-text-muted">{resource.category}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          'h-7 w-7 rounded-full !opacity-0 group-hover:!opacity-100 disabled:!opacity-0 group-hover:disabled:!opacity-100',
-                          GHOST_ACCENT_HOVER_CLASSNAME,
-                        )}
-                        disabled={resourcesDisabled}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!resourcesDisabled) {
-                            onResourceAdd(resource);
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollContainer>
-        </div>
-
-        {showPagination && totalResourceCount > pageSize ? (
-          <div className="border-t border-border px-4 py-2.5">
-            <Pagination
-              current={safeCurrentPage}
-              total={totalResourceCount}
-              pageSize={pageSize}
-              onChange={(page) => onPageChange(page)}
-              variant="compact"
-              className="text-[11px]"
-            />
+        {/* 右栏：已选资源面板 */}
+        <div className="flex min-h-0 flex-col bg-muted/20">
+          <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-semibold text-foreground">已选资源</span>
+              <Badge
+                variant="secondary"
+                className="h-5 border-none bg-background px-2 text-[11px] font-bold text-text-muted shadow-2xs"
+              >
+                {selectedResources.length}
+              </Badge>
+            </div>
+            {selectedResources.length > 0 ? (
+              <span className="text-[11px] font-medium text-text-muted">
+                {selectedDocumentCount} 份资料 · {selectedQuizCount} 份试卷
+              </span>
+            ) : null}
           </div>
-        ) : null}
+
+          <div className="min-h-0 flex-1 pl-4 pr-0 py-3">
+            <ScrollContainer className="h-full overflow-y-auto pr-4">
+              {selectedResources.length === 0 ? (
+                <div className="flex h-full min-h-[160px] flex-col items-center justify-center px-4 text-center text-text-muted">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-background shadow-2xs">
+                    <Layers className="h-5 w-5 text-text-muted/70" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground/80">暂无已选资源</span>
+                  <span className="mt-1 text-[11px] text-text-muted">
+                    从左侧点击 + 加入学习资料或试卷
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {selectedResources.map((resource) => (
+                    <ResourceOptionRow
+                      key={resource.uid}
+                      resource={resource}
+                      onPreview={() => handlePreview(resource)}
+                      badge={resource.resourceType === 'QUIZ' ? (
+                        <Badge
+                          variant="secondary"
+                          className="h-4 shrink-0 border-none bg-muted px-1.5 text-[10px] font-medium text-text-muted"
+                        >
+                          {resource.quizType === 'EXAM' ? '考试' : '练习'}
+                        </Badge>
+                      ) : null}
+                      action={(
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-text-muted hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`移除${resource.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onResourceRemove(resource.uid);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </ScrollContainer>
+          </div>
+        </div>
       </div>
+
+      {onDone ? (
+        <div className="flex items-center justify-between border-t border-border bg-background px-4 py-2.5">
+          <span className="text-[11px] text-text-muted">
+            点击任意资源可预览详情
+          </span>
+          <Button size="sm" onClick={onDone}>
+            完成
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

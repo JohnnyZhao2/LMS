@@ -5,8 +5,8 @@ import { queryKeys } from '@/lib/query-keys';
 export interface PendingQuiz {
   quiz_id: number;
   quiz_title: string;
-  quiz_type: 'EXAM' | 'PRACTICE';
-  quiz_type_display: string;
+  allow_retry: boolean;
+  kind_label: string;
   question_count: number;
   duration: number | null;
   pending_count: number;

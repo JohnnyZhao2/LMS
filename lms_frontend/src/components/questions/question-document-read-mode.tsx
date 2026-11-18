@@ -24,6 +24,7 @@ type QuestionDocumentReadModeProps = Pick<
   | 'questionNumber'
   | 'onResponseChange'
 > & {
+  onResponseBlur?: () => void;
   headerActions?: React.ReactNode;
   explanationLayout?: 'inline' | 'bottom';
 };
@@ -45,6 +46,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
   disabled = false,
   questionNumber,
   onResponseChange,
+  onResponseBlur,
 }) => {
   const isAnswerMode = mode === 'answer';
   const isChoiceType = questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE';
@@ -114,6 +116,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
               disabled={disabled}
               interactive={isAnswerMode}
               onResponseChange={onResponseChange}
+              onResponseBlur={onResponseBlur}
             />
           </div>
 

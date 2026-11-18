@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .assignment_workflow import get_assignment_progress_data
+from .progress import build_assignment_progress
 from .models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from .status_serializers import AssignmentExecutionStatusSerializerMixin
 from .student_task_service import StudentTaskService
@@ -66,7 +66,7 @@ class StudentAssignmentListSerializer(AssignmentExecutionStatusSerializerMixin, 
         return obj.task.has_knowledge
 
     def get_progress(self, obj):
-        return get_assignment_progress_data(obj)
+        return build_assignment_progress(obj)
 
 
 class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
@@ -102,7 +102,7 @@ class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, seri
         ]
 
     def get_progress(self, obj):
-        return get_assignment_progress_data(obj)
+        return build_assignment_progress(obj)
 
     def get_knowledge_items(self, obj):
         return StudentTaskService.get_student_knowledge_items(obj)

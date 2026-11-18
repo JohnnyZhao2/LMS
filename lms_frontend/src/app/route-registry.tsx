@@ -7,10 +7,9 @@
  */
 import { lazy, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Activity, BookOpen, FileSearch, HelpCircle, ListTodo, Settings, SquareTerminal, Tags, Users } from 'lucide-react';
+import { BookOpen, FileSearch, HelpCircle, ListTodo, SquareTerminal, Tags, Users } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageShell } from '@/components/ui/page-shell';
+import { PageShell } from '@/components/ui/page-shell';
 import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/authorization';
 import { useWorkbench } from '@/hooks/use-workbench';
 import type { Workbench } from '@/types/common';
@@ -251,7 +250,6 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     },
     element: (
       <PageShell>
-        <PageHeader title="日志策略" icon={<Settings />} />
         <ActivityLogPolicyPanel />
       </PageShell>
     ),
@@ -264,12 +262,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
       group: LOG_GROUP,
       order: 10,
     },
-    element: (
-      <PageFillShell>
-        <PageHeader title="日志审计" icon={<Activity />} />
-        <ActivityLogsPanel />
-      </PageFillShell>
-    ),
+    element: <ActivityLogsPanel />,
   },
   {
     path: 'authorization',

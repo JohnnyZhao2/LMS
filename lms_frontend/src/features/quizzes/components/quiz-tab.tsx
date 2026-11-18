@@ -19,18 +19,17 @@ import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
-import { CellMutedTimestamp, CellReferenceTag, CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
+import { CellMutedTimestamp, CellReferenceTag, CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuizTabProps {
   search?: string;
-  quizType?: 'EXAM' | 'PRACTICE';
 }
 
-export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
+export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
   const [deleteId, setDeleteId] = React.useState<number | null>(null);
 
-  const currentScopeKey = `${search}::${quizType ?? 'ALL'}`;
+  const currentScopeKey = search;
   const {
     page,
     pageIndex,
@@ -39,7 +38,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     onPageSizeChange,
   } = useScopedPagination({ scopeKey: currentScopeKey });
 
-  const { data, isLoading } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
+  const { data, isLoading } = useQuizzes({ page, pageSize, search: search || undefined });
   const deleteQuiz = useDeleteQuiz();
   const navigate = useNavigate();
 
@@ -73,26 +72,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       )
     },
     {
-      id: 'quiz_type',
-      header: '类型',
-      meta: {
-        width: '88px',
-      },
-      cell: ({ row }) => {
-        const isExam = row.original.quiz_type === 'EXAM';
-        return (
-          <CellTags
-            tagSize="sm"
-            tags={[{
-              key: row.original.quiz_type,
-              label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
-              bgClass: isExam ? 'bg-destructive-100/70' : 'bg-primary-100/70',
-            }]}
-          />
-        );
-      }
-    },
-    {
       id: 'metrics',
       header: '核心指标',
       meta: {
@@ -101,16 +80,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         maxWidth: '320px',
       },
       cell: ({ row }) => {
-        const isExam = row.original.quiz_type === 'EXAM';
         const metricItems = [
           { key: 'question-count', label: '题量', value: String(row.original.question_count) },
           { key: 'total-score', label: '总分', value: formatScore(row.original.total_score) },
-          ...(isExam
-            ? [
-              { key: 'duration', label: '参考时间', value: row.original.duration ? `${row.original.duration}min` : '' },
-              { key: 'pass-score', label: '及格线', value: formatScore(row.original.pass_score) },
-            ]
-            : []),
         ].filter((item) => item.value !== '');
 
         return (
@@ -212,7 +184,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
         title="彻底移除此试卷？"
-        description="此操作将永久删除该试卷及其所有数据映射，相关的历史成绩可能也会受到影响。该操作不可撤销。"
+        description="此操作将删除当前试卷。题库题目、已创建任务和历史答卷都会保留。该操作不可撤销。"
         icon={<Trash2 className="h-10 w-10" />}
         iconBgColor="bg-destructive-100"
         iconColor="text-destructive"

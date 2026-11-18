@@ -6,6 +6,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from apps.tasks.assignment_workflow import sync_assignment_completion_status
 
 from .models import Submission
@@ -35,8 +36,14 @@ def refresh_submission_scores(submission: Submission) -> None:
     refresh_assignment_score(submission.task_assignment, Submission)
 
 
+@transaction.atomic
 def grade_subjective_answer(answer, grader, score, comment=''):
     """给单道主观题评分，并在必要时自动完成整份答卷。"""
+    submission = Submission.objects.select_for_update().get(pk=answer.submission_id)
+    if submission.status not in ['SUBMITTED', 'GRADING', 'GRADED']:
+        raise ValidationError('答卷尚未提交，不能评分')
+    answer.refresh_from_db()
+    answer.submission = submission
     if answer.is_objective:
         raise ValidationError('客观题不需要人工评分')
 
@@ -46,7 +53,6 @@ def grade_subjective_answer(answer, grader, score, comment=''):
 
     answer.apply_manual_grade(grader=grader, score=score_decimal, comment=comment)
 
-    submission = answer.submission
     if submission.status == 'GRADING':
         if submission.all_subjective_graded:
             finalize_submission_grading(submission)

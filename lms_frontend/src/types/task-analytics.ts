@@ -78,6 +78,7 @@ interface GradingOption {
 }
 
 export interface GradingSubjectiveAnswer {
+  answer_id: number;
   student_id: number;
   student_name: string;
   avatar_key: string;
@@ -99,8 +100,7 @@ export interface GradingAnswerResponse {
 
 export interface GradingSubmitRequest {
   quiz_id: number;
-  question_id: number;
-  student_id: number;
+  answer_id: number;
   score: number;
   comments: string;
 }

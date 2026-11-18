@@ -1,4 +1,6 @@
 import type { TaskCreateRequest } from '@/features/tasks/api/create-task';
+import type { TaskUpdateRequest } from '@/features/tasks/api/update-task';
+import { formatScore } from '@/lib/score';
 import type { TaskDetail } from '@/types/task';
 
 import type { ResourceGroup, SelectedResource } from './task-form.types';
@@ -34,31 +36,37 @@ export const buildTaskFormInitialSelectedResources = ({
     });
 
     const practiceResources: SelectedResource[] = (task.quizzes || [])
-      .filter((item) => item.quiz_type !== 'EXAM')
+      .filter((item) => item.allow_retry)
       .map((item, idx) => {
-        const sourceId = item.quiz ?? -item.quiz_revision_id;
+        const sourceId = item.quiz ?? -item.task_quiz_id;
         return {
-          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:practice`, item.quiz_revision_id + idx + 1000),
+          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:practice`, item.task_quiz_id + idx + 1000),
           id: sourceId,
-          title: item.source_title || item.quiz_title || `试卷 ${item.quiz_revision_id}`,
+          taskQuizId: item.task_quiz_id,
+          title: item.source_title || item.quiz_title || `试卷 ${item.task_quiz_id}`,
           resourceType: 'QUIZ',
-          category: `${item.question_count || 0} 个题目`,
-          quizType: item.quiz_type,
+          category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
+          quizType: 'PRACTICE',
+          totalScore: Number(item.total_score || 0),
           isMissingSource: item.quiz == null,
         };
       });
 
     const examResources: SelectedResource[] = (task.quizzes || [])
-      .filter((item) => item.quiz_type === 'EXAM')
+      .filter((item) => !item.allow_retry)
       .map((item, idx) => {
-        const sourceId = item.quiz ?? -item.quiz_revision_id;
+        const sourceId = item.quiz ?? -item.task_quiz_id;
         return {
-          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:exam`, item.quiz_revision_id + idx + 2000),
+          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:exam`, item.task_quiz_id + idx + 2000),
           id: sourceId,
-          title: item.source_title || item.quiz_title || `试卷 ${item.quiz_revision_id}`,
+          taskQuizId: item.task_quiz_id,
+          title: item.source_title || item.quiz_title || `试卷 ${item.task_quiz_id}`,
           resourceType: 'QUIZ',
-          category: `${item.question_count || 0} 个题目`,
-          quizType: item.quiz_type,
+          category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
+          quizType: 'EXAM',
+          totalScore: Number(item.total_score || 0),
+          duration: item.duration != null ? String(item.duration) : '',
+          passScore: item.pass_score != null ? formatScore(item.pass_score) : '',
           isMissingSource: item.quiz == null,
         };
       });
@@ -83,33 +91,6 @@ export const getTaskResourceGroup = (resource: Pick<SelectedResource, 'resourceT
     return 'DOCUMENT';
   }
   return resource.quizType === 'EXAM' ? 'EXAM' : 'PRACTICE';
-};
-
-export const insertSelectedResourceByGroup = (resources: SelectedResource[], resource: SelectedResource): SelectedResource[] => {
-  const targetGroup = getTaskResourceGroup(resource);
-
-  for (let index = resources.length - 1; index >= 0; index -= 1) {
-    if (getTaskResourceGroup(resources[index]) === targetGroup) {
-      return [
-        ...resources.slice(0, index + 1),
-        resource,
-        ...resources.slice(index + 1),
-      ];
-    }
-  }
-
-  const targetGroupOrder = TASK_RESOURCE_GROUP_ORDER.indexOf(targetGroup);
-  const insertIndex = resources.findIndex((item) => TASK_RESOURCE_GROUP_ORDER.indexOf(getTaskResourceGroup(item)) > targetGroupOrder);
-
-  if (insertIndex === -1) {
-    return [...resources, resource];
-  }
-
-  return [
-    ...resources.slice(0, insertIndex),
-    resource,
-    ...resources.slice(insertIndex),
-  ];
 };
 
 export const sortSelectedResourcesByGroup = (resources: SelectedResource[]): SelectedResource[] => {
@@ -142,6 +123,32 @@ export const reorderSelectedResourcesWithinGroup = (
   return nextResources;
 };
 
+export const getExamResourcesValidationError = (
+  resources: SelectedResource[],
+  options?: { isEdit?: boolean },
+): string | null => {
+  const isEdit = options?.isEdit ?? false;
+  for (const item of resources) {
+    if (item.resourceType !== 'QUIZ' || item.quizType !== 'EXAM') {
+      continue;
+    }
+    if (!isEdit) {
+      const parsedDuration = Number(item.duration);
+      if (!item.duration?.trim() || !Number.isInteger(parsedDuration) || parsedDuration <= 0) {
+        return `请为考试「${item.title}」设置有效的参考时间（分钟）`;
+      }
+    }
+    const parsedPassScore = Number(item.passScore);
+    if (!item.passScore?.trim() || !Number.isFinite(parsedPassScore) || parsedPassScore <= 0) {
+      return `请为考试「${item.title}」设置大于 0 的及格分数`;
+    }
+    if (item.totalScore && item.totalScore > 0 && parsedPassScore > item.totalScore) {
+      return `考试「${item.title}」的及格分数不能超过总分 ${formatScore(item.totalScore)}`;
+    }
+  }
+  return null;
+};
+
 export const buildTaskSubmitPayload = ({
   title,
   description,
@@ -156,21 +163,44 @@ export const buildTaskSubmitPayload = ({
   selectedResources: SelectedResource[];
   selectedUserIds: number[];
   resourcesDisabled: boolean;
-}): TaskCreateRequest => {
+}): TaskCreateRequest | TaskUpdateRequest => {
   const orderedResources = sortSelectedResourcesByGroup(selectedResources);
+
+  if (resourcesDisabled) {
+    const quizPassScores = orderedResources
+      .filter((item) => item.resourceType === 'QUIZ' && item.quizType === 'EXAM' && item.taskQuizId)
+      .map((item) => ({
+        task_quiz_id: item.taskQuizId!,
+        pass_score: Number(item.passScore),
+      }));
+
+    return {
+      title,
+      description: description || undefined,
+      deadline: deadline.toISOString(),
+      ...(quizPassScores.length > 0 ? { quiz_pass_scores: quizPassScores } : {}),
+      assignee_ids: selectedUserIds,
+    };
+  }
 
   return {
     title,
     description: description || undefined,
     deadline: deadline.toISOString(),
-    ...(resourcesDisabled ? {} : {
-      knowledge_ids: orderedResources
-        .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
-        .map((item) => item.id),
-      quiz_ids: orderedResources
-        .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
-        .map((item) => item.id),
-    }),
+    knowledge_ids: orderedResources
+      .filter((item) => item.resourceType === 'DOCUMENT' && item.id > 0)
+      .map((item) => item.id),
+    quizzes: orderedResources
+      .filter((item) => item.resourceType === 'QUIZ' && item.id > 0)
+      .map((item) => {
+        const isExam = item.quizType === 'EXAM';
+        return {
+          id: item.id,
+          allow_retry: !isExam,
+          duration: isExam ? Number(item.duration) : null,
+          pass_score: isExam ? Number(item.passScore) : null,
+        };
+      }),
     assignee_ids: selectedUserIds,
   };
 };

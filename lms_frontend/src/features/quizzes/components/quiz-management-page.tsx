@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { PageWorkbench } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { QuizTab } from './quiz-tab';
@@ -12,29 +9,11 @@ import { QuizTab } from './quiz-tab';
 export const QuizManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
 
   return (
-    <PageFillShell>
-      <PageHeader
-        title="试卷管理"
-        icon={<Layout />}
-      />
-
-      <PageWorkbench>
-        <div className="mb-1 flex items-center gap-3">
-          <SegmentedControl
-            value={quizType}
-            onChange={(value: string) => setQuizType(value as 'ALL' | 'EXAM' | 'PRACTICE')}
-            options={[
-              { label: '全部', value: 'ALL' },
-              { label: '考试', value: 'EXAM' },
-              { label: '测验', value: 'PRACTICE' },
-            ]}
-            className="shrink-0"
-          />
-
-          <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+    <PageWorkbench>
+        <div className="mb-1 flex items-center justify-end gap-3">
+          <div className="flex min-w-0 items-center justify-end gap-3">
             <SearchInput
               className={DESKTOP_SEARCH_INPUT_CLASSNAME}
               placeholder="搜索试卷标题..."
@@ -51,9 +30,8 @@ export const QuizManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-1 min-h-0 flex-col">
-          <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
+          <QuizTab search={search} />
         </div>
-      </PageWorkbench>
-    </PageFillShell>
+    </PageWorkbench>
   );
 };

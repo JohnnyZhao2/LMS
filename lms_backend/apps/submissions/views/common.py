@@ -22,7 +22,7 @@ from ..services import SubmissionService, UNSET
 
 class StartQuizView(APIView):
     """
-    统一的开始答题接口，根据 quiz_type 自动判断行为。
+    统一的开始答题接口。不允许重做的试卷只能提交一次。
     - PRACTICE: 允许多次提交，任务完成后仍可继续
     - EXAM: 只能提交一次，展示参考时间倒计时
     """
@@ -64,7 +64,7 @@ class StartQuizView(APIView):
 
 class SubmitView(BaseAPIView):
     """
-    统一的提交答卷接口，根据 quiz_type 自动判断行为。
+    统一的提交答卷接口。
     """
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService

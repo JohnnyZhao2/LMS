@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { FileText } from 'lucide-react';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
+import { PageWorkbench } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -28,13 +26,7 @@ export const QuestionManagementPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <PageFillShell>
-      <PageHeader
-        title="题目管理"
-        icon={<FileText />}
-      />
-
-      <PageWorkbench>
+    <PageWorkbench>
         <div className="mb-1 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:gap-3">
             <SegmentedControl
@@ -83,7 +75,6 @@ export const QuestionManagementPage: React.FC = () => {
             filterSpaceTagId={filterSpaceTagId}
           />
         </div>
-      </PageWorkbench>
-    </PageFillShell>
+    </PageWorkbench>
   );
 };

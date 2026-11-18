@@ -3,7 +3,6 @@
  */
 
 import type { PaginatedResponse, TaskStatus } from './common';
-import type { QuizType } from './quiz';
 
 interface TaskActions {
   view: boolean;
@@ -38,17 +37,15 @@ export interface TaskQuiz {
   id: number;
   task_quiz_id: number;
   quiz?: number | null;
-  quiz_revision_id: number;
   quiz_title: string;
   source_title?: string | null;
   question_count: number;
   total_score: number;
   order: number;
-  revision_number: number;
-  quiz_type: QuizType;
-  quiz_type_display: string;
-  duration?: number | null;
-  pass_score?: string | null;
+  allow_retry: boolean;
+  kind_label: string;
+  duration: number | null;
+  pass_score: string | null;
 }
 
 export interface TaskResourceOption {
@@ -57,7 +54,7 @@ export interface TaskResourceOption {
   resource_type: 'DOCUMENT' | 'QUIZ';
   space_tag_name?: string | null;
   question_count?: number;
-  quiz_type?: QuizType;
+  total_score?: string | number;
 }
 
 export interface TaskDetail {
@@ -84,10 +81,6 @@ interface TaskProgress {
   knowledge_completed?: number;
   quiz_total?: number;
   quiz_completed?: number;
-  exam_total?: number;
-  exam_completed?: number;
-  practice_total?: number;
-  practice_completed?: number;
 }
 
 interface LearningTaskKnowledgeItem {
@@ -107,10 +100,9 @@ export interface LearningTaskQuizItem {
   quiz: number;
   quiz_id: number;
   task_quiz_id: number;
-  quiz_revision_id: number;
   quiz_title: string;
-  quiz_type: string;
-  quiz_type_display: string;
+  allow_retry: boolean;
+  kind_label: string;
   question_count: number;
   total_score: number;
   duration?: number | null;
@@ -166,8 +158,6 @@ export interface TaskListItem {
   deadline: string;
   knowledge_count: number;
   quiz_count: number;
-  exam_count: number;
-  practice_count: number;
   assignee_count: number;
   completed_count: number;
   pending_grading_count: number;

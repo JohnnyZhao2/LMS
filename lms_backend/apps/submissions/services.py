@@ -1,6 +1,6 @@
 """Submission management services."""
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 from apps.activity_logs.decorators import log_operation
 from apps.activity_logs.text import format_number
@@ -24,7 +24,7 @@ def _start_quiz_log_description(ctx: dict) -> str:
     submission = ctx['result']
     return (
         f'第 {submission.attempt_number} 次，'
-        f'{submission.quiz.get_quiz_type_display()}，'
+        f'{submission.task_quiz.kind_label}，'
         f'{format_number(submission.total_score)} 分'
     )
 
@@ -45,7 +45,6 @@ class SubmissionService(BaseService):
         qs = Submission.objects.select_related(
             'task_assignment__task',
             'task_quiz',
-            'quiz',
             'user',
         ).prefetch_related(
             'answers__question__question_options',
@@ -68,10 +67,25 @@ class SubmissionService(BaseService):
             task_assignment_id=task_assignment_id,
             task_quiz_id=task_quiz_id,
             status='IN_PROGRESS',
-        ).first()
+        ).order_by('-attempt_number', '-id').first()
 
-    def get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
-        return self._get_in_progress(task_assignment_id=task_assignment_id, task_quiz_id=quiz_id)
+    def _lock_in_progress_submission(self, submission: Submission, *, closed_message: str) -> Submission:
+        """保存和提交先锁分配，再锁这条答卷，避免中途改到另一次重做。"""
+        TaskAssignment.objects.select_for_update().get(pk=submission.task_assignment_id)
+        locked = Submission.objects.select_for_update().select_related(
+            'task_assignment__task',
+            'task_quiz',
+        ).get(pk=submission.pk)
+        if locked.status != 'IN_PROGRESS':
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message=closed_message)
+        current_id = Submission.objects.filter(
+            task_assignment_id=locked.task_assignment_id,
+            task_quiz_id=locked.task_quiz_id,
+            status='IN_PROGRESS',
+        ).order_by('-attempt_number', '-id').values_list('pk', flat=True).first()
+        if current_id != locked.pk:
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='答卷已变更，请重新进入')
+        return locked
 
     def _get_existing_submitted(self, task_assignment_id: int, task_quiz_id: int) -> Optional[Submission]:
         return Submission.objects.filter(
@@ -187,7 +201,7 @@ class SubmissionService(BaseService):
         assignment_id: int,
         quiz_id: int,
         user: User,
-    ) -> Tuple[TaskAssignment, TaskQuiz, Any]:
+    ) -> tuple[TaskAssignment, TaskQuiz]:
         """确认当前学员确实被分配了这张任务试卷。"""
         assignment = TaskAssignment.objects.select_related('task').filter(
             id=assignment_id,
@@ -197,46 +211,39 @@ class SubmissionService(BaseService):
             raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='任务不存在或未分配给您')
         if not assignment.task.has_quiz:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='此任务不包含试卷')
-        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
+        task_quiz = TaskQuiz.objects.filter(
             id=quiz_id,
             task_id=assignment.task_id,
         ).first()
         if not task_quiz:
             raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='该试卷不在此任务中')
-        return assignment, task_quiz, task_quiz.quiz
+        return assignment, task_quiz
 
-    def check_exam_constraints(self, assignment: TaskAssignment, quiz_id: int) -> Optional[Submission]:
-        now = timezone.now()
-        if now > assignment.task.deadline:
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已结束')
-        existing = self._get_existing_submitted(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
-        if existing:
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='您已提交过此考试，无法重新作答')
-        return self._get_in_progress(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
-
+    @transaction.atomic
     def start_or_resume_quiz(
         self,
         assignment_id: int,
         quiz_id: int,
         user: User,
     ) -> tuple[Submission, bool]:
-        """开始或恢复答题。
-
-        考试只能有一次有效提交；练习允许多次作答，但同一份进行中答卷会复用。
-        """
-        assignment, task_quiz, quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
-        is_exam = quiz.quiz_type == 'EXAM'
-        if is_exam:
-            in_progress = self.check_exam_constraints(assignment, quiz_id)
-        else:
-            in_progress = self.get_in_progress(task_assignment_id=assignment.id, quiz_id=quiz_id)
+        """开始或恢复答题。不允许重做时只能有一次有效提交。"""
+        assignment, task_quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
+        TaskAssignment.objects.select_for_update().get(pk=assignment.id)
+        in_progress = self._get_in_progress(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
         if in_progress:
-            return in_progress, False
+            in_progress = Submission.objects.select_for_update().get(pk=in_progress.pk)
+            if in_progress.status == 'IN_PROGRESS':
+                return in_progress, False
+        if timezone.now() > assignment.task.deadline:
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已结束')
+        if not task_quiz.allow_retry:
+            existing = self._get_existing_submitted(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
+            if existing:
+                raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='您已提交过此试卷，无法重新作答')
         submission = self.start_quiz(
             assignment=assignment,
             task_quiz=task_quiz,
             user=user,
-            is_exam=is_exam,
         )
         return submission, True
 
@@ -246,7 +253,7 @@ class SubmissionService(BaseService):
         'start_quiz',
         _start_quiz_log_description,
         target_type='quiz',
-        target_title_template='{result.quiz.title}',
+        target_title_template='{result.task_quiz.title}',
         group='答题/考试',
         label='开始答题',
     )
@@ -255,20 +262,21 @@ class SubmissionService(BaseService):
         assignment: TaskAssignment,
         task_quiz: TaskQuiz,
         user: User,
-        is_exam: bool = False,
     ) -> Submission:
-        quiz = task_quiz.quiz
-        total_score = quiz.total_score
-        attempt_number = 1 if is_exam else self._count_attempts(assignment.id, task_quiz.id) + 1
-        remaining_seconds = quiz.duration * 60 if is_exam and quiz.duration else None
-        questions = quiz.quiz_questions.order_by('order').values_list('id', flat=True)
+        total_score = task_quiz.total_score
+        attempt_number = (
+            self._count_attempts(assignment.id, task_quiz.id) + 1
+            if task_quiz.allow_retry
+            else 1
+        )
+        remaining_seconds = task_quiz.duration * 60 if task_quiz.duration else None
+        questions = task_quiz.quiz_questions.order_by('order').values_list('id', flat=True)
         # 每道快照题先生成空 Answer，后续保存答案只更新这批固定记录。
         answers_data = [{'question_id': question_id} for question_id in questions]
         submission = self._create_with_answers(
             answers_data,
             task_assignment=assignment,
             task_quiz=task_quiz,
-            quiz=quiz,
             user=user,
             attempt_number=attempt_number,
             total_score=total_score,
@@ -284,8 +292,10 @@ class SubmissionService(BaseService):
         user_answer: Any = UNSET,
         is_marked: bool = UNSET,
     ) -> Answer:
-        if submission.status != 'IN_PROGRESS':
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='当前答卷不可继续作答')
+        submission = self._lock_in_progress_submission(
+            submission,
+            closed_message='当前答卷不可继续作答',
+        )
         answer = self._get_answer_by_submission_and_question(submission.id, question_id)
         self.validate_not_none(answer, '题目不在此答卷中')
 
@@ -310,26 +320,20 @@ class SubmissionService(BaseService):
         'submit_quiz',
         _submit_quiz_log_description,
         target_type='quiz',
-        target_title_template='{result.quiz.title}',
+        target_title_template='{result.task_quiz.title}',
         group='答题/考试',
         label='提交答卷',
     )
     def submit(self, submission: Submission) -> Submission:
         """提交答卷并刷新成绩、任务完成状态。"""
-        if submission.status != 'IN_PROGRESS':
-            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='该答卷已提交')
+        submission = self._lock_in_progress_submission(
+            submission,
+            closed_message='该答卷已提交',
+        )
 
         task = submission.task_assignment.task
-        if submission.quiz.quiz_type == 'EXAM':
-            if timezone.now() > task.deadline:
-                submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
-                submission.submitted_at = task.deadline
-            else:
-                submission.submitted_at = timezone.now()
-                submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
-        else:
-            submission.submitted_at = timezone.now()
-            submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
+        submission.submitted_at = task.deadline if timezone.now() > task.deadline else timezone.now()
+        submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
 
         for answer in self._list_objective_answers(submission.id):
             answer.auto_grade()

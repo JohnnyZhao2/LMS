@@ -7,12 +7,17 @@ import { showApiError } from '@/utils/error-handler';
 /**
  * 更新任务请求
  */
-interface TaskUpdateRequest {
+export interface TaskQuizPassScoreUpdate {
+  task_quiz_id: number;
+  pass_score: number;
+}
+
+export interface TaskUpdateRequest {
   title?: string;
   description?: string;
   deadline?: string;
   knowledge_ids?: number[];
-  quiz_ids?: number[];
+  quiz_pass_scores?: TaskQuizPassScoreUpdate[];
   assignee_ids?: number[];
 }
 

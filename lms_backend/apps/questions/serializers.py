@@ -5,7 +5,6 @@ from rest_framework import serializers
 from apps.tags.serializers import TagSimpleSerializer
 
 from .models import Question
-from .question_like import DEFAULT_QUESTION_SCORE
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -18,7 +17,6 @@ class QuestionSerializer(serializers.ModelSerializer):
     tags = TagSimpleSerializer(many=True, read_only=True)
     usage_count = serializers.SerializerMethodField()
     is_referenced = serializers.SerializerMethodField()
-    created_from_quiz_id = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta:
         model = Question
@@ -30,12 +28,10 @@ class QuestionSerializer(serializers.ModelSerializer):
             'options',
             'answer',
             'explanation',
-            'score',
             'space_tag',
             'tags',
             'usage_count',
             'is_referenced',
-            'created_from_quiz_id',
             'created_by_name',
             'updated_by_name',
             'created_at',
@@ -46,7 +42,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         annotated_value = getattr(obj, 'usage_count', None)
         if annotated_value is not None:
             return annotated_value
-        return obj.quiz_copies.count()
+        return obj.quiz_uses.count()
 
     def get_is_referenced(self, obj) -> bool:
         annotated_value = getattr(obj, 'is_referenced', None)
@@ -63,7 +59,6 @@ class QuestionCreateSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, allow_blank=True, default='')
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=DEFAULT_QUESTION_SCORE)
 
 
 class QuestionUpdateSerializer(serializers.Serializer):
@@ -74,4 +69,3 @@ class QuestionUpdateSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, allow_blank=True)
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)

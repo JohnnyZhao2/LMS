@@ -1,7 +1,6 @@
 """答题与评分模型。
 
-提交记录只引用任务里的 `QuizRevision` 和 `QuizRevisionQuestion`，不回读资源中心的
-当前试卷/题目。这样阅卷和统计始终基于学员实际作答时看到的内容。
+提交记录只引用任务试卷及其冻结题目，不回读资源中心的当前试卷和题库。
 """
 
 from decimal import Decimal
@@ -32,15 +31,7 @@ class Submission(TimestampMixin, models.Model):
         'tasks.TaskQuiz',
         on_delete=models.PROTECT,
         related_name='submissions',
-        null=True,
-        blank=True,
         verbose_name='任务试卷',
-    )
-    quiz = models.ForeignKey(
-        'quizzes.QuizRevision',
-        on_delete=models.PROTECT,
-        related_name='submissions',
-        verbose_name='试卷快照',
     )
     user = models.ForeignKey(
         'users.User',
@@ -83,19 +74,15 @@ class Submission(TimestampMixin, models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)'
+        return f'{self.user.username} - {self.task_quiz.title} (第{self.attempt_number}次)'
 
     def save(self, *args, **kwargs):
-        """创建时补齐答题用户、试卷总分和任务试卷关联。"""
+        """创建时补齐答题用户和试卷总分。"""
         if not self.pk:
             if not self.user_id:
                 self.user = self.task_assignment.assignee
             if not self.total_score:
-                self.total_score = self.quiz.total_score
-            if not self.task_quiz_id:
-                self.task_quiz = self.task_assignment.task.task_quizzes.filter(
-                    quiz_id=self.quiz_id
-                ).first()
+                self.total_score = self.task_quiz.total_score
         super().save(*args, **kwargs)
 
     @property
@@ -104,7 +91,7 @@ class Submission(TimestampMixin, models.Model):
 
     @property
     def has_subjective_questions(self):
-        return self.quiz.has_subjective_questions
+        return self.task_quiz.has_subjective_questions
 
     @property
     def ungraded_subjective_count(self):
@@ -119,28 +106,23 @@ class Submission(TimestampMixin, models.Model):
 
     @property
     def pass_score(self):
-        return float(self.quiz.pass_score) if self.quiz.pass_score else None
+        if self.task_quiz.pass_score is None:
+            return None
+        return float(self.task_quiz.pass_score)
 
     @property
     def is_passed(self):
-        if self.quiz.quiz_type != 'EXAM':
+        if self.obtained_score is None or self.task_quiz.pass_score is None:
             return None
-        if not self.quiz.pass_score or self.obtained_score is None:
-            return None
-        return self.obtained_score >= self.quiz.pass_score
+        return self.obtained_score >= self.task_quiz.pass_score
 
     def get_reference_remaining_seconds(self):
-        """返回考试计时的参考剩余秒数。
-
-        保存答案时会记录 `remaining_seconds`，重新进入考试时再扣除离线期间耗时。
-        """
-        if self.quiz.quiz_type != 'EXAM':
-            return None
+        """返回参考剩余秒数。保存答案时记下剩余时间，再次进入时扣除离线耗时。"""
         base_seconds = self.remaining_seconds
         if base_seconds is None:
-            if not self.quiz.duration:
+            if not self.task_quiz.duration:
                 return None
-            base_seconds = self.quiz.duration * 60
+            base_seconds = self.task_quiz.duration * 60
         elapsed_seconds = max(0, int((timezone.now() - self.started_at).total_seconds()))
         return max(base_seconds - elapsed_seconds, 0)
 
@@ -157,7 +139,7 @@ class Answer(TimestampMixin, models.Model):
         verbose_name='答题记录',
     )
     question = models.ForeignKey(
-        'quizzes.QuizRevisionQuestion',
+        'quizzes.TaskQuizQuestion',
         on_delete=models.PROTECT,
         related_name='answers',
         verbose_name='试卷题目快照',
@@ -224,12 +206,6 @@ class Answer(TimestampMixin, models.Model):
         return self.question.is_subjective
 
     @property
-    def is_graded(self):
-        if self.is_objective:
-            return True
-        return self.graded_by is not None
-
-    @property
     def user_answer(self):
         if self.is_subjective:
             text = self.text_answer.strip()
@@ -283,7 +259,7 @@ class AnswerSelection(TimestampMixin, models.Model):
         verbose_name='答案记录',
     )
     question_option = models.ForeignKey(
-        'quizzes.QuizRevisionQuestionOption',
+        'quizzes.TaskQuizQuestionOption',
         on_delete=models.PROTECT,
         related_name='answer_selections',
         verbose_name='题目选项',

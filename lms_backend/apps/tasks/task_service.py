@@ -1,5 +1,6 @@
 """Task management service."""
 
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any, List, Optional, Tuple
 
@@ -12,7 +13,7 @@ from apps.activity_logs.text import format_datetime
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
-from apps.quizzes.services import ensure_quiz_revision
+from apps.quizzes.services import freeze_quiz_for_task
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
@@ -41,6 +42,8 @@ def _update_task_log_description(ctx: dict) -> str:
         parts.append(f'关联知识调整为 {len(ctx["knowledge_ids"])} 篇')
     if ctx.get('quiz_ids') is not None:
         parts.append(f'关联试卷调整为 {len(ctx["quiz_ids"])} 份')
+    if ctx.get('quiz_pass_scores'):
+        parts.append('考试及格分数已调整')
     if ctx.get('assignee_ids') is not None:
         parts.append(f'分配学员调整为 {len(ctx["assignee_ids"])} 名')
     return '；'.join(parts) if parts else '任务配置已调整'
@@ -54,7 +57,7 @@ class TaskService(BaseService):
     """
 
     def get_task_queryset_for_user(self) -> QuerySet:
-        qs = task_list_queryset()
+        qs = task_list_queryset().filter(is_archived=False)
         return get_engine(self.request).scope_filter('tasks.view_task', base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(
@@ -104,14 +107,25 @@ class TaskService(BaseService):
         description: str,
         deadline,
         knowledge_ids: List[int] = None,
-        quiz_ids: List[int] = None,
+        quizzes: List[dict] = None,
         assignee_ids: List[int] = None,
     ) -> Task:
         knowledge_ids = knowledge_ids or []
-        quiz_ids = quiz_ids or []
+        seen_quizzes = {}
+        for item in quizzes or []:
+            seen_quizzes.setdefault(
+                item['id'],
+                {
+                    'id': item['id'],
+                    'allow_retry': bool(item['allow_retry']),
+                    'duration': item.get('duration'),
+                    'pass_score': item.get('pass_score'),
+                },
+            )
+        quizzes = list(seen_quizzes.values())
         assignee_ids = assignee_ids or []
         get_engine(self.request).enforce('tasks.add_task', error_message='无权创建任务')
-        self._validate_create_payload(knowledge_ids, quiz_ids, assignee_ids)
+        self._validate_create_payload(knowledge_ids, quizzes, assignee_ids)
 
         task = Task.objects.create(
             title=title,
@@ -123,8 +137,8 @@ class TaskService(BaseService):
         )
         if knowledge_ids:
             self._create_knowledge_associations(task, knowledge_ids)
-        if quiz_ids:
-            self._create_quiz_associations(task, quiz_ids)
+        if quizzes:
+            self._create_quiz_associations(task, quizzes)
         self._bulk_create_assignments(task_id=task.id, assignee_ids=assignee_ids)
         return task
 
@@ -138,14 +152,7 @@ class TaskService(BaseService):
         return TaskAssignment.objects.bulk_create(assignments, batch_size=500)
 
     def _dedupe_resource_ids(self, resource_ids: List[int]) -> List[int]:
-        seen = set()
-        ordered = []
-        for resource_id in resource_ids:
-            if resource_id in seen:
-                continue
-            seen.add(resource_id)
-            ordered.append(resource_id)
-        return ordered
+        return list(dict.fromkeys(resource_ids))
 
     def _create_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         valid_ids = self._dedupe_resource_ids(knowledge_ids)
@@ -174,38 +181,30 @@ class TaskService(BaseService):
         if associations:
             TaskKnowledge.objects.bulk_create(associations, batch_size=500)
 
-    def _create_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
-        valid_ids = self._dedupe_resource_ids(quiz_ids)
+    def _create_quiz_associations(self, task: Task, quizzes: List[dict]) -> None:
         quiz_map = {
             quiz.id: quiz
             for quiz in get_engine(self.request).scope_filter('quizzes.view_quiz',
-                base_queryset=Quiz.objects.filter(id__in=valid_ids),
+                base_queryset=Quiz.objects.filter(id__in=[item['id'] for item in quizzes]),
             ).prefetch_related(
-                'quiz_questions__question_options',
-                'quiz_questions__question__tags',
-                'quiz_questions__question__space_tag',
+                'quiz_questions__question__question_options',
             )
         }
-        associations = []
-        for order, quiz_id in enumerate(valid_ids, start=1):
-            quiz = quiz_map.get(quiz_id)
+        for order, item in enumerate(quizzes, start=1):
+            quiz = quiz_map.get(item['id'])
             if quiz is None:
                 raise BusinessError(
                     code=ErrorCodes.RESOURCE_NOT_FOUND,
-                    message=f'试卷 {quiz_id} 不存在',
+                    message=f'试卷 {item["id"]} 不存在',
                 )
-            # 试卷快照包含题目和选项，保证学员答题期间不会被资源中心编辑影响。
-            revision = ensure_quiz_revision(quiz, actor=self.user)
-            associations.append(
-                TaskQuiz(
-                    task=task,
-                    quiz=revision,
-                    source_quiz=quiz,
-                    order=order,
-                )
+            freeze_quiz_for_task(
+                quiz,
+                task=task,
+                order=order,
+                allow_retry=item['allow_retry'],
+                duration=item.get('duration'),
+                pass_score=item.get('pass_score'),
             )
-        if associations:
-            TaskQuiz.objects.bulk_create(associations, batch_size=500)
 
     @transaction.atomic
     @log_operation(
@@ -222,69 +221,80 @@ class TaskService(BaseService):
         task: Task,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
+        quiz_pass_scores: List[dict] = None,
         assignee_ids: List[int] = None,
         **kwargs,
     ) -> Task:
         self._validate_update_payload(knowledge_ids, quiz_ids, assignee_ids)
-        has_progress = task.has_student_progress
-        if has_progress:
-            # 已有执行痕迹后不允许破坏执行边界：不能换资源，也不能移除既有执行人。
-            if knowledge_ids is not None:
+        if knowledge_ids is not None:
+            existing_ids = list(
+                TaskKnowledge.objects.filter(task_id=task.id)
+                .order_by('order')
+                .values_list('source_knowledge_id', flat=True)
+            )
+            if existing_ids != self._dedupe_resource_ids(knowledge_ids):
                 raise BusinessError(
                     code=ErrorCodes.INVALID_OPERATION,
-                    message='任务已有人员开始执行，无法修改知识文档',
+                    message='任务创建后无法修改知识文档，请创建新任务',
                 )
-            if quiz_ids is not None:
+        if quiz_ids is not None:
+            existing_ids = list(task.task_quizzes.order_by('order', 'id').values_list('source_quiz_id', flat=True))
+            if existing_ids != self._dedupe_resource_ids(quiz_ids):
                 raise BusinessError(
                     code=ErrorCodes.INVALID_OPERATION,
-                    message='任务已有人员开始执行，无法修改试卷',
+                    message='任务创建后无法修改试卷，请创建新任务',
                 )
-            if assignee_ids is not None:
-                existing_ids = set(task.assignments.values_list('assignee_id', flat=True))
-                new_ids = set(assignee_ids)
-                removed_ids = existing_ids - new_ids
-                if removed_ids:
-                    raise BusinessError(
-                        code=ErrorCodes.INVALID_OPERATION,
-                        message='任务已有人员开始执行，无法移除已分配的学员',
-                    )
+        if task.has_student_progress and assignee_ids is not None:
+            existing_ids = set(task.assignments.values_list('assignee_id', flat=True))
+            removed_ids = existing_ids - set(assignee_ids)
+            if removed_ids:
+                raise BusinessError(
+                    code=ErrorCodes.INVALID_OPERATION,
+                    message='任务已有人员开始执行，无法移除已分配的学员',
+                )
+        if quiz_pass_scores is not None:
+            self._update_quiz_pass_scores(task, quiz_pass_scores)
         if kwargs:
             for key, value in kwargs.items():
                 setattr(task, key, value)
         task.updated_by = self.user
         task.save(update_fields=[*kwargs.keys(), 'updated_by'])
-        if knowledge_ids is not None:
-            self._update_knowledge_associations(task, knowledge_ids)
-        if quiz_ids is not None:
-            self._update_quiz_associations(task, quiz_ids)
         if assignee_ids is not None:
             self._update_assignments(task, assignee_ids)
         return task
 
-    def _update_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
-        existing_ids = list(
-            TaskKnowledge.objects.filter(task_id=task.id)
-            .order_by('order')
-            .values_list('source_knowledge_id', flat=True)
-        )
-        normalized_ids = self._dedupe_resource_ids(knowledge_ids)
-        if existing_ids != normalized_ids:
-            # 资源顺序也是业务状态。只要集合或顺序变化，就重建关联并重新冻结快照。
-            TaskKnowledge.objects.filter(task_id=task.id).delete()
-            if normalized_ids:
-                self._create_knowledge_associations(task, normalized_ids)
-
-    def _update_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
-        existing_ids = list(
-            TaskQuiz.objects.filter(task_id=task.id)
-            .order_by('order')
-            .values_list('source_quiz_id', flat=True)
-        )
-        normalized_ids = self._dedupe_resource_ids(quiz_ids)
-        if existing_ids != normalized_ids:
-            TaskQuiz.objects.filter(task_id=task.id).delete()
-            if normalized_ids:
-                self._create_quiz_associations(task, normalized_ids)
+    def _update_quiz_pass_scores(self, task: Task, quiz_pass_scores: List[dict]) -> None:
+        if not quiz_pass_scores:
+            return
+        task_quiz_map = {tq.id: tq for tq in task.task_quizzes.all()}
+        for item in quiz_pass_scores:
+            task_quiz_id = item['task_quiz_id']
+            task_quiz = task_quiz_map.get(task_quiz_id)
+            if task_quiz is None:
+                raise BusinessError(
+                    code=ErrorCodes.RESOURCE_NOT_FOUND,
+                    message=f'任务试卷 {task_quiz_id} 不存在',
+                )
+            if task_quiz.allow_retry:
+                raise BusinessError(
+                    code=ErrorCodes.INVALID_OPERATION,
+                    message=f'测验「{task_quiz.title}」不支持设置及格分数',
+                )
+            new_pass_score = Decimal(str(item['pass_score']))
+            if new_pass_score <= 0:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'考试「{task_quiz.title}」的及格分数必须大于 0',
+                )
+            total_score = Decimal(str(task_quiz.total_score or 0))
+            if total_score > 0 and new_pass_score > total_score:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'考试「{task_quiz.title}」的及格分数不能超过试卷总分 {total_score}',
+                )
+            if task_quiz.pass_score != new_pass_score:
+                task_quiz.pass_score = new_pass_score
+                task_quiz.save(update_fields=['pass_score'])
 
     def _update_assignments(self, task: Task, assignee_ids: List[int]) -> None:
         existing_assignments = TaskAssignment.objects.filter(task_id=task.id)
@@ -331,7 +341,8 @@ class TaskService(BaseService):
             quiz_count=task.task_quizzes.count(),
             assignee_count=task.assignments.count(),
         )
-        self.hard_delete_tasks([task.id])
+        task.is_archived = True
+        task.save(update_fields=['is_archived'])
         return snapshot
 
     def _ensure_valid_resource_ids(self, resource_ids: List[int], resource_model: Any, resource_label: str) -> List[int]:
@@ -361,10 +372,10 @@ class TaskService(BaseService):
     def _validate_create_payload(
         self,
         knowledge_ids: List[int],
-        quiz_ids: List[int],
+        quizzes: List[dict],
         assignee_ids: List[int],
     ) -> None:
-        if not knowledge_ids and not quiz_ids:
+        if not knowledge_ids and not quizzes:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='请至少选择一个知识文档或试卷',
@@ -375,7 +386,7 @@ class TaskService(BaseService):
                 message='请至少选择一名指派人员',
             )
         self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
-        self._ensure_valid_resource_ids(quiz_ids, Quiz, '试卷')
+        self._ensure_valid_resource_ids([item['id'] for item in quizzes], Quiz, '试卷')
         self._ensure_valid_assignee_ids(assignee_ids)
 
     def _validate_update_payload(

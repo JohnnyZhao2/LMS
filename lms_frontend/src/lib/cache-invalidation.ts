@@ -60,12 +60,15 @@ export const invalidateAfterQuestionMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.questions.all(),
     queryKeys.questions.detailRoot(),
+    queryKeys.quizzes.detailRoot(),
   ]);
 
 export const invalidateAfterQuizMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.quizzes.all(),
     queryKeys.quizzes.detailRoot(),
+    queryKeys.questions.all(),
+    queryKeys.questions.detailRoot(),
     queryKeys.tasks.resourceOptionsRoot(),
   ]);
 

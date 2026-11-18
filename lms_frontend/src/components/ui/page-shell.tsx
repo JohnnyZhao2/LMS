@@ -105,6 +105,12 @@ const useViewportConstraint = ({
     }
     resizeObserver.observe(document.documentElement);
 
+    // 监听父级子节点变化（兄弟增删会影响自身在 grid/flex 中的位置）
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+    if (parent) {
+      mutationObserver.observe(parent, { childList: true });
+    }
+
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', scheduleUpdate);
@@ -112,6 +118,7 @@ const useViewportConstraint = ({
       visualViewport?.removeEventListener('resize', scheduleUpdate);
       visualViewport?.removeEventListener('scroll', scheduleUpdate);
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
     };
   }, [updateHeight]);
 

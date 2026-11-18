@@ -31,6 +31,7 @@ class GradingOptionSerializer(serializers.Serializer):
 
 
 class GradingSubjectiveAnswerSerializer(serializers.Serializer):
+    answer_id = serializers.IntegerField()
     student_id = serializers.IntegerField()
     student_name = serializers.CharField()
     avatar_key = serializers.CharField()
@@ -55,9 +56,8 @@ class GradingAnswerResponseSerializer(serializers.Serializer):
 class GradingSubmitSerializer(serializers.Serializer):
     """评分提交序列化器"""
     quiz_id = serializers.IntegerField()
-    question_id = serializers.IntegerField()
-    student_id = serializers.IntegerField()
-    score = serializers.FloatField()
+    answer_id = serializers.IntegerField()
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0)
     comments = serializers.CharField(required=False, allow_blank=True, default='')
 
 
@@ -65,8 +65,8 @@ class PendingQuizSerializer(serializers.Serializer):
     """阅卷中心试卷序列化器"""
     quiz_id = serializers.IntegerField()
     quiz_title = serializers.CharField()
-    quiz_type = serializers.CharField()
-    quiz_type_display = serializers.CharField()
+    allow_retry = serializers.BooleanField()
+    kind_label = serializers.CharField()
     question_count = serializers.IntegerField()
     duration = serializers.IntegerField(allow_null=True)
     pending_count = serializers.IntegerField()

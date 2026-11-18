@@ -137,13 +137,11 @@ export const queryKeys = {
       page,
       pageSize,
       search,
-      quizType,
     }: {
       page: number;
       pageSize: number;
       search?: string;
-      quizType?: string;
-    }) => ['quizzes', page, pageSize, search, quizType] as const,
+    }) => ['quizzes', page, pageSize, search] as const,
     detailRoot: () => ['quiz-detail'] as const,
     detail: ({
       id,

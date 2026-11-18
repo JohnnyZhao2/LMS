@@ -306,8 +306,8 @@ export const TaskDetail: React.FC = () => {
   const displayQuizzes: TaskQuizViewItem[] = isStudent
     ? (learningDetail!.quiz_items ?? [])
     : (task!.quizzes ?? []);
-  const practiceQuizzes = displayQuizzes.filter((item) => item.quiz_type !== 'EXAM');
-  const examQuizzes = displayQuizzes.filter((item) => item.quiz_type === 'EXAM');
+  const practiceQuizzes = displayQuizzes.filter((item) => item.allow_retry);
+  const examQuizzes = displayQuizzes.filter((item) => !item.allow_retry);
   const hasKnowledge = knowledgeList.length > 0;
   const hasPractice = practiceQuizzes.length > 0;
   const hasExam = examQuizzes.length > 0;
@@ -319,11 +319,11 @@ export const TaskDetail: React.FC = () => {
     : (statusValue ? TASK_EXECUTION_STATUS_META[statusValue].label : undefined);
   const totalNodeCount = knowledgeList.length + practiceQuizzes.length + examQuizzes.length;
 
-  const handleStartQuiz = (quizId: number, quizType?: string) => {
+  const handleStartQuiz = (quizId: number, allowRetry = true) => {
     if (!isStudent || !learningDetail) return;
     const assignmentId = learningDetail.id;
     if (!assignmentId || !quizId) return;
-    if (quizType === 'EXAM' && !canStartExam) return;
+    if (!allowRetry && !canStartExam) return;
     navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
@@ -331,8 +331,8 @@ export const TaskDetail: React.FC = () => {
     [
       `${item.question_count} 题`,
       `总分 ${formatScore(item.total_score)}`,
-      item.duration ? `参考 ${item.duration} 分钟` : null,
-      item.quiz_type === 'EXAM' && item.pass_score ? `及格 ${formatScore(item.pass_score)}` : null,
+      item.allow_retry ? '不限时' : (item.duration ? `参考 ${item.duration} 分钟` : null),
+      item.allow_retry ? '不设及格线' : (item.pass_score != null ? `及格 ${formatScore(item.pass_score)} 分` : null),
     ]
       .filter(Boolean)
       .join(' · ');
@@ -449,7 +449,7 @@ export const TaskDetail: React.FC = () => {
                                     : null
                                 }
                                 tone={isCompleted ? 'success' : 'default'}
-                                onClick={isStudent && quizId ? () => handleStartQuiz(quizId, item.quiz_type) : undefined}
+                                onClick={isStudent && quizId ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
                               />
                             );
                           })}
@@ -498,7 +498,7 @@ export const TaskDetail: React.FC = () => {
                                 }
                                 tone={isCompleted ? 'success' : 'warning'}
                                 disabled={isDisabled}
-                                onClick={isStudent && quizId && !isDisabled ? () => handleStartQuiz(quizId, item.quiz_type) : undefined}
+                                onClick={isStudent && quizId && !isDisabled ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
                               />
                             );
                           })}
@@ -573,16 +573,10 @@ export const TaskDetail: React.FC = () => {
                           value={`${learningDetail.progress?.knowledge_completed ?? 0} / ${learningDetail.progress?.knowledge_total ?? 0}`}
                         />
                       )}
-                      {Number(learningDetail.progress?.practice_total) > 0 && (
+                      {Number(learningDetail.progress?.quiz_total) > 0 && (
                         <TaskInfoRow
-                          label="测验"
-                          value={`${learningDetail.progress?.practice_completed ?? 0} / ${learningDetail.progress?.practice_total ?? 0}`}
-                        />
-                      )}
-                      {Number(learningDetail.progress?.exam_total) > 0 && (
-                        <TaskInfoRow
-                          label="考试"
-                          value={`${learningDetail.progress?.exam_completed ?? 0} / ${learningDetail.progress?.exam_total ?? 0}`}
+                          label="试卷"
+                          value={`${learningDetail.progress?.quiz_completed ?? 0} / ${learningDetail.progress?.quiz_total ?? 0}`}
                         />
                       )}
                     </div>

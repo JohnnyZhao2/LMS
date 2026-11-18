@@ -2,12 +2,13 @@
 
 from typing import Any, Optional
 
-from django.db.models import Count, Prefetch, Q, QuerySet, Sum
+from django.db.models import Count, DecimalField, OuterRef, Prefetch, Q, QuerySet, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.authorization.engine import get_engine
 from apps.knowledge.selectors import get_knowledge_queryset
-from apps.quizzes.models import Quiz
+from apps.quizzes.models import Quiz, QuizQuestion
 from apps.submissions.models import Submission
 
 from .models import KnowledgeLearningProgress, Task, TaskAssignment, TaskKnowledge, TaskQuiz
@@ -44,7 +45,7 @@ def task_detail_queryset() -> QuerySet:
     return Task.objects.select_related('created_by', 'updated_by').prefetch_related(
         'task_knowledge__knowledge',
         'task_knowledge__source_knowledge',
-        'task_quizzes__quiz',
+        'task_quizzes',
         'task_quizzes__source_quiz',
         'assignments__assignee',
     )
@@ -57,7 +58,7 @@ def task_list_queryset() -> QuerySet:
             'knowledge_progress',
             Prefetch(
                 'submissions',
-                queryset=Submission.objects.select_related('quiz').filter(
+                queryset=Submission.objects.select_related('task_quiz').filter(
                     status__in=ANALYTICS_SUBMISSION_STATUSES,
                 ),
             ),
@@ -67,16 +68,6 @@ def task_list_queryset() -> QuerySet:
     return Task.objects.select_related('created_by', 'updated_by').annotate(
         knowledge_count_value=Count('task_knowledge', distinct=True),
         quiz_count_value=Count('task_quizzes', distinct=True),
-        exam_count_value=Count(
-            'task_quizzes',
-            filter=Q(task_quizzes__quiz__quiz_type='EXAM'),
-            distinct=True,
-        ),
-        practice_count_value=Count(
-            'task_quizzes',
-            filter=Q(task_quizzes__quiz__quiz_type='PRACTICE'),
-            distinct=True,
-        ),
         assignee_count_value=Count('assignments', distinct=True),
         completed_count_value=Count(
             'assignments',
@@ -99,7 +90,7 @@ def assignment_detail_queryset() -> QuerySet:
         'assignee',
     ).prefetch_related(
         'task__task_knowledge__knowledge',
-        'task__task_quizzes__quiz',
+        'task__task_quizzes',
         'knowledge_progress__task_knowledge__knowledge',
     )
 
@@ -127,7 +118,6 @@ def task_knowledge_queryset(task_id: int) -> QuerySet:
 
 def task_quiz_queryset(task_id: int) -> QuerySet:
     return TaskQuiz.objects.filter(task_id=task_id).select_related(
-        'quiz',
         'source_quiz',
         'task',
     ).order_by('order')
@@ -167,10 +157,18 @@ def task_resource_options(
         )
 
     if resource_type in {'ALL', 'QUIZ'}:
+        scores = QuizQuestion.objects.filter(quiz_id=OuterRef('pk')).order_by().values('quiz_id').annotate(
+            total=Sum('score'),
+        ).values('total')
         quiz_rows = get_engine(request).scope_filter('quizzes.view_quiz',
             base_queryset=Quiz.objects.all(),
         ).annotate(
-            question_count_value=Count('quiz_questions'),
+            question_count_value=Count('quiz_questions', distinct=True),
+            total_score_value=Coalesce(
+                Subquery(scores, output_field=DecimalField(max_digits=10, decimal_places=2)),
+                Value(0),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
         )
         if exclude_quiz_ids:
             quiz_rows = quiz_rows.exclude(id__in=exclude_quiz_ids)
@@ -178,8 +176,8 @@ def task_resource_options(
             'id',
             'title',
             'updated_at',
-            'quiz_type',
             'question_count_value',
+            'total_score_value',
         ).order_by('-updated_at')
         if search:
             quiz_rows = quiz_rows.filter(title__icontains=search)
@@ -189,8 +187,8 @@ def task_resource_options(
                     'id': row['id'],
                     'title': row['title'],
                     'resource_type': 'QUIZ',
-                    'quiz_type': row['quiz_type'],
                     'question_count': row['question_count_value'],
+                    'total_score': row['total_score_value'],
                     'updated_at': row['updated_at'],
                 }
                 for row in quiz_rows
@@ -213,7 +211,7 @@ def knowledge_progress_queryset(assignment_id: int) -> QuerySet:
 def analytics_assignment_queryset(task_id: int, order_desc: bool = False) -> QuerySet:
     submissions_prefetch = Prefetch(
         'submissions',
-        queryset=Submission.objects.select_related('quiz').filter(status__in=ANALYTICS_SUBMISSION_STATUSES),
+        queryset=Submission.objects.select_related('task_quiz').filter(status__in=ANALYTICS_SUBMISSION_STATUSES),
     )
     queryset = TaskAssignment.objects.filter(task_id=task_id).select_related(
         'assignee',
@@ -277,10 +275,10 @@ def task_highest_score_percentages(task_id: int) -> list[float]:
 def task_exam_submissions_queryset(task_id: int) -> QuerySet:
     return Submission.objects.filter(
         task_assignment__task_id=task_id,
-        quiz__quiz_type='EXAM',
+        task_quiz__allow_retry=False,
         status__in=ANALYTICS_SUBMISSION_STATUSES,
         obtained_score__isnull=False,
-    ).select_related('quiz')
+    ).select_related('task_quiz')
 
 
 def assignment_has_pending_grading(assignment: TaskAssignment) -> bool:
@@ -332,8 +330,10 @@ def is_assignment_abnormal(assignment: TaskAssignment) -> bool:
                 return True
     for submission in assignment.submissions.all():
         if submission.submitted_at and submission.started_at:
+            if not submission.task_quiz.duration:
+                continue
             duration = (submission.submitted_at - submission.started_at).total_seconds() / 60
-            threshold = 30 if submission.quiz.quiz_type == 'EXAM' else 5
+            threshold = max(float(submission.task_quiz.duration) * 0.25, 1)
             if duration < threshold:
                 return True
     return False
@@ -418,8 +418,8 @@ def task_node_progress(task_id: int, total_count: int) -> list[dict[str, Any]]:
         nodes.append(
             {
                 'node_id': task_quiz.id,
-                'node_name': task_quiz.quiz.title,
-                'category': task_quiz.quiz.quiz_type,
+                'node_name': task_quiz.title,
+                'category': 'PRACTICE' if task_quiz.allow_retry else 'EXAM',
                 'completed_count': completed,
                 'total_count': total_count,
                 'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
@@ -454,8 +454,7 @@ def task_score_distribution(task_id: int) -> list[dict[str, int]]:
 
 
 def task_exam_pass_rate(task_id: int) -> Optional[float]:
-    has_exam = task_quiz_queryset(task_id).filter(quiz__quiz_type='EXAM').exists()
-    if not has_exam:
+    if not task_quiz_queryset(task_id).filter(allow_retry=False).exists():
         return None
     exam_submissions = task_exam_submissions_queryset(task_id)
     if not exam_submissions.exists():
@@ -464,7 +463,7 @@ def task_exam_pass_rate(task_id: int) -> Optional[float]:
     passed_count = sum(
         1
         for submission in exam_submissions
-        if submission.quiz.pass_score and submission.obtained_score >= submission.quiz.pass_score
+        if submission.task_quiz.pass_score is not None and submission.obtained_score >= submission.task_quiz.pass_score
     )
     return round(passed_count / total_count * 100, 1) if total_count > 0 else 0.0
 

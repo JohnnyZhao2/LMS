@@ -6,11 +6,11 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useTags } from '@/api/tags';
 import { useQuestions } from '@/api/questions/get-questions';
@@ -28,14 +28,14 @@ import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
 import type { Question } from '@/types/question';
-import type { QuizCreateRequest, QuizType } from '@/types/quiz';
+import type { QuizCreateRequest } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '@/features/quizzes/api/get-quizzes';
 import type { QuizDraftState } from '@/features/quizzes/types';
 
-import { buildQuizEditableItem, buildQuizSubmitPayload, validateQuizDraft } from './quiz-form.helpers';
+import { buildQuizEditableItem, buildQuizQuestionChanges, buildQuizSubmitPayload, validateQuizDraft } from './quiz-form.helpers';
 import { QuizOutlinePanel } from '@/components/quizzes/quiz-outline-panel';
 import { QuizPreviewWorkbench } from '@/features/quizzes/components/quiz-preview-workbench';
 
@@ -56,9 +56,6 @@ export const QuizForm: React.FC = () => {
     : undefined;
 
   const [title, setTitle] = useState('');
-  const [quizType, setQuizType] = useState<QuizType>('PRACTICE');
-  const [duration, setDuration] = useState<number | undefined>();
-  const [passScore, setPassScore] = useState<number | undefined>();
   const [items, setItems] = useState<EditableQuestionItem[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [resourceSearch, setResourceSearch] = useState('');
@@ -66,6 +63,7 @@ export const QuizForm: React.FC = () => {
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [pendingQuizData, setPendingQuizData] = useState<QuizCreateRequest | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [questionBankCollapsed, setQuestionBankCollapsed] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth < 1500 : false),
@@ -98,9 +96,6 @@ export const QuizForm: React.FC = () => {
     const bootstrap = async () => {
       if (quizDraft) {
         setTitle(quizDraft.title);
-        setQuizType(quizDraft.quizType);
-        setDuration(quizDraft.duration);
-        setPassScore(quizDraft.passScore);
         setItems(quizDraft.items);
         setActiveKey(quizDraft.items[0]?.key ?? null);
         initializedRef.current = true;
@@ -116,9 +111,6 @@ export const QuizForm: React.FC = () => {
         if (cancelled) return;
 
         setTitle(quizData.title);
-        setQuizType(quizData.quiz_type || 'PRACTICE');
-        setDuration(quizData.duration ?? undefined);
-        setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
         setItems(loadedItems);
         setActiveKey(loadedItems[0]?.key ?? null);
         initializedRef.current = true;
@@ -139,9 +131,6 @@ export const QuizForm: React.FC = () => {
       }
 
       setTitle('');
-      setQuizType('PRACTICE');
-      setDuration(undefined);
-      setPassScore(undefined);
       setItems(loadedItems);
       setActiveKey(loadedItems[0]?.key ?? null);
       initializedRef.current = true;
@@ -224,12 +213,25 @@ export const QuizForm: React.FC = () => {
     }
   }, []);
 
-  const handleSubmitQuiz = async () => {
+  const saveQuiz = async (data: QuizCreateRequest) => {
+    try {
+      if (isEdit) {
+        await updateQuiz.mutateAsync({ id: Number(id), data });
+        toast.success('试卷更新成功');
+        navigate(ROUTES.QUIZZES);
+      } else {
+        await createQuiz.mutateAsync(data);
+        setSuccessModalOpen(true);
+      }
+      setPendingQuizData(null);
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
+  const handleSubmitQuiz = () => {
     const validationMessage = validateQuizDraft({
       title,
-      quizType,
-      duration,
-      passScore,
       items,
     });
     if (validationMessage) {
@@ -241,32 +243,14 @@ export const QuizForm: React.FC = () => {
 
     const data: QuizCreateRequest = buildQuizSubmitPayload({
       title,
-      quizType,
-      duration,
-      passScore,
       items,
     });
 
-    try {
-      if (isEdit) {
-        await updateQuiz.mutateAsync({ id: Number(id), data });
-        toast.success('试卷更新成功');
-        navigate(ROUTES.QUIZZES);
-      } else {
-        await createQuiz.mutateAsync(data);
-        setSuccessModalOpen(true);
-      }
-    } catch (error) {
-      showApiError(error);
+    if (items.some((item) => Object.keys(buildQuizQuestionChanges(item)).length > 0)) {
+      setPendingQuizData(data);
+      return;
     }
-  };
-
-  const handleQuizTypeChange = (value: QuizType) => {
-    setQuizType(value);
-    if (value === 'PRACTICE') {
-      setDuration(undefined);
-      setPassScore(undefined);
-    }
+    void saveQuiz(data);
   };
 
   if (isPreviewRoute && isEdit) {
@@ -298,35 +282,14 @@ export const QuizForm: React.FC = () => {
             <QuizOutlinePanel
               items={items}
               activeKey={activeKey}
-              quizType={quizType}
               itemDisplayMode="plain"
-              duration={duration}
-              passScore={passScore}
               onSelectItem={setActiveKey}
               onReorderItems={handleReorderItems}
-              onDurationChange={setDuration}
-              onPassScoreChange={setPassScore}
             />
           </div>
 
           <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="relative flex h-12 shrink-0 items-center justify-between border-b border-border px-5">
-              <Select value={quizType} onValueChange={(value) => handleQuizTypeChange(value as QuizType)}>
-                <SelectTrigger
-                  className={
-                    quizType === 'EXAM'
-                      ? 'relative z-10 grid h-9 w-[88px] shrink-0 grid-cols-[minmax(0,1fr)_1rem] items-center gap-0 rounded-lg border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
-                      : 'relative z-10 grid h-9 w-[88px] shrink-0 grid-cols-[minmax(0,1fr)_1rem] items-center gap-0 rounded-lg border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
-                  }
-                >
-                  <SelectValue className="block w-full min-w-0 text-center" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PRACTICE">测验</SelectItem>
-                  <SelectItem value="EXAM">考试</SelectItem>
-                </SelectContent>
-              </Select>
-
+            <div className="relative flex h-12 shrink-0 items-center justify-end border-b border-border px-5">
               <div className="absolute left-1/2 top-1/2 w-[clamp(13rem,44%,22rem)] -translate-x-1/2 -translate-y-1/2">
                 <Input
                   value={title}
@@ -349,9 +312,6 @@ export const QuizForm: React.FC = () => {
                         quizDraft: {
                           quizId: Number(id),
                           title,
-                          quizType,
-                          duration,
-                          passScore,
                           items,
                         },
                       },
@@ -448,6 +408,15 @@ export const QuizForm: React.FC = () => {
           setPreviewQuestion(null);
           toast.info('请在题库管理页删除题目');
         }}
+      />
+      <ConfirmDialog
+        open={pendingQuizData !== null}
+        onOpenChange={(open) => { if (!open) setPendingQuizData(null); }}
+        title="更新题库题目？"
+        description="修改将同步到所有引用这些题目的当前试卷；已创建任务和历史答卷不会变化。"
+        confirmText="确认更新并保存"
+        onConfirm={() => { if (pendingQuizData) return saveQuiz(pendingQuizData); }}
+        isConfirming={isSubmitting}
       />
     </EditorPageShell>
   );

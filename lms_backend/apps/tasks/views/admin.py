@@ -197,7 +197,7 @@ class TaskCreateView(APIView):
         创建任务并分配给学员。
         一个任务可以包含：
         - knowledge_ids: 知识文档列表（可选）
-        - quiz_ids: 试卷列表（可选）
+        - quizzes: 试卷列表，每项包含 id、allow_retry，以及考试必填的 duration、pass_score（可选）
         - 至少需要选择一个知识文档或试卷
         ''',
         request=TaskCreateSerializer,
@@ -337,7 +337,7 @@ class TaskDetailView(BaseAPIView):
 
     @extend_schema(
         summary='删除任务',
-        description='删除任务（硬删除）。',
+        description='从任务管理列表移除任务；答题与阅卷历史保留。',
         responses={
             200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),

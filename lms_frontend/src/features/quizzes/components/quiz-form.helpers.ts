@@ -1,5 +1,11 @@
-import { hasQuestionAnswer, normalizeQuestionScore, type EditableQuestionItem } from '@/lib/question-editor';
-import type { QuizCreateRequest, QuizQuestion, QuizType } from '@/types/quiz';
+import {
+  buildQuestionCreatePayload,
+  buildQuestionPatchPayload,
+  hasQuestionAnswer,
+  normalizeQuestionScore,
+  type EditableQuestionItem,
+} from '@/lib/question-editor';
+import type { QuizCreateRequest, QuizQuestion } from '@/types/quiz';
 
 export const buildQuizEditableItem = (quizQuestion: QuizQuestion): EditableQuestionItem => ({
   key: `quiz_question_${quizQuestion.id}`,
@@ -15,26 +21,33 @@ export const buildQuizEditableItem = (quizQuestion: QuizQuestion): EditableQuest
   showExplanation: Boolean(quizQuestion.explanation?.trim()),
   score: normalizeQuestionScore(quizQuestion.score),
   tagIds: quizQuestion.tags?.map((tag) => tag.id) ?? [],
+  original: {
+    question_type: quizQuestion.question_type,
+    content: quizQuestion.question_content,
+    options: quizQuestion.options ?? [],
+    answer: quizQuestion.answer ?? '',
+    explanation: quizQuestion.explanation ?? '',
+    space_tag_id: quizQuestion.space_tag?.id ?? null,
+    tag_ids: quizQuestion.tags?.map((tag) => tag.id) ?? [],
+  },
 });
+
+export const buildQuizQuestionChanges = (item: EditableQuestionItem) =>
+  item.sourceQuestionId ?? item.questionId
+    ? buildQuestionPatchPayload(item.original ?? {}, buildQuestionCreatePayload(item))
+    : {};
 
 export interface QuizDraftValidationParams {
   title: string;
-  quizType: QuizType;
-  duration?: number;
-  passScore?: number;
   items: EditableQuestionItem[];
 }
 
 export const validateQuizDraft = ({
   title,
-  quizType,
-  duration,
-  passScore,
   items,
 }: QuizDraftValidationParams): string | null => {
   if (!title.trim()) return '请输入试卷名称';
   if (items.length === 0) return '请添加题目';
-  if (quizType === 'EXAM' && (!duration || !passScore)) return '考试模式需设置参考时间和及格分';
 
   for (const [index, item] of items.entries()) {
     if (!item.content.trim()) return `第${index + 1}题未填写内容`;
@@ -46,25 +59,19 @@ export const validateQuizDraft = ({
 
 export const buildQuizSubmitPayload = ({
   title,
-  quizType,
-  duration,
-  passScore,
   items,
 }: QuizDraftValidationParams): QuizCreateRequest => ({
   title,
-  quiz_type: quizType,
-  duration: quizType === 'EXAM' ? duration : null,
-  pass_score: quizType === 'EXAM' ? passScore : null,
-  questions: items.map((item) => ({
-    id: item.quizQuestionId ?? undefined,
-    source_question_id: item.sourceQuestionId ?? item.questionId ?? null,
-    content: item.content,
-    question_type: item.questionType,
-    options: item.options,
-    answer: item.answer,
-    explanation: item.explanation,
-    score: normalizeQuestionScore(item.score),
-    space_tag_id: item.spaceTagId ?? null,
-    tag_ids: item.tagIds,
-  })),
+  questions: items.map((item) => {
+    const questionId = item.sourceQuestionId ?? item.questionId;
+    const changes = buildQuizQuestionChanges(item);
+    return {
+      id: item.quizQuestionId ?? undefined,
+      source_question_id: questionId ?? null,
+      score: normalizeQuestionScore(item.score),
+      ...(questionId
+        ? (Object.keys(changes).length ? { question_changes: changes } : {})
+        : buildQuestionCreatePayload(item)),
+    };
+  }),
 });

@@ -21,7 +21,6 @@ interface QuizProgressPanelProps {
   answeredCount: number;
   markedCount: number;
   progressPercent: number;
-  isExam: boolean;
   onJump: (index: number) => void;
 }
 
@@ -56,7 +55,6 @@ export const QuizProgressPanel: React.FC<QuizProgressPanelProps> = ({
   answeredCount,
   markedCount,
   progressPercent,
-  isExam,
   onJump,
 }) => (
   <aside className="flex min-h-0 max-h-full flex-col overflow-hidden rounded-2xl border border-border bg-background p-5">
@@ -65,12 +63,7 @@ export const QuizProgressPanel: React.FC<QuizProgressPanelProps> = ({
         答题进度
       </p>
       <div className="mt-2">
-        <span
-          className={cn(
-            'text-3xl font-semibold leading-none tracking-tight',
-            isExam ? 'text-destructive-600' : 'text-primary',
-          )}
-        >
+        <span className="text-3xl font-semibold leading-none tracking-tight text-primary">
           {progressPercent}%
         </span>
       </div>
@@ -80,7 +73,7 @@ export const QuizProgressPanel: React.FC<QuizProgressPanelProps> = ({
       <Progress
         percent={progressPercent}
         size="lg"
-        strokeColor={isExam ? 'var(--color-error-500)' : 'var(--color-primary-500)'}
+        strokeColor="var(--color-primary-500)"
         trailColor="var(--color-gray-200)"
       />
     </div>
@@ -178,17 +171,12 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
   onAbandon,
   onSubmit,
 }) => {
-  const isExam = submission.quiz_type === 'EXAM';
+  const allowRetry = submission.allow_retry;
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-background p-5">
       <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white',
-            isExam ? 'bg-destructive' : 'bg-primary',
-          )}
-        >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-white">
           <FileText className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -196,12 +184,12 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
             {submission.quiz_title}
           </h2>
           <p className="mt-1 text-sm text-text-muted">
-            {isExam ? submission.quiz_type_display : `${submission.quiz_type_display} · 第 ${submission.attempt_number} 次`}
+            {`${submission.kind_label} · 第 ${submission.attempt_number} 次`}
           </p>
         </div>
       </div>
 
-      {isExam && submission.remaining_seconds != null ? (
+      {submission.remaining_seconds != null ? (
         <div className="mt-4">
           <Timer
             key={`${submission.id}-${submission.remaining_seconds}`}
@@ -227,18 +215,14 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
                 label="总分"
                 value={formatScore(submission.total_score)}
               />
-              {isExam ? (
-                <MetaItem
-                  label="参考时间"
-                  value={submission.quiz_duration ? `${submission.quiz_duration} 分钟` : '未设置'}
-                />
-              ) : null}
-              {isExam ? (
-                <MetaItem
-                  label="及格分"
-                  value={formatScore(submission.pass_score)}
-                />
-              ) : null}
+              <MetaItem
+                label="参考时间"
+                value={submission.quiz_duration ? `${submission.quiz_duration} 分钟` : '不限时'}
+              />
+              <MetaItem
+                label="及格分"
+                value={submission.pass_score != null ? formatScore(submission.pass_score) : '不设及格线'}
+              />
             </div>
           </section>
 
@@ -258,7 +242,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
           </Button>
           <Button
             size="lg"
-            variant={isExam ? 'destructive' : 'default'}
+            variant={allowRetry ? 'default' : 'destructive'}
             onClick={onSubmit}
             disabled={isSubmitPending}
             className="h-11 rounded-full font-semibold"

@@ -11,44 +11,49 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import {
-  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { BookOpen, ClipboardList, LayoutList, Trophy } from 'lucide-react';
+import { LayoutList, Plus } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollContainer } from '@/components/ui/scroll-container';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-import { getTaskResourceGroup } from './use-task-form.helpers';
-import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
+import {
+  TASK_FORM_PANEL_CLASSNAME,
+  TASK_FORM_PANEL_HEADER_CLASSNAME,
+  TASK_FORM_WARNING_ALERT_CLASSNAME,
+  TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME,
+} from './task-form.constants';
 import { SortableResourceItem } from './sortable-resource-item';
-import type { ResourceGroup, SelectedResource } from './task-form.types';
+import type { ResourceFilterType, SelectedResource } from './task-form.types';
 
 interface TaskPipelinePanelProps {
   selectedResources: SelectedResource[];
   resourcesDisabled: boolean;
+  isEdit?: boolean;
   onDragEnd: (event: DragEndEvent) => void;
   onRemoveResource: (uid: number) => void;
+  onToggleQuizType?: (uid: number, nextQuizType: 'PRACTICE' | 'EXAM') => void;
+  onUpdateExamConfig?: (uid: number, patch: { duration?: string; passScore?: string }) => void;
+  onAddResource?: (initialType?: ResourceFilterType, insertIndex?: number) => void;
   embedded?: boolean;
 }
-
-const SECTION_ORDER: ResourceGroup[] = ['DOCUMENT', 'PRACTICE', 'EXAM'];
-
-const SECTION_CONFIG: Record<ResourceGroup, {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = {
-  DOCUMENT: { title: '学习资料', icon: BookOpen },
-  PRACTICE: { title: '测验', icon: ClipboardList },
-  EXAM: { title: '考试', icon: Trophy },
-};
 
 export function TaskPipelinePanel({
   selectedResources,
   resourcesDisabled,
+  isEdit = false,
   onDragEnd,
   onRemoveResource,
+  onToggleQuizType,
+  onUpdateExamConfig,
+  onAddResource,
   embedded = false,
 }: TaskPipelinePanelProps) {
   const dragCleanupFrameRef = React.useRef<number | null>(null);
@@ -69,14 +74,6 @@ export function TaskPipelinePanel({
       cancelAnimationFrame(dragCleanupFrameRef.current);
     }
   }, []);
-
-  const groupedResources = React.useMemo(
-    () => SECTION_ORDER.map((group) => ({
-      group,
-      items: selectedResources.filter((item) => getTaskResourceGroup(item) === group),
-    })),
-    [selectedResources],
-  );
 
   const draggingItem = React.useMemo(
     () => selectedResources.find((item) => item.uid === draggingItemUid) ?? null,
@@ -104,99 +101,121 @@ export function TaskPipelinePanel({
 
   return (
     <div className={cn(embedded ? 'flex min-h-0 flex-1 flex-col overflow-hidden bg-background' : TASK_FORM_PANEL_CLASSNAME)}>
-      {embedded ? null : (
-        <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
-          <LayoutList className="h-4 w-4 text-foreground" />
-          <span>任务结构</span>
-        </div>
-      )}
+      <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
+        <LayoutList className="h-4 w-4 text-primary-500" />
+        <span>任务资源</span>
+        <Badge variant="secondary" className="h-5 border-none bg-muted px-2 font-bold text-text-muted">
+          已选 {selectedResources.length}
+        </Badge>
+      </div>
 
-      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto bg-muted/15 p-5">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragCancel={clearDragState}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex min-h-full w-full flex-col gap-4">
-            {groupedResources.map(({ group, items }) => (
-              <TaskPipelineSection
-                key={group}
-                group={group}
-                items={items}
-                resourcesDisabled={resourcesDisabled}
-                onRemoveResource={onRemoveResource}
-              />
-            ))}
-          </div>
+      <ScrollContainer className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/15 p-5">
+        {resourcesDisabled ? (
+          <Alert variant="warning" className={`${TASK_FORM_WARNING_ALERT_CLASSNAME} mb-4`}>
+            <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
+              {selectedResources.some((item) => item.quizType === 'EXAM')
+                ? '任务创建后无法修改资源结构与考试参考时间，仅可修改考试及格分'
+                : '任务创建后无法修改资源，请创建新任务'}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-          <DragOverlay>
-            {draggingItem ? (
-              <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
-                <SortableResourceItem
-                  item={draggingItem}
-                  indexInGroup={groupedResources.find(({ group }) => group === getTaskResourceGroup(draggingItem))?.items
-                    .findIndex((item) => item.uid === draggingItem.uid) ?? 0}
-                  removeResource={onRemoveResource}
-                  disabled={resourcesDisabled}
-                  isOverlay
-                />
+        {selectedResources.length === 0 ? (
+          resourcesDisabled ? null : (
+            <div className="flex flex-1 items-center justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-xl bg-background px-4 text-[13px] font-semibold shadow-2xs hover:border-interaction-border hover:bg-interaction-surface"
+                onClick={() => onAddResource?.('ALL')}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                添加资源
+              </Button>
+            </div>
+          )
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragCancel={clearDragState}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={selectedResources.map((item) => String(item.uid))} strategy={verticalListSortingStrategy}>
+              <div className="mx-auto flex w-full max-w-[676px] flex-col px-7">
+                {selectedResources.map((item, index) => (
+                  <React.Fragment key={item.uid}>
+                    {index > 0 ? (
+                      <div className="flex flex-col items-center py-0.5" aria-hidden={resourcesDisabled ? 'true' : undefined}>
+                        {resourcesDisabled ? (
+                          <div className="h-5 w-px border-l border-dashed border-border" />
+                        ) : (
+                          <>
+                            <div className="h-2.5 w-px border-l border-dashed border-border" />
+                            <Tooltip title="在此处插入资源">
+                              <button
+                                type="button"
+                                aria-label={`在第 ${index} 项和第 ${index + 1} 项之间插入资源`}
+                                onClick={() => onAddResource?.('ALL', index)}
+                                className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-background text-text-muted transition-[scale,border-color,background-color,color] duration-150 hover:scale-110 hover:border-primary/40 hover:bg-primary-50 hover:text-primary active:scale-95"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </Tooltip>
+                            <div className="h-2.5 w-px border-l border-dashed border-border" />
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                    <SortableResourceItem
+                      item={item}
+                      removeResource={onRemoveResource}
+                      onToggleQuizType={onToggleQuizType}
+                      onUpdateExamConfig={onUpdateExamConfig}
+                      isEdit={isEdit}
+                      disabled={resourcesDisabled}
+                    />
+                  </React.Fragment>
+                ))}
+
+                {resourcesDisabled ? null : (
+                  <div className="flex flex-col items-center pt-0.5">
+                    <div className="h-4 w-px border-l border-dashed border-border" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full bg-background px-4 text-[12px] font-semibold text-text-muted hover:border-interaction-border hover:bg-interaction-surface hover:text-foreground"
+                      onClick={() => onAddResource?.('ALL', selectedResources.length)}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      添加资源
+                    </Button>
+                  </div>
+                )}
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            </SortableContext>
+
+            <DragOverlay>
+              {draggingItem ? (
+                <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
+                  <SortableResourceItem
+                    item={draggingItem}
+                    removeResource={onRemoveResource}
+                    onToggleQuizType={onToggleQuizType}
+                    onUpdateExamConfig={onUpdateExamConfig}
+                    isEdit={isEdit}
+                    disabled={resourcesDisabled}
+                    isOverlay
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </ScrollContainer>
     </div>
   );
 }
-
-interface TaskPipelineSectionProps {
-  group: ResourceGroup;
-  items: SelectedResource[];
-  resourcesDisabled: boolean;
-  onRemoveResource: (uid: number) => void;
-}
-
-const TaskPipelineSection: React.FC<TaskPipelineSectionProps> = ({
-  group,
-  items,
-  resourcesDisabled,
-  onRemoveResource,
-}) => {
-  const { title, icon: Icon } = SECTION_CONFIG[group];
-
-  return (
-    <section className="flex min-h-[calc((100%-2rem)/3)] flex-none flex-col overflow-hidden rounded-xl border border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <Icon className="h-4 w-4 text-text-muted" />
-          <span className="text-[13px] font-semibold text-foreground">{title}</span>
-        </div>
-        <span className="text-[11px] font-medium text-text-muted">{items.length}</span>
-      </div>
-
-      <div className="px-4 py-3">
-        <SortableContext items={items.map((item) => String(item.uid))} strategy={rectSortingStrategy}>
-          {items.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {items.map((item, index) => (
-                <SortableResourceItem
-                  key={item.uid}
-                  item={item}
-                  indexInGroup={index}
-                  removeResource={onRemoveResource}
-                  disabled={resourcesDisabled}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex min-h-[92px] items-center justify-center rounded-lg border border-dashed border-border/80 text-[12px] font-medium text-text-muted">
-              点击左侧资源添加
-            </div>
-          )}
-        </SortableContext>
-      </div>
-    </section>
-  );
-};

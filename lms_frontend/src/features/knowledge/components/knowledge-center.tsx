@@ -12,7 +12,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -477,11 +476,6 @@ export const KnowledgeCenter: React.FC<{ learning?: KnowledgeLearning }> = ({ le
             className="pb-4"
             style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
         >
-            <PageHeader
-                title="知识中心"
-                icon={<Inbox />}
-            />
-
             <div className="relative w-full">
                 <Search
                     className="pointer-events-none absolute bottom-[12px] left-0 h-4 w-4 text-foreground/28 sm:bottom-[14px]"

@@ -3,7 +3,6 @@
  */
 
 import type { QuestionType, SubmissionStatus } from '@/types/common';
-import type { QuizType } from '@/types/quiz';
 
 export interface AnswerOption {
   key: string;
@@ -52,10 +51,9 @@ export interface SaveAnswerRequest {
  */
 export interface SubmissionDetail {
   id: number;
-  quiz: number;
   quiz_title: string;
-  quiz_type: QuizType;
-  quiz_type_display: string;
+  allow_retry: boolean;
+  kind_label: string;
   quiz_duration?: number | null;
   user: number;
   user_name: string;
@@ -65,8 +63,8 @@ export interface SubmissionDetail {
   status_display: string;
   total_score: string;
   obtained_score?: string;
-  pass_score: string;
-  is_passed: boolean;
+  pass_score?: string | number | null;
+  is_passed?: boolean | null;
   started_at: string;
   submitted_at?: string;
   remaining_seconds?: number;

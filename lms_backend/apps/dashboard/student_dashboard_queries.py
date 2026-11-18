@@ -39,7 +39,7 @@ def get_student_exam_avg_score(user_id: int) -> Optional[float]:
     result = Submission.objects.filter(
         user_id=user_id,
         status='GRADED',
-        quiz__quiz_type='EXAM',
+        task_quiz__allow_retry=False,
     ).aggregate(avg_score=Avg('obtained_score'))
     return float(result['avg_score']) if result['avg_score'] is not None else None
 
@@ -64,7 +64,7 @@ def get_task_participants_progress(
         'assignee', 'task'
     ).prefetch_related(
         'task__task_knowledge',
-        Prefetch('task__task_quizzes', queryset=TaskQuiz.objects.select_related('quiz')),
+        Prefetch('task__task_quizzes', queryset=TaskQuiz.objects.all()),
         'knowledge_progress',
     )
     quiz_progress_map = get_assignment_quiz_progress_map([assignment.id for assignment in assignments])

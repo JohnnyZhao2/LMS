@@ -57,6 +57,7 @@ export const buildQuestionPatchPayload = (
   current: Partial<QuestionCreateRequest>,
 ): Partial<QuestionCreateRequest> => {
   const fields: Array<keyof QuestionCreateRequest> = [
+    'question_type',
     'space_tag_id',
     'content',
     'options',

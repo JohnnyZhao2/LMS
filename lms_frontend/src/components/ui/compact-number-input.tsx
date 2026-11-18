@@ -17,6 +17,7 @@ interface CompactNumberInputProps {
   inputWidthClassName?: string;
   mode?: NumberMode;
   placeholder?: string;
+  disabled?: boolean;
   min?: number;
   max?: number;
   step?: number;
@@ -40,6 +41,7 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
   inputWidthClassName = 'w-12',
   mode = 'integer',
   placeholder,
+  disabled = false,
   min,
   max,
   step = mode === 'decimal' ? 0.5 : 1,
@@ -85,11 +87,12 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
         inputMode={mode === 'integer' ? 'numeric' : 'decimal'}
         value={value}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={onBlur}
         onKeyDown={handleKeyDown}
         className={cn(
-          'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40',
+          'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40 disabled:cursor-not-allowed disabled:text-text-muted',
           'focus:outline-none',
           inputWidthClassName,
           inputClassName,
@@ -109,6 +112,7 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
             ? 'grid grid-cols-[minmax(0,3fr)_1px_minmax(0,2fr)] items-center gap-x-2 rounded-md bg-muted px-2.5 py-1'
           : 'flex items-center gap-2 rounded-md bg-muted px-2.5 py-1',
         className,
+        disabled && 'opacity-70',
       )}
     >
       {prefixLabel && (
@@ -128,11 +132,12 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
               inputMode={mode === 'integer' ? 'numeric' : 'decimal'}
               value={value}
               placeholder={placeholder}
+              disabled={disabled}
               onChange={(e) => handleChange(e.target.value)}
               onBlur={onBlur}
               onKeyDown={handleKeyDown}
               className={cn(
-                'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40',
+                'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40 disabled:cursor-not-allowed disabled:text-text-muted',
                 'focus:outline-none',
                 inputWidthClassName,
                 inputClassName,

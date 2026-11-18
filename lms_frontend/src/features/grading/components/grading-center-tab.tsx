@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { UserAvatar } from '@/components/users/user-avatar';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -68,11 +69,7 @@ const getPassRateColor = (rate?: number | null) => {
   return 'text-destructive-700';
 };
 
-const formatAnswerText = (answer?: string | null) => {
-  const text = (answer || '').replace(/\r\n/g, '\n').trim();
-  if (!text) return <span className="text-text-muted italic">(未作答)</span>;
-  return text;
-};
+const normalizeAnswerText = (answer?: string | null) => (answer || '').replace(/\r\n/g, '\n').trim();
 
 const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
   answers.reduce<Record<number, string>>((acc, answer) => {
@@ -188,20 +185,18 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
   };
 
-  const commitScore = async (studentId: number, rawScore: string) => {
-    if (!selectedQuestion || rawScore === '' || !quizId) return;
+  const commitScore = async (answerId: number, studentId: number, rawScore: string) => {
+    if (!selectedQuestion || rawScore === '' || !quizId || !answerId) return;
     const parsedScore = Number(rawScore);
     if (Number.isNaN(parsedScore)) return;
     const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
 
-    // Optimistic update
     setScoresByStudent((prev) => ({ ...prev, [studentId]: normalizedScore.toString() }));
 
     try {
       await submitGrading.mutateAsync({
         quiz_id: quizId,
-        question_id: selectedQuestion.question_id,
-        student_id: studentId,
+        answer_id: answerId,
         score: normalizedScore,
         comments: '',
       });
@@ -210,12 +205,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     }
   };
 
-  const handleQuickScore = async (studentId: number, ratio: number) => {
+  const handleQuickScore = async (answerId: number, studentId: number, ratio: number) => {
     if (!selectedQuestion) return;
     const score = Math.round(selectedQuestion.max_score * ratio * 10) / 10;
     const formattedScore = score.toString();
     setScoresByStudent((prev) => ({ ...prev, [studentId]: formattedScore }));
-    await commitScore(studentId, formattedScore);
+    await commitScore(answerId, studentId, formattedScore);
   };
 
   if (questionsLoading && !questions) {
@@ -540,7 +535,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                         )}
                         {activeQuestionDetail?.subjective_answers?.map((answer) => (
                           <div
-                            key={answer.student_id}
+                            key={answer.answer_id}
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
                           >
                             {/* Header: Student Info + Score */}
@@ -571,7 +566,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                     max={selectedQuestion?.max_score || 0}
                                     value={scoresByStudent[answer.student_id] ?? ''}
                                     onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
-                                    onBlur={(e) => commitScore(answer.student_id, e.target.value)}
+                                    onBlur={(e) => commitScore(answer.answer_id, answer.student_id, e.target.value)}
                                     className="h-9 w-16 border-border bg-background pr-2 text-right font-mono text-base font-bold focus:border-primary focus:ring-1 focus:ring-primary/20 sm:w-20"
                                   />
                                   <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {formatScore(selectedQuestion?.max_score)}</span>
@@ -584,21 +579,26 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
-                                  <div className="min-h-[80px] whitespace-pre-wrap break-words rounded-xl border border-dashed border-border bg-background p-4 text-[15px] leading-7 text-foreground">
-                                    {formatAnswerText(answer.answer_text)}
-                                  </div>
+                                  <Textarea
+                                    readOnly
+                                    interactionStyle="minimal"
+                                    rows={10}
+                                    value={normalizeAnswerText(answer.answer_text)}
+                                    placeholder="（未作答）"
+                                    className="h-80 min-h-0 resize-none overflow-y-auto scrollbar-subtle rounded-xl border border-dashed border-border bg-background p-4 text-sm font-normal leading-relaxed text-foreground shadow-none focus:border-border focus:shadow-none"
+                                  />
                                 </div>
 
                                 {/* Quick Actions Footer */}
                                 <div className="flex justify-start pt-2 sm:justify-end">
                                   <div className="flex flex-wrap gap-2 opacity-100 transition-opacity sm:opacity-50 sm:group-hover:opacity-100">
-                                    <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
+                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
                                       <ThumbsUp className="w-3.5 h-3.5" /> 满分
                                     </button>
-                                    <button onClick={() => handleQuickScore(answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100">
+                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100">
                                       <Check className="w-3.5 h-3.5" /> 及格
                                     </button>
-                                    <button onClick={() => handleQuickScore(answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100">
+                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100">
                                       <ThumbsDown className="w-3.5 h-3.5" /> 零分
                                     </button>
                                   </div>

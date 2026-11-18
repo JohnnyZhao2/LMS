@@ -5,7 +5,7 @@ def hard_delete_user_business_data(user_id: int) -> None:
     """硬删除用户关联业务数据。"""
     from apps.knowledge.models import Knowledge, KnowledgeRevision
     from apps.questions.models import Question
-    from apps.quizzes.models import Quiz, QuizRevision
+    from apps.quizzes.models import Quiz
     from apps.spot_checks.models import SpotCheck
     from apps.submissions.models import Submission
     from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
@@ -20,8 +20,8 @@ def hard_delete_user_business_data(user_id: int) -> None:
     TaskAssignment.objects.filter(assignee_id=user_id).delete()
     Submission.objects.filter(user_id=user_id).delete()
 
-    Submission.objects.filter(quiz__created_by_id=user_id).delete()
-    TaskQuiz.objects.filter(quiz__created_by_id=user_id).delete()
+    Submission.objects.filter(task_quiz__source_quiz__created_by_id=user_id).delete()
+    TaskQuiz.objects.filter(source_quiz__created_by_id=user_id).delete()
     TaskKnowledge.objects.filter(knowledge__created_by_id=user_id).delete()
 
     if created_task_ids:
@@ -37,8 +37,4 @@ def hard_delete_user_business_data(user_id: int) -> None:
         created_by_id=user_id,
         knowledge_tasks__isnull=True,
     ).delete()
-    QuizRevision.objects.filter(
-        created_by_id=user_id,
-        quiz_tasks__isnull=True,
-        submissions__isnull=True,
-    ).delete()
+

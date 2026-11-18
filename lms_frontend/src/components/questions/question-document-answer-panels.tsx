@@ -58,6 +58,32 @@ export const QuestionDocumentAnswerEditor: React.FC<QuestionDocumentAnswerEditor
   );
 };
 
+const SHORT_ANSWER_FIELD_CLASSNAME = 'h-56 min-h-0 resize-none overflow-y-auto scrollbar-subtle rounded-[14px] border-border bg-background px-4 py-3 text-[15px] leading-7';
+
+export const ShortAnswerTextarea: React.FC<{
+  value: string;
+  readOnly?: boolean;
+  placeholder?: string;
+  onChange?: (value: string) => void;
+  onBlur?: () => void;
+}> = ({
+  value,
+  readOnly = false,
+  placeholder,
+  onChange,
+  onBlur,
+}) => (
+  <Textarea
+    readOnly={readOnly}
+    value={value}
+    onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+    onBlur={onBlur}
+    rows={8}
+    placeholder={placeholder}
+    className={SHORT_ANSWER_FIELD_CLASSNAME}
+  />
+);
+
 interface QuestionDocumentResponsePanelProps {
   questionType: QuestionType;
   options: QuestionChoiceOption[];
@@ -66,6 +92,7 @@ interface QuestionDocumentResponsePanelProps {
   disabled?: boolean;
   interactive?: boolean;
   onResponseChange?: (value: string | string[]) => void;
+  onResponseBlur?: () => void;
 }
 
 export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePanelProps> = ({
@@ -76,6 +103,7 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
   disabled = false,
   interactive = false,
   onResponseChange,
+  onResponseBlur,
 }) => {
   const activeValues = interactive
     ? normalizeQuestionValueToArray(response, questionType)
@@ -100,25 +128,19 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
 
   if (questionType === 'SHORT_ANSWER') {
     const responseText = typeof response === 'string' ? response : '';
-    const displayText = (interactive ? responseText : String(answer || '')).replace(/\r\n/g, '\n').trim();
-
-    if (interactive && !disabled) {
-      return (
-        <Textarea
-          autoResize
-          value={responseText}
-          onChange={(event) => onResponseChange?.(event.target.value)}
-          rows={6}
-          placeholder="请填写答案"
-          className="min-h-[168px] resize-none rounded-[14px] border-border bg-background px-4 py-3 text-[15px] leading-7"
-        />
-      );
-    }
+    const editing = interactive && !disabled;
+    const value = editing
+      ? responseText
+      : (interactive ? responseText : String(answer || '')).replace(/\r\n/g, '\n').trim();
 
     return (
-      <div className="min-h-[120px] whitespace-pre-wrap break-words rounded-[14px] border border-border bg-background px-4 py-3 text-[15px] leading-7 text-foreground">
-        {displayText || (interactive ? '未作答' : '暂无参考答案')}
-      </div>
+      <ShortAnswerTextarea
+        value={value}
+        readOnly={!editing}
+        placeholder={editing ? '请填写答案' : (value ? undefined : (interactive ? '未作答' : '暂无参考答案'))}
+        onChange={editing ? (next) => onResponseChange?.(next) : undefined}
+        onBlur={editing ? onResponseBlur : undefined}
+      />
     );
   }
 

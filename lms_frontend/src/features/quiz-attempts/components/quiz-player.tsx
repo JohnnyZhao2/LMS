@@ -16,6 +16,7 @@ import { QuizInfoPanel, QuizProgressPanel } from './quiz-player-panels';
 import { isAnswerEmpty } from './quiz-player-utils';
 
 const QUESTION_SCROLL_OFFSET = 16;
+const SHORT_ANSWER_SAVE_DELAY_MS = 1000;
 
 export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
@@ -41,6 +42,17 @@ export const QuizPlayer: React.FC = () => {
   const { mutateAsync: submitMutation, isPending: isSubmitPending } = useSubmitQuiz();
 
   const startAttemptKeyRef = useRef<string | null>(null);
+  const submissionIdRef = useRef<number | null>(null);
+  const saveAnswerRef = useRef(saveAnswerMutation);
+  const textsRef = useRef(new Map<number, {
+    draft: string;
+    saved?: string;
+    timer?: number;
+    pending?: Promise<void>;
+  }>());
+  const flushAllTextRef = useRef<() => Promise<void>>(async () => undefined);
+  saveAnswerRef.current = saveAnswerMutation;
+  submissionIdRef.current = submission?.id ?? null;
 
   const scheduleProgrammaticScrollRelease = () => {
     if (releaseProgrammaticScrollFrameRef.current !== null) {
@@ -68,9 +80,16 @@ export const QuizPlayer: React.FC = () => {
 
         const existingAnswers: Record<number, string | string[]> = {};
         const existingMarkedQuestions: Record<number, boolean> = {};
+        textsRef.current.forEach((slot) => {
+          if (slot.timer) window.clearTimeout(slot.timer);
+        });
+        textsRef.current.clear();
         result.answers.forEach((a) => {
           if (a.user_answer !== null && a.user_answer !== undefined) {
             existingAnswers[a.question] = a.user_answer;
+          }
+          if (a.question_type === 'SHORT_ANSWER' && typeof a.user_answer === 'string') {
+            textsRef.current.set(a.question, { draft: a.user_answer, saved: a.user_answer });
           }
           if (a.is_marked) {
             existingMarkedQuestions[a.question] = true;
@@ -95,41 +114,121 @@ export const QuizPlayer: React.FC = () => {
     start();
   }, [assignmentId, navigate, quizId, startQuizMutation]);
 
-  const handleAnswerChange = async (questionId: number, value: string | string[]) => {
+  const flushText = (questionId: number): Promise<void> => {
+    const slot = textsRef.current.get(questionId);
+    if (!slot) return Promise.resolve();
+    if (slot.timer) {
+      window.clearTimeout(slot.timer);
+      slot.timer = undefined;
+    }
+    if (slot.pending) return slot.pending;
+
+    const submissionId = submissionIdRef.current;
+    if (submissionId === null || slot.draft === slot.saved) return Promise.resolve();
+
+    const value = slot.draft;
+    const pending = (async () => {
+      try {
+        await saveAnswerRef.current({
+          submissionId,
+          data: { question_id: questionId, user_answer: value },
+        });
+        slot.saved = value;
+      } catch (error) {
+        console.error('保存答案失败:', error);
+        throw error;
+      } finally {
+        slot.pending = undefined;
+      }
+      if (slot.draft !== value) await flushText(questionId);
+    })();
+    slot.pending = pending;
+    return pending;
+  };
+
+  const flushAllText = () => Promise.all(
+    [...textsRef.current.keys()].map((questionId) => flushText(questionId)),
+  ).then(() => undefined);
+  flushAllTextRef.current = flushAllText;
+
+  useEffect(() => {
+    const flush = () => {
+      void flushAllTextRef.current();
+    };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
+
+  const scheduleText = (questionId: number, value: string) => {
+    const slot = textsRef.current.get(questionId) ?? { draft: value };
+    slot.draft = value;
+    if (slot.timer) window.clearTimeout(slot.timer);
+    slot.timer = window.setTimeout(() => {
+      slot.timer = undefined;
+      void flushText(questionId).catch((error) => {
+        showApiError(error, '答案未保存');
+      });
+    }, SHORT_ANSWER_SAVE_DELAY_MS);
+    textsRef.current.set(questionId, slot);
+  };
+
+  const handleAnswerChange = (questionId: number, value: string | string[]) => {
     if (!submission) {
       return;
     }
 
-    // 判断答案是否为空
     const isEmpty = isAnswerEmpty(value);
 
     setAnswers((prev) => {
       if (isEmpty) {
-        // 如果答案为空，从对象中删除该键
         const nextAnswers = { ...prev };
         delete nextAnswers[questionId];
         return nextAnswers;
       }
-      // 否则正常设置答案
       return { ...prev, [questionId]: value };
     });
 
-    try {
-      await saveAnswerMutation({
-        submissionId: submission.id,
-        data: { question_id: questionId, user_answer: value },
-      });
-    } catch (error) {
-      console.error('保存答案失败:', error);
+    const questionType = submission.answers.find((item) => item.question === questionId)?.question_type;
+    if (questionType === 'SHORT_ANSWER' && typeof value === 'string') {
+      scheduleText(questionId, value);
+      return;
     }
+
+    const submissionId = submissionIdRef.current;
+    if (!submissionId) {
+      return;
+    }
+    void saveAnswerMutation({
+      submissionId,
+      data: { question_id: questionId, user_answer: value },
+    }).catch((error) => {
+      console.error('保存答案失败:', error);
+    });
+  };
+
+  const handleAnswerBlur = (questionId: number) => {
+    void flushText(questionId).catch((error) => {
+      showApiError(error, '答案未保存');
+    });
   };
 
   const handleSubmitConfirm = async () => {
-    if (!submission) {
+    const submissionId = submissionIdRef.current;
+    if (!submissionId) {
       return;
     }
     try {
-      await submitMutation(submission.id);
+      await flushAllText();
+    } catch (error) {
+      console.error('保存答案失败:', error);
+      showApiError(error, '答案未保存');
+      return;
+    }
+    try {
+      await submitMutation(submissionId);
       toast.success('提交成功');
       setShowSubmitDialog(false);
       navigate(ROUTES.TASKS);
@@ -140,12 +239,15 @@ export const QuizPlayer: React.FC = () => {
   };
 
   const handleAbandonConfirm = () => {
-    setShowAbandonDialog(false);
-    navigate(ROUTES.TASKS);
+    void flushAllText().finally(() => {
+      setShowAbandonDialog(false);
+      navigate(ROUTES.TASKS);
+    });
   };
 
   const handleToggleMark = async (questionId: number) => {
-    if (!submission) {
+    const submissionId = submissionIdRef.current;
+    if (!submissionId) {
       return;
     }
 
@@ -162,7 +264,7 @@ export const QuizPlayer: React.FC = () => {
 
     try {
       await saveAnswerMutation({
-        submissionId: submission.id,
+        submissionId,
         data: { question_id: questionId, is_marked: nextMarked },
       });
     } catch (error) {
@@ -303,7 +405,6 @@ export const QuizPlayer: React.FC = () => {
   const progressPercent = totalQuestions === 0
     ? 0
     : Math.round((answeredCount / totalQuestions) * 100);
-  const isExam = submission.quiz_type === 'EXAM';
   const unansweredCount = totalQuestions - answeredCount;
 
   return (
@@ -319,7 +420,6 @@ export const QuizPlayer: React.FC = () => {
               answeredCount={answeredCount}
               markedCount={markedCount}
               progressPercent={progressPercent}
-              isExam={isExam}
               onJump={scrollToQuestion}
             />
           </div>
@@ -334,6 +434,7 @@ export const QuizPlayer: React.FC = () => {
             questionRefs={questionRefs}
             scrollViewportRef={questionViewportRef}
             onAnswerChange={handleAnswerChange}
+            onAnswerBlur={handleAnswerBlur}
             onToggleMark={handleToggleMark}
           />
 
@@ -351,7 +452,7 @@ export const QuizPlayer: React.FC = () => {
       <QuizSubmitDialog
         open={showSubmitDialog}
         unansweredCount={unansweredCount}
-        isExam={isExam}
+        allowRetry={submission.allow_retry}
         isPending={isSubmitPending}
         onOpenChange={setShowSubmitDialog}
         onConfirm={handleSubmitConfirm}

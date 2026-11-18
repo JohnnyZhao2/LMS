@@ -14,7 +14,6 @@ import { useUsers, useDepartments, useMentors } from '@/api/users/get-users'
 import { useChangePassword, useDeleteUser, useUpdateUserAvatar } from '@/api/users/manage-users'
 import { UserForm } from "./user-form"
 import { AvatarPickerPopover } from '@/components/users/avatar-picker-popover'
-import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor, SUPERUSER_VISUAL } from "@/lib/role-config"
 import { useAuth } from "@/lib/auth"
 import { DataTable } from '@/components/ui/data-table/data-table';
@@ -31,8 +30,7 @@ import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, Sel
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tooltip } from '@/components/ui/tooltip';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
+import { PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import type { UserList as UserListType, Role } from '@/types/common';
@@ -301,13 +299,7 @@ export const UserList: React.FC = () => {
 
   return (
     <>
-      <PageFillShell>
-        <PageHeader
-          title="用户中心"
-          icon={<UsersIcon />}
-        />
-
-        <PageWorkbench>
+      <PageWorkbench>
           <div className="flex min-h-0 flex-1 flex-col self-stretch">
             <UserDirectoryFilters
               departmentOptions={departmentSegmentOptions}
@@ -369,7 +361,6 @@ export const UserList: React.FC = () => {
             </div>
           </div>
         </PageWorkbench>
-      </PageFillShell>
 
       {/* User Form Modal */}
       <UserForm

@@ -6,12 +6,19 @@ import type { TaskDetail } from '@/types/task';
 /**
  * 统一的任务创建请求
  */
+export interface TaskQuizBinding {
+  id: number;
+  allow_retry: boolean;
+  duration?: number | null;
+  pass_score?: number | null;
+}
+
 export interface TaskCreateRequest {
   title: string;
   description?: string;
   deadline: string;
   knowledge_ids?: number[];
-  quiz_ids?: number[];
+  quizzes?: TaskQuizBinding[];
   assignee_ids: number[];
 }
 

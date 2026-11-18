@@ -5,7 +5,6 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Clock3, Target } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -16,54 +15,29 @@ import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import type { EditableQuestionItem } from '@/lib/question-editor';
-import type { QuizType } from '@/types/quiz';
-import { CompactNumberInput } from '@/components/ui/compact-number-input';
 import { SortableOutlineItem } from './sortable-outline-item';
-
-const EXAM_META_GROUP_WIDTH_CLASSNAME = 'w-[116px]';
 
 interface QuizOutlinePanelProps {
   items: EditableQuestionItem[];
   activeKey: string | null;
-  quizType: QuizType;
   itemDisplayMode?: 'card' | 'plain';
   title?: string;
   showScoreSummary?: boolean;
-  duration?: number;
-  passScore?: number;
   readOnly?: boolean;
   onSelectItem: (key: string) => void;
   onReorderItems?: (activeKey: string, overKey: string) => void;
-  onDurationChange?: (value?: number) => void;
-  onPassScoreChange?: (value?: number) => void;
 }
 
 export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   items,
   activeKey,
-  quizType,
   itemDisplayMode = 'card',
   title = '试卷结构',
   showScoreSummary = true,
-  duration,
-  passScore,
   readOnly = false,
   onSelectItem,
   onReorderItems,
-  onDurationChange,
-  onPassScoreChange,
 }) => {
-  const parseIntegerValue = (value: string) => {
-    if (!value) return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-  };
-  const parseDecimalValue = (value: string) => {
-    if (!value) return undefined;
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-    return Math.round(parsed * 10) / 10;
-  };
   const groupedSections = useMemo(
     () => buildQuestionSections(items, (item) => item.questionType),
     [items],
@@ -122,57 +96,6 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           <div className="text-[13px] font-semibold tracking-[0.01em] text-foreground">{title}</div>
         </div>
       </div>
-      {quizType === 'EXAM' && (
-        <div className="flex justify-center gap-8 border-b border-border bg-background px-5 py-3.5">
-          <div className={cn('flex shrink-0 flex-col items-start gap-1.5', EXAM_META_GROUP_WIDTH_CLASSNAME)}>
-            <div className="flex w-full items-center justify-start gap-1.5 text-[12px] font-medium text-text-muted">
-              <Clock3 className="h-3.5 w-3.5" />
-              参考时间
-            </div>
-            {readOnly ? (
-              <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
-                {duration || 0} 分
-              </div>
-            ) : (
-              <CompactNumberInput
-                value={duration ? String(duration) : ''}
-                onChange={(value) => onDurationChange?.(parseIntegerValue(value))}
-                min={1}
-                step={1}
-                unit="分"
-                dividerBeforeUnit
-                inputWidthClassName="w-10"
-                inputClassName="text-[12px] font-semibold"
-                className="h-8 w-full rounded-lg px-2"
-              />
-            )}
-          </div>
-          <div className={cn('flex shrink-0 flex-col items-start gap-1.5', EXAM_META_GROUP_WIDTH_CLASSNAME)}>
-            <div className="flex w-full items-center justify-start gap-1.5 text-[12px] font-medium text-text-muted">
-              <Target className="h-3.5 w-3.5" />
-              及格分数
-            </div>
-            {readOnly ? (
-              <div className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
-                {formatScore(passScore) || '0'} 分
-              </div>
-            ) : (
-              <CompactNumberInput
-                value={passScore ? formatScore(passScore) : ''}
-                onChange={(value) => onPassScoreChange?.(parseDecimalValue(value))}
-                min={1}
-                mode="decimal"
-                step={0.1}
-                unit="分"
-                dividerBeforeUnit
-                inputWidthClassName="w-12"
-                inputClassName="text-[12px] font-semibold"
-                className="h-8 w-full rounded-lg px-2"
-              />
-            )}
-          </div>
-        </div>
-      )}
       <ScrollContainer className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="h-full" />

@@ -1,21 +1,14 @@
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { FileText, Loader2, Send } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
-import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditorPageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { ROUTES } from '@/config/routes';
-import { cn } from '@/lib/utils';
 
-import { useQuizDetail } from '@/features/quizzes/api/get-quizzes';
 import { useTaskForm } from '@/features/tasks/components/task-form/use-task-form';
 import { TaskConfigurationPanel } from '@/features/tasks/components/task-form/task-configuration-panel';
-import { buildStableUid } from '@/features/tasks/components/task-form/use-task-form.helpers';
-import type { SelectedResource } from '@/features/tasks/components/task-form/task-form.types';
-import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { TaskPipelinePanel } from '@/features/tasks/components/task-form/task-pipeline-panel';
 import { TaskResourceLibraryPanel } from '@/features/tasks/components/task-form/task-resource-library-panel';
 import { QuizPreviewDialog } from '@/features/quizzes/components/quiz-preview-dialog';
@@ -25,23 +18,25 @@ const ASSIGNEE_ROLE_LABELS = new Map([
   ['DEPT_MANAGER', '室经理'],
 ]);
 
+const TASK_FORM_WORKBENCH_CLASSNAME =
+  'grid h-full min-h-0 min-w-0 grid-cols-1 items-stretch gap-3 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_minmax(23rem,26rem)] lg:overflow-hidden';
+
 export const TaskForm: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
-  const paramQuizId = Number(searchParams.get('quiz_id'));
-  const { data: quizDetail } = useQuizDetail(paramQuizId);
-  const initialResources = useMemo<SelectedResource[]>(() => {
-    if (!quizDetail) return [];
-    return [{
-      uid: buildStableUid(`QUIZ:${quizDetail.id}:prefill`, quizDetail.id),
-      id: quizDetail.id,
-      title: quizDetail.title,
-      resourceType: 'QUIZ',
-      category: `${quizDetail.question_count || 0} 个题目`,
-      quizType: quizDetail.quiz_type,
-    }];
-  }, [quizDetail]);
+  const previewOpen = previewDocumentId !== null || previewQuizId !== null;
+  const suppressPickerDismissRef = useRef(false);
+  if (previewOpen) suppressPickerDismissRef.current = true;
+  useEffect(() => {
+    if (previewOpen) return undefined;
+    const timer = window.setTimeout(() => {
+      suppressPickerDismissRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [previewOpen]);
+  const keepPickerUnderPreview = (event: { preventDefault: () => void }) => {
+    if (suppressPickerDismissRef.current) event.preventDefault();
+  };
   const {
     isEdit,
     taskError,
@@ -50,12 +45,16 @@ export const TaskForm: React.FC = () => {
     description,
     setDescription,
     deadline,
-    setDeadline,
+    deadlineDays,
+    setDeadlineDays,
     selectedResources,
     resourceSearch,
     setResourceSearch,
-    resourceType,
-    setResourceType,
+    resourceTypeFilter,
+    setResourceTypeFilter,
+    isPickerOpen,
+    openPicker,
+    closePicker,
     selectedUserIds,
     userSearch,
     setUserSearch,
@@ -73,24 +72,31 @@ export const TaskForm: React.FC = () => {
     resourcesDisabled,
     canRemoveAssignee,
     addResource,
+    toggleQuizType,
+    updateResourceExamConfig,
     removeResource,
     toggleUser,
     toggleUsers,
     handleDragEnd,
     handleSubmit,
     navigate,
-  } = useTaskForm({ initialResources });
+  } = useTaskForm();
 
-  const userPanelItems: UserSelectPanelItem[] = filteredUsers.map((user) => ({
-    id: user.id,
-    name: user.username,
-    avatarKey: user.avatar_key,
-    meta: [
+  const userPanelItems: UserSelectPanelItem[] = filteredUsers.map((user) => {
+    const tags = [
       user.employee_id || '-',
       user.department?.name || '无部门',
       user.roles.map((role) => ASSIGNEE_ROLE_LABELS.get(role.code)).find(Boolean),
-    ].filter(Boolean).join(' · '),
-  }));
+    ].filter((tag): tag is string => Boolean(tag));
+
+    return {
+      id: user.id,
+      name: user.username,
+      avatarKey: user.avatar_key,
+      meta: tags.join(' · '),
+      tags,
+    };
+  });
 
   if (taskError) {
     return (
@@ -105,66 +111,28 @@ export const TaskForm: React.FC = () => {
   return (
     <EditorPageShell>
       <PageWorkbench className="min-w-0">
-        <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
-          <TaskResourceLibraryPanel
-            availableResources={availableResources}
-            isLoading={isLoading}
-            resourceSearch={resourceSearch}
-            onResourceSearchChange={(value) => {
-              setResourceSearch(value);
-              setCurrentPage(1);
-            }}
-            resourceType={resourceType}
-            onResourceTypeChange={(value) => {
-              setResourceType(value);
-              setCurrentPage(1);
-            }}
-            onResourceAdd={addResource}
-            onDocumentPreview={setPreviewDocumentId}
-            onQuizPreview={setPreviewQuizId}
-            resourcesDisabled={resourcesDisabled}
-            totalResourceCount={totalResourceCount}
-            pageSize={resourcePageSize}
-            safeCurrentPage={safeCurrentPage}
-            showPagination={shouldPaginateResources}
-            onPageChange={setCurrentPage}
-          />
-
-          <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="relative flex h-11 shrink-0 items-center justify-end border-b border-border px-4">
-              <div className="absolute left-1/2 top-1/2 w-[clamp(12rem,44%,20rem)] -translate-x-1/2 -translate-y-1/2">
-                <Input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="输入任务标题..."
-                  className={cn(
-                    'h-9 rounded-lg px-4 text-center text-[13px] font-semibold placeholder:text-text-muted/50',
-                    FILLED_PLAIN_FIELD_CLASSNAME,
-                  )}
-                />
-              </div>
-              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-3.5 text-[12px] font-semibold text-background hover:bg-foreground/90"
-              >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {isEdit ? '保存修改' : '发布任务'}
-              </Button>
-            </div>
-
+        <div className={TASK_FORM_WORKBENCH_CLASSNAME}>
+          <div className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background lg:min-h-0">
             <TaskPipelinePanel
               selectedResources={selectedResources}
               resourcesDisabled={resourcesDisabled}
+              isEdit={isEdit}
               onDragEnd={handleDragEnd}
               onRemoveResource={removeResource}
+              onToggleQuizType={toggleQuizType}
+              onUpdateExamConfig={updateResourceExamConfig}
+              onAddResource={openPicker}
               embedded
             />
           </div>
 
+          <div className="min-h-[32rem] lg:h-full lg:min-h-0">
           <TaskConfigurationPanel
+            title={title}
+            onTitleChange={setTitle}
             deadline={deadline}
-            onDeadlineChange={setDeadline}
+            deadlineDays={deadlineDays}
+            onDeadlineDaysChange={setDeadlineDays}
             description={description}
             onDescriptionChange={setDescription}
             selectedUserIds={selectedUserIds}
@@ -175,9 +143,55 @@ export const TaskForm: React.FC = () => {
             onToggleUsers={toggleUsers}
             isUsersLoading={isUsersLoading}
             canRemoveAssignee={canRemoveAssignee}
+            isEdit={isEdit}
+            isSubmitting={isSubmitting}
+            canSubmit={canSubmit}
+            onSubmit={handleSubmit}
           />
+          </div>
         </div>
       </PageWorkbench>
+
+      <Dialog open={isPickerOpen} onOpenChange={(open) => { if (!open) closePicker(); }}>
+        <DialogContent
+          className="flex h-[min(78vh,680px)] w-[min(980px,calc(100vw-48px))] max-w-none flex-col gap-0 overflow-hidden p-0"
+          onPointerDownOutside={keepPickerUnderPreview}
+          onInteractOutside={keepPickerUnderPreview}
+          onFocusOutside={keepPickerUnderPreview}
+          onEscapeKeyDown={keepPickerUnderPreview}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>添加任务资源</DialogTitle>
+          </DialogHeader>
+          {isPickerOpen ? (
+            <TaskResourceLibraryPanel
+              resourceTypeFilter={resourceTypeFilter}
+              onResourceTypeFilterChange={(value) => {
+                setResourceTypeFilter(value);
+                setCurrentPage(1);
+              }}
+              availableResources={availableResources}
+              selectedResources={selectedResources}
+              isLoading={isLoading}
+              resourceSearch={resourceSearch}
+              onResourceSearchChange={(value) => {
+                setResourceSearch(value);
+                setCurrentPage(1);
+              }}
+              onResourceAdd={(resource) => addResource(resource)}
+              onResourceRemove={removeResource}
+              onDocumentPreview={setPreviewDocumentId}
+              onQuizPreview={setPreviewQuizId}
+              onDone={closePicker}
+              totalResourceCount={totalResourceCount}
+              pageSize={resourcePageSize}
+              safeCurrentPage={safeCurrentPage}
+              showPagination={shouldPaginateResources}
+              onPageChange={setCurrentPage}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <QuizPreviewDialog
         open={previewQuizId !== null}

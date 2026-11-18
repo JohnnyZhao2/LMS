@@ -1,4 +1,4 @@
-.kd-overlay{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:rgba(0,0,0,.6);animation:kdFadeIn .18s ease}
+.kd-overlay{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:rgba(0,0,0,.6);pointer-events:auto;animation:kdFadeIn .18s ease}
 .kd-overlay-focus{padding:0}
 .kd-container{position:relative;display:flex;width:min(1480px,calc(100vw - 64px));height:min(840px,calc(100dvh - 64px));max-width:100%;max-height:100%;gap:8px;overflow:hidden;border-radius:12px;padding:8px;background:#f1f3f6;box-shadow:0 40px 100px rgba(0,0,0,.35);animation:kdPopIn .22s cubic-bezier(.4,0,.2,1);transition:width .22s ease,height .22s ease,border-radius .22s ease,padding .22s ease}
 .kd-container-focus{width:100vw;height:100dvh;gap:0;border-radius:0;padding:0;background:transparent;box-shadow:none}

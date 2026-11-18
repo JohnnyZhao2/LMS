@@ -9,27 +9,24 @@ interface UseQuizzesParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  quizType?: 'EXAM' | 'PRACTICE';
 }
 
 /**
  * 获取试卷列表
  */
 export const useQuizzes = (params: UseQuizzesParams = {}) => {
-  const { page = 1, pageSize = 20, search, quizType } = params;
+  const { page = 1, pageSize = 20, search } = params;
 
   return useQuery({
     queryKey: queryKeys.quizzes.list({
       page,
       pageSize,
       search,
-      quizType,
     }),
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(search && { search }),
-        ...(quizType && { quiz_type: quizType }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/${queryString}`);

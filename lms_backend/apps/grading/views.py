@@ -24,6 +24,7 @@ from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
 from apps.submissions.workflows import grade_subjective_answer
+from apps.submissions.models import Answer
 
 
 def _manual_grade_log_description(ctx: dict) -> str:
@@ -76,7 +77,7 @@ class GradingQuestionsView(GradingBaseView):
 
     def _get_grading_questions(self, task, quiz_id):
         """获取阅卷中心题目列表"""
-        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
+        task_quiz = TaskQuiz.objects.filter(
             id=quiz_id,
             task=task,
         ).first()
@@ -85,7 +86,7 @@ class GradingQuestionsView(GradingBaseView):
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='试卷不属于该任务',
             )
-        relations = task_quiz.quiz.quiz_questions.prefetch_related('question_options').order_by('order')
+        relations = task_quiz.quiz_questions.prefetch_related('question_options').order_by('order')
 
         results = []
         for relation in relations:
@@ -137,7 +138,7 @@ class GradingAnswersView(GradingBaseView):
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
-        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
+        task_quiz = TaskQuiz.objects.filter(
             id=quiz_id,
             task=task,
         ).first()
@@ -146,7 +147,7 @@ class GradingAnswersView(GradingBaseView):
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='试卷不属于该任务',
             )
-        relation = task_quiz.quiz.quiz_questions.prefetch_related('question_options').filter(
+        relation = task_quiz.quiz_questions.prefetch_related('question_options').filter(
             id=question_id,
         ).first()
         if not relation:
@@ -251,6 +252,7 @@ class GradingAnswersView(GradingBaseView):
         for answer in answers:
             user = answer.submission.task_assignment.assignee
             results.append({
+                'answer_id': answer.id,
                 'student_id': user.id,
                 'student_name': user.username,
                 'avatar_key': user.avatar_key,
@@ -289,8 +291,7 @@ class GradingSubmitView(GradingBaseView):
         self._submit_grading(
             task=task,
             quiz_id=data['quiz_id'],
-            question_id=data['question_id'],
-            student_id=data['student_id'],
+            answer_id=data['answer_id'],
             score=data['score'],
             comments=data['comments']
         )
@@ -302,18 +303,22 @@ class GradingSubmitView(GradingBaseView):
         'manual_grade',
         _manual_grade_log_description,
         target_type='quiz',
-        target_title_template='{result.submission.quiz.title}',
+        target_title_template='{result.submission.task_quiz.title}',
         group='阅卷中心',
         label='提交评分',
     )
-    def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments):
+    def _submit_grading(self, task, quiz_id, answer_id, score, comments):
         """提交评分"""
         grader = self.request.user
-        answer = get_latest_quiz_answers(task, quiz_id).filter(
-            question_id=question_id,
-            submission__task_assignment__assignee_id=student_id,
-            submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
-        ).order_by('-submission__submitted_at', '-submission_id').first()
+        answer = Answer.objects.select_related(
+            'question',
+            'submission__task_assignment__assignee',
+        ).filter(
+            pk=answer_id,
+            submission__task_quiz_id=quiz_id,
+            submission__task_assignment__task=task,
+            submission__status__in=['GRADING', 'SUBMITTED', 'GRADED'],
+        ).first()
         if not answer:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
@@ -337,10 +342,10 @@ class PendingQuizzesView(GradingBaseView):
         description='获取当前用户可在阅卷中心查看的任务与试卷列表，支持按试卷类型筛选',
         parameters=[
             OpenApiParameter(
-                name='quiz_type',
-                type=str,
+                name='allow_retry',
+                type=bool,
                 required=False,
-                description='试卷类型筛选: EXAM(考试) / PRACTICE(测验)'
+                description='按是否允许重做筛选'
             ),
         ],
         responses={
@@ -350,23 +355,23 @@ class PendingQuizzesView(GradingBaseView):
     )
     def get(self, request):
         get_engine(request).require_permission('tasks.view_grading', error_message='无权访问阅卷中心')
-        quiz_type = request.query_params.get('quiz_type')
+        allow_retry = request.query_params.get('allow_retry')
 
         tasks = get_engine(request).scope_filter('tasks.view_task',
-            base_queryset=Task.objects.prefetch_related('task_quizzes__quiz').filter(
+            base_queryset=Task.objects.prefetch_related('task_quizzes').filter(
                 task_quizzes__isnull=False,
             ),
         ).distinct().order_by('-created_at')
 
         results = []
         for task in tasks:
-            task_quizzes = task.task_quizzes.select_related('quiz').all()
+            task_quizzes = list(task.task_quizzes.all())
 
-            # 按试卷类型筛选
-            if quiz_type:
+            if allow_retry in {'true', 'false'}:
+                expected = allow_retry == 'true'
                 task_quizzes = [
                     tq for tq in task_quizzes
-                    if tq.quiz.quiz_type == quiz_type
+                    if tq.allow_retry is expected
                 ]
 
             if not task_quizzes:
@@ -374,7 +379,6 @@ class PendingQuizzesView(GradingBaseView):
 
             quizzes_data = []
             for tq in task_quizzes:
-                quiz = tq.quiz
                 pending_count = self._count_pending_grading(task, tq.id)
                 has_analysis_data = self._has_analysis_data(task, tq.id)
                 if pending_count <= 0 and not has_analysis_data:
@@ -382,11 +386,11 @@ class PendingQuizzesView(GradingBaseView):
 
                 quizzes_data.append({
                     'quiz_id': tq.id,
-                    'quiz_title': quiz.title,
-                    'quiz_type': quiz.quiz_type,
-                    'quiz_type_display': quiz.get_quiz_type_display(),
-                    'question_count': quiz.question_count,
-                    'duration': quiz.duration,
+                    'quiz_title': tq.title,
+                    'allow_retry': tq.allow_retry,
+                    'kind_label': tq.kind_label,
+                    'question_count': tq.question_count,
+                    'duration': tq.duration,
                     'pending_count': pending_count,
                 })
 

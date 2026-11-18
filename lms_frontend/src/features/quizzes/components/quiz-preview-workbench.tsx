@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { BookOpenText, Calendar, Clock3, FileText, Pencil, User } from 'lucide-react';
+import { Calendar, FileText, Pencil, User } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +11,6 @@ import type { EditableQuestionItem } from '@/lib/question-editor';
 import { QuestionTypeBadge } from '@/components/questions/question-type-badge';
 import { buildQuestionSections } from '@/lib/question-sections';
 import { formatListDateTime } from '@/lib/date-time';
-import { formatScore } from '@/lib/score';
 import { cn } from '@/lib/utils';
 import { useQuizDetail } from '@/features/quizzes/api/get-quizzes';
 import type { QuizDraftState } from '@/features/quizzes/types';
@@ -29,11 +27,6 @@ interface QuizPreviewWorkbenchProps {
 }
 
 const PANEL_CLASSNAME = 'flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background';
-
-const quizTypeBadgeVariant = {
-  EXAM: 'error' as const,
-  PRACTICE: 'info' as const,
-};
 
 function MetaItem({
   icon,
@@ -73,8 +66,6 @@ export function QuizPreviewWorkbench({
     ? selectedQuestionKey
     : previewItems[0]?.key ?? null;
 
-  const quizType = quizDraft?.quizType ?? quiz?.quiz_type ?? 'PRACTICE';
-  const isExam = quizType === 'EXAM';
   const createdByName = quiz?.created_by_name || '未知';
   const updatedByName = quiz?.updated_by_name || quiz?.created_by_name || '未知';
   const createdAtText = formatListDateTime(quiz?.created_at);
@@ -132,21 +123,14 @@ export function QuizPreviewWorkbench({
         <QuizOutlinePanel
           items={previewItems}
           activeKey={activeQuestionKey}
-          quizType={quizType}
           itemDisplayMode="plain"
-          duration={quizDraft?.duration ?? quiz?.duration ?? undefined}
-          passScore={quizDraft?.passScore ?? (quiz?.pass_score ? Number(quiz.pass_score) : undefined)}
           readOnly
           onSelectItem={setSelectedQuestionKey}
         />
       </aside>
 
       <section className={PANEL_CLASSNAME}>
-        <div className="relative flex h-12 items-center justify-between border-b border-border px-4">
-          <div className="relative z-10 flex items-center gap-2">
-            <Badge variant={quizTypeBadgeVariant[quizType]}>{quizType === 'EXAM' ? '考试' : '测验'}</Badge>
-          </div>
-
+        <div className="relative flex h-12 items-center justify-end border-b border-border px-4">
           <div className="pointer-events-none absolute left-1/2 top-1/2 w-[clamp(13rem,44%,22rem)] -translate-x-1/2 -translate-y-1/2 text-center">
             <div className="truncate text-[14px] font-semibold text-foreground">{quizDraft?.title ?? quiz?.title}</div>
           </div>
@@ -224,16 +208,6 @@ export function QuizPreviewWorkbench({
             <div>
               <p className="mb-[10px] text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">详细信息</p>
               <div className="flex flex-col gap-2">
-                {isExam ? (
-                  <>
-                    <MetaItem icon={<Clock3 className="h-[14px] w-[14px]" />}>
-                      参考时间 {quizDraft?.duration ?? quiz?.duration ?? 0} 分钟
-                    </MetaItem>
-                    <MetaItem icon={<BookOpenText className="h-[14px] w-[14px]" />}>
-                      {formatScore(quizDraft?.passScore ?? quiz?.pass_score) || '0'} 分及格
-                    </MetaItem>
-                  </>
-                ) : null}
                 {isSameOperator ? (
                   <MetaItem icon={<User className="h-[14px] w-[14px]" />}>
                     {createdByName}

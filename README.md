@@ -46,7 +46,7 @@ LMS/
 - Django REST Framework
 - MySQL 8.0
 - drf-spectacular
-- pytest / pytest-django / hypothesis / factory-boy
+- pytest / pytest-django
 
 ### 前端
 

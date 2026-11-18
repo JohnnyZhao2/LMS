@@ -24,6 +24,7 @@ interface SegmentedControlProps {
   activeOptionClassName?: string;
   inactiveOptionClassName?: string;
   disabledOptionClassName?: string;
+  trailing?: React.ReactNode;
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -40,6 +41,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   activeOptionClassName = 'bg-white text-foreground shadow-sm',
   inactiveOptionClassName = 'text-text-muted hover:text-foreground',
   disabledOptionClassName = 'cursor-not-allowed text-text-muted/55',
+  trailing,
 }) => {
   const sizeStyles = {
     default: {
@@ -110,6 +112,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             ) : null}
           </button>
         ))}
+        {trailing}
       </div>
     </div>
   );

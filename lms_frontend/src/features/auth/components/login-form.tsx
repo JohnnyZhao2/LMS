@@ -1,33 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/lib/auth';
 import { showApiError } from '@/utils/error-handler';
 import { ApiError } from '@/lib/api-client';
 import { beginOneAccountLogin } from '../utils/one-account';
 
-const loginSchema = z.object({
-  employee_id: z.string().min(1, '请输入工号'),
-  password: z.string().min(1, '请输入密码'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 type PendingAction = 'password' | 'one-account' | null;
+
+const FIELD_CLASS = 'h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer';
 
 export const LoginForm: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -36,14 +21,6 @@ export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const isPending = pendingAction !== null;
   const callbackCode = searchParams.get('code');
-
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      employee_id: '',
-      password: '',
-    },
-  });
 
   useEffect(() => {
     if (!callbackCode) {
@@ -83,10 +60,15 @@ export const LoginForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (values: LoginFormValues) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     setPendingAction('password');
     try {
-      await login(values);
+      await login({
+        employee_id: String(formData.get('employee_id') ?? ''),
+        password: String(formData.get('password') ?? ''),
+      });
       toast.success('登录成功');
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (error) {
@@ -116,74 +98,47 @@ export const LoginForm: React.FC = () => {
           transition: background-color 5000s ease-in-out 0s;
         }
       ` }} />
-      <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={handleSubmit}
           className="space-y-14"
         >
           <div className="space-y-12">
-            <div>
-              <FormField
-                control={form.control}
-                name="employee_id"
-                render={({ field }) => (
-                  <FormItem className="space-y-4 group">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
-                      <span className="w-1 h-1 bg-primary/30" />
-                      工号
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="请输入工号"
-                          interactionStyle="minimal"
-                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
-                          {...field}
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+            <label className="block space-y-4">
+              <span className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
+                <span className="w-1 h-1 bg-primary/30" />
+                工号
+              </span>
+              <div className="relative">
+                <Input
+                  name="employee_id"
+                  required
+                  placeholder="请输入工号"
+                  interactionStyle="minimal"
+                  className={FIELD_CLASS}
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100" />
+              </div>
+            </label>
 
-                        <div
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div>
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem className="space-y-4 group">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
-                      <span className="w-1 h-1 bg-primary/30" />
-                      密码
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="password"
-                          placeholder="请输入密码"
-                          interactionStyle="minimal"
-                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
-                          {...field}
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
-
-                        <div
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <label className="block space-y-4">
+              <span className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
+                <span className="w-1 h-1 bg-primary/30" />
+                密码
+              </span>
+              <div className="relative">
+                <Input
+                  name="password"
+                  type="password"
+                  required
+                  placeholder="请输入密码"
+                  interactionStyle="minimal"
+                  className={FIELD_CLASS}
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100" />
+              </div>
+            </label>
           </div>
 
           <div className="space-y-4">
@@ -210,7 +165,6 @@ export const LoginForm: React.FC = () => {
             </Button>
           </div>
         </form>
-      </Form>
     </div>
   );
 };

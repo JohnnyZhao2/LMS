@@ -1,11 +1,10 @@
 import { startTransition, useDeferredValue, useState } from 'react';
-import { ListChecks, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
+import { PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/lib/auth';
 import type { SpotCheck, SpotCheckStudent } from '@/features/spot-checks/types';
 import { showApiError } from '@/utils/error-handler';
@@ -129,13 +128,7 @@ export const SpotCheckList: React.FC = () => {
 
   return (
     <>
-      <PageFillShell>
-        <PageHeader
-          title="抽查管理"
-          icon={<ListChecks className="h-5 w-5" />}
-        />
-
-        <PageWorkbench>
+      <PageWorkbench>
           <PageSplit className="min-h-0 flex-1 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
             <SpotCheckStudentPanel
               students={filteredStudents}
@@ -172,8 +165,7 @@ export const SpotCheckList: React.FC = () => {
               }}
             />
           </PageSplit>
-        </PageWorkbench>
-      </PageFillShell>
+      </PageWorkbench>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="flex max-h-[92vh] w-[95vw] max-w-[1060px] flex-col gap-0 overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
@@ -184,7 +176,6 @@ export const SpotCheckList: React.FC = () => {
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden pl-5 pr-0 pb-5">
               <SpotCheckForm
                 studentIds={createTargetStudentIds}
-                hidePageHeader
                 onCancel={() => setIsCreateDialogOpen(false)}
                 onSuccess={() => {
                   setIsCreateDialogOpen(false);
@@ -208,7 +199,6 @@ export const SpotCheckList: React.FC = () => {
               <SpotCheckForm
                 key={editingRecord.id}
                 spotCheckId={editingRecord.id}
-                hidePageHeader
                 onCancel={() => setEditingRecord(null)}
                 onSuccess={() => setEditingRecord(null)}
                 onSwitchRecord={setEditingRecord}

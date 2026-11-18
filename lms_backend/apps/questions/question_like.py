@@ -45,12 +45,6 @@ class QuestionContentMixin(models.Model):
         default='',
         verbose_name='解析',
     )
-    score = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=DEFAULT_QUESTION_SCORE,
-        verbose_name='分值',
-    )
 
     class Meta:
         abstract = True
@@ -146,7 +140,7 @@ class QuestionContentMixin(models.Model):
         else:
             is_correct = False
 
-        resolved_score = self.score if full_score is None else Decimal(str(full_score))
+        resolved_score = Decimal(str(self.score if full_score is None else full_score))
         return is_correct, resolved_score if is_correct else Decimal('0')
 
 

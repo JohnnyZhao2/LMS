@@ -34,8 +34,7 @@ import dayjs from "@/lib/dayjs"
 import { getLastEditedByName } from '@/lib/last-edited';
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from '@/types/task';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
+import { PageViewport } from '@/components/ui/page-shell';
 
 type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'OVERDUE' | 'ENDED'
 type ResponsiveColumnMeta = {
@@ -84,11 +83,8 @@ const getTaskResourceTags = (task: TaskListItem) => {
     if (task.knowledge_count > 0) {
         tags.push({ key: 'knowledge', label: renderTaskTagLabel(task.knowledge_count, '知识'), className: 'bg-secondary-100/70 text-text-muted' })
     }
-    if (task.practice_count > 0) {
-        tags.push({ key: 'practice', label: renderTaskTagLabel(task.practice_count, '测验'), className: 'bg-primary-100/70 text-text-muted' })
-    }
-    if (task.exam_count > 0) {
-        tags.push({ key: 'exam', label: renderTaskTagLabel(task.exam_count, '考试'), className: 'bg-warning-100/70 text-text-muted' })
+    if (task.quiz_count > 0) {
+        tags.push({ key: 'quiz', label: renderTaskTagLabel(task.quiz_count, '试卷'), className: 'bg-primary-100/70 text-text-muted' })
     }
     return tags
 }
@@ -259,7 +255,7 @@ export const TaskManagement: React.FC = () => {
         if (!deleteId) return
         try {
             await deleteTask.mutateAsync(deleteId)
-            toast.success("任务已永久删除")
+            toast.success("任务已从列表移除，答题记录已保留")
             setDeleteId(null)
         } catch (error) {
             showApiError(error)
@@ -379,12 +375,7 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <PageFillShell>
-            <PageHeader
-                title="任务中心"
-                icon={<ListTodo />}
-            />
-
+        <>
             {/* 列表主体 */}
             <PageViewport className="flex flex-col">
                 {/* 搜索和筛选 */}
@@ -466,7 +457,7 @@ export const TaskManagement: React.FC = () => {
                 open={!!deleteId}
                 onOpenChange={(open) => !open && setDeleteId(null)}
                 title="确认删除此任务？"
-                description="此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。"
+                description="任务会从列表中移除，学员的答题和阅卷记录会保留。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
                 iconBgColor="bg-destructive-100"
                 iconColor="text-destructive"
@@ -476,6 +467,6 @@ export const TaskManagement: React.FC = () => {
                 onConfirm={handleDeleteTask}
                 isConfirming={deleteTask.isPending}
             />
-        </PageFillShell>
+        </>
     )
 }
