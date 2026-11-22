@@ -5,7 +5,7 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 
-from .base import MENTOR_DASHBOARD_ROLES, MentorScopedDashboardView
+from .base import MentorScopedDashboardView
 
 
 @extend_schema_view(
@@ -24,5 +24,5 @@ class MentorDashboardView(MentorScopedDashboardView):
     导师/室经理仪表盘 API 端点
     GET /api/dashboard/mentor/
     """
-    allowed_roles = MENTOR_DASHBOARD_ROLES
-    permission_error_message = '只有导师或室经理可以访问此仪表盘'
+    require_full_scope = False
+    permission_error_message = '无权访问此仪表盘'

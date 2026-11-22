@@ -28,9 +28,10 @@ export function StepsEditor({
     const el = ref.current;
     if (!el) return;
     if (document.activeElement === el && value === lastHtmlRef.current) return;
-    if (el.innerHTML === (value || '')) return;
-    el.innerHTML = value || '';
-    lastHtmlRef.current = value;
+    const safe = sanitizeStepsHtml(value || '');
+    if (el.innerHTML === safe) return;
+    el.innerHTML = safe;
+    lastHtmlRef.current = safe;
   }, [value]);
 
   const emitChange = React.useCallback(() => {

@@ -180,7 +180,12 @@ def log_operation(
             result = func(self, *args, **kwargs)
             duration = int((time.time() - start_time) * 1000) if measure_duration else 0
             ctx = _log_context(func, self, args, kwargs, result)
-            resolved_target_id = str(result.id) if result is not None and hasattr(result, 'id') else ''
+            raw_target_id = (
+                result.get('id')
+                if isinstance(result, dict)
+                else getattr(result, 'id', None)
+            )
+            resolved_target_id = '' if raw_target_id is None else str(raw_target_id)
             ActivityLogService.log_operation(
                 operator=_resolve_operator(self, kwargs),
                 operation_type=operation_type,

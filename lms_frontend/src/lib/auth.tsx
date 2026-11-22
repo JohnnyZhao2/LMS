@@ -6,17 +6,19 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { queryClient } from '@/lib/react-query';
+import { setWorkbench } from '@/lib/workbench-store';
 import type {
   AuthSessionPayload,
+  CapabilityCodes,
   ChangeOwnPasswordRequest,
   ChangeOwnPasswordResponse,
   LoginRequest,
   LoginResponse,
 } from '@/types/auth';
-import type { CapabilityCodes } from '@/types/authorization';
 import type { Role, RoleCode, UserInfo } from '@/types/common';
 import { tokenStorage } from '@/lib/token-storage';
-import { MANAGEMENT_ROLE_CODES } from '@/config/authorization';
+import { isBuiltinPrimaryRole } from '@/lib/user-role-assignment';
 
 interface AuthState {
   user: UserInfo | null;
@@ -35,6 +37,7 @@ interface AuthContextValue extends AuthState {
   changeOwnPassword: (data: ChangeOwnPasswordRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasCapability: (permissionCode: string) => boolean;
+  hasFullScopeCapability: (permissionCode: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,13 +65,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetAuthState = useCallback(() => {
     tokenStorage.clearTokens();
+    setWorkbench('learn');
+    queryClient.clear();
     setState(buildLoggedOutState());
   }, []);
 
   const applyAuthSession = useCallback((session: AuthSessionPayload) => {
+    const nextRoles = session.roles ?? [];
+    if (!session.user?.is_superuser && nextRoles.length === 0) {
+      setWorkbench('learn');
+    }
     setState({
       user: session.user,
-      roles: session.roles ?? [],
+      roles: nextRoles,
       capabilities: session.capabilities ?? [],
       isAuthenticated: true,
       isLoading: false,
@@ -101,6 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyAuthSession, resetAuthState]);
 
   const completeLogin = useCallback((response: LoginResponse) => {
+    setWorkbench('learn');
+    queryClient.clear();
     tokenStorage.setTokenPair(response);
     applyAuthSession(response);
   }, [applyAuthSession]);
@@ -141,6 +152,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.capabilities.includes(permissionCode);
   }, [state.capabilities]);
 
+  const hasFullScopeCapability = useCallback((permissionCode: string) => {
+    if (!permissionCode) {
+      return false;
+    }
+    if (state.user?.is_superuser) {
+      return true;
+    }
+    if (!state.capabilities.includes(permissionCode)) {
+      return false;
+    }
+    return state.roles.some((role) => (
+      role.data_scope === 'ALL'
+      && (role.permission_codes ? role.permission_codes.includes(permissionCode) : role.code === 'ADMIN')
+    ));
+  }, [state.capabilities, state.roles, state.user?.is_superuser]);
+
   useEffect(() => {
     void refreshUser();
   }, [refreshUser]);
@@ -163,9 +190,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshUser, state.isAuthenticated]);
 
   const managementRole = state.roles.find((role) => (
-    MANAGEMENT_ROLE_CODES.includes(role.code)
+    isBuiltinPrimaryRole(role.code)
   ))?.code ?? null;
-  const canAccessManage = Boolean(state.user?.is_superuser || managementRole);
+  const canAccessManage = Boolean(state.user?.is_superuser || state.roles.length > 0);
 
   const value: AuthContextValue = {
     ...state,
@@ -177,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     changeOwnPassword,
     refreshUser,
     hasCapability,
+    hasFullScopeCapability,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

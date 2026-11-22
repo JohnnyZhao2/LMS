@@ -8,6 +8,8 @@ Implements:
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
+from apps.tasks.progress import get_assignment_quiz_progress_map
+from apps.tasks.selectors import get_pending_grading_assignment_ids, get_started_assignment_ids
 from apps.tasks.student_serializers import (
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
@@ -51,7 +53,16 @@ class StudentAssignmentListView(BaseAPIView):
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
-        serializer = StudentAssignmentListSerializer(page, many=True)
+        assignment_ids = [item.id for item in page]
+        serializer = StudentAssignmentListSerializer(
+            page,
+            many=True,
+            context={
+                'quiz_progress_map': get_assignment_quiz_progress_map(assignment_ids),
+                'pending_grading_ids': get_pending_grading_assignment_ids(assignment_ids),
+                'started_submission_ids': get_started_assignment_ids(assignment_ids),
+            },
+        )
         return paginator.get_paginated_response(serializer.data)
 
 
@@ -78,8 +89,8 @@ class StudentTaskDetailView(BaseAPIView):
     def get(self, request, task_id):
         # 执行态：assignee=request.user，不走管理 /tasks/{id}/
         assignment = self.service.get_student_assignment(task_id)
-
-        serializer = StudentTaskDetailSerializer(assignment)
+        context = self.service.build_student_assignment_detail_context(assignment)
+        serializer = StudentTaskDetailSerializer(assignment, context=context)
         return success_response(serializer.data)
 
 

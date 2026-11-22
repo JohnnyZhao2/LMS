@@ -15,8 +15,10 @@ def sync_assignment_overdue_status(assignment) -> bool:
 
 
 def sync_assignment_completion_status(assignment) -> bool:
+    from apps.tasks.selectors import assignment_has_pending_grading
+
     progress = build_assignment_progress(assignment)
-    if is_assignment_completed(progress):
+    if is_assignment_completed(progress) and not assignment_has_pending_grading(assignment):
         if assignment.status != 'COMPLETED':
             assignment.mark_completed()
         return True

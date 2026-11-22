@@ -117,8 +117,7 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理'],
     )
     def patch(self, request, pk):
-        question = self.service.get_by_id(pk)
-        serializer = QuestionUpdateSerializer(instance=question, data=request.data, partial=True)
+        serializer = QuestionUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated_question = self.service.update(pk=pk, data=serializer.validated_data)
         return success_response(QuestionSerializer(updated_question).data)

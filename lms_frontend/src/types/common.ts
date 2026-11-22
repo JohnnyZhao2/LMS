@@ -6,9 +6,12 @@
 // ==================== 枚举类型 ====================
 
 /**
- * 角色代码
+ * 角色代码（支持内置与自定义角色）
  */
-export type RoleCode = 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN';
+export type BuiltinRoleCode = 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN';
+export type RoleCode = string;
+
+export type DataScope = 'SELF' | 'DEPT' | 'CUSTOM_DEPT' | 'ALL';
 
 export type Workbench = 'learn' | 'manage';
 
@@ -16,7 +19,7 @@ export type Workbench = 'learn' | 'manage';
  * 任务状态
  */
 export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PENDING_GRADING' | 'COMPLETED' | 'OVERDUE';
-export type TaskExecutionStatus = TaskStatus | 'COMPLETED_ABNORMAL';
+export type NodeExecutionStatus = TaskStatus;
 
 /**
  * 提交状态
@@ -68,14 +71,21 @@ export interface Department {
   name: string;
   code: string;
   description?: string;
+  manager_id?: number | null;
+  manager_name?: string | null;
 }
 
 /**
  * 角色
  */
 export interface Role {
+  id: number;
   code: RoleCode;
   name: string;
+  data_scope: DataScope;
+  is_builtin: boolean;
+  is_active?: boolean;
+  permission_codes?: string[];
 }
 
 /**

@@ -4,10 +4,10 @@ Usage:
     python manage.py init_data --settings=config.settings.development
 """
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import Group
 from django.db import transaction
 
-from apps.users.models import Department, ROLE_CHOICES
+from apps.authorization.roles import ensure_builtin_role_profiles
+from apps.users.models import Department
 
 
 class Command(BaseCommand):
@@ -34,8 +34,7 @@ class Command(BaseCommand):
             self.stdout.write(f"  部门 {dept.name}: {status}")
 
     def create_roles(self):
-        """创建管理角色 Group。"""
-        for role_code, role_name in ROLE_CHOICES:
-            _role, created = Group.objects.get_or_create(name=role_code)
-            status = '创建' if created else '已存在'
-            self.stdout.write(f"  角色 {role_name}: {status}")
+        """创建内置角色 Group 及 RoleProfile。"""
+        profiles = ensure_builtin_role_profiles()
+        for profile in profiles:
+            self.stdout.write(f"  角色 {profile.name} ({profile.group.name}, {profile.data_scope}): 就绪")

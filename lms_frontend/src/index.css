@@ -517,3 +517,36 @@
     overflow-x: auto;
     line-height: 1.5;
 }
+
+/* ============================================
+   Right Drawer Transitions
+   ============================================ */
+@keyframes drawerSlideInRight {
+    from {
+        transform: translate3d(100%, 0, 0);
+        opacity: 0.92;
+    }
+    to {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes drawerSlideOutRight {
+    from {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+    }
+    to {
+        transform: translate3d(100%, 0, 0);
+        opacity: 0.92;
+    }
+}
+
+.drawer-content-right[data-state='open'] {
+    animation: drawerSlideInRight 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-content-right[data-state='closed'] {
+    animation: drawerSlideOutRight 200ms cubic-bezier(0.4, 0, 1, 1);
+}

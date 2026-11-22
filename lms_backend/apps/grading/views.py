@@ -1,30 +1,34 @@
+from django.db.models import Count, Prefetch
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.activity_logs.decorators import log_operation
 from apps.activity_logs.text import format_number, format_user_label
+from apps.authorization.engine import get_engine
 from apps.grading.selectors import (
     OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
     REVIEWABLE_SUBMISSION_STATUSES,
-    calculate_question_pass_rate,
+    calculate_pass_rate_from_answers,
+    calculate_quiz_question_pass_rates,
     get_latest_quiz_answers,
+    get_pending_quiz_metrics,
     has_answer_content,
 )
-from apps.authorization.engine import get_engine
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
     GradingSubmitSerializer,
     PendingTaskSerializer,
 )
+from apps.submissions.models import Answer
+from apps.submissions.workflows import grade_subjective_answer
 from apps.tasks.models import Task, TaskQuiz
+from apps.tasks.selectors import get_task_for_access
 from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
-from apps.submissions.workflows import grade_subjective_answer
-from apps.submissions.models import Answer
 
 
 def _manual_grade_log_description(ctx: dict) -> str:
@@ -37,20 +41,34 @@ class GradingBaseView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     service_class = TaskService
 
-    def _get_task(self, task_id, permission_code: str, error_message: str):
-        task = self.service.get_task_by_id(task_id)
-        get_engine(self.request).enforce(permission_code,
+    def _get_task(
+        self,
+        task_id,
+        permission_code: str,
+        error_message: str,
+        *,
+        include_archived: bool = True,
+    ) -> Task:
+        task = self.service.validate_not_none(
+            get_task_for_access(task_id, include_archived=include_archived),
+            f'任务 {task_id} 不存在',
+        )
+        get_engine(self.request).enforce(
+            permission_code,
             resource=task,
             error_message=error_message,
         )
         return task
 
-    def _validate_quiz_in_task(self, task, quiz_id):
-        if not task.task_quizzes.filter(id=quiz_id).exists():
+    @staticmethod
+    def _get_task_quiz(task, quiz_id: int) -> TaskQuiz:
+        task_quiz = TaskQuiz.objects.filter(id=quiz_id, task=task).first()
+        if not task_quiz:
             raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='试卷不属于该任务'
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='试卷不属于该任务',
             )
+        return task_quiz
 
 
 class GradingQuestionsView(GradingBaseView):
@@ -66,37 +84,25 @@ class GradingQuestionsView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
+        task = self._get_task(
+            task_id,
+            'tasks.view_grading',
+            '无权访问阅卷中心',
+        )
 
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
-        self._validate_quiz_in_task(task, quiz_id)
-
         questions = self._get_grading_questions(task, quiz_id)
         serializer = GradingQuestionSerializer(questions, many=True)
         return list_response(serializer.data)
 
     def _get_grading_questions(self, task, quiz_id):
         """获取阅卷中心题目列表"""
-        task_quiz = TaskQuiz.objects.filter(
-            id=quiz_id,
-            task=task,
-        ).first()
-        if not task_quiz:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不属于该任务',
-            )
-        relations = task_quiz.quiz_questions.prefetch_related('question_options').order_by('order')
+        task_quiz = self._get_task_quiz(task, quiz_id)
+        relations = list(task_quiz.quiz_questions.prefetch_related('question_options').order_by('order'))
+        pass_rates = calculate_quiz_question_pass_rates(quiz_id, relations)
 
         results = []
         for relation in relations:
-            pass_rate = calculate_question_pass_rate(
-                task,
-                relation.id,
-                quiz_id,
-                relation.score,
-                relation.is_objective,
-            )
             results.append({
                 'question_id': relation.id,
                 'question_text': relation.content,
@@ -104,7 +110,7 @@ class GradingQuestionsView(GradingBaseView):
                 'question_type': relation.question_type,
                 'question_type_display': relation.get_question_type_display(),
                 'max_score': float(relation.score),
-                'pass_rate': pass_rate,
+                'pass_rate': pass_rates.get(relation.id),
             })
 
         return results
@@ -126,11 +132,14 @@ class GradingAnswersView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id, 'tasks.view_grading', '无权访问阅卷中心')
+        task = self._get_task(
+            task_id,
+            'tasks.view_grading',
+            '无权访问阅卷中心',
+        )
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
-        self._validate_quiz_in_task(task, quiz_id)
 
         answers = self._get_grading_answers(task, question_id, quiz_id)
         serializer = GradingAnswerResponseSerializer(answers)
@@ -138,15 +147,7 @@ class GradingAnswersView(GradingBaseView):
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
-        task_quiz = TaskQuiz.objects.filter(
-            id=quiz_id,
-            task=task,
-        ).first()
-        if not task_quiz:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不属于该任务',
-            )
+        task_quiz = self._get_task_quiz(task, quiz_id)
         relation = task_quiz.quiz_questions.prefetch_related('question_options').filter(
             id=question_id,
         ).first()
@@ -160,24 +161,18 @@ class GradingAnswersView(GradingBaseView):
             if relation.is_objective
             else REVIEWABLE_SUBMISSION_STATUSES
         )
-        answers = list(get_latest_quiz_answers(
-            task,
-            quiz_id,
-            submission_statuses=answer_statuses,
-        ).filter(question_id=question_id).select_related(
-            'submission__task_assignment__assignee',
-            'submission__task_assignment__assignee__department'
-        ).order_by('graded_by', 'submission__submitted_at')
+        answers = list(
+            get_latest_quiz_answers(
+                quiz_id,
+                submission_statuses=answer_statuses,
+            ).filter(question_id=question_id).select_related(
+                'submission__task_assignment__assignee',
+                'submission__task_assignment__assignee__department'
+            ).order_by('graded_by', 'submission__submitted_at')
         )
-        answered_count = sum(1 for answer in answers if has_answer_content(answer.user_answer))
-
-        pass_rate = calculate_question_pass_rate(
-            task,
-            relation.id,
-            quiz_id,
-            relation.score,
-            relation.is_objective,
-        )
+        answer_pairs = [(answer, answer.user_answer) for answer in answers]
+        answered_count = sum(1 for _, user_answer in answer_pairs if has_answer_content(user_answer))
+        pass_rate = calculate_pass_rate_from_answers(answer_pairs, relation.score, relation.is_objective)
 
         if relation.is_objective:
             return {
@@ -185,17 +180,17 @@ class GradingAnswersView(GradingBaseView):
                 'question_type': relation.question_type,
                 'pass_rate': pass_rate,
                 'answered_count': answered_count,
-                'options': self._build_objective_options(relation, answers),
+                'options': self._build_objective_options(relation, answer_pairs),
             }
 
         return {
             'question_id': relation.id,
             'question_type': relation.question_type,
             'pass_rate': pass_rate,
-            'subjective_answers': self._build_subjective_answers(answers),
+            'subjective_answers': self._build_subjective_answers(answer_pairs),
         }
 
-    def _build_objective_options(self, question, answers):
+    def _build_objective_options(self, question, answer_pairs):
         """构造客观题选项分布"""
         options = question.options or []
         if question.question_type == 'TRUE_FALSE' and not options:
@@ -217,9 +212,7 @@ class GradingAnswersView(GradingBaseView):
             students = []
             selected_count = 0
 
-            for answer in answers:
-                user_answer = answer.user_answer
-                selected = False
+            for answer, user_answer in answer_pairs:
                 if question.question_type == 'MULTIPLE_CHOICE':
                     selected = isinstance(user_answer, list) and option_key in user_answer
                 else:
@@ -246,10 +239,10 @@ class GradingAnswersView(GradingBaseView):
 
         return option_payload
 
-    def _build_subjective_answers(self, answers):
+    def _build_subjective_answers(self, answer_pairs):
         """构造主观题答案列表"""
         results = []
-        for answer in answers:
+        for answer, user_answer in answer_pairs:
             user = answer.submission.task_assignment.assignee
             results.append({
                 'answer_id': answer.id,
@@ -258,9 +251,9 @@ class GradingAnswersView(GradingBaseView):
                 'avatar_key': user.avatar_key,
                 'employee_id': user.employee_id or '',
                 'department': user.department.name if user.department else '',
-                'answer_text': answer.user_answer if isinstance(answer.user_answer, str) else str(answer.user_answer or ''),
+                'answer_text': user_answer if isinstance(user_answer, str) else str(user_answer or ''),
                 'submitted_at': answer.submission.submitted_at,
-                'score': float(answer.obtained_score) if answer.graded_by else None,
+                'score': float(answer.obtained_score) if answer.graded_by_id else None,
             })
 
         return results
@@ -281,19 +274,24 @@ class GradingSubmitView(GradingBaseView):
         tags=['阅卷中心']
     )
     def post(self, request, task_id):
-        task = self._get_task(task_id, 'tasks.score_grading', '无权提交评分')
+        task = self._get_task(
+            task_id,
+            'tasks.score_grading',
+            '无权提交评分',
+            include_archived=False,
+        )
 
         serializer = GradingSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
-        self._validate_quiz_in_task(task, data['quiz_id'])
+        self._get_task_quiz(task, data['quiz_id'])
         self._submit_grading(
             task=task,
             quiz_id=data['quiz_id'],
             answer_id=data['answer_id'],
             score=data['score'],
-            comments=data['comments']
+            comments=data['comments'],
         )
 
         return success_response({'message': '评分成功'})
@@ -325,12 +323,6 @@ class GradingSubmitView(GradingBaseView):
                 message='未找到对应的答案记录'
             )
 
-        if score < 0 or score > float(answer.max_score):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'分数必须在 0 到 {answer.max_score} 之间'
-            )
-
         return grade_subjective_answer(answer, grader=grader, score=score, comment=comments)
 
 
@@ -339,48 +331,48 @@ class PendingQuizzesView(GradingBaseView):
 
     @extend_schema(
         summary='获取阅卷中心任务列表',
-        description='获取当前用户可在阅卷中心查看的任务与试卷列表，支持按试卷类型筛选',
-        parameters=[
-            OpenApiParameter(
-                name='allow_retry',
-                type=bool,
-                required=False,
-                description='按是否允许重做筛选'
-            ),
-        ],
+        description='获取当前用户可在阅卷中心查看的任务与试卷列表',
         responses={
             200: PendingTaskSerializer(many=True),
         },
         tags=['阅卷中心']
     )
     def get(self, request):
-        get_engine(request).require_permission('tasks.view_grading', error_message='无权访问阅卷中心')
-        allow_retry = request.query_params.get('allow_retry')
+        engine = get_engine(request)
+        engine.require_permission('tasks.view_grading', error_message='无权访问阅卷中心')
 
-        tasks = get_engine(request).scope_filter('tasks.view_task',
-            base_queryset=Task.objects.prefetch_related('task_quizzes').filter(
+        base_tasks = engine.scope_filter(
+            'tasks.view_task',
+            base_queryset=Task.objects.filter(
+                is_archived=False,
                 task_quizzes__isnull=False,
+            ),
+        )
+        tasks = engine.scope_filter(
+            'tasks.view_grading',
+            base_queryset=base_tasks.prefetch_related(
+                Prefetch(
+                    'task_quizzes',
+                    queryset=TaskQuiz.objects.annotate(question_count_value=Count('quiz_questions')),
+                )
             ),
         ).distinct().order_by('-created_at')
 
-        results = []
+        filtered_tasks: list[tuple[Task, list[TaskQuiz]]] = []
+        quiz_ids: list[int] = []
         for task in tasks:
             task_quizzes = list(task.task_quizzes.all())
+            if task_quizzes:
+                filtered_tasks.append((task, task_quizzes))
+                quiz_ids.extend(tq.id for tq in task_quizzes)
 
-            if allow_retry in {'true', 'false'}:
-                expected = allow_retry == 'true'
-                task_quizzes = [
-                    tq for tq in task_quizzes
-                    if tq.allow_retry is expected
-                ]
+        metrics = get_pending_quiz_metrics(quiz_ids)
 
-            if not task_quizzes:
-                continue
-
+        results = []
+        for task, task_quizzes in filtered_tasks:
             quizzes_data = []
             for tq in task_quizzes:
-                pending_count = self._count_pending_grading(task, tq.id)
-                has_analysis_data = self._has_analysis_data(task, tq.id)
+                pending_count, has_analysis_data = metrics.get(tq.id, (0, False))
                 if pending_count <= 0 and not has_analysis_data:
                     continue
 
@@ -389,7 +381,7 @@ class PendingQuizzesView(GradingBaseView):
                     'quiz_title': tq.title,
                     'allow_retry': tq.allow_retry,
                     'kind_label': tq.kind_label,
-                    'question_count': tq.question_count,
+                    'question_count': tq.question_count_value,
                     'duration': tq.duration,
                     'pending_count': pending_count,
                 })
@@ -404,26 +396,3 @@ class PendingQuizzesView(GradingBaseView):
 
         serializer = PendingTaskSerializer(results, many=True)
         return list_response(serializer.data)
-
-    def _has_analysis_data(self, task, quiz_id):
-        objective_answers = get_latest_quiz_answers(
-            task,
-            quiz_id,
-            submission_statuses=OBJECTIVE_ANALYTICS_SUBMISSION_STATUSES,
-        ).exclude(question__question_type='SHORT_ANSWER')
-        if any(has_answer_content(answer.user_answer) for answer in objective_answers):
-            return True
-
-        return get_latest_quiz_answers(
-            task,
-            quiz_id,
-            submission_statuses=REVIEWABLE_SUBMISSION_STATUSES,
-        ).filter(question__question_type='SHORT_ANSWER').exists()
-
-    def _count_pending_grading(self, task, quiz_id):
-        """统计待批阅的主观题答案数量（仅统计最新提交）"""
-        return get_latest_quiz_answers(task, quiz_id).filter(
-            submission__status__in=['SUBMITTED', 'GRADING'],
-            question__question_type='SHORT_ANSWER',
-            graded_by__isnull=True
-        ).count()

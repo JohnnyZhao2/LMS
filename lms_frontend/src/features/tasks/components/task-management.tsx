@@ -2,7 +2,6 @@ import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import {
     Trash2,
-    Clock,
     ListTodo,
     Pencil,
     BarChart3,
@@ -36,7 +35,7 @@ import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from '@/types/task';
 import { PageViewport } from '@/components/ui/page-shell';
 
-type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'OVERDUE' | 'ENDED'
+type TaskDisplayStatus = 'IN_PROGRESS' | 'DUE_SOON' | 'ENDED'
 type ResponsiveColumnMeta = {
     width?: string
     minWidth?: string
@@ -49,21 +48,15 @@ const TASK_STATUS_META: Record<TaskDisplayStatus, {
 }> = {
     IN_PROGRESS: { label: '进行中', className: 'bg-secondary-100/70 text-text-muted' },
     DUE_SOON: { label: '即将截止', className: 'bg-warning-100/70 text-text-muted' },
-    OVERDUE: { label: '已逾期', className: 'bg-destructive-100/70 text-text-muted' },
-    ENDED: { label: '已结束', className: 'bg-primary-100/70 text-text-muted' },
+    ENDED: { label: '已结束', className: 'bg-muted/85 text-text-muted' },
 }
 
 const getTaskDisplayStatus = (task: TaskListItem): TaskDisplayStatus => {
     const now = dayjs()
     const deadline = dayjs(task.deadline)
-    const total = task.assignee_count
-    const completed = task.completed_count
 
-    if (total > 0 && completed >= total) {
-        return 'ENDED'
-    }
     if (!deadline.isAfter(now)) {
-        return 'OVERDUE'
+        return 'ENDED'
     }
     if (deadline.diff(now, 'hour', true) <= 48) {
         return 'DUE_SOON'
@@ -164,10 +157,7 @@ const TaskStatusCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
 
 const TaskDeadlineCell: React.FC<{ task: TaskListItem }> = ({ task }) => {
     return (
-        <CellMutedTimestamp
-            icon={<Clock className="h-3.5 w-3.5" />}
-            value={task.deadline}
-        />
+        <CellMutedTimestamp value={task.deadline} />
     )
 }
 
@@ -312,8 +302,8 @@ export const TaskManagement: React.FC = () => {
             meta: columnMeta.actions,
             cell: ({ row }) => {
                 const canEdit = row.original.actions.update || row.original.actions.delete;
-                const canViewProgress = row.original.actions.update || row.original.actions.analytics;
-                const canViewGrading = row.original.actions.view && hasCapability('tasks.view_grading');
+                const canViewProgress = row.original.actions.analytics;
+                const canViewGrading = row.original.actions.grading;
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
                     <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>

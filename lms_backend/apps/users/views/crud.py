@@ -64,8 +64,6 @@ class UserListCreateView(APIView):
         get_engine(request).enforce('users.add_user', error_message='只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        if serializer.validated_data.get('role_codes'):
-            get_engine(request).require_permission('users.assign_user_role', error_message='无权分配用户角色')
         user = UserManagementService(request).create_user(dict(serializer.validated_data))
         return created_response(UserDetailSerializer(user).data)
 
@@ -119,11 +117,6 @@ class UserDetailView(APIView):
             context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
-        if serializer.validated_data.get('role_codes') is not None:
-            get_engine(request).enforce('users.assign_user_role',
-                resource=user,
-                error_message='无权分配该用户角色',
-            )
         user = UserManagementService(request).update_user(user, dict(serializer.validated_data))
         return success_response(UserDetailSerializer(user).data)
 
@@ -139,10 +132,5 @@ class UserDetailView(APIView):
         tags=['用户管理'],
     )
     def delete(self, request, pk):
-        user = self.get_object(pk)
-        get_engine(request).enforce('users.delete_user',
-            resource=user,
-            error_message='无权删除该用户',
-        )
         UserManagementService(request).delete_user(pk)
         return no_content_response()

@@ -24,8 +24,20 @@ class QuizDefinitionMixin(models.Model):
     def __str__(self):
         return self.title
 
+    def _prefetched_quiz_questions(self):
+        cache = getattr(self, '_prefetched_objects_cache', None)
+        if cache is not None and 'quiz_questions' in cache:
+            return cache['quiz_questions']
+        return None
+
     @property
     def total_score(self):
+        annotated = getattr(self, 'total_score_value', None)
+        if annotated is not None:
+            return annotated
+        prefetched = self._prefetched_quiz_questions()
+        if prefetched is not None:
+            return sum((item.score for item in prefetched), 0)
         if not self.pk:
             return 0
         result = self.quiz_questions.aggregate(total=Sum('score'))
@@ -33,12 +45,28 @@ class QuizDefinitionMixin(models.Model):
 
     @property
     def question_count(self):
+        annotated = getattr(self, 'question_count_value', None)
+        if annotated is not None:
+            return annotated
+        prefetched = self._prefetched_quiz_questions()
+        if prefetched is not None:
+            return len(prefetched)
         if not self.pk:
             return 0
         return self.quiz_questions.count()
 
     @property
     def has_subjective_questions(self):
+        prefetched = self._prefetched_quiz_questions()
+        if prefetched is not None:
+            if not prefetched:
+                return False
+            if self.question_type_path == 'question_type':
+                return any(item.question_type == 'SHORT_ANSWER' for item in prefetched)
+            if self.question_type_path == 'question__question_type' and all(
+                'question' in item._state.fields_cache for item in prefetched
+            ):
+                return any(item.question.question_type == 'SHORT_ANSWER' for item in prefetched)
         if not self.pk:
             return False
         return self.quiz_questions.filter(**{self.question_type_path: 'SHORT_ANSWER'}).exists()

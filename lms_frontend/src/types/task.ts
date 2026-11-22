@@ -9,6 +9,7 @@ interface TaskActions {
   update: boolean;
   delete: boolean;
   analytics: boolean;
+  grading: boolean;
 }
 
 interface TaskAssignment {
@@ -35,12 +36,11 @@ interface TaskKnowledge {
 
 export interface TaskQuiz {
   id: number;
-  task_quiz_id: number;
   quiz?: number | null;
   quiz_title: string;
   source_title?: string | null;
   question_count: number;
-  total_score: number;
+  total_score: string | number;
   order: number;
   allow_retry: boolean;
   kind_label: string;
@@ -97,9 +97,6 @@ interface LearningTaskKnowledgeItem {
 
 export interface LearningTaskQuizItem {
   id: number;
-  quiz: number;
-  quiz_id: number;
-  task_quiz_id: number;
   quiz_title: string;
   allow_retry: boolean;
   kind_label: string;

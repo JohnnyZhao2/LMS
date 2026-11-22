@@ -21,11 +21,11 @@ import { QuestionTypeBadge } from '@/components/questions/question-type-badge';
 import { richTextToPlainText, richTextToPreviewText } from '@/lib/rich-text';
 import { buildQuestionSections } from '@/lib/question-sections';
 import { formatScore } from '@/lib/score';
+import { useAuth } from '@/lib/auth';
 import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
-import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
-import type { PendingTask, PendingQuiz } from '@/features/grading/api/pending-quizzes';
+import type { GradingQuestion } from '@/types/task-analytics';
 import {
   useGradingAnswers,
   useGradingQuestions,
@@ -40,12 +40,24 @@ interface GradingCenterTabProps {
 
 type QuestionFilter = QuestionType | null;
 
+export interface GradingSelectorQuizOption {
+  quiz_id: number;
+  quiz_title: string;
+}
+
+export interface GradingSelectorTaskOption {
+  task_id: number;
+  task_title: string;
+  quizzes: GradingSelectorQuizOption[];
+}
+
 export interface GradingCenterSelectorConfig {
-  tasks: PendingTask[];
-  selectedTaskId: number | null;
+  tasks?: GradingSelectorTaskOption[];
+  selectedTaskId?: number | null;
+  onTaskSelect?: (task: GradingSelectorTaskOption) => void;
+  quizzes: GradingSelectorQuizOption[];
   selectedQuizId: number | null;
-  onTaskSelect: (task: PendingTask) => void;
-  onQuizSelect: (quiz: PendingQuiz) => void;
+  onQuizSelect: (quiz: GradingSelectorQuizOption) => void;
 }
 
 const questionFilterTypes: QuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER'];
@@ -71,12 +83,6 @@ const getPassRateColor = (rate?: number | null) => {
 
 const normalizeAnswerText = (answer?: string | null) => (answer || '').replace(/\r\n/g, '\n').trim();
 
-const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
-  answers.reduce<Record<number, string>>((acc, answer) => {
-    acc[answer.student_id] = answer.score !== null && answer.score !== undefined ? answer.score.toString() : '';
-    return acc;
-  }, {});
-
 const SELECTOR_TRIGGER_CLASSNAME = 'h-10 rounded-xl border-border/70 bg-background/90 px-3 shadow-none';
 const SELECTOR_ICON_CLASSNAME = 'h-4 w-4 shrink-0 text-primary-500';
 const QUESTION_LIST_GRID_CLASSNAME = 'grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem] items-center gap-x-2';
@@ -86,42 +92,36 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
   quizId,
   selectorConfig,
 }) => {
+  const { hasCapability } = useAuth();
+  const canScoreGrading = hasCapability('tasks.score_grading');
   const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
-  const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
-  const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
+  const [questionSelection, setQuestionSelection] = React.useState<{
+    quizId: number | null;
+    questionId: number | null;
+  }>({ quizId: quizId ?? null, questionId: null });
+  const [scoreDrafts, setScoreDrafts] = React.useState<Record<number, string>>({});
+
+  const selectedQuestionId =
+    questionSelection.quizId === (quizId ?? null) ? questionSelection.questionId : null;
 
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
     enabled: Boolean(taskId) && Boolean(quizId),
   });
 
-  React.useEffect(() => {
-    if (!questions || questions.length === 0) {
-      return;
-    }
-
-    if (questionFilter === null) {
-      return;
-    }
-
-    const hasCurrentType = questions.some((question) => question.question_type === questionFilter);
-    if (hasCurrentType) {
-      return;
-    }
-
-    setQuestionFilter(null);
-  }, [questionFilter, questions]);
-
-  const filteredQuestions = React.useMemo(() => {
-    if (!questions) return [];
-    if (questionFilter === null) {
-      return questions;
-    }
-    return questions.filter((question) => question.question_type === questionFilter);
-  }, [questions, questionFilter]);
   const availableQuestionTypes = React.useMemo(
     () => new Set((questions ?? []).map((question) => question.question_type)),
     [questions],
   );
+  const effectiveQuestionFilter =
+    questionFilter !== null && availableQuestionTypes.has(questionFilter) ? questionFilter : null;
+
+  const filteredQuestions = React.useMemo(() => {
+    if (!questions) return [];
+    if (effectiveQuestionFilter === null) {
+      return questions;
+    }
+    return questions.filter((question) => question.question_type === effectiveQuestionFilter);
+  }, [questions, effectiveQuestionFilter]);
   const effectiveQuestionId = React.useMemo(() => {
     if (filteredQuestions.length === 0) {
       return null;
@@ -144,54 +144,61 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
   );
   const submitGrading = useSubmitGrading(taskId || 0);
+  const [savingAnswerIds, setSavingAnswerIds] = React.useState<Record<number, boolean>>({});
+  const savingAnswerIdsRef = React.useRef<Set<number>>(new Set());
   const effectiveQuestion = React.useMemo<GradingQuestion | null>(
     () => questions?.find((question) => question.question_id === effectiveQuestionId) ?? null,
     [effectiveQuestionId, questions]
   );
-  const displayedQuestion = React.useMemo<GradingQuestion | null>(
-    () => questions?.find((question) => question.question_id === questionDetail?.question_id) ?? null,
-    [questionDetail, questions]
-  );
-  const isShowingPreviousQuestion = Boolean(
-    questionDetail
-    && effectiveQuestionId !== null
-    && questionDetail.question_id !== effectiveQuestionId
-  );
-  const selectedQuestion = isShowingPreviousQuestion
-    ? displayedQuestion
-    : (effectiveQuestion ?? displayedQuestion ?? undefined);
-  const activeQuestionDetail = (
-    selectedQuestion
-    && questionDetail
-    && questionDetail.question_id === selectedQuestion.question_id
-  ) ? questionDetail : null;
-
-  React.useEffect(() => {
-    if (activeQuestionDetail?.subjective_answers) {
-      setScoresByStudent(buildScoreMap(activeQuestionDetail.subjective_answers));
-      return;
-    }
-    setScoresByStudent({});
-  }, [activeQuestionDetail]);
 
   const sortedOptions = React.useMemo(() => {
-    if (!activeQuestionDetail?.options) return [];
-    return [...activeQuestionDetail.options].sort((a, b) => Number(b.is_correct) - Number(a.is_correct));
-  }, [activeQuestionDetail]);
+    if (!questionDetail?.options) return [];
+    return [...questionDetail.options].sort((a, b) => Number(b.is_correct) - Number(a.is_correct));
+  }, [questionDetail]);
 
-  const answeredCount = activeQuestionDetail?.answered_count ?? 0;
+  const answeredCount = questionDetail?.answered_count ?? 0;
 
-  const handleScoreChange = (studentId: number, value: string) => {
-    setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
+  const clearAnswerDraft = (answerId: number, expectedValue?: string) => {
+    setScoreDrafts((prev) => {
+      if (!(answerId in prev)) return prev;
+      if (expectedValue !== undefined && prev[answerId] !== expectedValue) return prev;
+      const next = { ...prev };
+      delete next[answerId];
+      return next;
+    });
   };
 
-  const commitScore = async (answerId: number, studentId: number, rawScore: string) => {
-    if (!selectedQuestion || rawScore === '' || !quizId || !answerId) return;
-    const parsedScore = Number(rawScore);
-    if (Number.isNaN(parsedScore)) return;
-    const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
+  const handleScoreChange = (answerId: number, value: string) => {
+    setScoreDrafts((prev) => ({ ...prev, [answerId]: value }));
+  };
 
-    setScoresByStudent((prev) => ({ ...prev, [studentId]: normalizedScore.toString() }));
+  const commitScore = async (answerId: number, rawScore: string) => {
+    if (!canScoreGrading || !effectiveQuestion || !quizId || !answerId) return;
+    if (savingAnswerIdsRef.current.has(answerId)) return;
+
+    const serverAnswer = questionDetail?.subjective_answers?.find((item) => item.answer_id === answerId);
+
+    if (rawScore === '') {
+      clearAnswerDraft(answerId);
+      return;
+    }
+
+    const parsedScore = Number(rawScore);
+    if (Number.isNaN(parsedScore)) {
+      clearAnswerDraft(answerId);
+      return;
+    }
+
+    const normalizedScore = Math.min(Math.max(parsedScore, 0), effectiveQuestion.max_score);
+    if (serverAnswer?.score != null && normalizedScore === Number(serverAnswer.score)) {
+      clearAnswerDraft(answerId);
+      return;
+    }
+
+    const draftValue = normalizedScore.toString();
+    setScoreDrafts((prev) => ({ ...prev, [answerId]: draftValue }));
+    savingAnswerIdsRef.current.add(answerId);
+    setSavingAnswerIds((prev) => ({ ...prev, [answerId]: true }));
 
     try {
       await submitGrading.mutateAsync({
@@ -200,17 +207,28 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
         score: normalizedScore,
         comments: '',
       });
+      clearAnswerDraft(answerId, draftValue);
     } catch (error) {
+      clearAnswerDraft(answerId, draftValue);
       showApiError(error, '评分保存失败，请重试');
+    } finally {
+      savingAnswerIdsRef.current.delete(answerId);
+      setSavingAnswerIds((prev) => {
+        if (!prev[answerId]) return prev;
+        const next = { ...prev };
+        delete next[answerId];
+        return next;
+      });
     }
   };
 
-  const handleQuickScore = async (answerId: number, studentId: number, ratio: number) => {
-    if (!selectedQuestion) return;
-    const score = Math.round(selectedQuestion.max_score * ratio * 10) / 10;
-    const formattedScore = score.toString();
-    setScoresByStudent((prev) => ({ ...prev, [studentId]: formattedScore }));
-    await commitScore(answerId, studentId, formattedScore);
+  const handleQuickScore = async (answerId: number, ratio: number) => {
+    if (!canScoreGrading || !effectiveQuestion) return;
+    const score =
+      ratio === 0.6
+        ? Math.ceil(effectiveQuestion.max_score * ratio * 100 - 1e-9) / 100
+        : Math.round(effectiveQuestion.max_score * ratio * 100) / 100;
+    await commitScore(answerId, score.toString());
   };
 
   if (questionsLoading && !questions) {
@@ -230,48 +248,51 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     );
   }
 
-  const selectedTask = selectorConfig?.tasks.find((task) => task.task_id === selectorConfig.selectedTaskId) ?? null;
+  const taskOptions = selectorConfig?.tasks ?? [];
+  const showTaskSelector = Boolean(selectorConfig && taskOptions.length > 1 && selectorConfig.onTaskSelect);
   const selectedQuiz =
-    selectedTask?.quizzes.find((quiz) => quiz.quiz_id === selectorConfig?.selectedQuizId) ?? null;
-  const activeFilterMeta = questionFilter ? QUESTION_TYPE_CONFIG[questionFilter] : null;
+    selectorConfig?.quizzes.find((quiz) => quiz.quiz_id === selectorConfig.selectedQuizId) ?? null;
+  const activeFilterMeta = effectiveQuestionFilter ? QUESTION_TYPE_CONFIG[effectiveQuestionFilter] : null;
   const selector = selectorConfig ? (
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-      <div className="min-w-0">
-        <Select
-          value={selectorConfig.selectedTaskId ? String(selectorConfig.selectedTaskId) : undefined}
-          onValueChange={(value) => {
-            const nextTask = selectorConfig.tasks.find((task) => task.task_id === Number(value));
-            if (nextTask) {
-              selectorConfig.onTaskSelect(nextTask);
-            }
-          }}
-        >
-          <SelectTrigger className={SELECTOR_TRIGGER_CLASSNAME}>
-            <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
-              <ListTodo className={SELECTOR_ICON_CLASSNAME} />
-              <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择任务" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {selectorConfig.tasks.map((task) => (
-              <SelectItem key={task.task_id} value={String(task.task_id)}>
-                {task.task_title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className={cn('grid grid-cols-1 gap-2.5', showTaskSelector && 'sm:grid-cols-2')}>
+      {showTaskSelector && (
+        <div className="min-w-0">
+          <Select
+            value={selectorConfig.selectedTaskId ? String(selectorConfig.selectedTaskId) : undefined}
+            onValueChange={(value) => {
+              const nextTask = taskOptions.find((task) => task.task_id === Number(value));
+              if (nextTask) {
+                selectorConfig.onTaskSelect?.(nextTask);
+              }
+            }}
+          >
+            <SelectTrigger className={SELECTOR_TRIGGER_CLASSNAME}>
+              <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+                <ListTodo className={SELECTOR_ICON_CLASSNAME} />
+                <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择任务" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {taskOptions.map((task) => (
+                <SelectItem key={task.task_id} value={String(task.task_id)}>
+                  {task.task_title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="min-w-0">
         <Select
           value={selectedQuiz ? String(selectedQuiz.quiz_id) : undefined}
           onValueChange={(value) => {
-            const nextQuiz = selectedTask?.quizzes.find((quiz) => quiz.quiz_id === Number(value));
+            const nextQuiz = selectorConfig.quizzes.find((quiz) => quiz.quiz_id === Number(value));
             if (nextQuiz) {
               selectorConfig.onQuizSelect(nextQuiz);
             }
           }}
-          disabled={!selectedTask || selectedTask.quizzes.length === 0}
+          disabled={selectorConfig.quizzes.length === 0}
         >
           <SelectTrigger className={SELECTOR_TRIGGER_CLASSNAME}>
             <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
@@ -280,7 +301,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
             </div>
           </SelectTrigger>
           <SelectContent>
-            {(selectedTask?.quizzes ?? []).map((quiz) => (
+            {selectorConfig.quizzes.map((quiz) => (
               <SelectItem key={quiz.quiz_id} value={String(quiz.quiz_id)}>
                 {quiz.quiz_title}
               </SelectItem>
@@ -313,18 +334,20 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
     <div className="grid h-full min-h-0 gap-4 lg:gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
       {/* Left Column: Question List */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
-        <div className="border-b border-border bg-background p-3 sm:p-4">
-          {selector}
-        </div>
+        {selector ? (
+          <div className="border-b border-border bg-background p-3 sm:p-4">
+            {selector}
+          </div>
+        ) : null}
 
         <div className="bg-background px-3 py-3 sm:px-4">
           <SegmentedControl
-            value={questionFilter}
+            value={effectiveQuestionFilter}
             onChange={(value) => setQuestionFilter(value as QuestionType)}
             onClear={() => setQuestionFilter(null)}
             options={questionFilters.map((filter) => ({
               ...filter,
-              disabled: filter.value ? !availableQuestionTypes.has(filter.value) : false,
+              disabled: !availableQuestionTypes.has(filter.value),
             }))}
             className="w-full"
             size="default"
@@ -364,7 +387,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                     return (
                       <button
                         key={question.question_id}
-                        onClick={() => setSelectedQuestionId(question.question_id)}
+                        onClick={() => setQuestionSelection({ quizId: quizId ?? null, questionId: question.question_id })}
                         className={cn(
                           'group relative w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-200',
                           QUESTION_LIST_GRID_CLASSNAME,
@@ -394,7 +417,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
 
       {/* Right Column: Content */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
-        {selectedQuestion ? (
+        {effectiveQuestion ? (
           <div className="flex min-h-0 flex-1 flex-col">
               {/* Detail Header */}
               <div className="sticky top-0 z-20 border-b border-border bg-background p-4 backdrop-blur sm:p-6">
@@ -402,37 +425,37 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                   <div className="min-w-0">
                     <div className="mb-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
                       <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
-                        {selectedQuestion?.question_type_display || '题目详情'}
+                        {effectiveQuestion.question_type_display || '题目详情'}
                       </span>
                       <span className="text-sm font-medium text-text-muted">
-                        分值: {formatScore(selectedQuestion?.max_score)}
+                        分值: {formatScore(effectiveQuestion.max_score)}
                       </span>
                     </div>
                     <h2 className="whitespace-pre-wrap break-words text-lg font-semibold leading-7 text-foreground">
-                      {richTextToPlainText(selectedQuestion?.question_text || '')}
+                      {richTextToPlainText(effectiveQuestion.question_text)}
                     </h2>
                   </div>
                   <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
                     <span className="text-xs text-text-muted uppercase font-semibold tracking-wider">该题平均通过率</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-bold text-foreground tabular-nums">
-                        {formatPassRate(activeQuestionDetail?.pass_rate ?? selectedQuestion?.pass_rate)}
+                        {formatPassRate(questionDetail?.pass_rate ?? effectiveQuestion.pass_rate)}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {selectedQuestion?.question_analysis && (
+                {effectiveQuestion.question_analysis && (
                   <div className="mt-4 whitespace-pre-wrap break-words rounded-xl border border-border bg-background p-3 text-sm leading-7 text-text-muted sm:p-4">
                     <span className="font-semibold text-foreground mr-2">解析:</span>
-                    {richTextToPlainText(selectedQuestion.question_analysis)}
+                    {richTextToPlainText(effectiveQuestion.question_analysis)}
                   </div>
                 )}
               </div>
 
               {/* Content Body */}
               <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
-                {!activeQuestionDetail && detailLoading ? (
+                {detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -441,7 +464,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                 ) : (
                   <>
                     {/* OBJECTIVE QUESTIONS */}
-                    {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
+                    {effectiveQuestion.question_type !== 'SHORT_ANSWER' && (
                       <div className="relative mx-auto max-w-3xl space-y-4">
                         {sortedOptions.length === 0 && (
                           <div className="bg-background rounded-xl border border-dashed">
@@ -526,14 +549,14 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                     )}
 
                     {/* SUBJECTIVE QUESTIONS */}
-                    {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
+                    {effectiveQuestion.question_type === 'SHORT_ANSWER' && (
                       <div className="relative mx-auto max-w-4xl space-y-4">
-                        {activeQuestionDetail?.subjective_answers?.length === 0 && (
+                        {questionDetail?.subjective_answers?.length === 0 && (
                           <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
                             暂无学员回答
                           </div>
                         )}
-                        {activeQuestionDetail?.subjective_answers?.map((answer) => (
+                        {questionDetail?.subjective_answers?.map((answer) => (
                           <div
                             key={answer.answer_id}
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
@@ -563,13 +586,19 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                   <Input
                                     type="number"
                                     min={0}
-                                    max={selectedQuestion?.max_score || 0}
-                                    value={scoresByStudent[answer.student_id] ?? ''}
-                                    onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
-                                    onBlur={(e) => commitScore(answer.answer_id, answer.student_id, e.target.value)}
+                                    max={effectiveQuestion.max_score}
+                                    value={
+                                      scoreDrafts[answer.answer_id]
+                                      ?? (answer.score !== null && answer.score !== undefined ? answer.score.toString() : '')
+                                    }
+                                    disabled={!canScoreGrading || Boolean(savingAnswerIds[answer.answer_id])}
+                                    onChange={(e) => handleScoreChange(answer.answer_id, e.target.value)}
+                                    onBlur={(e) => {
+                                      void commitScore(answer.answer_id, e.target.value);
+                                    }}
                                     className="h-9 w-16 border-border bg-background pr-2 text-right font-mono text-base font-bold focus:border-primary focus:ring-1 focus:ring-primary/20 sm:w-20"
                                   />
-                                  <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {formatScore(selectedQuestion?.max_score)}</span>
+                                  <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {formatScore(effectiveQuestion.max_score)}</span>
                                 </div>
                               </div>
                             </div>
@@ -589,20 +618,39 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
                                   />
                                 </div>
 
-                                {/* Quick Actions Footer */}
-                                <div className="flex justify-start pt-2 sm:justify-end">
-                                  <div className="flex flex-wrap gap-2 opacity-100 transition-opacity sm:opacity-50 sm:group-hover:opacity-100">
-                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
-                                      <ThumbsUp className="w-3.5 h-3.5" /> 满分
-                                    </button>
-                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100">
-                                      <Check className="w-3.5 h-3.5" /> 及格
-                                    </button>
-                                    <button onClick={() => handleQuickScore(answer.answer_id, answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100">
-                                      <ThumbsDown className="w-3.5 h-3.5" /> 零分
-                                    </button>
+                                {canScoreGrading && (
+                                  <div className="flex justify-start pt-2 sm:justify-end">
+                                    <div className="flex flex-wrap gap-2 opacity-100 transition-opacity sm:opacity-50 sm:group-hover:opacity-100">
+                                      <button
+                                        type="button"
+                                        disabled={Boolean(savingAnswerIds[answer.answer_id])}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => handleQuickScore(answer.answer_id, 1)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100 disabled:opacity-50 disabled:pointer-events-none"
+                                      >
+                                        <ThumbsUp className="w-3.5 h-3.5" /> 满分
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={Boolean(savingAnswerIds[answer.answer_id])}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => handleQuickScore(answer.answer_id, 0.6)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100 disabled:opacity-50 disabled:pointer-events-none"
+                                      >
+                                        <Check className="w-3.5 h-3.5" /> 及格
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={Boolean(savingAnswerIds[answer.answer_id])}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => handleQuickScore(answer.answer_id, 0)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100 disabled:opacity-50 disabled:pointer-events-none"
+                                      >
+                                        <ThumbsDown className="w-3.5 h-3.5" /> 零分
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           </div>

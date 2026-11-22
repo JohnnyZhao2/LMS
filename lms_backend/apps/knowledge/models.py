@@ -8,19 +8,37 @@ from apps.tags.models import Tag
 from core.mixins import CreatorMixin, TimestampMixin
 
 
+_STEPS_ALLOWED_TAG_RE = re.compile(r'<(/?(?:br|strong|b))\b[^<>]*>', re.IGNORECASE)
+_STEPS_PLACEHOLDERS = {
+    'br': '\x00BR\x00',
+    'strong': '\x00STRONG_OPEN\x00',
+    'b': '\x00STRONG_OPEN\x00',
+    '/strong': '\x00STRONG_CLOSE\x00',
+    '/b': '\x00STRONG_CLOSE\x00',
+}
+
+
 def sanitize_steps_html(html: str) -> str:
     """清洗步骤摘要，仅保留裸 br / strong（剥掉全部属性，防 XSS）。"""
-    text = html or ''
+    text = (html or '').replace('\x00', '')
     text = re.sub(r'<(script|style)\b[^>]*>.*?</\1>', '', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'</p>', '<br>', text, flags=re.IGNORECASE)
-    text = re.sub(r'<p[^>]*>', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<div[^>]*>', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'</div>', '<br>', text, flags=re.IGNORECASE)
-    text = re.sub(r'<(?!/?(?:br|strong|b)\b)[^>]+>', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<br\b[^>]*>', '<br>', text, flags=re.IGNORECASE)
-    text = re.sub(r'<(?:strong|b)\b[^>]*>', '<strong>', text, flags=re.IGNORECASE)
-    text = re.sub(r'</(?:strong|b)>', '</strong>', text, flags=re.IGNORECASE)
-    text = re.sub(r'(?:<br\s*/?\s*>\s*)+$', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</p\s*>', '<br>', text, flags=re.IGNORECASE)
+    text = re.sub(r'<p\b[^<>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<div\b[^<>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</div\s*>', '<br>', text, flags=re.IGNORECASE)
+    text = _STEPS_ALLOWED_TAG_RE.sub(
+        lambda m: _STEPS_PLACEHOLDERS.get(m.group(1).lower(), ''),
+        text,
+    )
+    text = re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
+    text = re.sub(r'</?[a-zA-Z!?][^<>]*>', '', text)
+    text = text.replace('<', '&lt;').replace('>', '&gt;')
+    text = (
+        text.replace('\x00BR\x00', '<br>')
+        .replace('\x00STRONG_OPEN\x00', '<strong>')
+        .replace('\x00STRONG_CLOSE\x00', '</strong>')
+    )
+    text = re.sub(r'(?:<br>\s*)+$', '', text, flags=re.IGNORECASE)
     return text.strip()
 
 

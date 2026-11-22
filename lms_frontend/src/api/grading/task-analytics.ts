@@ -1,8 +1,15 @@
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { invalidateAfterGradingMutation } from '@/lib/cache-invalidation';
 import { queryKeys } from '@/lib/query-keys';
-import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
+import type {
+  TaskAnalytics,
+  TaskNodeCategory,
+  StudentExecution,
+  GradingQuestion,
+  GradingAnswerResponse,
+  GradingSubmitRequest,
+} from '@/types/task-analytics';
 
 /**
  * 获取任务分析数据
@@ -17,14 +24,30 @@ export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } 
 };
 
 /**
- * 获取学员执行情况
+ * 获取节点下学员执行情况
  */
-export const useStudentExecutions = (taskId: number, options: { enabled?: boolean } = {}) => {
+export const useStudentExecutions = (
+  taskId: number,
+  nodeType: TaskNodeCategory | null = null,
+  nodeId: number | null = null,
+  options: { enabled?: boolean } = {}
+) => {
   const { enabled = true } = options;
+  const hasSelectedNode = Boolean(nodeType) && Boolean(nodeId);
   return useQuery({
-    queryKey: queryKeys.grading.studentExecutions({ taskId }),
-    queryFn: () => apiClient.get<StudentExecution[]>(`/tasks/${taskId}/student-executions/`),
-    enabled: Boolean(taskId) && enabled,
+    queryKey: queryKeys.grading.studentExecutions({ taskId, nodeType, nodeId }),
+    queryFn: () => {
+      const search = new URLSearchParams();
+      if (nodeType && nodeId) {
+        search.set('node_type', nodeType);
+        search.set('node_id', String(nodeId));
+      }
+      const queryString = search.toString();
+      return apiClient.get<StudentExecution[]>(
+        `/tasks/${taskId}/student-executions/${queryString ? `?${queryString}` : ''}`
+      );
+    },
+    enabled: Boolean(taskId) && hasSelectedNode && enabled,
   });
 };
 
@@ -41,7 +64,6 @@ export const useGradingQuestions = (
     queryKey: queryKeys.grading.questions({ taskId, quizId }),
     queryFn: () => apiClient.get<GradingQuestion[]>(`/grading/tasks/${taskId}/questions/?quiz_id=${quizId}`),
     enabled: Boolean(taskId) && Boolean(quizId) && enabled,
-    placeholderData: keepPreviousData,
   });
 };
 
@@ -62,7 +84,6 @@ export const useGradingAnswers = (
         `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
       ),
     enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && enabled,
-    placeholderData: keepPreviousData,
   });
 };
 
@@ -75,5 +96,6 @@ export const useSubmitGrading = (taskId: number) => {
     mutationFn: (data: GradingSubmitRequest) =>
       apiClient.post(`/grading/tasks/${taskId}/submit/`, data),
     onSuccess: () => invalidateAfterGradingMutation(queryClient),
+    onError: () => undefined,
   });
 };

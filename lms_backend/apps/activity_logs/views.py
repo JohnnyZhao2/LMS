@@ -142,7 +142,7 @@ class ActivityLogItemView(BaseAPIView):
         tags=['活动日志']
     )
     def delete(self, request, log_item_id: str):
-        get_engine(request).enforce('activity_logs.view_activitylog', error_message='无权删除活动日志')
+        get_engine(request).enforce('activity_logs.delete_activitylog', error_message='无权删除活动日志')
 
         category, record_id = _parse_log_item_id(log_item_id)
         deleted_count, _ = ActivityLog.objects.filter(id=record_id, category=category).delete()
@@ -170,7 +170,7 @@ class ActivityLogBulkDeleteView(BaseAPIView):
         tags=['活动日志']
     )
     def post(self, request):
-        get_engine(request).enforce('activity_logs.view_activitylog', error_message='无权删除活动日志')
+        get_engine(request).enforce('activity_logs.delete_activitylog', error_message='无权删除活动日志')
 
         serializer = ActivityLogBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

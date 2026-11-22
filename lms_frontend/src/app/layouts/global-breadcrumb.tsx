@@ -54,7 +54,7 @@ const createBreadcrumbs = (
     { pattern: '/spot-checks/:id/edit', items: [{ title: '抽查管理', path: ROUTES.SPOT_CHECKS }, { title: '抽查详情' }] },
     { pattern: '/spot-checks', items: [{ title: '抽查管理' }] },
     { pattern: '/users', items: [{ title: '用户管理' }, { title: '用户列表' }] },
-    { pattern: '/authorization', items: [{ title: '用户管理', path: ROUTES.USERS }, { title: '用户授权' }] },
+    { pattern: '/authorization', items: [{ title: '用户管理', path: ROUTES.USERS }, { title: '角色授权' }] },
     { pattern: '/audit-logs/policy', items: [{ title: '日志管理', path: ROUTES.AUDIT_LOGS }, { title: '日志策略' }] },
     { pattern: '/audit-logs', items: [{ title: '日志管理' }, { title: '日志审计' }] },
     { pattern: '/quiz/:id', items: [{ title: taskLabel, path: ROUTES.TASKS }, { title: '在线答题' }] },

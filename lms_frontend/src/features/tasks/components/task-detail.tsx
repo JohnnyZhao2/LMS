@@ -7,7 +7,6 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardList,
-  Edit,
   Ghost,
   GraduationCap,
   Info,
@@ -22,9 +21,7 @@ import { MicroLabel } from '@/components/common/micro-label';
 import { PageFillShell, PageShell, PageSplit } from '@/components/ui/page-shell';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/lib/auth';
 import { ROUTES } from '@/config/routes';
-import { useWorkbench } from '@/hooks/use-workbench';
 import { formatListDateTime } from '@/lib/date-time';
 import dayjs from '@/lib/dayjs';
 import { richTextToPlainText } from '@/lib/rich-text';
@@ -32,18 +29,16 @@ import { formatScore } from '@/lib/score';
 import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 import { cn } from '@/lib/utils';
 import type { TaskStatus } from '@/types/common';
-import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
+import type { LearningTaskQuizItem } from '@/types/task';
 
-import { useStudentLearningTaskDetail, useTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 
 interface KnowledgeListViewItem {
   id: number;
   knowledgeId?: number | null;
   title: string;
-  isCompleted?: boolean;
+  isCompleted: boolean;
 }
-
-type TaskQuizViewItem = LearningTaskQuizItem | TaskQuiz;
 
 const TaskStatusBadge: React.FC<{
   status: TaskStatus;
@@ -183,51 +178,32 @@ export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const workbench = useWorkbench();
-  const { user, isLoading: authLoading } = useAuth();
 
   const searchParams = new URLSearchParams(location.search);
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
-  const roleReady = !authLoading && user !== null;
-  const isStudent = workbench === 'learn';
-
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
 
-  // 管理态 / 执行态严格分流：学员只打 /detail/，管理只打 /{id}/，禁止双请求
-  const managementQuery = useTaskDetail(taskId, {
-    enabled: isValidTaskId && roleReady && !isStudent,
+  const {
+    data: learningDetail,
+    isLoading: isDetailLoading,
+    isError,
+  } = useStudentLearningTaskDetail(taskId, {
+    enabled: isValidTaskId,
   });
-  const studentQuery = useStudentLearningTaskDetail(taskId, {
-    enabled: isValidTaskId && roleReady && isStudent,
-  });
 
-  const task = managementQuery.data;
-  const learningDetail = studentQuery.data;
-  const isLoading = !roleReady
-    || !isValidTaskId
-    || (isStudent ? studentQuery.isLoading : managementQuery.isLoading);
-  const isError = isStudent ? studentQuery.isError : managementQuery.isError;
-  const hasDetail = isStudent ? Boolean(learningDetail) : Boolean(task);
+  const isLoading = !isValidTaskId || isDetailLoading;
 
-  const knowledgeList: KnowledgeListViewItem[] = useMemo(() => {
-    if (isStudent) {
-      return (learningDetail?.knowledge_items ?? []).map((item) => ({
-        id: item.id,
-        knowledgeId: item.knowledge_id,
-        title: item.title || '无标题',
-        isCompleted: item.is_completed,
-      }));
-    }
-
-    return (task?.knowledge_items ?? []).map((item) => ({
+  const knowledgeList: KnowledgeListViewItem[] = useMemo(
+    () => (learningDetail?.knowledge_items ?? []).map((item) => ({
       id: item.id,
-      knowledgeId: item.knowledge,
-      title: item.knowledge_title || '无标题',
-      isCompleted: false,
-    }));
-  }, [isStudent, learningDetail, task]);
+      knowledgeId: item.knowledge_id,
+      title: item.title || '无标题',
+      isCompleted: item.is_completed,
+    })),
+    [learningDetail],
+  );
 
   if (!isValidTaskId) {
     return (
@@ -265,7 +241,7 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  if (isError || !hasDetail) {
+  if (isError || !learningDetail) {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
@@ -284,28 +260,21 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  const title = isStudent ? learningDetail!.task_title : task!.title;
-  const rawDescription = isStudent ? learningDetail!.task_description : task!.description;
-  const deadline = isStudent ? learningDetail!.deadline : task!.deadline;
-  const updatedAt = isStudent ? learningDetail!.updated_at : task!.updated_at;
-  const updatedByLabel = isStudent
-    ? learningDetail!.created_by_name
-    : (task!.updated_by_name || task!.created_by_name);
+  const title = learningDetail.task_title;
+  const rawDescription = learningDetail.task_description;
+  const deadline = learningDetail.deadline;
+  const updatedAt = learningDetail.updated_at;
+  const updatedByLabel = learningDetail.created_by_name;
+  const studentStatus = learningDetail.status;
+  const studentStatusDisplay = learningDetail.status_display;
+  const isOverdue = studentStatus === 'OVERDUE';
 
-  const myAssignment = !isStudent
-    ? task!.assignments?.find((assignment) => assignment.assignee === user?.id)
-    : undefined;
-  const studentStatus = learningDetail?.status;
-  const studentStatusDisplay = learningDetail?.status_display;
+  const canStartExam =
+    studentStatus === 'NOT_STARTED'
+    || studentStatus === 'IN_PROGRESS'
+    || studentStatus === 'PENDING_GRADING';
 
-  const canStartExam = isStudent
-    ? studentStatus === 'NOT_STARTED' || studentStatus === 'IN_PROGRESS'
-    : false;
-  const canEditTask = !isStudent && Boolean(task!.actions.update) && dayjs(task!.deadline).isAfter(dayjs());
-
-  const displayQuizzes: TaskQuizViewItem[] = isStudent
-    ? (learningDetail!.quiz_items ?? [])
-    : (task!.quizzes ?? []);
+  const displayQuizzes = learningDetail.quiz_items ?? [];
   const practiceQuizzes = displayQuizzes.filter((item) => item.allow_retry);
   const examQuizzes = displayQuizzes.filter((item) => !item.allow_retry);
   const hasKnowledge = knowledgeList.length > 0;
@@ -313,21 +282,16 @@ export const TaskDetail: React.FC = () => {
   const hasExam = examQuizzes.length > 0;
   const descriptionText = rawDescription ? richTextToPlainText(rawDescription).trim() : '';
   const hasDescription = Boolean(descriptionText);
-  const statusValue = isStudent ? studentStatus : myAssignment?.status;
-  const statusLabel = isStudent
-    ? studentStatusDisplay
-    : (statusValue ? TASK_EXECUTION_STATUS_META[statusValue].label : undefined);
   const totalNodeCount = knowledgeList.length + practiceQuizzes.length + examQuizzes.length;
 
   const handleStartQuiz = (quizId: number, allowRetry = true) => {
-    if (!isStudent || !learningDetail) return;
     const assignmentId = learningDetail.id;
     if (!assignmentId || !quizId) return;
     if (!allowRetry && !canStartExam) return;
     navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
-  const getQuizMetaText = (item: TaskQuizViewItem) =>
+  const getQuizMetaText = (item: LearningTaskQuizItem) =>
     [
       `${item.question_count} 题`,
       `总分 ${formatScore(item.total_score)}`,
@@ -423,33 +387,37 @@ export const TaskDetail: React.FC = () => {
 
                         <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                           {practiceQuizzes.map((item, index) => {
-                            const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
-                            const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
-                            const isCompleted = Boolean(studentQuizItem?.is_completed);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
-                            const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名测验';
+                            const isCompleted = Boolean(item.is_completed);
+                            const isPendingGrading = item.latest_status === 'GRADING';
+                            const quizId = item.id;
+                            const quizTitle = item.quiz_title || '未命名测验';
 
                             return (
                               <TaskNodeCard
                                 key={item.id}
                                 index={index}
-                                title={title}
+                                title={quizTitle}
                                 meta={getQuizMetaText(item)}
                                 metaSeparated
                                 status={
-                                  isStudent
-                                    ? isCompleted
+                                  isPendingGrading
+                                    ? (
+                                      <span className="inline-flex items-center gap-1 text-warning-700">
+                                        待批改
+                                      </span>
+                                    )
+                                    : isCompleted
                                       ? (
                                         <span className="inline-flex items-center gap-1 text-secondary-700">
                                           <CheckCircle2 className="h-3.5 w-3.5" />
-                                          {studentQuizItem?.score ?? '--'} 分
+                                          {`${item.score ?? '--'} 分`}
                                         </span>
                                       )
                                       : null
-                                    : null
                                 }
-                                tone={isCompleted ? 'success' : 'default'}
-                                onClick={isStudent && quizId ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
+                                tone={isCompleted ? 'success' : isPendingGrading ? 'warning' : 'default'}
+                                disabled={isOverdue}
+                                onClick={quizId && !isOverdue ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
                               />
                             );
                           })}
@@ -468,37 +436,45 @@ export const TaskDetail: React.FC = () => {
 
                         <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                           {examQuizzes.map((item, index) => {
-                            const studentQuizItem = isStudent ? (item as LearningTaskQuizItem) : null;
-                            const adminQuizItem = !isStudent ? (item as TaskQuiz) : null;
-                            const isCompleted = Boolean(studentQuizItem?.is_completed);
-                            const isDisabled = Boolean(isStudent && !canStartExam && !isCompleted);
-                            const quizId = studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz ?? 0);
-                            const title = studentQuizItem?.quiz_title || adminQuizItem?.quiz_title || '未命名考试';
+                            const isCompleted = Boolean(item.is_completed);
+                            const isPendingGrading = item.latest_status === 'GRADING';
+                            const isSubmitted = isCompleted || isPendingGrading;
+                            const isDisabled = !canStartExam && !isSubmitted;
+                            const quizId = item.id;
+                            const quizTitle = item.quiz_title || '未命名考试';
 
                             return (
                               <TaskNodeCard
                                 key={item.id}
                                 index={index}
-                                title={title}
+                                title={quizTitle}
                                 meta={getQuizMetaText(item)}
                                 metaSeparated
                                 status={
-                                  isStudent
-                                    ? isCompleted
+                                  isPendingGrading
+                                    ? (
+                                      <span className="inline-flex items-center gap-1 text-warning-700">
+                                        待批改
+                                      </span>
+                                    )
+                                    : isCompleted
                                       ? (
                                         <span className="inline-flex items-center gap-1 text-secondary-700">
                                           <CheckCircle2 className="h-3.5 w-3.5" />
-                                          {studentQuizItem?.score ?? '--'} 分
+                                          {`${item.score ?? '--'} 分`}
                                         </span>
                                       )
                                       : isDisabled
-                                        ? <span className="text-warning-700">待解锁</span>
+                                        ? (
+                                          <span className={isOverdue ? 'text-destructive-600' : 'text-warning-700'}>
+                                            {isOverdue ? '已逾期' : '待解锁'}
+                                          </span>
+                                        )
                                         : null
-                                    : null
                                 }
                                 tone={isCompleted ? 'success' : 'warning'}
                                 disabled={isDisabled}
-                                onClick={isStudent && quizId && !isDisabled ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
+                                onClick={quizId && !isSubmitted && !isDisabled ? () => handleStartQuiz(quizId, item.allow_retry) : undefined}
                               />
                             );
                           })}
@@ -530,58 +506,56 @@ export const TaskDetail: React.FC = () => {
               <MicroLabel icon={<Info className="h-4 w-4 text-text-muted" />}>
                 任务信息
               </MicroLabel>
-              {statusValue && statusLabel && (
+              {studentStatus && studentStatusDisplay && (
                 <div className="mt-4">
-                  <TaskStatusBadge status={statusValue} label={statusLabel} />
+                  <TaskStatusBadge status={studentStatus} label={studentStatusDisplay} />
                 </div>
               )}
             </div>
 
             <ScrollContainer as="aside" className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-6 px-5 py-5">
-                {isStudent && learningDetail && (
-                  <section className="space-y-4 rounded-2xl border border-primary-100/80 bg-primary-50/35 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[13px] font-semibold text-foreground">学习进度</p>
-                        <p className="mt-1.5 text-[22px] font-semibold text-foreground">
-                          {learningDetail.progress?.percentage ?? 0}
-                          <span className="ml-1 text-xs font-medium text-text-muted">%</span>
-                        </p>
-                      </div>
-                      <IconBox
-                        icon={Activity}
-                        size="sm"
-                        bgColor="bg-primary-100"
-                        iconColor="text-primary-600"
-                        rounded="lg"
-                        hoverScale={false}
-                      />
+                <section className="space-y-4 rounded-2xl border border-primary-100/80 bg-primary-50/35 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[13px] font-semibold text-foreground">学习进度</p>
+                      <p className="mt-1.5 text-[22px] font-semibold text-foreground">
+                        {learningDetail.progress?.percentage ?? 0}
+                        <span className="ml-1 text-xs font-medium text-text-muted">%</span>
+                      </p>
                     </div>
+                    <IconBox
+                      icon={Activity}
+                      size="sm"
+                      bgColor="bg-primary-100"
+                      iconColor="text-primary-600"
+                      rounded="lg"
+                      hoverScale={false}
+                    />
+                  </div>
 
-                    <div className="h-2 overflow-hidden rounded-full bg-primary-100">
-                      <div
-                        className="h-full rounded-full bg-primary-500 transition-[width] duration-700"
-                        style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
-                      />
-                    </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-primary-100">
+                    <div
+                      className="h-full rounded-full bg-primary-500 transition-[width] duration-700"
+                      style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
+                    />
+                  </div>
 
-                    <div className="space-y-0">
-                      {Number(learningDetail.progress?.knowledge_total) > 0 && (
-                        <TaskInfoRow
-                          label="学习资料"
-                          value={`${learningDetail.progress?.knowledge_completed ?? 0} / ${learningDetail.progress?.knowledge_total ?? 0}`}
-                        />
-                      )}
-                      {Number(learningDetail.progress?.quiz_total) > 0 && (
-                        <TaskInfoRow
-                          label="试卷"
-                          value={`${learningDetail.progress?.quiz_completed ?? 0} / ${learningDetail.progress?.quiz_total ?? 0}`}
-                        />
-                      )}
-                    </div>
-                  </section>
-                )}
+                  <div className="space-y-0">
+                    {Number(learningDetail.progress?.knowledge_total) > 0 && (
+                      <TaskInfoRow
+                        label="学习资料"
+                        value={`${learningDetail.progress?.knowledge_completed ?? 0} / ${learningDetail.progress?.knowledge_total ?? 0}`}
+                      />
+                    )}
+                    {Number(learningDetail.progress?.quiz_total) > 0 && (
+                      <TaskInfoRow
+                        label="试卷"
+                        value={`${learningDetail.progress?.quiz_completed ?? 0} / ${learningDetail.progress?.quiz_total ?? 0}`}
+                      />
+                    )}
+                  </div>
+                </section>
 
                 <section>
                   <div className="space-y-0">
@@ -598,19 +572,6 @@ export const TaskDetail: React.FC = () => {
                       value={formatListDateTime(updatedAt)}
                     />
                   </div>
-                </section>
-
-                <section className="pt-2">
-                  {canEditTask && (
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-xl border-border/80 hover:bg-muted"
-                      onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      编辑任务配置
-                    </Button>
-                  )}
                 </section>
               </div>
             </ScrollContainer>

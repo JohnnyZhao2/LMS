@@ -57,7 +57,7 @@ export const MentorDashboard: React.FC = () => {
               />
               <StatCard
                 title="平均分"
-                value={data?.summary?.overall_avg_score ?? 0}
+                value={data?.summary?.overall_avg_score ?? '-'}
                 icon={Trophy}
                 accentClassName="bg-primary-500"
                 size="sm"

@@ -4,8 +4,13 @@ import { FileCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
-import { usePendingQuizzes, type PendingTask, type PendingQuiz } from '@/features/grading/api/pending-quizzes';
-import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/grading/components/grading-center-tab';
+import { usePendingQuizzes } from '@/features/grading/api/pending-quizzes';
+import {
+  GradingCenterTab,
+  type GradingCenterSelectorConfig,
+  type GradingSelectorQuizOption,
+  type GradingSelectorTaskOption,
+} from '@/features/grading/components/grading-center-tab';
 
 export const GradingCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,7 +59,7 @@ export const GradingCenterPage: React.FC = () => {
     setSearchParams(nextSearchParams, { replace: true });
   }, [resolvedTaskId, searchParams, setSearchParams]);
 
-  const handleTaskSelect = (task: PendingTask) => {
+  const handleTaskSelect = (task: GradingSelectorTaskOption) => {
     setSelectedQuizId(task.quizzes[0]?.quiz_id ?? null);
     if (Number(searchParams.get('task') || 0) === task.task_id) {
       return;
@@ -64,7 +69,7 @@ export const GradingCenterPage: React.FC = () => {
     setSearchParams(nextSearchParams, { replace: true });
   };
 
-  const handleQuizSelect = (quiz: PendingQuiz) => {
+  const handleQuizSelect = (quiz: GradingSelectorQuizOption) => {
     setSelectedQuizId(quiz.quiz_id);
   };
 
@@ -72,8 +77,9 @@ export const GradingCenterPage: React.FC = () => {
     ? {
       tasks: selectorTasks,
       selectedTaskId: resolvedTaskId,
-      selectedQuizId: resolvedQuizId,
       onTaskSelect: handleTaskSelect,
+      quizzes: selectedTask?.quizzes ?? [],
+      selectedQuizId: resolvedQuizId,
       onQuizSelect: handleQuizSelect,
     }
     : undefined;

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Calendar, FileText, Pencil, User } from 'lucide-react';
+import { Calendar, Pencil, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -22,7 +22,6 @@ interface QuizPreviewWorkbenchProps {
   quizId: number;
   quizDraft?: QuizDraftState;
   onEdit?: (quizId: number) => void;
-  onPrimaryAction?: (quizId: number) => void;
   className?: string;
 }
 
@@ -47,7 +46,6 @@ export function QuizPreviewWorkbench({
   quizId,
   quizDraft,
   onEdit,
-  onPrimaryAction,
   className,
 }: QuizPreviewWorkbenchProps) {
   const [selectedQuestionKey, setSelectedQuestionKey] = React.useState<string | null>(null);
@@ -240,15 +238,6 @@ export function QuizPreviewWorkbench({
             </div>
           </div>
         </ScrollContainer>
-
-        {onPrimaryAction ? (
-          <div className="border-t border-border px-4 py-4">
-            <Button className="h-9 w-full rounded-lg" onClick={() => onPrimaryAction(quizId)}>
-              <FileText className="h-4 w-4" />
-              添加到任务
-            </Button>
-          </div>
-        ) : null}
       </aside>
     </div>
   );

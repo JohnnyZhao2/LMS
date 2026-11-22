@@ -19,7 +19,7 @@ elif SETTINGS_MODULE.endswith('.production'):
     ENV_FILE = BASE_DIR / '.env.production'
 elif SETTINGS_MODULE.endswith('.test'):
     APP_ENV = 'test'
-    ENV_FILE = None
+    ENV_FILE = BASE_DIR / '.env.development'
 else:
     raise ValueError(
         'Unsupported DJANGO_SETTINGS_MODULE '
@@ -27,9 +27,10 @@ else:
     )
 
 if ENV_FILE is not None:
-    if not ENV_FILE.exists():
+    if ENV_FILE.exists():
+        load_dotenv(ENV_FILE, override=(APP_ENV != 'test'))
+    elif APP_ENV != 'test':
         raise FileNotFoundError(f'Missing environment file: {ENV_FILE}')
-    load_dotenv(ENV_FILE, override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 secret_key = os.getenv('SECRET_KEY')
@@ -134,6 +135,7 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
+            'isolation_level': 'read committed',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES', time_zone='+08:00'",
         },
     }
@@ -156,9 +158,14 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
-    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
     'DEFAULT_THROTTLE_RATES': {
-        'auth': '10/minute',
+        'anon': '300/minute',
+        'user': '600/minute',
+        'auth': os.getenv('AUTH_THROTTLE_RATE', '100/minute'),
     },
 }
 # Simple JWT settings
@@ -266,6 +273,9 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'lms-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 10000,
+        },
     }
 }
 

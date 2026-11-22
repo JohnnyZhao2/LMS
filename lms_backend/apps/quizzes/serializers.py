@@ -1,7 +1,10 @@
 """Serializers for quiz management."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
+from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.questions.serializers import QuestionUpdateSerializer
 from apps.tags.serializers import TagSimpleSerializer
@@ -83,9 +86,13 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_questions(self, obj):
-        quiz_questions = obj.quiz_questions.select_related('question__space_tag').prefetch_related(
-            'question__question_options', 'question__tags',
-        ).order_by('order')
+        prefetched = getattr(obj, '_prefetched_objects_cache', {}).get('quiz_questions')
+        if prefetched is not None:
+            quiz_questions = sorted(prefetched, key=lambda item: (item.order, item.id))
+        else:
+            quiz_questions = obj.quiz_questions.select_related('question__space_tag').prefetch_related(
+                'question__question_options', 'question__tags',
+            ).order_by('order', 'id')
         return QuizQuestionSerializer(quiz_questions, many=True).data
 
 
@@ -93,11 +100,11 @@ class QuizEditableQuestionSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=False)
     source_question_id = serializers.IntegerField(required=False, allow_null=True)
     content = serializers.CharField(required=False)
-    question_type = serializers.CharField(required=False)
+    question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES, required=False)
     options = serializers.JSONField(required=False)
     answer = serializers.JSONField(required=False)
     explanation = serializers.CharField(required=False, allow_blank=True)
-    score = serializers.DecimalField(max_digits=5, decimal_places=2)
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0.01'))
     space_tag_id = serializers.IntegerField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
     question_changes = QuestionUpdateSerializer(required=False)

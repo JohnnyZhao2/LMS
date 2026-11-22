@@ -33,5 +33,6 @@ export const useCreateTask = () => {
       return apiClient.post<TaskDetail>('/tasks/create/', data);
     },
     onSuccess: () => invalidateAfterTaskMutation(queryClient),
+    onError: () => undefined,
   });
 };

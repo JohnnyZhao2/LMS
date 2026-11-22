@@ -8,11 +8,11 @@ import type { MentorDashboard } from '@/features/dashboard/types';
  * 获取导师/室经理仪表盘数据
  */
 export const useMentorDashboard = () => {
-  const { managementRole } = useAuth();
+  const { hasCapability, hasFullScopeCapability } = useAuth();
   return useQuery({
     queryKey: queryKeys.dashboards.mentor(),
     queryFn: () => apiClient.get<MentorDashboard>('/dashboard/mentor/'),
-    enabled: managementRole === 'MENTOR' || managementRole === 'DEPT_MANAGER',
+    enabled: hasCapability('tasks.view_task_analytics') && !hasFullScopeCapability('tasks.view_task_analytics'),
     staleTime: 0,
     refetchOnMount: 'always',
   });

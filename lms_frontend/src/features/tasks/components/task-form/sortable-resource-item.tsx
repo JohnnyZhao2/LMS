@@ -12,11 +12,10 @@ import type { SelectedResource } from './task-form.types';
 
 interface SortableResourceItemProps {
   item: SelectedResource;
-  removeResource: (uid: number) => void;
-  onToggleQuizType?: (uid: number, nextQuizType: 'PRACTICE' | 'EXAM') => void;
-  onUpdateExamConfig?: (uid: number, patch: { duration?: string; passScore?: string }) => void;
+  removeResource: (uid: string) => void;
+  onToggleQuizType?: (uid: string, nextQuizType: 'PRACTICE' | 'EXAM') => void;
+  onUpdateExamConfig?: (uid: string, patch: { duration?: string; passScore?: string }) => void;
   isEdit?: boolean;
-  disabled?: boolean;
   isOverlay?: boolean;
 }
 
@@ -26,12 +25,11 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
   onToggleQuizType,
   onUpdateExamConfig,
   isEdit = false,
-  disabled = false,
   isOverlay = false,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: String(item.uid),
-    disabled: isOverlay || disabled,
+    id: item.uid,
+    disabled: isOverlay || isEdit,
   });
 
   const style = {
@@ -82,7 +80,7 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
   const BackIcon = backConfig.icon;
   const flipDeg = flipStep * 180 + (isHoveringIcon && !justClickedIcon ? 18 : 0);
 
-  const canFlipQuiz = item.resourceType === 'QUIZ' && !isEdit && !disabled && !isOverlay;
+  const canFlipQuiz = item.resourceType === 'QUIZ' && !isEdit && !isOverlay;
 
   return (
     <div
@@ -94,11 +92,11 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
       )}
     >
       <div
-        {...(disabled || isOverlay ? {} : attributes)}
-        {...(disabled || isOverlay ? {} : listeners)}
+        {...(isEdit || isOverlay ? {} : attributes)}
+        {...(isEdit || isOverlay ? {} : listeners)}
         className={cn(
           'absolute -left-7 top-1/2 flex h-7 w-5 -translate-y-1/2 items-center justify-center rounded text-text-muted/60 transition-colors duration-150',
-          disabled
+          isEdit
             ? 'cursor-not-allowed opacity-35'
             : isOverlay
               ? 'cursor-grabbing text-foreground'
@@ -225,7 +223,7 @@ export const SortableResourceItem: React.FC<SortableResourceItemProps> = ({
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0 text-text-muted hover:bg-destructive-50 hover:text-destructive-600"
-            disabled={disabled || isOverlay}
+            disabled={isEdit || isOverlay}
             onClick={() => removeResource(item.uid)}
           >
             <Trash2 className="h-3.5 w-3.5" />

@@ -16,8 +16,9 @@ from ..serializers import (
     SaveAnswerSerializer,
     StartQuizSerializer,
     SubmissionDetailSerializer,
+    SubmitQuizSerializer,
 )
-from ..services import SubmissionService, UNSET
+from ..services import SubmissionService
 
 
 class StartQuizView(APIView):
@@ -76,6 +77,7 @@ class SubmitView(BaseAPIView):
         - PRACTICE: 可多次提交
         - EXAM: 自动评分，不会因参考时间超时而强制交卷
         ''',
+        request=SubmitQuizSerializer,
         responses={
             200: SubmissionDetailSerializer,
             400: OpenApiResponse(description='参数错误'),
@@ -84,8 +86,13 @@ class SubmitView(BaseAPIView):
         tags=['答题']
     )
     def post(self, request, pk):
-        submission = self.service.get_submission_by_id(pk, user=request.user)
-        submission = self.service.submit(submission)
+        submission = self.service.get_submission_for_write(pk, user=request.user)
+        serializer = SubmitQuizSerializer(data=request.data or {})
+        serializer.is_valid(raise_exception=True)
+        submission = self.service.submit(
+            submission,
+            answers=serializer.validated_data.get('answers'),
+        )
         response_serializer = SubmissionDetailSerializer(submission)
         return success_response(response_serializer.data)
 
@@ -126,10 +133,7 @@ class SaveAnswerView(BaseAPIView):
 
     @extend_schema(
         summary='保存答案',
-        description='''
-        保存单个题目的答案。
-        可以在答题过程中多次调用此接口保存答案。
-        ''',
+        description='批量保存作答内容或题目标记状态。',
         request=SaveAnswerSerializer,
         responses={
             200: OpenApiResponse(description='保存成功'),
@@ -139,23 +143,11 @@ class SaveAnswerView(BaseAPIView):
         tags=['测验答题', '考试答题']
     )
     def post(self, request, pk):
-        submission = self.service.get_submission_by_id(pk, user=request.user)
-        serializer = SaveAnswerSerializer(
-            data=request.data,
-            context={'request': request, 'submission': submission}
-        )
+        submission = self.service.get_submission_for_write(pk, user=request.user)
+        serializer = SaveAnswerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        answer = self.service.save_answer(
-            submission=submission,
-            question_id=serializer.validated_data['question_id'],
-            user_answer=serializer.validated_data.get('user_answer', UNSET),
-            is_marked=serializer.validated_data.get('is_marked', UNSET),
-        )
+        saved = self.service.save_answers(submission, serializer.validated_data['answers'])
         return success_response(
-            data={
-                'question_id': answer.question_id,
-                'user_answer': answer.user_answer,
-                'is_marked': answer.is_marked,
-            },
-            message='保存成功'
+            data={'saved_count': len(saved)},
+            message='保存成功',
         )

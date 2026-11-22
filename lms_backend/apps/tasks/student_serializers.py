@@ -60,13 +60,21 @@ class StudentAssignmentListSerializer(AssignmentExecutionStatusSerializerMixin, 
         ]
 
     def get_has_quiz(self, obj):
+        prefetched = getattr(obj.task, '_prefetched_objects_cache', {}).get('task_quizzes')
+        if prefetched is not None:
+            return len(prefetched) > 0
         return obj.task.has_quiz
 
     def get_has_knowledge(self, obj):
+        prefetched = getattr(obj.task, '_prefetched_objects_cache', {}).get('task_knowledge')
+        if prefetched is not None:
+            return len(prefetched) > 0
         return obj.task.has_knowledge
 
     def get_progress(self, obj):
-        return build_assignment_progress(obj)
+        quiz_progress_map = (self.context or {}).get('quiz_progress_map')
+        quiz_completed = quiz_progress_map.get(obj.id) if quiz_progress_map is not None else None
+        return build_assignment_progress(obj, quiz_completed=quiz_completed)
 
 
 class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
@@ -102,13 +110,16 @@ class StudentTaskDetailSerializer(AssignmentExecutionStatusSerializerMixin, seri
         ]
 
     def get_progress(self, obj):
-        return build_assignment_progress(obj)
+        quiz_progress_map = (self.context or {}).get('quiz_progress_map')
+        quiz_completed = quiz_progress_map.get(obj.id) if quiz_progress_map is not None else None
+        return build_assignment_progress(obj, quiz_completed=quiz_completed)
 
     def get_knowledge_items(self, obj):
         return StudentTaskService.get_student_knowledge_items(obj)
 
     def get_quiz_items(self, obj):
-        return StudentTaskService.get_student_quiz_items(obj)
+        submissions = (self.context or {}).get('submissions')
+        return StudentTaskService.get_student_quiz_items(obj, submissions=submissions)
 
 
 class CompleteKnowledgeLearningSerializer(serializers.Serializer):

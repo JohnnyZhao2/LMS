@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, CheckCircle, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { QuestionDocumentReadMode } from '@/components/questions/question-document-read-mode';
@@ -12,7 +12,6 @@ interface QuestionCardProps {
   answer: Answer;
   userAnswer?: UserAnswerValue;
   onAnswerChange: (value: string | string[]) => void;
-  onAnswerBlur?: () => void;
   disabled?: boolean;
   showResult?: boolean;
   questionNumber?: number;
@@ -31,7 +30,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   answer,
   userAnswer,
   onAnswerChange,
-  onAnswerBlur,
   disabled = false,
   showResult = false,
   questionNumber,
@@ -56,12 +54,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         explanation=""
         showExplanation={false}
         disabled={disabled}
-        onResponseBlur={onAnswerBlur}
         headerActions={onToggleMark ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            disabled={disabled}
             onClick={onToggleMark}
             className={cn(
               'h-auto min-w-0 gap-1 rounded-none px-0 text-[13px] font-semibold leading-5 tracking-[0.01em] shadow-none',
@@ -77,41 +75,52 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         onResponseChange={onAnswerChange}
       />
 
-      {showResult ? (
-        <div
-          className={cn(
-            'rounded-xl border p-4',
-            answer.is_correct
-              ? 'border-secondary-300 bg-secondary-50'
-              : 'border-destructive-300 bg-destructive-50',
-          )}
-        >
-          <div className="mb-2 flex items-center gap-2">
-            {answer.is_correct ? (
-              <CheckCircle className="h-4.5 w-4.5 text-secondary-500" />
-            ) : (
-              <XCircle className="h-4.5 w-4.5 text-destructive-500" />
+      {showResult ? (() => {
+        const isPendingGrade = answer.is_correct == null;
+        return (
+          <div
+            className={cn(
+              'rounded-xl border p-4',
+              isPendingGrade
+                ? 'border-warning-300 bg-warning-50'
+                : answer.is_correct
+                  ? 'border-secondary-300 bg-secondary-50'
+                  : 'border-destructive-300 bg-destructive-50',
             )}
-            <span
-              className={cn(
-                'font-semibold',
-                answer.is_correct ? 'text-secondary-600' : 'text-destructive-600',
+          >
+            <div className="mb-2 flex items-center gap-2">
+              {isPendingGrade ? (
+                <Clock className="h-4.5 w-4.5 text-warning-600" />
+              ) : answer.is_correct ? (
+                <CheckCircle className="h-4.5 w-4.5 text-secondary-500" />
+              ) : (
+                <XCircle className="h-4.5 w-4.5 text-destructive-500" />
               )}
-            >
-              {answer.is_correct ? '回答正确' : '回答错误'}
-            </span>
-            <span className="ml-auto text-text-muted">
-              得分: {formatScore(answer.obtained_score) || '0'}/{formatScore(answer.question_score) || '--'}
-            </span>
-          </div>
-          {answer.explanation ? (
-            <div className="whitespace-pre-wrap break-words text-text-muted">
-              {'解析：'}
-              {richTextToPlainText(answer.explanation)}
+              <span
+                className={cn(
+                  'font-semibold',
+                  isPendingGrade
+                    ? 'text-warning-700'
+                    : answer.is_correct
+                      ? 'text-secondary-600'
+                      : 'text-destructive-600',
+                )}
+              >
+                {isPendingGrade ? '待评分' : answer.is_correct ? '回答正确' : '回答错误'}
+              </span>
+              <span className="ml-auto text-text-muted">
+                得分: {isPendingGrade ? '--' : (formatScore(answer.obtained_score) || '0')}/{formatScore(answer.question_score) || '--'}
+              </span>
             </div>
-          ) : null}
-        </div>
-      ) : null}
+            {answer.explanation ? (
+              <div className="whitespace-pre-wrap break-words text-text-muted">
+                {'解析：'}
+                {richTextToPlainText(answer.explanation)}
+              </div>
+            ) : null}
+          </div>
+        );
+      })() : null}
     </div>
   );
 };

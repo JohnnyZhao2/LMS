@@ -12,8 +12,6 @@ QUESTION_TYPE_CHOICES = [
     ('SHORT_ANSWER', '简答题'),
 ]
 
-DEFAULT_QUESTION_SCORE = 5.0
-
 
 def build_choice_option_key(index: int) -> str:
     """将 0-based 索引转换为 A/B/.../Z/AA 的展示键。"""
@@ -124,7 +122,7 @@ class QuestionContentMixin(models.Model):
             if option['id'] is not None
         }
 
-    def check_answer(self, user_answer, full_score=None):
+    def check_answer(self, user_answer, full_score):
         if self.is_subjective:
             return None, Decimal('0')
 
@@ -140,7 +138,7 @@ class QuestionContentMixin(models.Model):
         else:
             is_correct = False
 
-        resolved_score = Decimal(str(self.score if full_score is None else full_score))
+        resolved_score = Decimal(str(full_score))
         return is_correct, resolved_score if is_correct else Decimal('0')
 
 

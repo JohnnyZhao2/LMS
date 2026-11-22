@@ -35,19 +35,17 @@ import type { ResourceFilterType, SelectedResource } from './task-form.types';
 
 interface TaskPipelinePanelProps {
   selectedResources: SelectedResource[];
-  resourcesDisabled: boolean;
   isEdit?: boolean;
   onDragEnd: (event: DragEndEvent) => void;
-  onRemoveResource: (uid: number) => void;
-  onToggleQuizType?: (uid: number, nextQuizType: 'PRACTICE' | 'EXAM') => void;
-  onUpdateExamConfig?: (uid: number, patch: { duration?: string; passScore?: string }) => void;
+  onRemoveResource: (uid: string) => void;
+  onToggleQuizType?: (uid: string, nextQuizType: 'PRACTICE' | 'EXAM') => void;
+  onUpdateExamConfig?: (uid: string, patch: { duration?: string; passScore?: string }) => void;
   onAddResource?: (initialType?: ResourceFilterType, insertIndex?: number) => void;
   embedded?: boolean;
 }
 
 export function TaskPipelinePanel({
   selectedResources,
-  resourcesDisabled,
   isEdit = false,
   onDragEnd,
   onRemoveResource,
@@ -57,7 +55,7 @@ export function TaskPipelinePanel({
   embedded = false,
 }: TaskPipelinePanelProps) {
   const dragCleanupFrameRef = React.useRef<number | null>(null);
-  const [draggingItemUid, setDraggingItemUid] = React.useState<number | null>(null);
+  const [draggingItemUid, setDraggingItemUid] = React.useState<string | null>(null);
   const [draggingItemWidth, setDraggingItemWidth] = React.useState<number | null>(null);
 
   const sensors = useSensors(
@@ -90,7 +88,7 @@ export function TaskPipelinePanel({
   }, []);
 
   const handleDragStart = React.useCallback(({ active }: DragStartEvent) => {
-    setDraggingItemUid(Number(active.id));
+    setDraggingItemUid(String(active.id));
     setDraggingItemWidth(active.rect.current.initial?.width ?? null);
   }, []);
 
@@ -110,7 +108,7 @@ export function TaskPipelinePanel({
       </div>
 
       <ScrollContainer className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/15 p-5">
-        {resourcesDisabled ? (
+        {isEdit ? (
           <Alert variant="warning" className={`${TASK_FORM_WARNING_ALERT_CLASSNAME} mb-4`}>
             <AlertDescription className={TASK_FORM_WARNING_ALERT_DESCRIPTION_CLASSNAME}>
               {selectedResources.some((item) => item.quizType === 'EXAM')
@@ -121,7 +119,7 @@ export function TaskPipelinePanel({
         ) : null}
 
         {selectedResources.length === 0 ? (
-          resourcesDisabled ? null : (
+          isEdit ? null : (
             <div className="flex flex-1 items-center justify-center">
               <Button
                 type="button"
@@ -143,13 +141,13 @@ export function TaskPipelinePanel({
             onDragCancel={clearDragState}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={selectedResources.map((item) => String(item.uid))} strategy={verticalListSortingStrategy}>
+            <SortableContext items={selectedResources.map((item) => item.uid)} strategy={verticalListSortingStrategy}>
               <div className="mx-auto flex w-full max-w-[740px] flex-col px-7">
                 {selectedResources.map((item, index) => (
                   <React.Fragment key={item.uid}>
                     {index > 0 ? (
-                      <div className="flex flex-col items-center py-1" aria-hidden={resourcesDisabled ? 'true' : undefined}>
-                        {resourcesDisabled ? (
+                      <div className="flex flex-col items-center py-1" aria-hidden={isEdit ? 'true' : undefined}>
+                        {isEdit ? (
                           <div className="h-7 w-px border-l border-dashed border-border" />
                         ) : (
                           <>
@@ -175,12 +173,11 @@ export function TaskPipelinePanel({
                       onToggleQuizType={onToggleQuizType}
                       onUpdateExamConfig={onUpdateExamConfig}
                       isEdit={isEdit}
-                      disabled={resourcesDisabled}
                     />
                   </React.Fragment>
                 ))}
 
-                {resourcesDisabled ? null : (
+                {isEdit ? null : (
                   <div className="flex flex-col items-center pt-1">
                     <div className="h-3.5 w-px border-l border-dashed border-border" />
                     <Tooltip title="添加资源">
@@ -207,7 +204,6 @@ export function TaskPipelinePanel({
                     onToggleQuizType={onToggleQuizType}
                     onUpdateExamConfig={onUpdateExamConfig}
                     isEdit={isEdit}
-                    disabled={resourcesDisabled}
                     isOverlay
                   />
                 </div>

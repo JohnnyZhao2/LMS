@@ -1,14 +1,16 @@
 """
 Serializers for user management.
 """
+from typing import Optional
+
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.authorization.roles import serialize_user_roles
+from apps.authorization.roles import get_group_profile, serialize_role_profile, serialize_user_roles
 from core.exceptions import BusinessError
 
 from .avatar_constants import validate_avatar_key
-from .models import Department, ROLE_CHOICES, ROLE_LABELS, User
+from .models import Department, User
 from .selectors import get_valid_mentor_by_id
 
 
@@ -56,15 +58,44 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = ['id', 'name', 'code']
+
+
+class DepartmentOptionSerializer(DepartmentSerializer):
+    """Department reference serializer with active manager info."""
+    manager_id = serializers.SerializerMethodField()
+    manager_name = serializers.SerializerMethodField()
+
+    class Meta(DepartmentSerializer.Meta):
+        fields = ['id', 'name', 'code', 'manager_id', 'manager_name']
+
+    def get_manager_id(self, obj) -> Optional[int]:
+        manager = obj.manager
+        return manager.id if manager and manager.is_active else None
+
+    def get_manager_name(self, obj) -> Optional[str]:
+        manager = obj.manager
+        return manager.username if manager and manager.is_active else None
 class RoleSerializer(serializers.Serializer):
     """Serializer for Role model."""
+    id = serializers.IntegerField(read_only=True)
     code = serializers.CharField()
     name = serializers.CharField()
+    data_scope = serializers.CharField(read_only=True)
+    is_builtin = serializers.BooleanField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    permission_codes = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+        required=False,
+    )
 
     def to_representation(self, instance):
-        if hasattr(instance, 'name'):
-            return {'code': instance.name, 'name': ROLE_LABELS.get(instance.name, instance.name)}
-        return super().to_representation(instance)
+        if isinstance(instance, dict):
+            return super().to_representation(instance)
+        profile = get_group_profile(instance)
+        if profile is None:
+            raise ValueError(f'Group {getattr(instance, "name", instance)!r} 缺少 RoleProfile')
+        return serialize_role_profile(instance, profile)
 class MentorSerializer(serializers.ModelSerializer):
     """Serializer for mentor information."""
     class Meta:
@@ -103,7 +134,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleSerializer(many=True))
     def get_roles(self, obj):
-        return serialize_user_roles(obj)
+        return serialize_user_roles(obj, include_inactive=True)
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -131,7 +162,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleSerializer(many=True))
     def get_roles(self, obj):
-        return serialize_user_roles(obj)
+        return serialize_user_roles(obj, include_inactive=True)
 class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating new users.
@@ -156,10 +187,10 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='导师ID（可选）'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=ROLE_CHOICES),
+        child=serializers.CharField(),
         required=False,
         default=list,
-        help_text='管理角色列表，最多一个；空表示普通员工',
+        help_text='角色编码列表，内置角色最多一个；空表示普通员工',
     )
 
     class Meta:
@@ -203,9 +234,9 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
         help_text='工号'
     )
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=ROLE_CHOICES),
+        child=serializers.CharField(),
         required=False,
-        help_text='管理角色列表，最多一个；空表示普通员工',
+        help_text='角色编码列表，内置角色最多一个；空表示普通员工',
     )
 
     class Meta:
@@ -227,9 +258,9 @@ class AssignRolesSerializer(serializers.Serializer):
     Serializer for assigning roles to a user.
     """
     role_codes = serializers.ListField(
-        child=serializers.ChoiceField(choices=ROLE_CHOICES),
+        child=serializers.CharField(),
         required=True,
-        help_text='管理角色列表，最多一个；空表示普通员工',
+        help_text='角色编码列表，内置角色最多一个；空表示普通员工',
     )
 class AssignMentorSerializer(serializers.Serializer):
     """

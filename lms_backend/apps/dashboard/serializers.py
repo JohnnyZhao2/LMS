@@ -8,9 +8,8 @@ from rest_framework import serializers
 
 from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.tasks.models import TaskAssignment
+from apps.tasks.progress import build_assignment_progress
 from apps.tasks.status_serializers import AssignmentExecutionStatusSerializerMixin
-
-from .student_dashboard_queries import calculate_assignment_progress
 
 
 class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializers.ModelSerializer):
@@ -36,7 +35,9 @@ class StudentTaskSerializer(AssignmentExecutionStatusSerializerMixin, serializer
 
     def get_progress(self, obj):
         """计算任务进度"""
-        return calculate_assignment_progress(obj)
+        quiz_progress_map = (self.context or {}).get('quiz_progress_map')
+        quiz_completed = quiz_progress_map.get(obj.id) if quiz_progress_map is not None else None
+        return build_assignment_progress(obj, quiz_completed=quiz_completed)
 
 
 class StudentStatsSerializer(serializers.Serializer):

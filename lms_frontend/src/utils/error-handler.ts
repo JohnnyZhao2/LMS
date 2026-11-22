@@ -97,7 +97,7 @@ export function getApiErrorContent(error: unknown, defaultMessage?: string): Err
 }
 
 export function showApiError(error: unknown, defaultMessage?: string): void {
-  if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+  if (error instanceof ApiError && error.status === 401) {
     return;
   }
 

@@ -8,17 +8,20 @@ DEFAULT_TASK_ACTIONS = {
     'update': False,
     'delete': False,
     'analytics': False,
+    'grading': False,
 }
 
 
 def get_task_actions_payload(request, task) -> dict[str, bool]:
     if request is None:
         return dict(DEFAULT_TASK_ACTIONS)
+    engine = get_engine(request)
     return {
-        'view': get_engine(request).authorize('tasks.view_task', resource=task).allowed,
-        'update': get_engine(request).authorize('tasks.change_task', resource=task).allowed,
-        'delete': get_engine(request).authorize('tasks.delete_task', resource=task).allowed,
-        'analytics': get_engine(request).authorize('tasks.view_task_analytics', resource=task).allowed,
+        'view': engine.authorize('tasks.view_task', resource=task).allowed,
+        'update': engine.authorize('tasks.change_task', resource=task).allowed,
+        'delete': engine.authorize('tasks.delete_task', resource=task).allowed,
+        'analytics': engine.authorize('tasks.view_task_analytics', resource=task).allowed,
+        'grading': engine.authorize('tasks.view_grading', resource=task).allowed,
     }
 
 

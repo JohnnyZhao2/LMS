@@ -1,5 +1,5 @@
 export const isAnswerEmpty = (value: unknown) =>
   value === null ||
   value === undefined ||
-  value === '' ||
+  (typeof value === 'string' && value.trim() === '') ||
   (Array.isArray(value) && value.length === 0);

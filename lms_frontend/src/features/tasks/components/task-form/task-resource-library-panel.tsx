@@ -1,7 +1,9 @@
 import {
   BookOpen,
+  ClipboardList,
   FileCheck,
   Layers,
+  Trophy,
   X,
 } from 'lucide-react';
 
@@ -28,8 +30,8 @@ interface TaskResourceLibraryPanelProps {
   isLoading: boolean;
   resourceSearch: string;
   onResourceSearchChange: (value: string) => void;
-  onResourceAdd: (resource: ResourceItem) => void;
-  onResourceRemove: (uid: number) => void;
+  onResourceAdd: (resource: ResourceItem, quizType?: 'PRACTICE' | 'EXAM') => void;
+  onResourceRemove: (uid: string) => void;
   onDone?: () => void;
   totalResourceCount: number;
   pageSize: number;
@@ -54,43 +56,48 @@ interface ResourceOptionRowProps {
   resource: ResourceItem;
   onClick?: () => void;
   action?: React.ReactNode;
-  badge?: React.ReactNode;
   className?: string;
 }
+
+const RESOURCE_ROW_VISUALS = {
+  DOCUMENT: { icon: BookOpen, iconClassName: 'bg-secondary-50 text-secondary', label: '文档', labelClassName: 'text-text-muted' },
+  QUIZ: { icon: FileCheck, iconClassName: 'bg-primary-50 text-primary', label: '试卷', labelClassName: 'text-text-muted' },
+  PRACTICE: { icon: ClipboardList, iconClassName: 'bg-primary-50 text-primary', label: '测验', labelClassName: 'font-semibold text-primary' },
+  EXAM: { icon: Trophy, iconClassName: 'bg-destructive-50 text-destructive', label: '考试', labelClassName: 'font-semibold text-destructive' },
+} as const;
+
+const QUIZ_ADD_ACTIONS = [
+  { type: 'PRACTICE', label: '测验', className: 'border-primary/20 bg-primary-50/70 text-primary hover:border-primary/40 hover:bg-primary-50 hover:text-primary' },
+  { type: 'EXAM', label: '考试', className: 'border-destructive/20 bg-destructive-50/70 text-destructive hover:border-destructive/40 hover:bg-destructive-50 hover:text-destructive' },
+] as const;
 
 function ResourceOptionRow({
   resource,
   onClick,
   action,
-  badge,
   className,
 }: ResourceOptionRowProps) {
+  const visual = RESOURCE_ROW_VISUALS[resource.resourceType === 'DOCUMENT' ? 'DOCUMENT' : (resource.quizType ?? 'QUIZ')];
+  const Icon = visual.icon;
   const content = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
         <div
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
-            resource.resourceType === 'DOCUMENT'
-              ? 'bg-secondary-50 text-secondary'
-              : 'bg-primary-50 text-primary',
+            visual.iconClassName,
           )}
         >
-          {resource.resourceType === 'DOCUMENT' ? (
-            <BookOpen className="h-5 w-5" />
-          ) : (
-            <FileCheck className="h-5 w-5" />
-          )}
+          <Icon className="h-5 w-5" />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex items-center gap-1.5">
             <span className="truncate text-[13px] font-semibold text-foreground">{resource.title}</span>
-            {badge}
           </div>
           <div className="flex items-center gap-2 text-[10px] font-medium text-text-muted">
-            <span className="text-text-muted">
-              {resource.resourceType === 'DOCUMENT' ? '文档' : '试卷'}
+            <span className={visual.labelClassName}>
+              {visual.label}
             </span>
             <span className="h-0.5 w-0.5 rounded-full bg-border" />
             <span className="truncate text-text-muted">{resource.category}</span>
@@ -98,7 +105,7 @@ function ResourceOptionRow({
         </div>
       </div>
 
-      {action ? <div className="flex shrink-0 items-center gap-1">{action}</div> : null}
+      {action ? <div className="flex shrink-0 items-center gap-1.5">{action}</div> : null}
     </>
   );
 
@@ -207,7 +214,20 @@ export function TaskResourceLibraryPanel({
                     <ResourceOptionRow
                       key={`${resource.resourceType}-${resource.id}-${resource.title}`}
                       resource={resource}
-                      onClick={() => onResourceAdd(resource)}
+                      onClick={resource.resourceType === 'DOCUMENT' ? () => onResourceAdd(resource) : undefined}
+                      action={resource.resourceType === 'QUIZ' ? QUIZ_ADD_ACTIONS.map(({ type, label, className }) => (
+                        <Button
+                          key={type}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className={cn('h-7 rounded-md border px-2.5 text-[11px] font-semibold', className)}
+                          aria-label={`作为${label}加入${resource.title}`}
+                          onClick={() => onResourceAdd(resource, type)}
+                        >
+                          {label}
+                        </Button>
+                      )) : undefined}
                     />
                   ))}
                 </div>
@@ -257,7 +277,7 @@ export function TaskResourceLibraryPanel({
                   </div>
                   <span className="text-sm font-medium text-foreground/80">暂无已选资源</span>
                   <span className="mt-1 text-[11px] text-text-muted">
-                    点击左侧学习资料或试卷即可加入
+                    点击左侧学习资料，或选择试卷作为测验/考试加入
                   </span>
                 </div>
               ) : (
@@ -266,14 +286,6 @@ export function TaskResourceLibraryPanel({
                     <ResourceOptionRow
                       key={resource.uid}
                       resource={resource}
-                      badge={resource.resourceType === 'QUIZ' ? (
-                        <Badge
-                          variant="secondary"
-                          className="h-4 shrink-0 border-none bg-muted px-1.5 text-[10px] font-medium text-text-muted"
-                        >
-                          {resource.quizType === 'EXAM' ? '考试' : '练习'}
-                        </Badge>
-                      ) : null}
                       action={(
                         <Button
                           variant="ghost"

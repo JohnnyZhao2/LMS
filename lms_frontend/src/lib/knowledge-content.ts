@@ -7,22 +7,35 @@ export function plain(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+const STEPS_ALLOWED_TAG_RE = /<(\/?(?:br|strong|b))\b[^<>]*>/gi;
+const STEPS_PLACEHOLDERS: Record<string, string> = {
+  br: '\0BR\0',
+  strong: '\0STRONG_OPEN\0',
+  b: '\0STRONG_OPEN\0',
+  '/strong': '\0STRONG_CLOSE\0',
+  '/b': '\0STRONG_CLOSE\0',
+};
+
 /** 清洗步骤摘要，仅保留裸 br / strong（剥掉全部属性，防 XSS） */
 export function sanitizeStepsHtml(html: string): string {
   const withBreaks = (html || '')
+    .replace(/\0/g, '')
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<\/p>/gi, '<br>')
-    .replace(/<p[^>]*>/gi, '')
-    .replace(/<div[^>]*>/gi, '')
-    .replace(/<\/div>/gi, '<br>');
+    .replace(/<\/p\s*>/gi, '<br>')
+    .replace(/<p\b[^<>]*>/gi, '')
+    .replace(/<div\b[^<>]*>/gi, '')
+    .replace(/<\/div\s*>/gi, '<br>');
 
   return withBreaks
-    .replace(/<(?!\/?(?:br|strong|b)\b)[^>]+>/gi, '')
-    .replace(/<br\b[^>]*>/gi, '<br>')
-    .replace(/<\/?(?:strong|b)\b[^>]*>/gi, (tag) => (
-      tag.startsWith('</') ? '</strong>' : '<strong>'
-    ))
-    .replace(/(?:<br\s*\/?\s*>\s*)+$/i, '')
+    .replace(STEPS_ALLOWED_TAG_RE, (_, tag: string) => STEPS_PLACEHOLDERS[tag.toLowerCase()] ?? '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?[a-zA-Z!?][^<>]*>/g, '')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\0BR\0/g, '<br>')
+    .replace(/\0STRONG_OPEN\0/g, '<strong>')
+    .replace(/\0STRONG_CLOSE\0/g, '</strong>')
+    .replace(/(?:<br>\s*)+$/i, '')
     .trim();
 }
 

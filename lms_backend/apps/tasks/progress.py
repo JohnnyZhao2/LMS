@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Any, Optional
 
 
-QUIZ_COMPLETION_STATUSES = ('SUBMITTED', 'GRADING', 'GRADED')
+QUIZ_COMPLETION_STATUSES = ('SUBMITTED', 'GRADED')
 
 
 def build_assignment_progress(
     assignment,
     *,
     quiz_completed: Optional[int] = None,
-    quiz_progress: Optional[dict[str, int]] = None,
+    statuses: tuple[str, ...] = QUIZ_COMPLETION_STATUSES,
 ) -> dict[str, Any]:
     task = assignment.task
     task_knowledge_items = _get_prefetched_related(task, 'task_knowledge')
@@ -45,12 +45,13 @@ def build_assignment_progress(
         if knowledge_progress_items is not None
         else assignment.knowledge_progress.filter(is_completed=True).count()
     )
-    completed_quiz_progress = quiz_progress or _get_completed_quiz_progress(assignment)
-    completed_quizzes = (
-        quiz_completed
-        if quiz_completed is not None
-        else completed_quiz_progress['completed']
-    )
+    if quiz_completed is not None:
+        completed_quizzes = quiz_completed
+    else:
+        completed_quizzes = get_assignment_quiz_progress_map(
+            [assignment.id],
+            statuses=statuses,
+        ).get(assignment.id, 0)
     completed = completed_knowledge + completed_quizzes
 
     return {
@@ -69,42 +70,30 @@ def is_assignment_completed(progress_data: dict[str, Any]) -> bool:
     return total > 0 and progress_data['completed'] >= total
 
 
-def get_assignment_quiz_progress_map(assignment_ids: list[int]) -> dict[int, dict[str, int]]:
+def get_assignment_quiz_progress_map(
+    assignment_ids: list[int],
+    *,
+    statuses: tuple[str, ...] = QUIZ_COMPLETION_STATUSES,
+) -> dict[int, int]:
     from apps.submissions.models import Submission
 
-    progress_map = {
-        assignment_id: {
-            'completed': 0,
-        }
-        for assignment_id in assignment_ids
-    }
+    progress_map = {assignment_id: 0 for assignment_id in assignment_ids}
     if not assignment_ids:
         return progress_map
 
     grouped_quiz_ids: dict[int, set[int]] = {}
     rows = Submission.objects.filter(
         task_assignment_id__in=assignment_ids,
-        status__in=QUIZ_COMPLETION_STATUSES,
+        status__in=statuses,
     ).values_list('task_assignment_id', 'task_quiz_id').distinct()
     for assignment_id, task_quiz_id in rows:
         grouped_quiz_ids.setdefault(assignment_id, set()).add(task_quiz_id)
 
     for assignment_id, quiz_ids in grouped_quiz_ids.items():
-        progress_map[assignment_id] = {
-            'completed': len(quiz_ids),
-        }
+        progress_map[assignment_id] = len(quiz_ids)
 
     return progress_map
 
 
 def _get_prefetched_related(instance, relation_name: str):
     return getattr(instance, '_prefetched_objects_cache', {}).get(relation_name)
-
-
-def _get_completed_quiz_progress(assignment) -> dict[str, int]:
-    return get_assignment_quiz_progress_map([assignment.id]).get(
-        assignment.id,
-        {
-            'completed': 0,
-        },
-    )

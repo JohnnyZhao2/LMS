@@ -3,14 +3,14 @@
  * 业务路由注册表。
  *
  * 路径、权限、菜单元数据集中声明在这里。
- * workbenches 只决定菜单在哪个界面模式出现，不参与路由访问控制。
+ * workbenches 同时决定菜单展示与工作台路由访问控制（未声明时默认 ['manage']）。
  */
 import { lazy, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { BookOpen, FileSearch, HelpCircle, ListTodo, SquareTerminal, Tags, Users } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { PageShell } from '@/components/ui/page-shell';
-import { AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS } from '@/config/authorization';
+import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
 import { useWorkbench } from '@/hooks/use-workbench';
 import type { Workbench } from '@/types/common';
 
@@ -36,6 +36,26 @@ export type BusinessRouteMeta = {
   permissionMode?: PermissionMode;
   menu?: MenuMeta;
   element: ReactElement;
+};
+
+export const canAccessBusinessRoute = (
+  route: Pick<BusinessRouteMeta, 'workbenches' | 'requiredPermissions' | 'permissionMode'>,
+  workbench: Workbench,
+  hasCapability: (permissionCode: string) => boolean,
+): boolean => {
+  const allowedWorkbenches = route.workbenches ?? ['manage'];
+  if (!allowedWorkbenches.includes(workbench)) {
+    return false;
+  }
+  if (workbench === 'learn') {
+    return true;
+  }
+  if (!route.requiredPermissions?.length) {
+    return true;
+  }
+  return route.permissionMode === 'any'
+    ? route.requiredPermissions.some(hasCapability)
+    : route.requiredPermissions.every(hasCapability);
 };
 
 const StudentTaskCenter = lazy(() => import('@/app/routes/student-task-center').then(m => ({ default: m.StudentTaskCenter })));
@@ -97,10 +117,28 @@ const TaskRoutePage = () => {
   return <TaskManagement />;
 };
 
+const KeyedTaskForm = () => {
+  const { id } = useParams<{ id: string }>();
+  return <TaskForm key={id ?? 'create'} />;
+};
+
+const KeyedTaskPreviewPage = () => {
+  const { id } = useParams<{ id: string }>();
+  return <TaskPreviewPage key={id ?? 'preview'} />;
+};
+
+const KeyedQuizForm = () => {
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const mode = location.pathname.endsWith('/preview') ? 'preview' : id ? 'edit' : 'create';
+  return <QuizForm key={`${mode}-${id ?? 'new'}`} />;
+};
+
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     path: 'tasks',
     workbenches: ['learn', 'manage'],
+    requiredPermissions: ['tasks.view_task'],
     menu: {
       label: (workbench) => (workbench === 'manage' ? '任务管理' : '任务中心'),
       icon: ListTodo,
@@ -111,21 +149,22 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     path: 'tasks/create',
     requiredPermissions: ['tasks.add_task'],
-    element: <TaskForm />,
+    element: <KeyedTaskForm />,
   },
   {
     path: 'tasks/:id/edit',
     requiredPermissions: ['tasks.change_task'],
-    element: <TaskForm />,
+    element: <KeyedTaskForm />,
   },
   {
     path: 'tasks/:id/preview',
-    requiredPermissions: ['tasks.change_task', 'tasks.view_grading'],
+    requiredPermissions: ['tasks.view_task_analytics', 'tasks.view_grading'],
     permissionMode: 'any',
-    element: <TaskPreviewPage />,
+    element: <KeyedTaskPreviewPage />,
   },
   {
     path: 'tasks/:id',
+    workbenches: ['learn'],
     element: <TaskDetail />,
   },
   {
@@ -141,6 +180,7 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     path: 'knowledge',
     workbenches: ['learn', 'manage'],
+    requiredPermissions: ['knowledge.view_knowledge'],
     menu: {
       label: (workbench) => (workbench === 'learn' ? '知识中心' : '知识管理'),
       icon: BookOpen,
@@ -160,6 +200,8 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     path: 'knowledge/:id',
+    workbenches: ['learn', 'manage'],
+    requiredPermissions: ['knowledge.view_knowledge'],
     element: <KnowledgeCenter />,
   },
   {
@@ -176,17 +218,17 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
     path: 'quizzes/create',
     requiredPermissions: ['quizzes.add_quiz'],
-    element: <QuizForm />,
+    element: <KeyedQuizForm />,
   },
   {
     path: 'quizzes/:id/preview',
     requiredPermissions: ['quizzes.view_quiz', 'questions.view_question'],
-    element: <QuizForm />,
+    element: <KeyedQuizForm />,
   },
   {
     path: 'quizzes/:id/edit',
     requiredPermissions: ['quizzes.change_quiz'],
-    element: <QuizForm />,
+    element: <KeyedQuizForm />,
   },
   {
     path: 'questions',
@@ -266,10 +308,9 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     path: 'authorization',
-    requiredPermissions: AUTHORIZATION_WORKBENCH_ACCESS_PERMISSIONS,
-    permissionMode: 'any',
+    requiredPermissions: [USER_ROLE_ASSIGN_PERMISSION],
     menu: {
-      label: '用户授权',
+      label: '角色授权',
       group: USERS_GROUP,
       order: 20,
     },
@@ -277,14 +318,17 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   },
   {
     path: 'quiz/:id',
+    workbenches: ['learn'],
     element: <QuizPlayer />,
   },
   {
     path: 'review/practice',
+    workbenches: ['learn'],
     element: <AnswerReview type="practice" />,
   },
   {
     path: 'review/exam',
+    workbenches: ['learn'],
     element: <AnswerReview type="exam" />,
   },
   {

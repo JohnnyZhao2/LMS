@@ -11,42 +11,29 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
+import { useTaskAnalytics } from '@/api/grading/task-analytics';
 import { useTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { ProgressMonitoringTab } from '@/features/tasks/components/task-preview/progress-monitoring-tab';
-import { GradingCenterTab, type GradingCenterSelectorConfig } from '@/features/grading/components/grading-center-tab';
-import type { PendingQuiz, PendingTask } from '@/features/grading/api/pending-quizzes';
-import type { TaskDetail } from '@/types/task';
+import { TaskOverviewStrip } from '@/features/tasks/components/task-preview/task-overview-strip';
+import {
+  GradingCenterTab,
+  type GradingCenterSelectorConfig,
+  type GradingSelectorQuizOption,
+} from '@/features/grading/components/grading-center-tab';
 import dayjs from '@/lib/dayjs';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/lib/auth';
-
-const toPendingTask = (task: TaskDetail): PendingTask => ({
-  task_id: task.id,
-  task_title: task.title,
-  deadline: task.deadline,
-  quizzes: task.quizzes.map((quiz) => ({
-    quiz_id: quiz.task_quiz_id,
-    quiz_title: quiz.quiz_title,
-    allow_retry: quiz.allow_retry,
-    kind_label: quiz.kind_label,
-    question_count: quiz.question_count,
-    duration: quiz.duration ?? null,
-    pending_count: 0,
-  })),
-});
 
 export const TaskPreviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { hasCapability } = useAuth();
   const tasksPath = ROUTES.TASKS;
   const taskId = Number(id);
   const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
 
   const { data: task, isLoading } = useTaskDetail(taskId);
-  const canViewProgress = !!task && (task.actions.update || task.actions.analytics);
-  const canViewGrading = !!task && task.actions.view && hasCapability('tasks.view_grading');
+  const canViewProgress = Boolean(task?.actions.analytics);
+  const canViewGrading = Boolean(task?.actions.grading);
   const availableTabs = React.useMemo(
     () => [
       canViewProgress ? 'progress' : null,
@@ -60,34 +47,38 @@ export const TaskPreviewPage: React.FC = () => {
     : availableTabs.includes(requestedTab)
       ? requestedTab
       : availableTabs[0];
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+  } = useTaskAnalytics(taskId || 0, {
+    enabled: Boolean(taskId) && canViewProgress && activeTab === 'progress',
+  });
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
-  const pendingTask = React.useMemo(() => (task ? toPendingTask(task) : null), [task]);
-  const quizzes = pendingTask?.quizzes ?? [];
+  const quizzes = React.useMemo<GradingSelectorQuizOption[]>(
+    () => (task?.quizzes ?? []).map((quiz) => ({
+      quiz_id: quiz.id,
+      quiz_title: quiz.quiz_title,
+    })),
+    [task?.quizzes],
+  );
   const activeQuizId = (selectedQuizId && quizzes.some((quiz) => quiz.quiz_id === selectedQuizId))
     ? selectedQuizId
     : (quizzes[0]?.quiz_id ?? null);
 
-  React.useEffect(() => {
-    if (activeTab === 'grading' && !selectedQuizId && quizzes.length > 0) {
-      setSelectedQuizId(quizzes[0].quiz_id);
-    }
-  }, [activeTab, quizzes, selectedQuizId]);
-
   const gradingSelectorConfig = React.useMemo<GradingCenterSelectorConfig | undefined>(() => {
-    if (!pendingTask) {
+    if (!task) {
       return undefined;
     }
     return {
-      tasks: [pendingTask],
-      selectedTaskId: pendingTask.task_id,
+      quizzes,
       selectedQuizId: activeQuizId,
-      onTaskSelect: () => undefined,
-      onQuizSelect: (quiz: PendingQuiz) => {
+      onQuizSelect: (quiz) => {
         setSelectedQuizId(quiz.quiz_id);
       },
     };
-  }, [activeQuizId, pendingTask]);
+  }, [activeQuizId, quizzes, task]);
 
   React.useEffect(() => {
     if (isLoading || !task || availableTabs.length === 0) {
@@ -146,11 +137,12 @@ export const TaskPreviewPage: React.FC = () => {
     );
   }
 
-  const Shell = PageFillShell;
+  const showOverviewInHeader = activeTab === 'progress' && canViewProgress;
+  const showTabSwitcher = !isTaskManagementEntry && availableTabs.length > 1;
 
   return (
-    <Shell className="gap-4">
-      <div className="flex min-w-0 flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
+    <PageFillShell className="gap-4">
+      <div className="flex min-w-0 flex-col gap-4 pb-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-4">
           <div className="flex items-center gap-4">
             <Button
@@ -183,37 +175,52 @@ export const TaskPreviewPage: React.FC = () => {
           </div>
         </div>
 
-        {!isTaskManagementEntry && availableTabs.length > 1 && (
-          <div className="flex w-full justify-start lg:w-auto lg:justify-end">
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
-                {canViewProgress && (
-                  <TabsTrigger
-                    value="progress"
-                    className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    进度监控
-                  </TabsTrigger>
-                )}
-                {canViewGrading && (
-                  <TabsTrigger
-                    value="grading"
-                    className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                  >
-                    <FileCheck className="h-4 w-4" />
-                    阅卷中心
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </Tabs>
+        {(showOverviewInHeader || showTabSwitcher) && (
+          <div className="flex w-full flex-wrap items-center gap-6 lg:w-auto lg:justify-end">
+            {showOverviewInHeader && (
+              analyticsLoading ? (
+                <Skeleton className="h-11 w-[460px] max-w-full rounded-lg" />
+              ) : analytics ? (
+                <TaskOverviewStrip analytics={analytics} />
+              ) : null
+            )}
+
+            {showTabSwitcher && (
+              <Tabs value={activeTab} onValueChange={handleTabChange}>
+                <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
+                  {canViewProgress && (
+                    <TabsTrigger
+                      value="progress"
+                      className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      进度监控
+                    </TabsTrigger>
+                  )}
+                  {canViewGrading && (
+                    <TabsTrigger
+                      value="grading"
+                      className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                    >
+                      <FileCheck className="h-4 w-4" />
+                      阅卷中心
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </Tabs>
+            )}
           </div>
         )}
       </div>
 
       {activeTab === 'progress' ? (
         <PageWorkbench className="gap-4">
-          <ProgressMonitoringTab taskId={taskId} />
+          <ProgressMonitoringTab
+            taskId={taskId}
+            analytics={analytics}
+            isLoading={analyticsLoading}
+            isError={analyticsError}
+          />
         </PageWorkbench>
       ) : (
         <PageWorkbench>
@@ -224,6 +231,6 @@ export const TaskPreviewPage: React.FC = () => {
           />
         </PageWorkbench>
       )}
-    </Shell>
+    </PageFillShell>
   );
 };

@@ -13,6 +13,7 @@ interface QuizSubmitDialogProps {
 
 interface QuizAbandonDialogProps {
   open: boolean;
+  isPending?: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
@@ -25,7 +26,11 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
   onOpenChange,
   onConfirm,
 }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
+  <Dialog open={open} onOpenChange={(nextOpen) => {
+    if (!isPending) {
+      onOpenChange(nextOpen);
+    }
+  }}>
     <DialogContent className="rounded-lg">
       <DialogHeader>
         <DialogTitle>确认提交</DialogTitle>
@@ -43,7 +48,7 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
           继续答题
         </Button>
         <Button
@@ -61,10 +66,13 @@ export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
 
 export const QuizAbandonDialog: React.FC<QuizAbandonDialogProps> = ({
   open,
+  isPending = false,
   onOpenChange,
   onConfirm,
 }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
+  <Dialog open={open} onOpenChange={(nextOpen) => {
+    if (!isPending) onOpenChange(nextOpen);
+  }}>
     <DialogContent className="rounded-lg">
       <DialogHeader>
         <DialogTitle>确认放弃作答</DialogTitle>
@@ -73,10 +81,11 @@ export const QuizAbandonDialog: React.FC<QuizAbandonDialogProps> = ({
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
           继续答题
         </Button>
-        <Button variant="destructive" onClick={onConfirm}>
+        <Button variant="destructive" disabled={isPending} onClick={onConfirm}>
+          {isPending && <Spinner className="mr-1.5 h-4 w-4" />}
           暂时退出
         </Button>
       </DialogFooter>

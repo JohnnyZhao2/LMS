@@ -132,8 +132,6 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
         items={panelItems}
         selectedIds={selectedMemberIds}
         onSelect={onToggleMember}
-        selectionMode="multiple"
-        appearance="panel"
         emptyText={resolvedEmptyText}
         className="max-h-none"
       />

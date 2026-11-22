@@ -88,9 +88,11 @@ export function TaskConfigurationPanel({
   onSubmit,
 }: TaskConfigurationPanelProps) {
   const [departmentFilter, setDepartmentFilter] = useState<TaskAssigneeDepartmentFilter>('all');
+  const [customDaysInput, setCustomDaysInput] = useState<string | null>(null);
   const isPresetDeadline = DEADLINE_DAY_PRESETS.includes(
     deadlineDays as (typeof DEADLINE_DAY_PRESETS)[number],
   );
+  const isCustomActive = customDaysInput !== null || !isPresetDeadline;
   const filteredUserPanelItems = useMemo(
     () => userPanelItems.filter((item) => matchesDepartmentFilter(item, departmentFilter)),
     [departmentFilter, userPanelItems],
@@ -155,15 +157,18 @@ export function TaskConfigurationPanel({
                     label: preset,
                     value: preset,
                   }))}
-                  value={isPresetDeadline ? deadlineDays : null}
-                  onChange={onDeadlineDaysChange}
+                  value={!isCustomActive ? deadlineDays : null}
+                  onChange={(value) => {
+                    setCustomDaysInput(null);
+                    onDeadlineDaysChange(value);
+                  }}
                   trailing={(
                     <div className="flex shrink-0 items-center">
                       <div className="mx-1 h-4 w-px bg-border/80" />
                       <div
                         className={cn(
                           'flex h-full w-14 items-center rounded-md px-1.5 transition-all duration-200',
-                          !isPresetDeadline
+                          isCustomActive
                             ? 'bg-white text-foreground shadow-sm'
                             : 'bg-transparent text-text-muted hover:text-foreground focus-within:bg-white focus-within:text-foreground focus-within:shadow-sm',
                         )}
@@ -173,8 +178,17 @@ export function TaskConfigurationPanel({
                           min={1}
                           step={1}
                           interactionStyle="minimal"
-                          value={isPresetDeadline ? '' : deadlineDays}
-                          onChange={(event) => onDeadlineDaysChange(event.target.value)}
+                          value={customDaysInput ?? (isPresetDeadline ? '' : deadlineDays)}
+                          onChange={(event) => {
+                            const cleaned = event.target.value.replace(/[^\d]/g, '');
+                            setCustomDaysInput(cleaned);
+                            onDeadlineDaysChange(cleaned);
+                          }}
+                          onBlur={() => {
+                            if (customDaysInput !== null && isPresetDeadline) {
+                              setCustomDaysInput(null);
+                            }
+                          }}
                           placeholder="自定义"
                           className="h-6 w-full border-0 bg-transparent p-0 text-center text-[12px] tabular-nums shadow-none placeholder:text-[11px] placeholder:text-text-muted/60"
                         />
@@ -255,11 +269,7 @@ export function TaskConfigurationPanel({
                 items={filteredUserPanelItems}
                 selectedIds={selectedUserIds}
                 onSelect={onToggleUser}
-                appearance="panel"
                 layout="grid"
-                density="regular"
-                showGridSelectionIndicator={false}
-                minimalGridCard
                 isLoading={isUsersLoading}
                 emptyText="暂无可分配人员"
                 loadingText="加载人员列表..."

@@ -8,12 +8,12 @@ import type { AdminDashboard } from '@/features/dashboard/types';
  * 获取管理员仪表盘数据
  */
 export const useAdminDashboard = () => {
-  const { managementRole, user } = useAuth();
+  const { hasFullScopeCapability } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.dashboards.admin(),
     queryFn: () => apiClient.get<AdminDashboard>('/dashboard/admin/'),
-    enabled: managementRole === 'ADMIN' || Boolean(user?.is_superuser),
+    enabled: hasFullScopeCapability('tasks.view_task_analytics'),
     staleTime: 0,
     refetchOnMount: 'always',
   });

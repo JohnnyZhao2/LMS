@@ -1,6 +1,6 @@
-import type { TaskExecutionStatus, TaskStatus } from '@/types/common';
+import type { TaskStatus } from '@/types/common';
 
-export const TASK_EXECUTION_STATUS_META: Record<TaskExecutionStatus, {
+export const TASK_EXECUTION_STATUS_META: Record<TaskStatus, {
   label: string;
   textClassName: string;
   bgClassName: string;
@@ -47,14 +47,6 @@ export const TASK_EXECUTION_STATUS_META: Record<TaskExecutionStatus, {
     badgeClassName: 'bg-destructive-100/75 text-destructive-700',
     outlineClassName: 'border-destructive-200 bg-destructive-50 text-destructive-700',
     dotClassName: 'bg-destructive-500',
-  },
-  COMPLETED_ABNORMAL: {
-    label: '完成但异常',
-    textClassName: 'text-warning',
-    bgClassName: 'bg-warning-100',
-    badgeClassName: 'bg-warning-100/75 text-warning-700',
-    outlineClassName: 'border-warning-200 bg-warning-50 text-warning-700',
-    dotClassName: 'bg-warning-500',
   },
 };
 

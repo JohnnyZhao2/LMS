@@ -1,21 +1,20 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  User,
-  Shield,
-  Plus,
-  Building2,
-  Users,
-} from 'lucide-react';
 
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogTitle,
+  DrawerContent,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import { SegmentedControl, type SegmentedOption } from '@/components/ui/segmented-control';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -24,20 +23,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { UserAvatar } from '@/components/users/user-avatar';
-import { cn } from '@/lib/utils';
-import { getRoleColor } from '@/lib/role-config';
-import { useAuth } from '@/lib/auth';
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
 import {
-  getNextFormRoleCodes,
-  isAssignableRoleCode,
+  DATA_SCOPE_LABELS,
+  LEARNER_ROLE_VALUE,
+  USER_ROLE_ASSIGN_PERMISSION,
+} from '@/config/authorization';
+import { ROUTES } from '@/config/routes';
+import { useAuth } from '@/lib/auth';
+import {
+  composeRoleCodes,
+  getPrimaryIdentity,
+  getSpecialtyRoleCodes,
+  isBuiltinPrimaryRole,
+  type PrimaryIdentityValue,
 } from '@/lib/user-role-assignment';
-
-import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '@/api/users/manage-users';
-import { useUserDetail, useMentors, useDepartments, useRoles } from '@/api/users/get-users';
+import { cn } from '@/lib/utils';
+import { useDepartments, useMentors, useRoles, useUserDetail } from '@/api/users/get-users';
+import { useAssignMentor, useAssignRoles, useCreateUser, useUpdateUser } from '@/api/users/manage-users';
 import { showApiError } from '@/utils/error-handler';
-import type { RoleCode } from '@/types/common';
-import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
+import type { Role, RoleCode, UserList as UserDetail } from '@/types/common';
 
 interface UserFormProps {
   open: boolean;
@@ -53,7 +57,8 @@ interface FormData {
   employee_id: string;
   password: string;
   department_id: number | undefined;
-  role_codes: RoleCode[];
+  primary_identity: PrimaryIdentityValue;
+  specialty_role_codes: RoleCode[];
   mentor_id: number | null;
 }
 
@@ -64,9 +69,21 @@ interface FormErrors {
   department_id?: string;
 }
 
-/**
- * 用户表单组件 — 外层壳，负责数据获取与 Dialog 控制
- */
+const FIELD_INPUT_CLASS = 'h-10 text-sm';
+const FIELD_LABEL_CLASS = 'text-xs font-semibold text-text-muted';
+
+const FormField: React.FC<{
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}> = ({ label, error, children }) => (
+  <div>
+    <label className={cn('mb-1.5 block', FIELD_LABEL_CLASS)}>{label}</label>
+    {children}
+    {error ? <p className="mt-1.5 text-xs font-medium text-destructive">{error}</p> : null}
+  </div>
+);
+
 export const UserForm: React.FC<UserFormProps> = ({
   open,
   userId,
@@ -75,7 +92,85 @@ export const UserForm: React.FC<UserFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { data: userDetail } = useUserDetail(userId || 0);
+  const { data: userDetail, isError: isUserDetailError } = useUserDetail(userId || 0);
+  const isEdit = Boolean(userId);
+  const bodyKey = isEdit
+    ? `edit-${userId}-${userDetail?.updated_at ?? 'loading'}`
+    : `new-${initialDepartmentId ?? 'none'}-${initialMentorId ?? 'none'}`;
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) onClose();
+    }}>
+      <DrawerContent className="max-w-[460px]">
+        <DialogTitle className="sr-only">
+          {isEdit ? '编辑用户' : '新建用户'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          用户资料与角色配置
+        </DialogDescription>
+        {open ? (
+          isEdit && !userDetail ? (
+            isUserDetailError ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-7 text-sm text-text-muted">
+                <p>加载用户信息失败，请关闭重试</p>
+                <Button type="button" variant="outline" size="sm" onClick={onClose}>
+                  关闭
+                </Button>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col gap-6 px-7 py-6">
+                <div className="flex items-center gap-3.5">
+                  <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-3.5 w-36" />
+                  </div>
+                </div>
+                <Skeleton className="h-14 w-full rounded-lg" />
+                <Skeleton className="h-14 w-full rounded-lg" />
+                <Skeleton className="h-28 w-full rounded-lg" />
+              </div>
+            )
+          ) : (
+            <UserDrawerBody
+              key={bodyKey}
+              isEdit={isEdit}
+              userId={userId}
+              userDetail={userDetail}
+              initialDepartmentId={initialDepartmentId}
+              initialMentorId={initialMentorId}
+              onClose={onClose}
+              onSuccess={onSuccess}
+            />
+          )
+        ) : null}
+      </DrawerContent>
+    </Dialog>
+  );
+};
+
+interface UserDrawerBodyProps {
+  isEdit: boolean;
+  userId?: number;
+  userDetail?: UserDetail;
+  initialDepartmentId?: number;
+  initialMentorId?: number;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
+  isEdit,
+  userId,
+  userDetail,
+  initialDepartmentId,
+  initialMentorId,
+  onClose,
+  onSuccess,
+}) => {
+  const navigate = useNavigate();
+  const { hasCapability, user } = useAuth();
   const {
     data: mentors = [],
     isLoading: isMentorsLoading,
@@ -83,480 +178,508 @@ export const UserForm: React.FC<UserFormProps> = ({
   } = useMentors();
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
-  const isEdit = !!userId;
 
-  return (
-    <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!nextOpen) onClose();
-    }}>
-      <DialogContent
-        className="max-w-5xl p-0 gap-0 overflow-hidden rounded-xl border border-border flex flex-col bg-background"
-      >
-        <DialogTitle className="sr-only">
-          {isEdit ? '编辑用户档案' : '新建用户档案'}
-        </DialogTitle>
-        <DialogDescription className="sr-only">
-          配置用户基础信息、导师归属与系统角色。
-        </DialogDescription>
-        {open && (
-          <UserFormContent
-            key={`${userId ?? 'new'}-${userDetail?.id ?? 0}-${initialDepartmentId ?? 'none'}-${initialMentorId ?? 'none'}`}
-            isEdit={isEdit}
-            userId={userId}
-            userDetail={userDetail}
-            mentors={mentors}
-            isMentorsLoading={isMentorsLoading}
-            isMentorsError={isMentorsError}
-            departments={departments}
-            roles={roles}
-            initialDepartmentId={initialDepartmentId}
-            initialMentorId={initialMentorId}
-            onClose={onClose}
-            onSuccess={onSuccess}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
+  const isSuperuser = Boolean(user?.is_superuser);
+  const canCreateUser = isSuperuser || hasCapability('users.add_user');
+  const canUpdateUser = isSuperuser || hasCapability('users.change_user');
+  const canEditBaseInfo = isEdit ? canUpdateUser : canCreateUser;
+  const canAssignUserRole = isSuperuser || hasCapability(USER_ROLE_ASSIGN_PERMISSION);
+  const canAssignRole = (role: Role) => role.code !== 'ADMIN' || isSuperuser;
+  const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
 
-/** 内部表单组件 — 通过 key 重挂载来重置状态 */
-const UserFormContent: React.FC<{
-  isEdit: boolean;
-  userId?: number;
-  userDetail?: UserDetail;
-  mentors: Mentor[];
-  isMentorsLoading: boolean;
-  isMentorsError: boolean;
-  departments: Department[];
-  roles: Role[];
-  initialDepartmentId?: number;
-  initialMentorId?: number;
-  onClose: () => void;
-  onSuccess?: () => void;
-}> = ({
-  isEdit,
-  userId,
-  userDetail,
-  mentors = [],
-  isMentorsLoading,
-  isMentorsError,
-  departments = [],
-  roles = [],
-  initialDepartmentId,
-  initialMentorId,
-  onClose,
-  onSuccess,
-}) => {
-    const { hasCapability } = useAuth();
-    const canCreateUser = hasCapability('users.add_user');
-    const canUpdateUser = hasCapability('users.change_user');
-    const canAssignUserRole = hasCapability(USER_ROLE_ASSIGN_PERMISSION);
-    const canSubmitForm = isEdit ? (canUpdateUser || canAssignUserRole) : canCreateUser;
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const assignRoles = useAssignRoles();
+  const assignMentor = useAssignMentor();
 
-    const createUser = useCreateUser();
-    const updateUser = useUpdateUser();
-    const assignRoles = useAssignRoles();
-    const assignMentor = useAssignMentor();
-    // 直接从 props 初始化，组件通过 key 重挂载时自动重置
-    const [initialRoleCodes] = useState<RoleCode[]>(() =>
-      isEdit && userDetail
-        ? (
-          userDetail.is_superuser
-            ? []
-            : userDetail.roles
-              .map((role) => role.code)
-              .filter((code): code is RoleCode => (
-                isAssignableRoleCode(code)
-              ))
-        )
-        : [],
-    );
-    const [initialAssignedMentorId] = useState<number | null>(() =>
-      isEdit && userDetail ? (userDetail.mentor?.id || null) : null,
-    );
+  const deptManagerByDeptId = departments.reduce<Record<number, { id: number; username: string }>>((acc, dept) => {
+    if (dept.manager_id && dept.manager_name) {
+      acc[dept.id] = { id: dept.manager_id, username: dept.manager_name };
+    }
+    return acc;
+  }, {});
 
-    const [formData, setFormData] = useState<FormData>(() => {
-      if (isEdit && userDetail) {
-        return {
-          username: userDetail.username,
-          employee_id: userDetail.employee_id,
-          password: '',
-          department_id: userDetail.department?.id,
-          role_codes: initialRoleCodes,
-          mentor_id: initialAssignedMentorId,
-        };
-      }
+  const initialSavedRoleCodes: RoleCode[] =
+    isEdit && userDetail && !userDetail.is_superuser
+      ? userDetail.roles.map((role) => role.code)
+      : [];
+  const initialSavedMentorId: number | null =
+    isEdit && userDetail ? (userDetail.mentor?.id || null) : null;
+
+  const savedBaseInfoRef = useRef({
+    username: userDetail?.username ?? '',
+    employee_id: userDetail?.employee_id ?? '',
+    department_id: userDetail?.department?.id ?? null,
+  });
+  const savedRoleCodesRef = useRef<RoleCode[]>(initialSavedRoleCodes);
+  const savedMentorIdRef = useRef<number | null>(initialSavedMentorId);
+
+  const [formData, setFormData] = useState<FormData>(() => {
+    if (isEdit && userDetail) {
       return {
-        username: '',
-        employee_id: '',
+        username: userDetail.username,
+        employee_id: userDetail.employee_id,
         password: '',
-        department_id: initialDepartmentId,
-        role_codes: [],
-        mentor_id: initialMentorId ?? null,
+        department_id: userDetail.department?.id,
+        primary_identity: getPrimaryIdentity(initialSavedRoleCodes),
+        specialty_role_codes: getSpecialtyRoleCodes(initialSavedRoleCodes),
+        mentor_id: initialSavedMentorId,
+      };
+    }
+    return {
+      username: '',
+      employee_id: '',
+      password: '',
+      department_id: initialDepartmentId,
+      primary_identity: LEARNER_ROLE_VALUE,
+      specialty_role_codes: [],
+      mentor_id: initialMentorId ?? null,
+    };
+  });
+
+  const [mentorTouched, setMentorTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const effectiveDepartmentId = isEdit
+    ? formData.department_id
+    : (formData.department_id ?? initialDepartmentId ?? departments[0]?.id);
+  const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
+  const roleByCode = new Map(roles.map((role) => [role.code, role]));
+  const activeSpecialtyRoles = roles.filter((role) => !role.is_builtin && !isBuiltinPrimaryRole(role.code) && role.is_active !== false);
+  const activeSpecialtyCodes = new Set(activeSpecialtyRoles.map((role) => role.code));
+  const assignedInactiveSpecialtyRoles = (userDetail?.roles ?? [])
+    .filter((role) => !role.is_builtin && !isBuiltinPrimaryRole(role.code) && role.is_active === false && !activeSpecialtyCodes.has(role.code))
+    .map((role) => ({ ...role, is_active: false }));
+  const specialtyRoles = [...activeSpecialtyRoles, ...assignedInactiveSpecialtyRoles];
+  const selectableMentors = mentors.filter((m) => !userId || m.id !== userId);
+
+  const existingDeptManager = effectiveDepartmentId
+    ? deptManagerByDeptId[effectiveDepartmentId]
+    : undefined;
+  const deptManagerOccupiedByOther = Boolean(
+    existingDeptManager && existingDeptManager.id !== userDetail?.id,
+  );
+
+  const isSelfAccount = Boolean(
+    isEdit && userDetail?.id && user?.id && userDetail.id === user.id,
+  );
+  const isAdminAccountLocked = Boolean(
+    isEdit && !isSuperuser && initialSavedRoleCodes.includes('ADMIN'),
+  );
+  const roleControlDisabled = (
+    !canAssignUserRole
+    || isSuperuserAccount
+    || isAdminAccountLocked
+    || (!isSuperuser && isSelfAccount)
+  );
+
+  const primaryOptions: SegmentedOption[] = [
+    {
+      value: LEARNER_ROLE_VALUE,
+      label: '普通学员',
+      disabled: roleControlDisabled,
+    },
+    ...(
+      (['MENTOR', 'DEPT_MANAGER', 'ADMIN'] as const)
+        .filter((code) => roleByCode.has(code))
+        .map((code) => {
+          const role = roleByCode.get(code)!;
+          const deptBlocked = code === 'DEPT_MANAGER' && (!effectiveDepartmentId || deptManagerOccupiedByOther);
+          return {
+            value: code,
+            label: role.name,
+            disabled: roleControlDisabled || !canAssignRole(role) || deptBlocked,
+          };
+        })
+    ),
+  ];
+
+  const departmentOptions: SegmentedOption[] = departments.map((dept) => ({
+    value: dept.id.toString(),
+    label: dept.name,
+    disabled: !canEditBaseInfo,
+  }));
+
+  const resolvedRoleCodes = isSuperuserAccount
+    ? []
+    : composeRoleCodes(formData.primary_identity, formData.specialty_role_codes);
+
+  const updateTextField = (key: 'username' | 'employee_id' | 'password', value: string) => {
+    setErrors((prev) => ({ ...prev, [key]: undefined }));
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleSpecialtyRole = (code: RoleCode) => {
+    setFormData((prev) => {
+      const exists = prev.specialty_role_codes.includes(code);
+      return {
+        ...prev,
+        specialty_role_codes: exists
+          ? prev.specialty_role_codes.filter((item) => item !== code)
+          : [...prev.specialty_role_codes, code],
       };
     });
-
-    const [mentorTouched, setMentorTouched] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errors, setErrors] = useState<FormErrors>({});
-    const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
-
-    const validate = (): boolean => {
-      const newErrors: FormErrors = {};
-      if (!formData.username.trim()) newErrors.username = '此项必填';
-      if (!formData.employee_id.trim()) newErrors.employee_id = '此项必填';
-      if (!isEdit && !formData.password.trim()) newErrors.password = '设置初始密码';
-      if (!formData.department_id) newErrors.department_id = '请选择部门';
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async () => {
-      if (isSubmitting) return;
-      if (!validate()) return;
-      setIsSubmitting(true);
-      try {
-        if (isEdit) {
-          const roleSet = new Set(formData.role_codes);
-          const initialRoleSet = new Set(initialRoleCodes);
-          const rolesChanged =
-            roleSet.size !== initialRoleSet.size ||
-            [...roleSet].some((code) => !initialRoleSet.has(code));
-          const baseInfoChanged = (
-            formData.username !== (userDetail?.username ?? '')
-            || formData.employee_id !== (userDetail?.employee_id ?? '')
-            || (formData.department_id ?? null) !== (userDetail?.department?.id ?? null)
-          );
-          const mentorChanged = mentorTouched && formData.mentor_id !== initialAssignedMentorId;
-
-          if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
-            toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
-            return;
-          }
-          if (rolesChanged && !canAssignUserRole) {
-            toast.error('当前账号没有用户角色分配权限，无法调整角色');
-            return;
-          }
-
-          if (baseInfoChanged) {
-            await updateUser.mutateAsync({
-              id: userId!,
-              data: {
-                username: formData.username,
-                employee_id: formData.employee_id,
-                department_id: formData.department_id,
-              },
-            });
-          }
-          if (mentorChanged) {
-            await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
-          }
-          if (rolesChanged) {
-            await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
-          }
-          toast.success("账号信息已更新");
-        } else {
-          if (!canCreateUser) {
-            toast.error('当前账号没有用户资料管理权限，无法创建账号');
-            return;
-          }
-          if (!canAssignUserRole) {
-            toast.error('当前账号没有用户角色分配权限，无法分配角色');
-            return;
-          }
-          await createUser.mutateAsync({
-            username: formData.username,
-            employee_id: formData.employee_id,
-            password: formData.password,
-            department_id: formData.department_id!,
-            mentor_id: formData.mentor_id,
-            role_codes: formData.role_codes,
-          });
-          toast.success("新账号已创建");
-        }
-        onClose();
-        onSuccess?.();
-      } catch (error) {
-        showApiError(error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-
-    const toggleRole = (code: RoleCode) => {
-      setFormData((prev) => ({
-        ...prev,
-        role_codes: isSuperuserAccount ? [] : getNextFormRoleCodes(prev.role_codes, code),
-      }));
-    };
-
-    const isRoleToggleDisabled = (): boolean => {
-      return isSuperuserAccount;
-    };
-
-    const isLoading = isSubmitting
-      || createUser.isPending
-      || updateUser.isPending
-      || assignRoles.isPending
-      || assignMentor.isPending;
-
-    return (
-      <>
-        {/* Header */}
-        <div className="px-8 py-5 border-b border-border bg-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-6 bg-primary rounded-full" />
-            <h2 className="text-lg font-bold text-foreground">
-              {isEdit ? '编辑用户档案' : '新建用户档案'}
-            </h2>
-            {!isEdit && (
-              <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-bold">
-                新成员
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 px-6 pt-6 pb-4 bg-background overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 relative">
-            {/* Extremely Subtle Vertical Divider */}
-            <div className="hidden lg:block absolute left-1/2 top-4 bottom-4 w-[1px] bg-slate-100/50 -translate-x-1/2" />
-
-            {/* Left Column: Essential Info */}
-            <div className="flex h-full flex-col">
-              <div className="flex items-center gap-2 pb-1 text-slate-400">
-                <User className="w-4 h-4" />
-                <h3 className="text-sm font-bold text-slate-800">账号基础信息</h3>
-              </div>
-
-              <div className="mt-4 flex flex-1 flex-col justify-between gap-4">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* 1. Name */}
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-bold text-slate-500 block">真实姓名</label>
-                      <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
-                        <Input
-                          value={formData.username}
-                          onChange={e => setFormData({ ...formData, username: e.target.value })}
-                          placeholder="输入姓名"
-                          disabled={!canUpdateUser}
-                          interactionStyle="minimal"
-                          className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
-                        />
-                      </div>
-                      {errors.username && <p className="text-xs font-bold text-destructive mt-1">{errors.username}</p>}
-                    </div>
-
-                    {/* 2. Employee ID */}
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-bold text-slate-500 block">员工工号</label>
-                      <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
-                        <Input
-                          value={formData.employee_id}
-                          onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                          disabled={!canUpdateUser}
-                          interactionStyle="minimal"
-                          className="h-10 font-mono bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
-                          placeholder="例如：EMP001"
-                        />
-                      </div>
-                      {errors.employee_id && <p className="text-xs font-bold text-destructive mt-1">{errors.employee_id}</p>}
-                    </div>
-                  </div>
-
-                  {/* 3. Password */}
-                  {!isEdit && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-bold text-slate-500 block">初始密码</label>
-                      <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
-                        <Input
-                          type="password"
-                          value={formData.password}
-                          onChange={e => setFormData({ ...formData, password: e.target.value })}
-                          disabled={!canUpdateUser}
-                          interactionStyle="minimal"
-                          className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
-                          placeholder="设置 6 位以上密码"
-                        />
-                      </div>
-                      {errors.password && <p className="text-xs font-bold text-destructive mt-1">{errors.password}</p>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Row: Assignments */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                  {/* 4. Mentor Select */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-1 text-slate-400">
-                      <Users className="w-4 h-4" />
-                      <h3 className="text-sm font-bold text-slate-800">带教导师 (可选)</h3>
-                    </div>
-                    <div className="relative">
-                      <Select
-                        value={formData.mentor_id?.toString() || ''}
-                        disabled={!canUpdateUser}
-                        onValueChange={(v) => {
-                          if (!canUpdateUser) return;
-                          setMentorTouched(true);
-                          setFormData({ ...formData, mentor_id: v ? Number(v) : null });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={isMentorsLoading ? "正在加载导师列表" : "点击选择导师档案"} />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60 z-[9999]">
-                          {isMentorsLoading ? (
-                            <div className="px-3 py-4 text-sm text-text-muted">正在加载导师列表...</div>
-                          ) : isMentorsError ? (
-                            <div className="px-3 py-4 text-sm text-destructive">导师列表加载失败，请刷新后重试</div>
-                          ) : mentors.filter(m => !userId || m.id !== userId).length === 0 ? (
-                            <div className="px-3 py-4 text-sm text-text-muted">当前没有可选导师</div>
-                          ) : (
-                            mentors.filter(m => !userId || m.id !== userId).map(m => (
-                              <SelectItem key={m.id} value={m.id.toString()}>
-                                <div className="flex items-center gap-3 py-1">
-                                  <UserAvatar avatarKey={m.avatar_key} name={m.username} size="sm" />
-                                  <span className="text-sm font-medium">{m.username}</span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {formData.mentor_id && canUpdateUser && (
-                        <button
-                          type="button"
-                          className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-destructive transition-colors z-[20]"
-                          onClick={() => {
-                            if (!canUpdateUser) return;
-                            setMentorTouched(true);
-                            setFormData({ ...formData, mentor_id: null });
-                          }}
-                        >
-                          <Plus className="w-4 h-4 rotate-45" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 5. Organization Assignment */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-1 text-slate-400">
-                      <Building2 className="w-4 h-4" />
-                      <h3 className="text-sm font-bold text-slate-800">组织架构分配</h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {departments.map(dept => {
-                        const active = formData.department_id === dept.id;
-                        return (
-                          <div
-                            key={dept.id}
-                            onClick={() => {
-                              if (!canUpdateUser) return;
-                              setFormData({ ...formData, department_id: dept.id });
-                            }}
-                            className={cn(
-                              "px-6 py-2 rounded-full border transition-all duration-300 ease-in-out",
-                              canUpdateUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
-                              active
-                                ? "border-primary text-primary bg-white shadow-sm"
-                                : "border-border/70 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50/30 hover:text-slate-700"
-                            )}
-                          >
-                            <span className="text-sm font-bold">{dept.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Roles */}
-            <div className="flex h-full flex-col">
-              <div className="flex items-center gap-2 pb-1 text-slate-400">
-                <Shield className="w-4 h-4" />
-                <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
-                <span className="text-xs text-slate-400">管理角色单选，可不选（默认可学习）</span>
-              </div>
-
-              <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
-                {roles.map(role => {
-                  const roleCode = role.code as RoleCode;
-                  const active = formData.role_codes.includes(roleCode);
-                  const disabled = !canAssignUserRole || isRoleToggleDisabled();
-                  const colorConfig = getRoleColor(role.code);
-
-                  return (
-                    <div
-                      key={role.code}
-                      onClick={() => !disabled && toggleRole(roleCode)}
-                      className={cn(
-                        "group relative overflow-hidden rounded-xl border p-4 shadow-sm transition-all duration-500 cursor-pointer",
-                        disabled ? "opacity-20 grayscale cursor-not-allowed" : "active:scale-[0.98]",
-                        active
-                          ? `${colorConfig.bgClass} ${colorConfig.borderClass}`
-                          : "border-border/60 bg-white hover:bg-muted/35"
-                      )}
-                    >
-                      <div className={cn(
-                        "absolute -right-3 -bottom-5 transition-all duration-700",
-                        active ? cn("opacity-[0.2] scale-110", colorConfig.mutedTextClass) : "opacity-[0.3] scale-100 text-slate-200"
-                      )}>
-                        {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
-                          role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
-                            <Users className="w-24 h-24" strokeWidth={0.5} />}
-                      </div>
-
-                      <div className="relative z-10 flex flex-col gap-1">
-                        <p className={cn(
-                          "text-sm font-bold transition-all duration-300",
-                          active ? colorConfig.mutedTextClass : "text-slate-600"
-                        )}>{role.name}</p>
-                        <p className={cn(
-                          "text-[10px] font-bold transition-all duration-300 opacity-60",
-                          active ? colorConfig.mutedTextClass : "text-slate-300"
-                        )}>
-                          {role.code === 'ADMIN' ? '全系统管理权限' :
-                            role.code === 'DEPT_MANAGER' ? '本室人员与常用权限' :
-                              '导师常用权限'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Footer - Aligned with Grid */}
-        <div className="px-8 pb-3 flex-shrink-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-3 border-t border-slate-100">
-            <div className="hidden lg:block" />
-            <div className="flex items-center justify-end gap-6">
-              <button
-                onClick={onClose}
-                className="text-sm font-bold text-slate-300 hover:text-slate-500 transition-colors"
-              >
-                取消
-              </button>
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading || !canSubmitForm}
-                className="h-10 px-9 rounded-full bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
-              >
-                {isLoading ? "处理中..." : isEdit ? "更新" : "创建"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
   };
+
+  const handleDepartmentChange = (deptIdStr: string) => {
+    if (!canEditBaseInfo) return;
+    const deptId = Number(deptIdStr);
+    const occupied = Boolean(deptManagerByDeptId[deptId] && deptManagerByDeptId[deptId].id !== userDetail?.id);
+    setErrors((prev) => ({ ...prev, department_id: undefined }));
+    setFormData((prev) => {
+      const shouldResetDeptManager = !roleControlDisabled && occupied && prev.primary_identity === 'DEPT_MANAGER';
+      return {
+        ...prev,
+        department_id: deptId,
+        primary_identity: shouldResetDeptManager ? LEARNER_ROLE_VALUE : prev.primary_identity,
+      };
+    });
+  };
+
+  const validate = (): boolean => {
+    if (isEdit && !canEditBaseInfo) return true;
+    const newErrors: FormErrors = {};
+    if (!formData.username.trim()) newErrors.username = '请输入姓名';
+    if (!formData.employee_id.trim()) newErrors.employee_id = '请输入工号';
+    if (!isEdit && !formData.password.trim()) newErrors.password = '请设置初始密码';
+    if (!effectiveDepartmentId) newErrors.department_id = '请选择部门';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (isSubmitting) return;
+    if (!validate()) return;
+    setIsSubmitting(true);
+    try {
+      if (isEdit) {
+        const trimmedUsername = formData.username.trim();
+        const trimmedEmployeeId = formData.employee_id.trim();
+        const nextSet = new Set(resolvedRoleCodes);
+        const initialSet = new Set(savedRoleCodesRef.current);
+        const rolesChanged =
+          nextSet.size !== initialSet.size
+          || [...nextSet].some((code) => !initialSet.has(code));
+        const baseInfoChanged = canEditBaseInfo && (
+          trimmedUsername !== savedBaseInfoRef.current.username
+          || trimmedEmployeeId !== savedBaseInfoRef.current.employee_id
+          || (effectiveDepartmentId ?? null) !== savedBaseInfoRef.current.department_id
+        );
+        const mentorChanged = canEditBaseInfo && mentorTouched && formData.mentor_id !== savedMentorIdRef.current;
+
+        if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
+          toast.error('当前账号无权修改基础信息');
+          return;
+        }
+        if (rolesChanged && !canAssignUserRole) {
+          toast.error('当前账号无权分配角色');
+          return;
+        }
+
+        if (baseInfoChanged) {
+          await updateUser.mutateAsync({
+            id: userId!,
+            data: {
+              username: trimmedUsername,
+              employee_id: trimmedEmployeeId,
+              department_id: effectiveDepartmentId,
+              ...(rolesChanged ? { role_codes: resolvedRoleCodes } : {}),
+            },
+          });
+          savedBaseInfoRef.current = {
+            username: trimmedUsername,
+            employee_id: trimmedEmployeeId,
+            department_id: effectiveDepartmentId ?? null,
+          };
+          if (rolesChanged) {
+            savedRoleCodesRef.current = resolvedRoleCodes;
+          }
+        } else if (rolesChanged) {
+          await assignRoles.mutateAsync({ id: userId!, roles: resolvedRoleCodes });
+          savedRoleCodesRef.current = resolvedRoleCodes;
+        }
+        if (mentorChanged) {
+          await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
+          savedMentorIdRef.current = formData.mentor_id;
+          setMentorTouched(false);
+        }
+        toast.success('已保存');
+      } else {
+        if (!canCreateUser) {
+          toast.error('当前账号无权创建用户');
+          return;
+        }
+        if (resolvedRoleCodes.length > 0 && !canAssignUserRole) {
+          toast.error('当前账号无权分配角色');
+          return;
+        }
+        await createUser.mutateAsync({
+          username: formData.username.trim(),
+          employee_id: formData.employee_id.trim(),
+          password: formData.password,
+          department_id: effectiveDepartmentId!,
+          mentor_id: formData.mentor_id,
+          role_codes: resolvedRoleCodes,
+        });
+        toast.success('已创建');
+      }
+      onClose();
+      onSuccess?.();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(e)} className="flex h-full min-h-0 flex-col">
+      {/* Header */}
+      <header className="shrink-0 border-b border-border/60 px-7 py-5 pr-16">
+        {isEdit && userDetail ? (
+          <div className="flex items-center gap-3.5">
+            <UserAvatar
+              avatarKey={userDetail.avatar_key}
+              name={userDetail.username}
+              size="md"
+              className="h-11 w-11 shrink-0"
+            />
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold tracking-tight text-foreground">
+                {userDetail.username}
+              </h2>
+              <p className="mt-0.5 truncate text-xs font-medium text-text-muted">
+                <span className="font-mono">{userDetail.employee_id}</span>
+                {userDetail.department?.name ? ` · ${userDetail.department.name}` : ''}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <h2 className="text-xl font-bold tracking-tight text-foreground">新建用户</h2>
+        )}
+      </header>
+
+      {/* Body */}
+      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+        <div className="space-y-6">
+          {/* 姓名 & 工号 */}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="姓名" error={errors.username}>
+              <Input
+                value={formData.username}
+                onChange={(e) => updateTextField('username', e.target.value)}
+                placeholder="输入姓名"
+                disabled={!canEditBaseInfo}
+                className={FIELD_INPUT_CLASS}
+              />
+            </FormField>
+
+            <FormField label="工号" error={errors.employee_id}>
+              <Input
+                value={formData.employee_id}
+                onChange={(e) => updateTextField('employee_id', e.target.value)}
+                placeholder="EMP001"
+                disabled={!canEditBaseInfo}
+                className={cn(FIELD_INPUT_CLASS, 'font-mono')}
+              />
+            </FormField>
+          </div>
+
+          {/* 初始密码（仅新建） */}
+          {!isEdit ? (
+            <FormField label="初始密码" error={errors.password}>
+              <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => updateTextField('password', e.target.value)}
+                placeholder="6 位以上密码"
+                disabled={!canEditBaseInfo}
+                className={FIELD_INPUT_CLASS}
+              />
+            </FormField>
+          ) : null}
+
+          {/* 部门 & 导师 */}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="所属部门" error={errors.department_id}>
+              <SegmentedControl
+                options={departmentOptions}
+                value={effectiveDepartmentId?.toString() ?? null}
+                onChange={handleDepartmentChange}
+                fill
+                className="w-full"
+              />
+            </FormField>
+
+            <FormField label="带教导师">
+              <div className="relative">
+                <Select
+                  value={formData.mentor_id?.toString() || ''}
+                  disabled={!canEditBaseInfo}
+                  onValueChange={(value) => {
+                    if (!canEditBaseInfo) return;
+                    setMentorTouched(true);
+                    setFormData({ ...formData, mentor_id: value ? Number(value) : null });
+                  }}
+                >
+                  <SelectTrigger className="rounded-lg text-left [&>span]:text-left">
+                    <SelectValue placeholder={isMentorsLoading ? '加载中...' : '未分配'} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 z-[9999]">
+                    {isMentorsLoading ? (
+                      <div className="px-3 py-3 text-sm text-text-muted">加载中...</div>
+                    ) : isMentorsError ? (
+                      <div className="px-3 py-3 text-sm text-destructive">加载失败</div>
+                    ) : selectableMentors.length === 0 ? (
+                      <div className="px-3 py-3 text-sm text-text-muted">无可选导师</div>
+                    ) : (
+                      selectableMentors.map((mentor) => (
+                        <SelectItem key={mentor.id} value={mentor.id.toString()}>
+                          <div className="flex items-center gap-2.5 py-0.5">
+                            <UserAvatar avatarKey={mentor.avatar_key} name={mentor.username} size="sm" />
+                            <span className="text-sm font-medium">{mentor.username}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {formData.mentor_id && canEditBaseInfo ? (
+                  <button
+                    type="button"
+                    aria-label="清除导师"
+                    className="absolute right-9 top-1/2 z-20 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-destructive"
+                    onClick={() => {
+                      setMentorTouched(true);
+                      setFormData({ ...formData, mentor_id: null });
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            </FormField>
+          </div>
+
+          <div className="h-px bg-border/60" />
+
+          {/* 常规身份 */}
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className={FIELD_LABEL_CLASS}>常规身份</label>
+              {deptManagerOccupiedByOther && formData.primary_identity !== 'DEPT_MANAGER' ? (
+                <span className="text-xs font-medium text-amber-600">
+                  室经理：{existingDeptManager?.username}
+                </span>
+              ) : null}
+            </div>
+            <SegmentedControl
+              options={primaryOptions}
+              value={formData.primary_identity}
+              onChange={(nextValue) => {
+                if (roleControlDisabled) return;
+                const primary = nextValue as PrimaryIdentityValue;
+                setFormData((prev) => ({
+                  ...prev,
+                  primary_identity: primary,
+                  specialty_role_codes: primary === 'ADMIN' ? [] : prev.specialty_role_codes,
+                }));
+              }}
+              fill
+              className="w-full"
+            />
+          </div>
+
+          {/* 专项角色 */}
+          {formData.primary_identity !== 'ADMIN' ? (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className={FIELD_LABEL_CLASS}>专项角色</label>
+                {canAssignUserRole ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      navigate(ROUTES.AUTHORIZATION);
+                    }}
+                    className="text-xs font-semibold text-primary transition-opacity hover:opacity-80"
+                  >
+                    管理角色
+                  </button>
+                ) : null}
+              </div>
+
+              {specialtyRoles.length === 0 ? (
+                <div className="flex h-10 items-center rounded-lg border border-dashed border-border px-3.5 text-sm text-text-muted">
+                  暂无专项角色
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {specialtyRoles.map((role) => {
+                    const checked = formData.specialty_role_codes.includes(role.code);
+                    const isInactiveRole = role.is_active === false;
+                    const disabled = roleControlDisabled || !canAssignRole(role) || (isInactiveRole && !checked);
+
+                    return (
+                      <label
+                        key={role.code}
+                        className={cn(
+                          'flex h-11 items-center justify-between gap-3 rounded-lg border px-3.5 transition-colors',
+                          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+                          checked
+                            ? 'border-primary/40 bg-primary/5'
+                            : 'border-border bg-background hover:bg-muted/40',
+                        )}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Checkbox
+                            checked={checked}
+                            disabled={disabled}
+                            onCheckedChange={() => {
+                              if (!disabled) toggleSpecialtyRole(role.code);
+                            }}
+                          />
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {role.name}
+                          </span>
+                          {isInactiveRole ? (
+                            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                              已停用
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="shrink-0 text-xs text-text-muted">
+                          {DATA_SCOPE_LABELS[role.data_scope]}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </ScrollContainer>
+
+      {/* Footer */}
+      <footer className="flex shrink-0 items-center justify-end gap-3 border-t border-border bg-background px-7 py-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          取消
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting || !canSubmitForm}
+        >
+          {isSubmitting ? '保存中...' : isEdit ? '保存' : '创建'}
+        </Button>
+      </footer>
+    </form>
+  );
+};

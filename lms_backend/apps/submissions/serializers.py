@@ -94,7 +94,7 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
         return obj.get_reference_remaining_seconds()
 
 
-class SaveAnswerSerializer(serializers.Serializer):
+class SaveAnswerItemSerializer(serializers.Serializer):
     question_id = serializers.IntegerField(help_text='试卷题目快照ID')
     user_answer = serializers.JSONField(help_text='用户答案', allow_null=True, required=False)
     is_marked = serializers.BooleanField(help_text='是否标记题目', required=False)
@@ -103,6 +103,14 @@ class SaveAnswerSerializer(serializers.Serializer):
         if 'user_answer' not in attrs and 'is_marked' not in attrs:
             raise serializers.ValidationError('至少提供一个要更新的字段')
         return attrs
+
+
+class SaveAnswerSerializer(serializers.Serializer):
+    answers = SaveAnswerItemSerializer(many=True, allow_empty=False, help_text='批量保存的答案列表')
+
+
+class SubmitQuizSerializer(serializers.Serializer):
+    answers = SaveAnswerItemSerializer(many=True, required=False, default=list)
 
 
 class StartQuizSerializer(serializers.Serializer):

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from .policies import get_task_actions_payload
-from .selectors import is_assignment_abnormal
+from .selectors import get_task_list_metrics
 from .student_task_service import extract_knowledge_preview
 
 
@@ -48,7 +48,6 @@ class TaskKnowledgeSerializer(serializers.ModelSerializer):
 
 class TaskQuizSerializer(serializers.ModelSerializer):
     quiz = serializers.IntegerField(source='source_quiz_id', read_only=True, allow_null=True)
-    task_quiz_id = serializers.IntegerField(source='id', read_only=True)
     quiz_title = serializers.CharField(source='title', read_only=True)
     source_title = serializers.SerializerMethodField()
     question_count = serializers.IntegerField(read_only=True)
@@ -62,7 +61,6 @@ class TaskQuizSerializer(serializers.ModelSerializer):
         model = TaskQuiz
         fields = [
             'id',
-            'task_quiz_id',
             'quiz',
             'quiz_title',
             'source_title',
@@ -83,11 +81,11 @@ class TaskQuizSerializer(serializers.ModelSerializer):
 class TaskListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    knowledge_count = serializers.IntegerField(source='knowledge_count_value', read_only=True)
-    quiz_count = serializers.IntegerField(source='quiz_count_value', read_only=True)
-    assignee_count = serializers.IntegerField(source='assignee_count_value', read_only=True)
-    completed_count = serializers.IntegerField(source='completed_count_value', read_only=True)
-    pending_grading_count = serializers.IntegerField(source='pending_grading_count_value', read_only=True)
+    knowledge_count = serializers.SerializerMethodField()
+    quiz_count = serializers.SerializerMethodField()
+    assignee_count = serializers.SerializerMethodField()
+    completed_count = serializers.SerializerMethodField()
+    pending_grading_count = serializers.SerializerMethodField()
     abnormal_count = serializers.SerializerMethodField()
     actions = serializers.SerializerMethodField()
 
@@ -111,13 +109,33 @@ class TaskListSerializer(serializers.ModelSerializer):
             'actions',
         ]
 
-    def get_abnormal_count(self, obj):
-        abnormal_ids = {
-            assignment.assignee_id
-            for assignment in obj.completed_assignments_for_abnormal
-            if is_assignment_abnormal(assignment)
-        }
-        return len(abnormal_ids)
+    def _get_metrics(self, obj) -> dict[str, int]:
+        metrics_map = (self.context or {}).get('task_metrics_map')
+        if metrics_map is not None:
+            return metrics_map.get(obj.id, {})
+        if not hasattr(self, '_fallback_metrics_cache'):
+            self._fallback_metrics_cache = {}
+        if obj.id not in self._fallback_metrics_cache:
+            self._fallback_metrics_cache[obj.id] = get_task_list_metrics([obj.id]).get(obj.id, {})
+        return self._fallback_metrics_cache[obj.id]
+
+    def get_knowledge_count(self, obj) -> int:
+        return self._get_metrics(obj).get('knowledge_count', 0)
+
+    def get_quiz_count(self, obj) -> int:
+        return self._get_metrics(obj).get('quiz_count', 0)
+
+    def get_assignee_count(self, obj) -> int:
+        return self._get_metrics(obj).get('assignee_count', 0)
+
+    def get_completed_count(self, obj) -> int:
+        return self._get_metrics(obj).get('completed_count', 0)
+
+    def get_pending_grading_count(self, obj) -> int:
+        return self._get_metrics(obj).get('pending_grading_count', 0)
+
+    def get_abnormal_count(self, obj) -> int:
+        return self._get_metrics(obj).get('abnormal_count', 0)
 
     def get_actions(self, obj):
         return get_task_actions_payload(self.context.get('request'), obj)
@@ -213,14 +231,12 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=200, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     deadline = serializers.DateTimeField(required=False)
-    knowledge_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
-    quiz_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
     quiz_pass_scores = TaskQuizPassScoreUpdateSerializer(many=True, required=False)
     assignee_ids = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
 
     class Meta:
         model = Task
-        fields = ['title', 'description', 'deadline', 'knowledge_ids', 'quiz_ids', 'quiz_pass_scores', 'assignee_ids']
+        fields = ['title', 'description', 'deadline', 'quiz_pass_scores', 'assignee_ids']
 
     def validate_assignee_ids(self, value):
         if value is None:
@@ -228,13 +244,6 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError('请至少选择一名指派人员')
         return value
-
-    def validate(self, attrs):
-        knowledge_ids = attrs.get('knowledge_ids')
-        quiz_ids = attrs.get('quiz_ids')
-        if knowledge_ids is not None and quiz_ids is not None and not knowledge_ids and not quiz_ids:
-            raise serializers.ValidationError('请至少选择一个知识文档或试卷')
-        return attrs
 
 
 class TaskResourceOptionSerializer(serializers.Serializer):

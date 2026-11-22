@@ -15,12 +15,7 @@ export interface Question {
   space_tag?: SimpleTag;
   tags?: SimpleTag[];
   usage_count: number;
-  is_referenced: boolean;
-  is_objective?: boolean;
-  is_subjective?: boolean;
-  created_by?: number;
   created_by_name?: string;
-  updated_by?: number;
   updated_by_name?: string;
   created_at: string;
   updated_at: string;

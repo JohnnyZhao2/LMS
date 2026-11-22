@@ -26,7 +26,7 @@ export interface Answer {
   user_answer?: UserAnswerValue;
   is_marked?: boolean;
   correct_answer?: string | string[];
-  is_correct?: boolean;
+  is_correct?: boolean | null;
   obtained_score?: string;
   explanation?: string;
   graded_by?: number;
@@ -71,22 +71,4 @@ export interface SubmissionDetail {
   answers: Answer[];
   created_at: string;
   updated_at: string;
-}
-
-/**
- * 练习结果
- */
-export interface PracticeResult {
-  id: number;
-  quiz: number;
-  quiz_title: string;
-  attempt_number: number;
-  status: SubmissionStatus;
-  status_display: string;
-  total_score: string;
-  obtained_score?: string;
-  started_at: string;
-  submitted_at?: string;
-  answers: Answer[];
-  created_at: string;
 }

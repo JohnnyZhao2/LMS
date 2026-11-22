@@ -8,17 +8,10 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
-from django.utils.functional import cached_property
 
 from core.mixins import TimestampMixin
 
 
-ROLE_CHOICES = [
-    ('MENTOR', '导师'),
-    ('DEPT_MANAGER', '室经理'),
-    ('ADMIN', '管理员'),
-]
-ROLE_LABELS = dict(ROLE_CHOICES)
 MANAGEMENT_ROLE_CODES = frozenset({'MENTOR', 'DEPT_MANAGER', 'ADMIN'})
 
 
@@ -106,16 +99,14 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
         permissions = [
             ('assign_user_role', '分配用户角色'),
             ('change_user_avatar', '修改他人头像'),
-            ('view_user_permission', '查看用户权限'),
-            ('change_user_permission', '更新用户权限'),
         ]
 
     def __str__(self):
         return self.username
 
     def has_role(self, role_code: str) -> bool:
-        """检查用户是否拥有指定管理角色"""
-        return self.groups.filter(name=role_code).exists()
+        """检查用户是否拥有指定激活的管理角色"""
+        return self.groups.filter(name=role_code, profile__is_active=True).exists()
 
     @property
     def is_admin(self) -> bool:
@@ -126,8 +117,3 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     def is_department_manager(self) -> bool:
         department = getattr(self, 'department', None)
         return bool(department and department.manager_id == self.pk)
-
-    @cached_property
-    def role_codes(self) -> list:
-        """获取用户所有角色代码列表"""
-        return list(self.groups.values_list('name', flat=True))

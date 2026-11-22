@@ -15,11 +15,9 @@ import { formatScore } from '@/lib/score';
 import type { ResourceFilterType, ResourceItem, SelectedResource } from './task-form.types';
 import { mapTaskResourceOptionToResource } from './task-form.types';
 import {
-  buildStableUid,
   buildTaskFormInitialSelectedResources,
   buildTaskSubmitPayload,
   getExamResourcesValidationError,
-  hasMissingTaskResourceSources,
   reorderSelectedResourcesWithinGroup,
   sortSelectedResourcesByGroup,
 } from './use-task-form.helpers';
@@ -41,8 +39,11 @@ const buildDeadlineFromDays = (days: number): Date => {
   return target;
 };
 
+const startOfLocalDay = (date: Date): number =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
 const computeRemainingDays = (deadlineDate: Date): string => {
-  const diffDays = Math.ceil((deadlineDate.getTime() - Date.now()) / MS_PER_DAY);
+  const diffDays = Math.round((startOfLocalDay(deadlineDate) - startOfLocalDay(new Date())) / MS_PER_DAY);
   return String(Math.max(1, diffDays));
 };
 
@@ -55,10 +56,9 @@ const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
   return updater;
 };
 
-export const useTaskForm = (options?: { initialResources?: SelectedResource[] }) => {
+export const useTaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const initialResources = options?.initialResources;
 
   const isEdit = !!id;
   const taskId = isEdit ? Number(id) : 0;
@@ -83,7 +83,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   const hasProgress = task?.has_progress || false;
-  const resourcesDisabled = isEdit;
   const canRemoveAssignee = !(isEdit && hasProgress);
 
   const initialTitle = isEdit && task ? task.title : '';
@@ -94,13 +93,10 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   );
   const initialDeadlineDays = initialDeadline ? computeRemainingDays(initialDeadline) : DEFAULT_DEADLINE_DAYS;
 
-  const initialSelectedResources = useMemo<SelectedResource[]>(() => {
-    return buildTaskFormInitialSelectedResources({
-      isEdit,
-      task,
-      initialResources,
-    });
-  }, [isEdit, initialResources, task]);
+  const initialSelectedResources = useMemo<SelectedResource[]>(
+    () => buildTaskFormInitialSelectedResources({ isEdit, task }),
+    [isEdit, task],
+  );
 
   const initialSelectedUserIds = useMemo<number[]>(
     () => (isEdit && task ? (task.assignments?.map((item) => item.assignee) || []) : []),
@@ -177,7 +173,7 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
   }, [users, userSearch]);
 
   const openPicker = (initialType: ResourceFilterType = 'ALL', insertIndex?: number) => {
-    if (resourcesDisabled) return;
+    if (isEdit) return;
     pendingInsertIndexRef.current = insertIndex ?? null;
     setResourceSearch('');
     setResourceTypeFilter(initialType);
@@ -190,9 +186,17 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     setIsPickerOpen(false);
   };
 
-  const addResource = (resource: ResourceItem) => {
-    if (resourcesDisabled) return;
-    const quizType = resource.resourceType === 'QUIZ' ? 'PRACTICE' : undefined;
+  const buildDefaultExamConfig = (totalScore?: number) => ({
+    duration: '60',
+    passScore: totalScore && totalScore > 0
+      ? formatScore(Math.round(totalScore * 0.6 * 10) / 10)
+      : '',
+  });
+
+  const addResource = (resource: ResourceItem, targetQuizType?: 'PRACTICE' | 'EXAM') => {
+    if (isEdit) return;
+    const quizType = resource.resourceType === 'QUIZ' ? (targetQuizType ?? 'PRACTICE') : undefined;
+    const examDefaults = quizType === 'EXAM' ? buildDefaultExamConfig(resource.totalScore) : {};
     const insertAt = pendingInsertIndexRef.current;
     const alreadyExists = selectedResources.some(
       (item) => item.resourceType === resource.resourceType && item.id === resource.id,
@@ -210,7 +214,8 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
       const nextItem: SelectedResource = {
         ...resource,
         quizType,
-        uid: buildStableUid(`${resource.resourceType}:${resource.id}:${prev.length}`, resource.id + prev.length),
+        ...examDefaults,
+        uid: `${resource.resourceType}:${resource.id}`,
       };
       const nextList = [...prev];
       const clampedIndex = insertAt === null ? nextList.length : Math.max(0, Math.min(insertAt, nextList.length));
@@ -219,8 +224,8 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     });
   };
 
-  const toggleQuizType = (uid: number, nextQuizType: 'PRACTICE' | 'EXAM') => {
-    if (resourcesDisabled) return;
+  const toggleQuizType = (uid: string, nextQuizType: 'PRACTICE' | 'EXAM') => {
+    if (isEdit) return;
     setSelectedResources((prev) => sortSelectedResourcesByGroup(prev.map((item) => {
       if (item.uid !== uid || item.resourceType !== 'QUIZ') {
         return item;
@@ -231,21 +236,18 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
           quizType: 'PRACTICE',
         };
       }
-      const defaultPassScore =
-        item.totalScore && item.totalScore > 0
-          ? formatScore(Math.round(item.totalScore * 0.6 * 10) / 10)
-          : '';
+      const defaults = buildDefaultExamConfig(item.totalScore);
       return {
         ...item,
         quizType: 'EXAM',
-        duration: item.duration || '60',
-        passScore: item.passScore || defaultPassScore,
+        duration: item.duration || defaults.duration,
+        passScore: item.passScore || defaults.passScore,
       };
     })));
   };
 
   const updateResourceExamConfig = (
-    uid: number,
+    uid: string,
     patch: { duration?: string; passScore?: string },
   ) => {
     setSelectedResources((prev) => prev.map((item) => (
@@ -259,8 +261,8 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     )));
   };
 
-  const removeResource = (uid: number) => {
-    if (resourcesDisabled) return;
+  const removeResource = (uid: string) => {
+    if (isEdit) return;
     setSelectedResources((prev) => prev.filter((item) => item.uid !== uid));
   };
 
@@ -287,12 +289,8 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     setSelectedUserIds((prev) => prev.filter((idValue) => !userIds.includes(idValue) || originalAssigneeIds.includes(idValue)));
   };
 
-  const clearUsers = () => {
-    setSelectedUserIds(canRemoveAssignee ? [] : originalAssigneeIds);
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
-    if (resourcesDisabled) return;
+    if (isEdit) return;
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setSelectedResources((currentItems) => {
@@ -300,8 +298,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
       });
     }
   };
-
-  const hasMissingSources = hasMissingTaskResourceSources(selectedResources);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -314,10 +310,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     }
     if (selectedResources.length === 0 || selectedUserIds.length === 0) {
       toast.error('请选择资源和指派人员');
-      return;
-    }
-    if (!resourcesDisabled && hasMissingSources) {
-      toast.error('存在已删除的原始资源，请先移除或替换');
       return;
     }
     const examConfigError = getExamResourcesValidationError(selectedResources, { isEdit });
@@ -333,7 +325,7 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
         deadline,
         selectedResources,
         selectedUserIds,
-        resourcesDisabled,
+        isEdit,
       });
 
       if (isEdit) {
@@ -356,7 +348,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     && deadline
     && selectedResources.length > 0
     && selectedUserIds.length > 0
-    && (resourcesDisabled || !hasMissingSources)
   );
 
   return {
@@ -394,7 +385,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     isLoading,
     isSubmitting,
     canSubmit,
-    resourcesDisabled,
     canRemoveAssignee,
     addResource,
     toggleQuizType,
@@ -402,7 +392,6 @@ export const useTaskForm = (options?: { initialResources?: SelectedResource[] })
     removeResource,
     toggleUser,
     toggleUsers,
-    clearUsers,
     handleDragEnd,
     handleSubmit,
     navigate,

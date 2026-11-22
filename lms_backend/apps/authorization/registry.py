@@ -13,6 +13,7 @@ PERMISSION_IMPLIES: dict[str, tuple[str, ...]] = {
     'tasks.score_grading': ('tasks.view_grading',),
     'users.assign_user_role': ('users.view_user',),
     'users.change_user_avatar': ('users.view_user',),
+    'activity_logs.delete_activitylog': ('activity_logs.view_activitylog',),
 }
 
 # 主业务模型：权限目录可配置 + 写权限自动推 view 共用这一份
@@ -34,9 +35,8 @@ ASSIGNABLE_CUSTOM_CODES = frozenset({
     'tasks.score_grading',
     'users.assign_user_role',
     'users.change_user_avatar',
-    'users.view_user_permission',
-    'users.change_user_permission',
     'activity_logs.view_activitylog',
+    'activity_logs.delete_activitylog',
     'activity_logs.change_activitylogpolicy',
 })
 
@@ -121,8 +121,6 @@ def _resource_authorizers() -> dict:
         'users.delete_user',
         'users.assign_user_role',
         'users.change_user_avatar',
-        'users.view_user_permission',
-        'users.change_user_permission',
     ):
         mapping[code] = authorize_user_resource
     authorize_question = partial(
@@ -166,10 +164,7 @@ def _scope_filters() -> dict:
     from apps.authorization.owner_scope import filter_queryset_by_owner_scope
     from apps.questions.models import Question
     from apps.quizzes.models import Quiz
-    from apps.spot_checks.authorization import (
-        filter_spot_check_queryset,
-        filter_writable_spot_check_queryset,
-    )
+    from apps.spot_checks.authorization import filter_spot_check_queryset
     from apps.spot_checks.models import SpotCheck
     from apps.tasks.authorization import filter_scoped_learning_members
     from apps.tasks.models import Task
@@ -181,6 +176,8 @@ def _scope_filters() -> dict:
         ('tasks.view_task_analytics', User): filter_scoped_learning_members,
         ('spot_checks.view_spotcheck', User): filter_scoped_learning_members,
         ('spot_checks.add_spotcheck', User): filter_scoped_learning_members,
+        ('spot_checks.change_spotcheck', User): filter_scoped_learning_members,
+        ('spot_checks.delete_spotcheck', User): filter_scoped_learning_members,
         ('spot_checks.view_spotcheck', SpotCheck): filter_spot_check_queryset,
     }
     for code in (
@@ -198,8 +195,6 @@ def _scope_filters() -> dict:
         'users.delete_user',
         'users.assign_user_role',
         'users.change_user_avatar',
-        'users.view_user_permission',
-        'users.change_user_permission',
     ):
         mapping[(code, User)] = filter_viewable_users
     for code in (
@@ -214,8 +209,6 @@ def _scope_filters() -> dict:
         'quizzes.delete_quiz',
     ):
         mapping[(code, Quiz)] = filter_queryset_by_owner_scope
-    for code in ('spot_checks.change_spotcheck', 'spot_checks.delete_spotcheck'):
-        mapping[(code, SpotCheck)] = filter_writable_spot_check_queryset
     return mapping
 
 

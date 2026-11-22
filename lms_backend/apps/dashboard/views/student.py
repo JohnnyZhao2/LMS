@@ -12,6 +12,8 @@ from apps.dashboard.serializers import (
     StudentDashboardSerializer,
 )
 from apps.dashboard.services import StudentDashboardService
+from apps.tasks.progress import get_assignment_quiz_progress_map
+from apps.tasks.selectors import get_pending_grading_assignment_ids, get_started_assignment_ids
 from core.base_view import BaseAPIView
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
@@ -56,8 +58,16 @@ class StudentDashboardView(BaseAPIView):
             task_limit=task_limit,
             knowledge_limit=knowledge_limit
         )
-
-        return success_response(StudentDashboardSerializer(data).data)
+        assignment_ids = [item.id for item in data['tasks']]
+        serializer = StudentDashboardSerializer(
+            data,
+            context={
+                'quiz_progress_map': get_assignment_quiz_progress_map(assignment_ids),
+                'pending_grading_ids': get_pending_grading_assignment_ids(assignment_ids),
+                'started_submission_ids': get_started_assignment_ids(assignment_ids),
+            },
+        )
+        return success_response(serializer.data)
 
 
 class TaskParticipantsView(BaseAPIView):

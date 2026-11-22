@@ -21,7 +21,7 @@ from apps.tasks.management_serializers import (
     TaskResourceOptionSerializer,
     TaskUpdateSerializer,
 )
-from apps.tasks.selectors import task_resource_options
+from apps.tasks.selectors import get_task_list_metrics, task_resource_options
 from apps.tasks.task_service import TaskService
 from apps.users.models import User
 from apps.users.serializers import UserListSerializer
@@ -88,7 +88,7 @@ class AssignableUserListView(APIView):
             resource_model=User,
         ).select_related(
             'department', 'mentor'
-        ).prefetch_related('groups').distinct()
+        ).prefetch_related('groups__profile').distinct()
 
         department_id = parse_int_query_param(
             request=request,
@@ -278,7 +278,15 @@ class TaskListView(BaseAPIView):
         # Apply pagination
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
-        serializer = TaskListSerializer(page, many=True, context={'request': request})
+        task_ids = [task.id for task in page]
+        serializer = TaskListSerializer(
+            page,
+            many=True,
+            context={
+                'request': request,
+                'task_metrics_map': get_task_list_metrics(task_ids),
+            },
+        )
         return paginator.get_paginated_response(serializer.data)
 
 

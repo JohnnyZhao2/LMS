@@ -1,4 +1,4 @@
-import { Check, Loader2, Users } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 
 import { UserAvatar } from '@/components/users/user-avatar';
 import { ScrollContainer } from '@/components/ui/scroll-container';
@@ -9,7 +9,6 @@ export interface UserSelectPanelItem {
   name: string;
   avatarKey?: string | null;
   meta?: string | null;
-  tags?: string[];
   count?: number;
   disabled?: boolean;
 }
@@ -18,31 +17,53 @@ interface UserSelectListProps {
   items: UserSelectPanelItem[];
   selectedIds: number[];
   onSelect: (id: number) => void;
-  onBeforeSelect?: () => void;
   /**
    * 双态选择：点行 = onSelect（查看），点勾 = onToggleCheck（多选）。
    * 传入后勾选态用 checkedIds，行高亮用 selectedIds。
    */
   checkedIds?: number[];
   onToggleCheck?: (id: number) => void;
-  selectionMode?: 'single' | 'multiple';
-  appearance?: 'panel' | 'plain';
   layout?: 'list' | 'grid';
-  density?: 'regular' | 'compact';
   emptyText?: string;
   isLoading?: boolean;
   loadingText?: string;
   className?: string;
   listClassName?: string;
   itemsClassName?: string;
-  showGridSelectionIndicator?: boolean;
-  minimalGridCard?: boolean;
+}
+
+function renderCheckVisual(
+  checked: boolean,
+  disabled: boolean,
+  options?: {
+    dualSelect?: boolean;
+    className?: string;
+    ariaHidden?: boolean;
+  },
+) {
+  return (
+    <div
+      aria-hidden={options?.ariaHidden}
+      className={cn(
+        'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-all duration-150',
+        disabled
+          ? 'opacity-0'
+          : checked
+            ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
+            : options?.dualSelect
+              ? 'border-border/80 bg-background opacity-100'
+              : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
+        options?.className,
+      )}
+    >
+      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+    </div>
+  );
 }
 
 function renderTrailing(
   item: UserSelectPanelItem,
   checked: boolean,
-  selectionMode: 'single' | 'multiple',
   options?: {
     dualSelect?: boolean;
     onToggleCheck?: (id: number) => void;
@@ -51,25 +72,6 @@ function renderTrailing(
   const disabled = item.disabled ?? false;
   const hasCount = typeof item.count === 'number';
   const dualSelect = options?.dualSelect === true;
-  const shapeClass = selectionMode === 'single' && !dualSelect ? 'rounded-full' : 'rounded-md';
-
-  const checkVisual = (
-    <div
-      className={cn(
-        'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-all duration-150',
-        shapeClass,
-        disabled
-          ? 'opacity-0'
-          : checked
-            ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
-            : dualSelect
-              ? 'border-border/80 bg-background opacity-100'
-              : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
-      )}
-    >
-      {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-    </div>
-  );
 
   if (hasCount && !dualSelect) {
     return (
@@ -86,23 +88,15 @@ function renderTrailing(
         >
           {item.count}
         </span>
-        <div
-          aria-hidden="true"
-          className={cn(
-            'absolute right-0 flex h-[18px] w-[18px] items-center justify-center border transition-all duration-150',
-            shapeClass,
-            disabled
-              ? 'opacity-0'
-              : checked
-                ? 'translate-x-0 border-primary bg-primary text-white opacity-100'
-                : 'translate-x-1 border-border bg-background opacity-0 group-hover:translate-x-0 group-hover:border-primary/40 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:border-primary/40 group-focus-visible:opacity-100',
-          )}
-        >
-          {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-        </div>
+        {renderCheckVisual(checked, disabled, {
+          className: 'absolute right-0',
+          ariaHidden: true,
+        })}
       </div>
     );
   }
+
+  const checkVisual = renderCheckVisual(checked, disabled, { dualSelect });
 
   if (dualSelect && !disabled) {
     return (
@@ -110,9 +104,8 @@ function renderTrailing(
         type="button"
         aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
         aria-pressed={checked}
-        className="flex shrink-0 items-center justify-center rounded-md p-1 hover:bg-primary/5"
+        className="flex shrink-0 items-center justify-center rounded-md p-1 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         onClick={(event) => {
-          event.preventDefault();
           event.stopPropagation();
           options?.onToggleCheck?.(item.id);
         }}
@@ -129,21 +122,15 @@ export function UserSelectList({
   items,
   selectedIds,
   onSelect,
-  onBeforeSelect,
   checkedIds,
   onToggleCheck,
-  selectionMode = 'multiple',
-  appearance = 'plain',
   layout = 'list',
-  density = 'regular',
   emptyText = '暂无成员',
   isLoading = false,
   loadingText = '加载中...',
   className,
   listClassName,
   itemsClassName,
-  showGridSelectionIndicator = true,
-  minimalGridCard = false,
 }: UserSelectListProps) {
   const dualSelect = typeof onToggleCheck === 'function';
 
@@ -152,44 +139,22 @@ export function UserSelectList({
       scrollbar="subtle"
       className={cn(
         'min-h-0 flex-1 overflow-y-auto overscroll-contain',
-        appearance === 'panel'
-          ? layout === 'grid'
-            ? 'px-0 py-0'
-            : density === 'compact'
-              ? 'p-1.5'
-              : 'p-2'
-          : 'overscroll-contain px-2.5 py-2',
+        layout === 'grid' ? 'px-0 py-0' : 'p-2',
         className,
       )}
       onWheel={(event) => event.stopPropagation()}
     >
       {isLoading ? (
-        appearance === 'panel' ? (
-          <div className="flex items-center justify-center gap-2 py-9 text-[12px] text-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{loadingText}</span>
-          </div>
-        ) : (
-          <div className="py-6 text-center">
-            <Loader2 className="mx-auto mb-1.5 h-4 w-4 animate-spin text-slate-300" />
-            <span className="text-[11px] text-slate-400">{loadingText}</span>
-          </div>
-        )
+        <div className="flex items-center justify-center gap-2 py-9 text-[12px] text-text-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{loadingText}</span>
+        </div>
       ) : items.length === 0 ? (
-        appearance === 'panel' ? (
-          <div className={listClassName}>
-            <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[12px] text-text-muted">
-              {emptyText}
-            </div>
-          </div>
-        ) : (
-          <div className="py-6 text-center text-[11px] text-slate-400">
-            <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <Users className="h-4 w-4 text-slate-300" />
-            </div>
+        <div className={listClassName}>
+          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[12px] text-text-muted">
             {emptyText}
           </div>
-        )
+        </div>
       ) : (
         <div
           className={cn(
@@ -206,184 +171,102 @@ export function UserSelectList({
               ? (checkedIds ?? []).includes(item.id)
               : selectedIds.includes(item.id);
             const disabled = item.disabled ?? false;
+            const handleSelect = () => {
+              if (disabled) {
+                return;
+              }
+              onSelect(item.id);
+            };
+            const rowClassName = cn(
+              'group relative flex w-full text-left transition-all duration-150',
+              layout === 'grid'
+                ? 'flex-col rounded-xl border border-border/70 px-3.5 py-3'
+                : 'items-center gap-3 rounded-lg px-3 py-2.5',
+              layout === 'grid'
+                ? (
+                  active
+                    ? 'border-primary/25 bg-primary-50/35'
+                    : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
+                )
+                : (active ? 'bg-primary-50/70' : 'hover:bg-muted'),
+              disabled ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : '',
+            );
+
+            const listItemContent = (
+              <>
+                <UserAvatar
+                  avatarKey={item.avatarKey}
+                  name={item.name}
+                  size="md"
+                  className="h-9 w-9 shrink-0"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium leading-tight text-foreground">
+                    {item.name}
+                  </p>
+                  <p className="truncate text-[11px] leading-tight text-text-muted">
+                    {item.meta ?? '未填写工号'}
+                  </p>
+                </div>
+              </>
+            );
+
+            const trailing = layout !== 'grid'
+              ? renderTrailing(item, checked, {
+                dualSelect,
+                onToggleCheck,
+              })
+              : null;
+
+            if (dualSelect && layout !== 'grid') {
+              return (
+                <div key={item.id} className={rowClassName}>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={handleSelect}
+                    className={cn(
+                      'flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                      disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+                    )}
+                  >
+                    {listItemContent}
+                  </button>
+                  {trailing}
+                </div>
+              );
+            }
 
             return (
               <button
                 key={item.id}
                 type="button"
                 disabled={disabled}
-                onClick={() => {
-                  if (disabled) {
-                    return;
-                  }
-                  onBeforeSelect?.();
-                  onSelect(item.id);
-                }}
-                className={cn(
-                  'group relative flex w-full text-left transition-all duration-150',
-                  layout === 'grid'
-                    ? density === 'compact'
-                      ? 'flex-col rounded-xl border border-border/70 px-3 py-2.5'
-                      : 'flex-col rounded-xl border border-border/70 px-3.5 py-3'
-                    : appearance === 'panel'
-                      ? density === 'compact'
-                        ? 'items-center gap-2.5 rounded-md px-2.5 py-1.5'
-                        : 'items-center gap-3 rounded-lg px-3 py-2.5'
-                      : 'items-center rounded-lg border px-2.5 py-2',
-                  appearance === 'panel'
-                    ? layout === 'grid'
-                      ? (
-                        active
-                          ? 'border-primary/25 bg-primary-50/35'
-                          : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
-                      )
-                      : (active ? 'bg-primary-50/70' : 'hover:bg-muted')
-                    : (
-                      active
-                        ? 'border-primary/10 bg-primary/[0.06]'
-                        : 'border-transparent hover:border-slate-100 hover:bg-white hover:shadow-sm'
-                    ),
-                  disabled ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : '',
-                )}
+                onClick={handleSelect}
+                className={rowClassName}
               >
                 {layout === 'grid' ? (
-                  minimalGridCard ? (
-                    <div className="flex w-full items-center gap-2.5">
-                      <UserAvatar
-                        avatarKey={item.avatarKey}
-                        name={item.name}
-                        size="sm"
-                        className="h-8 w-8 shrink-0 ring-1 ring-border/60"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
-                          {item.name}
-                        </p>
-                        <p className="mt-1 truncate text-[11px] font-medium leading-tight text-text-muted">
-                          {item.meta || '未填写工号'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                  <>
-                    <div className="flex w-full items-center gap-2.5">
-                      <UserAvatar
-                        avatarKey={item.avatarKey}
-                        name={item.name}
-                        size="sm"
-                        className={cn(
-                          'shrink-0 ring-1 ring-border/60',
-                          density === 'compact' ? 'h-7 w-7' : 'h-8 w-8',
-                        )}
-                      />
-
-                      <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-foreground">
-                        {item.name}
-                      </p>
-
-                      {showGridSelectionIndicator ? (
-                        dualSelect && !disabled ? (
-                          <button
-                            type="button"
-                            aria-label={checked ? `取消勾选 ${item.name}` : `勾选 ${item.name}`}
-                            className={cn(
-                              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                              checked
-                                ? 'border-primary bg-primary text-white opacity-100'
-                                : 'border-border bg-background text-transparent opacity-70 hover:border-primary/40 hover:bg-primary-50/80 hover:text-primary',
-                            )}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              onToggleCheck?.(item.id);
-                            }}
-                          >
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </button>
-                        ) : (
-                          <div
-                            aria-hidden="true"
-                            className={cn(
-                              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
-                              disabled
-                                ? 'opacity-0'
-                                : checked
-                                  ? 'border-primary bg-primary text-white opacity-100'
-                                  : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
-                            )}
-                          >
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </div>
-                        )
-                      ) : null}
-                    </div>
-
-                    <div className="my-2 w-full border-t border-border/60" />
-
-                    <div className="flex w-full flex-wrap items-center gap-1.5">
-                      {(item.tags && item.tags.length > 0
-                        ? item.tags
-                        : (item.meta ? item.meta.split(' · ').filter(Boolean) : ['未填写工号'])
-                      ).map((tag) => (
-                        <span
-                          key={tag}
-                          className={cn(
-                            'inline-flex max-w-full items-center truncate rounded-full px-2 py-0.5 text-[10px] font-medium leading-tight',
-                            active
-                              ? 'bg-primary-100/70 text-primary-700'
-                              : 'bg-muted/70 text-text-muted',
-                          )}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                  )
-                ) : (
-                  <>
+                  <div className="flex w-full items-center gap-2.5">
                     <UserAvatar
                       avatarKey={item.avatarKey}
                       name={item.name}
-                      size={appearance === 'panel' ? (density === 'compact' ? 'sm' : 'md') : 'sm'}
-                      className={cn(
-                        'shrink-0',
-                        appearance === 'panel' && (density === 'compact' ? 'h-8 w-8' : 'h-9 w-9'),
-                      )}
+                      size="sm"
+                      className="h-8 w-8 shrink-0 ring-1 ring-border/60"
                     />
-
                     <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          'truncate font-medium leading-tight',
-                          appearance === 'panel'
-                            ? density === 'compact'
-                              ? 'text-[12px] text-foreground'
-                              : 'text-[13px] text-foreground'
-                            : 'text-[12px]',
-                          active && appearance === 'plain' ? 'text-primary' : '',
-                        )}
-                      >
+                      <p className="truncate text-[13px] font-semibold leading-tight text-foreground">
                         {item.name}
                       </p>
-                      <p
-                        className={cn(
-                          'truncate leading-tight',
-                          appearance === 'panel'
-                            ? density === 'compact'
-                              ? 'text-[10px] text-text-muted'
-                              : 'text-[11px] text-text-muted'
-                            : 'text-[10px] text-slate-400',
-                        )}
-                      >
-                        {item.meta ?? '未填写工号'}
+                      <p className="mt-1 truncate text-[11px] font-medium leading-tight text-text-muted">
+                        {item.meta || '未填写工号'}
                       </p>
                     </div>
-
-                    {renderTrailing(item, checked, dualSelect ? 'multiple' : selectionMode, {
-                      dualSelect,
-                      onToggleCheck,
-                    })}
+                  </div>
+                ) : (
+                  <>
+                    {listItemContent}
+                    {trailing}
                   </>
                 )}
               </button>

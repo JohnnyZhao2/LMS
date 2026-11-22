@@ -39,6 +39,8 @@ import { buildQuizEditableItem, buildQuizQuestionChanges, buildQuizSubmitPayload
 import { QuizOutlinePanel } from '@/components/quizzes/quiz-outline-panel';
 import { QuizPreviewWorkbench } from '@/features/quizzes/components/quiz-preview-workbench';
 
+const QUESTION_BANK_PAGE_SIZE = 20;
+
 const COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME =
   'grid h-full min-h-0 min-w-0 items-stretch gap-3 [grid-template-columns:minmax(12rem,14rem)_minmax(0,1fr)_2rem] xl:[grid-template-columns:minmax(15rem,16rem)_minmax(0,1fr)_2rem] 2xl:[grid-template-columns:minmax(18rem,18.5rem)_minmax(0,1fr)_2rem]';
 
@@ -61,6 +63,7 @@ export const QuizForm: React.FC = () => {
   const [resourceSearch, setResourceSearch] = useState('');
   const [filterSpaceTagId, setFilterSpaceTagId] = useState<string>('all');
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
+  const [questionBankPage, setQuestionBankPage] = useState(1);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [pendingQuizData, setPendingQuizData] = useState<QuizCreateRequest | null>(null);
@@ -76,12 +79,14 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   const { data: quizData } = useQuizDetail(Number(id));
-  const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
+  const { data: spaceTags } = useTags({ tag_type: 'SPACE', enabled: !isPreviewRoute });
   const { data: questionsData, isLoading: questionsLoading } = useQuestions({
-    pageSize: 1000,
+    page: questionBankPage,
+    pageSize: QUESTION_BANK_PAGE_SIZE,
     search: resourceSearch || undefined,
     spaceTagId: filterSpaceTagId === 'all' ? undefined : Number(filterSpaceTagId),
     questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType,
+    enabled: !isPreviewRoute,
   });
 
   const createQuiz = useCreateQuiz();
@@ -147,14 +152,6 @@ export const QuizForm: React.FC = () => {
     () => new Set(items.map((item) => item.sourceQuestionId ?? item.questionId).filter((value): value is number => Boolean(value))),
     [items],
   );
-
-  const filteredQuestionsData = useMemo(() => {
-    if (!questionsData) return undefined;
-    return {
-      ...questionsData,
-      results: questionsData.results.filter((question) => !selectedSourceQuestionIds.has(question.id)),
-    };
-  }, [questionsData, selectedSourceQuestionIds]);
 
   const workbenchClassName = questionBankCollapsed
     ? COLLAPSED_QUESTION_BANK_WORKBENCH_CLASSNAME
@@ -360,14 +357,27 @@ export const QuizForm: React.FC = () => {
               collapsed={questionBankCollapsed}
               onToggleCollapse={() => setQuestionBankCollapsed((prev) => !prev)}
               resourceSearch={resourceSearch}
-              onResourceSearchChange={setResourceSearch}
+              onResourceSearchChange={(value) => {
+                setResourceSearch(value);
+                setQuestionBankPage(1);
+              }}
               filterSpaceTagId={filterSpaceTagId}
-              onFilterSpaceTagIdChange={setFilterSpaceTagId}
+              onFilterSpaceTagIdChange={(value) => {
+                setFilterSpaceTagId(value);
+                setQuestionBankPage(1);
+              }}
               filterQuestionType={filterQuestionType}
-              onFilterQuestionTypeChange={setFilterQuestionType}
+              onFilterQuestionTypeChange={(value) => {
+                setFilterQuestionType(value);
+                setQuestionBankPage(1);
+              }}
               spaceTags={spaceTags}
-              questionsData={filteredQuestionsData}
+              questionsData={questionsData}
+              selectedQuestionIds={selectedSourceQuestionIds}
               questionsLoading={questionsLoading}
+              page={questionBankPage}
+              pageSize={QUESTION_BANK_PAGE_SIZE}
+              onPageChange={setQuestionBankPage}
               onPreview={handlePreviewQuestion}
               onAddQuestion={handleAddQuestion}
             />

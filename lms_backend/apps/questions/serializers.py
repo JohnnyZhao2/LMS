@@ -16,7 +16,6 @@ class QuestionSerializer(serializers.ModelSerializer):
     space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     usage_count = serializers.SerializerMethodField()
-    is_referenced = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -31,7 +30,6 @@ class QuestionSerializer(serializers.ModelSerializer):
             'space_tag',
             'tags',
             'usage_count',
-            'is_referenced',
             'created_by_name',
             'updated_by_name',
             'created_at',
@@ -43,12 +41,6 @@ class QuestionSerializer(serializers.ModelSerializer):
         if annotated_value is not None:
             return annotated_value
         return obj.quiz_uses.count()
-
-    def get_is_referenced(self, obj) -> bool:
-        annotated_value = getattr(obj, 'is_referenced', None)
-        if annotated_value is not None:
-            return annotated_value
-        return self.get_usage_count(obj) > 0
 
 
 class QuestionCreateSerializer(serializers.Serializer):

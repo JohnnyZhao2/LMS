@@ -9,23 +9,23 @@ import {
   KeyRound,
   Trash2,
 } from "lucide-react"
-import { useSearchParams } from "react-router-dom"
-import { useUsers, useDepartments, useMentors } from '@/api/users/get-users'
+import { useNavigate } from "react-router-dom"
+import { useUsers, useDepartments, useMentors, useRoles } from '@/api/users/get-users'
 import { useChangePassword, useDeleteUser, useUpdateUserAvatar } from '@/api/users/manage-users'
 import { UserForm } from "./user-form"
 import { AvatarPickerPopover } from '@/components/users/avatar-picker-popover'
 import { getRoleColor, SUPERUSER_VISUAL } from "@/lib/role-config"
-import { useAuth } from "@/lib/auth"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
   LIST_ACTION_ICON_WARNING_CLASS,
 } from '@/components/ui/data-table/action-icon-styles';
-import { CellWithAvatar, CellTags, CellSmallAvatar } from '@/components/ui/data-table/data-table-cells';
+import { CellWithAvatar, CellSmallAvatar } from '@/components/ui/data-table/data-table-cells';
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ListTag } from '@/components/ui/list-tag';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -35,23 +35,37 @@ import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import type { UserList as UserListType, Role } from '@/types/common';
 import { UserDirectoryFilters } from "./user-directory-filters"
-import { USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
+import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
+import { LEARNER_ROLE_VALUE, USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
+import { ROUTES } from '@/config/routes';
+
+const DISABLED_ACTION_CLASS = 'disabled:opacity-25 disabled:grayscale'
 
 export const UserList: React.FC = () => {
-  const [searchParams] = useSearchParams()
-  const { hasCapability } = useAuth()
-  const canCreateUser = hasCapability('users.add_user')
-  const canUpdateUser = hasCapability('users.change_user')
-  const canDeleteUser = hasCapability('users.delete_user')
+  const navigate = useNavigate()
+  const { user, hasCapability } = useAuth()
+  const isSuperuser = Boolean(user?.is_superuser)
+  const hasPermission = (code: string) => isSuperuser || hasCapability(code)
+  const canCreateUser = hasPermission('users.add_user')
+  const canUpdateUser = hasPermission('users.change_user')
+  const canDeleteUser = hasPermission('users.delete_user')
   const canChangePassword = canUpdateUser
-  const canOpenUserEditor = canUpdateUser || hasCapability(USER_ROLE_ASSIGN_PERMISSION)
-  const canAdminEditAvatar = canUpdateUser
-  const userIdParam = searchParams.get('user_id')
-  const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
+  const canOpenUserEditor = canUpdateUser || hasPermission(USER_ROLE_ASSIGN_PERMISSION)
+  const canAdminEditAvatar = hasPermission('users.change_user_avatar')
+  const canJumpToAuthorization = hasPermission(USER_ROLE_ASSIGN_PERMISSION)
+  const canManageUser = React.useCallback(
+    (target: UserListType) => (
+      !target.is_superuser
+      && (isSuperuser || (target.id !== user?.id && !target.roles.some((r) => r.code === 'ADMIN')))
+    ),
+    [isSuperuser, user?.id],
+  )
 
   // 筛选状态
   const [selectedDepartmentId, setSelectedDepartmentId] = React.useState<string>('all')
   const [selectedMentorId, setSelectedMentorId] = React.useState<string>('all')
+  const [selectedRoleCode, setSelectedRoleCode] = React.useState<string>('all')
   const [search, setSearch] = React.useState("")
 
   // 分页状态
@@ -78,6 +92,7 @@ export const UserList: React.FC = () => {
   // API Hooks
   const { data: departments = [] } = useDepartments()
   const { data: mentors = [] } = useMentors()
+  const { data: availableRoles = [] } = useRoles()
   const departmentSegmentOptions = React.useMemo(
     () => [
       { label: '全部', value: 'all' },
@@ -88,12 +103,6 @@ export const UserList: React.FC = () => {
     ],
     [departments]
   )
-  const createInitialDepartmentId = selectedDepartmentId !== 'all'
-    ? Number(selectedDepartmentId)
-    : undefined
-  const createInitialMentorId = selectedMentorId !== 'all'
-    ? Number(selectedMentorId)
-    : undefined
   const departmentFilter = selectedDepartmentId !== 'all'
     ? Number(selectedDepartmentId)
     : undefined
@@ -109,18 +118,19 @@ export const UserList: React.FC = () => {
   const changePassword = useChangePassword()
   const updateUserAvatar = useUpdateUserAvatar()
 
-  // 筛选变化时重置页码
-  React.useEffect(() => {
-    setPagination(prev => ({ ...prev, pageIndex: 0 }))
-  }, [search, selectedDepartmentId, selectedMentorId])
+  const withPageReset = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+    setter(value)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
 
-  React.useEffect(() => {
-    if (!userIdFromParam || Number.isNaN(userIdFromParam)) return
-    setEditingUserId(userIdFromParam)
-    setFormModalOpen(true)
-  }, [userIdFromParam])
-
-  const filteredUsers = data || []
+  const filteredUsers = React.useMemo(() => {
+    const list = data || []
+    if (selectedRoleCode === 'all') return list
+    if (selectedRoleCode === LEARNER_ROLE_VALUE) {
+      return list.filter((u) => !u.is_superuser && !u.roles.some((r) => r.is_active !== false))
+    }
+    return list.filter((u) => u.roles.some((r) => r.code === selectedRoleCode))
+  }, [data, selectedRoleCode])
 
   const closeChangePasswordDialog = () => {
     setChangePasswordDialog({ open: false })
@@ -128,11 +138,11 @@ export const UserList: React.FC = () => {
     setPasswordError(undefined)
   }
 
-  const openChangePasswordDialog = (user: UserListType) => {
-    setChangePasswordDialog({ open: true, userId: user.id, username: user.username })
+  const openChangePasswordDialog = React.useCallback((targetUser: UserListType) => {
+    setChangePasswordDialog({ open: true, userId: targetUser.id, username: targetUser.username })
     setNewPassword('')
     setPasswordError(undefined)
-  }
+  }, [])
 
   const handleChangePassword = async () => {
     if (!changePasswordDialog.userId) return
@@ -169,20 +179,20 @@ export const UserList: React.FC = () => {
     }
   }
 
-  const handleUserAvatarSelect = async (user: UserListType, avatarKey: string) => {
+  const handleUserAvatarSelect = React.useCallback(async (targetUser: UserListType, avatarKey: string) => {
     try {
       await updateUserAvatar.mutateAsync({
-        id: user.id,
+        id: targetUser.id,
         data: { avatar_key: avatarKey },
       })
-      toast.success(`已更新 ${user.username} 的头像`)
+      toast.success(`已更新 ${targetUser.username} 的头像`)
     } catch (error) {
       showApiError(error, '头像更新失败')
     }
-  }
+  }, [updateUserAvatar])
 
   // DataTable 列定义 - 使用共用 Cell 组件
-  const columns: ColumnDef<UserListType>[] = [
+  const columns = React.useMemo<ColumnDef<UserListType>[]>(() => [
     {
       header: "用户信息",
       id: "user",
@@ -198,7 +208,7 @@ export const UserList: React.FC = () => {
               name={row.original.username}
               size="md"
               className="h-[35px] w-[35px]"
-              canEdit={canAdminEditAvatar}
+              canEdit={canAdminEditAvatar && canManageUser(row.original)}
               isUpdating={updateUserAvatar.isPending}
               align="start"
               onSelectAvatar={(avatarKey) => handleUserAvatarSelect(row.original, avatarKey)}
@@ -211,19 +221,61 @@ export const UserList: React.FC = () => {
       header: "权限角色",
       id: "roles",
       meta: { width: '22%', minWidth: '180px' },
-      cell: ({ row }) => (
-        <CellTags
-          tags={
-            row.original.is_superuser
-              ? [{ key: 'SUPERUSER', label: '超管', bgClass: SUPERUSER_VISUAL.bgClass }]
-              : row.original.roles.map((role: Role) => ({
-                  key: role.code,
-                  label: role.name,
-                  bgClass: getRoleColor(role.code).bgClass,
-                }))
-          }
-        />
-      ),
+      cell: ({ row }) => {
+        if (row.original.is_superuser) {
+          return (
+            <ListTag size="sm" className={cn(SUPERUSER_VISUAL.bgClass, SUPERUSER_VISUAL.textClass)}>
+              超管
+            </ListTag>
+          )
+        }
+        if (row.original.roles.length === 0) {
+          return <span className="text-xs text-text-muted">普通学员</span>
+        }
+        const visibleRoles = row.original.roles.slice(0, 3)
+        const hiddenRoles = row.original.roles.slice(3)
+        return (
+          <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {visibleRoles.map((role: Role) => {
+              const isInactive = role.is_active === false
+              const visual = getRoleColor(role.code)
+              const tag = (
+                <ListTag
+                  size="sm"
+                  className={cn(
+                    isInactive ? 'bg-slate-100 text-slate-400 line-through' : visual.bgClass,
+                    !isInactive && visual.textClass,
+                    canJumpToAuthorization && 'cursor-pointer transition-opacity hover:opacity-80',
+                  )}
+                >
+                  {isInactive ? `${role.name}（已停用）` : role.name}
+                </ListTag>
+              )
+              if (!canJumpToAuthorization) {
+                return <React.Fragment key={role.code}>{tag}</React.Fragment>
+              }
+              return (
+                <button
+                  key={role.code}
+                  type="button"
+                  title={`查看「${role.name}」权限配置`}
+                  onClick={() => navigate(`${ROUTES.AUTHORIZATION}?role_code=${encodeURIComponent(role.code)}`)}
+                  className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {tag}
+                </button>
+              )
+            })}
+            {hiddenRoles.length > 0 && (
+              <Tooltip title={hiddenRoles.map((role) => role.name).join('、')}>
+                <ListTag size="sm" className="bg-slate-100 text-slate-600">
+                  +{hiddenRoles.length}
+                </ListTag>
+              </Tooltip>
+            )}
+          </div>
+        )
+      },
     },
     {
       header: "所属部门",
@@ -249,16 +301,18 @@ export const UserList: React.FC = () => {
       header: "操作",
       id: "actions",
       meta: { minWidth: '140px' },
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        const manageable = canManageUser(row.original)
+        return (
         <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <Tooltip title="编辑资料">
+          <Tooltip title={manageable ? "编辑资料" : "不可操作当前账号"}>
             <Button
               variant="ghost"
               size="icon"
-              disabled={!canUpdateUser}
-              className={LIST_ACTION_ICON_EDIT_CLASS}
+              disabled={!canOpenUserEditor || !manageable}
+              className={cn(LIST_ACTION_ICON_EDIT_CLASS, DISABLED_ACTION_CLASS)}
               onClick={() => {
-                if (!canUpdateUser) return
+                if (!canOpenUserEditor || !manageable) return
                 setEditingUserId(row.original.id)
                 setFormModalOpen(true)
               }}
@@ -267,24 +321,27 @@ export const UserList: React.FC = () => {
             </Button>
           </Tooltip>
           {canChangePassword && (
-            <Tooltip title="修改密码">
+            <Tooltip title={manageable ? "修改密码" : "不可修改当前账号密码"}>
               <Button
                 variant="ghost"
                 size="icon"
-                className={LIST_ACTION_ICON_WARNING_CLASS}
-                onClick={() => openChangePasswordDialog(row.original)}
+                disabled={!manageable}
+                className={cn(LIST_ACTION_ICON_WARNING_CLASS, DISABLED_ACTION_CLASS)}
+                onClick={() => manageable && openChangePasswordDialog(row.original)}
               >
                 <KeyRound className="h-4 w-4" />
               </Button>
             </Tooltip>
           )}
           {canDeleteUser && (
-            <Tooltip title="彻底删除">
+            <Tooltip title={manageable ? "彻底删除" : "不可删除当前账号"}>
               <Button
                 variant="ghost"
                 size="icon"
-                className={LIST_ACTION_ICON_DESTRUCTIVE_CLASS}
+                disabled={!manageable}
+                className={cn(LIST_ACTION_ICON_DESTRUCTIVE_CLASS, DISABLED_ACTION_CLASS)}
                 onClick={() => {
+                  if (!manageable) return
                   setDeleteUserDialog({ open: true, user: row.original })
                 }}
               >
@@ -293,9 +350,21 @@ export const UserList: React.FC = () => {
             </Tooltip>
           )}
         </div>
-      ),
+        )
+      },
     },
-  ]
+  ], [
+    canAdminEditAvatar,
+    canChangePassword,
+    canDeleteUser,
+    canJumpToAuthorization,
+    canManageUser,
+    canOpenUserEditor,
+    handleUserAvatarSelect,
+    navigate,
+    openChangePasswordDialog,
+    updateUserAvatar.isPending,
+  ])
 
   return (
     <>
@@ -304,25 +373,43 @@ export const UserList: React.FC = () => {
             <UserDirectoryFilters
               departmentOptions={departmentSegmentOptions}
               selectedDepartmentId={selectedDepartmentId}
-              onDepartmentChange={setSelectedDepartmentId}
+              onDepartmentChange={withPageReset(setSelectedDepartmentId)}
               search={search}
-              onSearchChange={setSearch}
-              searchPlaceholder="检索姓名、工号、部位..."
+              onSearchChange={withPageReset(setSearch)}
+              searchPlaceholder="检索姓名、工号、部门..."
               leftExtra={(
-                <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
-                  <Select value={selectedMentorId} onValueChange={setSelectedMentorId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="全部导师" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部导师</SelectItem>
-                      {mentors.map((mentor) => (
-                        <SelectItem key={mentor.id} value={mentor.id.toString()}>
-                          {mentor.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
+                    <Select value={selectedRoleCode} onValueChange={withPageReset(setSelectedRoleCode)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="全部角色" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部角色</SelectItem>
+                        <SelectItem value={LEARNER_ROLE_VALUE}>普通学员</SelectItem>
+                        {availableRoles.map((role) => (
+                          <SelectItem key={role.code} value={role.code}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
+                    <Select value={selectedMentorId} onValueChange={withPageReset(setSelectedMentorId)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="全部导师" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部导师</SelectItem>
+                        {mentors.map((mentor) => (
+                          <SelectItem key={mentor.id} value={mentor.id.toString()}>
+                            {mentor.username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
               rightExtra={canCreateUser ? (
@@ -353,7 +440,7 @@ export const UserList: React.FC = () => {
                 }}
                 rowClassName="group"
                 onRowClick={(row) => {
-                  if (!canOpenUserEditor) return
+                  if (!canOpenUserEditor || !canManageUser(row)) return
                   setEditingUserId(row.id)
                   setFormModalOpen(true)
                 }}
@@ -366,8 +453,8 @@ export const UserList: React.FC = () => {
       <UserForm
         open={formModalOpen}
         userId={editingUserId}
-        initialDepartmentId={editingUserId ? undefined : createInitialDepartmentId}
-        initialMentorId={editingUserId ? undefined : createInitialMentorId}
+        initialDepartmentId={editingUserId ? undefined : departmentFilter}
+        initialMentorId={editingUserId ? undefined : mentorFilter}
         onClose={() => {
           setFormModalOpen(false)
           setEditingUserId(undefined)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, FileCheck, Clock3 } from 'lucide-react';
+import { Pencil, Trash2, FileCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import { useQuizzes } from '@/features/quizzes/api/get-quizzes';
@@ -117,10 +117,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
         width: '168px',
       },
       cell: ({ row }) => (
-        <CellMutedTimestamp
-          icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
-          value={row.original.updated_at}
-        />
+        <CellMutedTimestamp value={row.original.updated_at} />
       ),
     },
     {

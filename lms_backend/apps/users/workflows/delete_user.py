@@ -7,8 +7,7 @@ def hard_delete_user_business_data(user_id: int) -> None:
     from apps.questions.models import Question
     from apps.quizzes.models import Quiz
     from apps.spot_checks.models import SpotCheck
-    from apps.submissions.models import Submission
-    from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+    from apps.tasks.models import Task, TaskAssignment, TaskKnowledge
     from apps.tasks.task_service import TaskService
 
     created_task_ids = list(Task.objects.filter(created_by_id=user_id).values_list('id', flat=True))
@@ -18,10 +17,7 @@ def hard_delete_user_business_data(user_id: int) -> None:
 
     SpotCheck.objects.filter(Q(student_id=user_id) | Q(checker_id=user_id)).delete()
     TaskAssignment.objects.filter(assignee_id=user_id).delete()
-    Submission.objects.filter(user_id=user_id).delete()
 
-    Submission.objects.filter(task_quiz__source_quiz__created_by_id=user_id).delete()
-    TaskQuiz.objects.filter(source_quiz__created_by_id=user_id).delete()
     TaskKnowledge.objects.filter(knowledge__created_by_id=user_id).delete()
 
     if created_task_ids:

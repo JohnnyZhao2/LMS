@@ -20,7 +20,7 @@ def user_base_queryset() -> QuerySet:
     return User.objects.select_related(
         'department',
         'mentor'
-    ).prefetch_related('groups')
+    ).prefetch_related('groups__profile')
 
 
 def get_user_by_id(pk: int) -> Optional[User]:

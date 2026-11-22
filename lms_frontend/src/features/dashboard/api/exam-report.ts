@@ -8,8 +8,6 @@ import type {
   ExamReportResponse,
 } from '@/features/dashboard/types';
 
-const EXAM_REPORT_ROLES = new Set(['MENTOR', 'DEPT_MANAGER', 'ADMIN']);
-
 const buildExamReportQueryString = (
   filters: ExamReportFiltersState,
   options?: { template?: ExamReportExportTemplate; includePagination?: boolean },
@@ -28,8 +26,8 @@ const buildExamReportQueryString = (
 };
 
 export const useExamReport = (filters: ExamReportFiltersState) => {
-  const { managementRole, user } = useAuth();
-  const enabled = Boolean(user?.is_superuser || EXAM_REPORT_ROLES.has(managementRole ?? ''));
+  const { hasCapability } = useAuth();
+  const enabled = hasCapability('tasks.view_task_analytics');
   const query = buildExamReportQueryString(filters, { includePagination: true });
 
   return useQuery({

@@ -17,15 +17,13 @@ export const invalidateAfterActivityLogPolicyMutation = (queryClient: QueryClien
     queryKeys.activityLogs.policies(),
   ]);
 
-export const invalidateAfterUserPermissionsMutation = (queryClient: QueryClient) =>
+export const invalidateAfterRoleMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
-    queryKeys.authorization.userPermissionsRoot(),
-  ]);
-
-export const invalidateAfterGroupPermissionsMutation = (queryClient: QueryClient) =>
-  invalidateMany(queryClient, [
-    queryKeys.authorization.groupPermissionsRoot(),
-    queryKeys.authorization.userPermissionsRoot(),
+    queryKeys.authorization.roles(),
+    queryKeys.users.roles(),
+    queryKeys.users.departments(),
+    queryKeys.users.all(),
+    queryKeys.users.detailRoot(),
   ]);
 
 export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
@@ -35,6 +33,9 @@ export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
     queryKeys.grading.pending(),
     queryKeys.grading.taskAnalyticsRoot(),
     queryKeys.grading.studentExecutionsRoot(),
+    queryKeys.tasks.all(),
+    queryKeys.dashboards.examReportRoot(),
+    queryKeys.dashboards.mentor(),
   ]);
 
 const knowledgeCollectionKeys = [
@@ -80,16 +81,10 @@ export const invalidateAfterSpotCheckMutation = (queryClient: QueryClient) =>
     ['spot-checks-batch-peers'],
   ]);
 
-export const invalidateAfterSubmissionAnswerSaved = (
-  queryClient: QueryClient,
-  submissionId: number,
-) => invalidateMany(queryClient, [
-  queryKeys.submissions.detail(submissionId),
-]);
-
 export const invalidateAfterSubmissionSubmitted = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.tasks.studentRoot(),
+    queryKeys.tasks.studentLearningDetailRoot(),
   ]);
 
 export const invalidateAfterTagMutation = (queryClient: QueryClient) =>
@@ -108,6 +103,9 @@ export const invalidateAfterTaskMutation = (queryClient: QueryClient) =>
     queryKeys.tasks.detailRoot(),
     queryKeys.tasks.studentRoot(),
     queryKeys.tasks.studentLearningDetailRoot(),
+    queryKeys.grading.taskAnalyticsRoot(),
+    queryKeys.grading.studentExecutionsRoot(),
+    queryKeys.dashboards.examReportRoot(),
   ]);
 
 export const invalidateAfterTaskProgressMutation = (queryClient: QueryClient) =>
@@ -127,6 +125,8 @@ export const invalidateAfterUserMutation = (
   const keys: QueryKey[] = [
     queryKeys.users.all(),
     queryKeys.users.detailRoot(),
+    queryKeys.users.departments(),
+    queryKeys.authorization.roles(),
   ];
 
   if (options.includeMentors) {

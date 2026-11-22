@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, ApiError } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { invalidateAfterTaskMutation } from '@/lib/cache-invalidation';
 import type { TaskDetail } from '@/types/task';
-import { showApiError } from '@/utils/error-handler';
 
 /**
  * 更新任务请求
@@ -16,7 +15,6 @@ export interface TaskUpdateRequest {
   title?: string;
   description?: string;
   deadline?: string;
-  knowledge_ids?: number[];
   quiz_pass_scores?: TaskQuizPassScoreUpdate[];
   assignee_ids?: number[];
 }
@@ -32,10 +30,6 @@ export const useUpdateTask = () => {
       return apiClient.patch<TaskDetail>(`/tasks/${taskId}/`, data);
     },
     onSuccess: () => invalidateAfterTaskMutation(queryClient),
-    onError: (error: Error) => {
-      if (error instanceof ApiError && error.code === 'INVALID_OPERATION') {
-        showApiError(error);
-      }
-    },
+    onError: () => undefined,
   });
 };

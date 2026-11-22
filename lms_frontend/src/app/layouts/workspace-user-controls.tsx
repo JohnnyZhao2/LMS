@@ -1,12 +1,7 @@
 import * as React from 'react'
-import { LEARNING_WORKSPACE_VISUAL, ROLE_VISUALS, SUPERUSER_VISUAL } from '@/lib/role-config'
+import { getRoleColor, LEARNING_WORKSPACE_VISUAL, SUPERUSER_VISUAL } from '@/lib/role-config'
 import { cn } from '@/lib/utils'
 import type { RoleCode, Workbench } from '@/types/common';
-
-const FALLBACK_ROLE_INDICATOR_CLASSES = {
-  bar: 'bg-slate-400',
-  glow: 'bg-slate-400/70',
-}
 
 interface WorkspaceIndicatorDotProps {
   workbench: Workbench
@@ -25,9 +20,7 @@ export const RoleIndicatorDot: React.FC<WorkspaceIndicatorDotProps> = ({
     ? LEARNING_WORKSPACE_VISUAL
     : isSuperuser
       ? SUPERUSER_VISUAL
-      : managementRole
-        ? ROLE_VISUALS[managementRole]
-        : FALLBACK_ROLE_INDICATOR_CLASSES
+      : getRoleColor(managementRole ?? '')
   const containerClassName = size === 'md' ? 'h-2 w-2' : 'h-1.5 w-1.5'
   const dotClassName = 'h-1.5 w-1.5'
 

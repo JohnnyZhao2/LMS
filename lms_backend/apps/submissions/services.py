@@ -5,7 +5,7 @@ from typing import Any, List, Optional
 from apps.activity_logs.decorators import log_operation
 from apps.activity_logs.text import format_number
 from django.db import transaction
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Max, Prefetch, QuerySet
 from django.utils import timezone
 
 from apps.tasks.models import TaskAssignment, TaskQuiz
@@ -14,10 +14,7 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Answer, AnswerSelection, Submission
-from .scoring import calculate_submission_obtained_score, refresh_assignment_score
-
-# 区分“调用方未传字段”和“调用方传了空值”的哨兵对象。
-UNSET = object()
+from .scoring import calculate_submission_scores, refresh_assignment_score
 
 
 def _start_quiz_log_description(ctx: dict) -> str:
@@ -52,7 +49,6 @@ class SubmissionService(BaseService):
                 'answers__answer_selections',
                 queryset=AnswerSelection.objects.select_related('question_option'),
             ),
-            'answers__question',
             'answers__graded_by',
         )
         if user:
@@ -72,10 +68,12 @@ class SubmissionService(BaseService):
     def _lock_in_progress_submission(self, submission: Submission, *, closed_message: str) -> Submission:
         """保存和提交先锁分配，再锁这条答卷，避免中途改到另一次重做。"""
         TaskAssignment.objects.select_for_update().get(pk=submission.task_assignment_id)
-        locked = Submission.objects.select_for_update().select_related(
+        locked = Submission.objects.select_for_update(of=('self',)).select_related(
             'task_assignment__task',
             'task_quiz',
         ).get(pk=submission.pk)
+        if locked.task_assignment.task.is_archived:
+            raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已移除，无法继续作答')
         if locked.status != 'IN_PROGRESS':
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message=closed_message)
         current_id = Submission.objects.filter(
@@ -94,27 +92,12 @@ class SubmissionService(BaseService):
             status__in=['SUBMITTED', 'GRADING', 'GRADED'],
         ).first()
 
-    def _count_attempts(self, task_assignment_id: int, task_quiz_id: int) -> int:
-        return Submission.objects.filter(
+    def _next_attempt_number(self, task_assignment_id: int, task_quiz_id: int) -> int:
+        max_attempt = Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             task_quiz_id=task_quiz_id,
-        ).count()
-
-    def _get_answer_by_submission_and_question(
-        self,
-        submission_id: int,
-        question_id: int,
-    ) -> Optional[Answer]:
-        return Answer.objects.select_related('question').prefetch_related(
-            'question__question_options',
-            Prefetch(
-                'answer_selections',
-                queryset=AnswerSelection.objects.select_related('question_option'),
-            ),
-        ).filter(
-            submission_id=submission_id,
-            question_id=question_id,
-        ).first()
+        ).aggregate(max_attempt=Max('attempt_number'))['max_attempt']
+        return (max_attempt or 0) + 1
 
     def _list_objective_answers(self, submission_id: int) -> QuerySet:
         return Answer.objects.filter(
@@ -196,16 +179,30 @@ class SubmissionService(BaseService):
         self.validate_not_none(submission, f'答题记录 {pk} 不存在')
         return submission
 
+    def get_submission_for_write(self, pk: int, user: Optional[User] = None) -> Submission:
+        qs = Submission.objects.filter(pk=pk)
+        if user:
+            qs = qs.filter(user=user)
+        submission = qs.first()
+        self.validate_not_none(submission, f'答题记录 {pk} 不存在')
+        return submission
+
     def validate_assignment_for_quiz(
         self,
         assignment_id: int,
         quiz_id: int,
         user: User,
+        *,
+        lock: bool = False,
     ) -> tuple[TaskAssignment, TaskQuiz]:
         """确认当前学员确实被分配了这张任务试卷。"""
-        assignment = TaskAssignment.objects.select_related('task').filter(
+        assignment_qs = TaskAssignment.objects
+        if lock:
+            assignment_qs = assignment_qs.select_for_update(of=('self',))
+        assignment = assignment_qs.select_related('task').filter(
             id=assignment_id,
             assignee=user,
+            task__is_archived=False,
         ).first()
         if not assignment:
             raise BusinessError(code=ErrorCodes.RESOURCE_NOT_FOUND, message='任务不存在或未分配给您')
@@ -227,13 +224,17 @@ class SubmissionService(BaseService):
         user: User,
     ) -> tuple[Submission, bool]:
         """开始或恢复答题。不允许重做时只能有一次有效提交。"""
-        assignment, task_quiz = self.validate_assignment_for_quiz(assignment_id, quiz_id, user)
-        TaskAssignment.objects.select_for_update().get(pk=assignment.id)
+        assignment, task_quiz = self.validate_assignment_for_quiz(
+            assignment_id,
+            quiz_id,
+            user,
+            lock=True,
+        )
         in_progress = self._get_in_progress(task_assignment_id=assignment.id, task_quiz_id=quiz_id)
         if in_progress:
             in_progress = Submission.objects.select_for_update().get(pk=in_progress.pk)
             if in_progress.status == 'IN_PROGRESS':
-                return in_progress, False
+                return self._base_queryset().get(pk=in_progress.pk), False
         if timezone.now() > assignment.task.deadline:
             raise BusinessError(code=ErrorCodes.INVALID_OPERATION, message='任务已结束')
         if not task_quiz.allow_retry:
@@ -245,7 +246,7 @@ class SubmissionService(BaseService):
             task_quiz=task_quiz,
             user=user,
         )
-        return submission, True
+        return self._base_queryset().get(pk=submission.pk), True
 
     @transaction.atomic
     @log_operation(
@@ -265,7 +266,7 @@ class SubmissionService(BaseService):
     ) -> Submission:
         total_score = task_quiz.total_score
         attempt_number = (
-            self._count_attempts(assignment.id, task_quiz.id) + 1
+            self._next_attempt_number(assignment.id, task_quiz.id)
             if task_quiz.allow_retry
             else 1
         )
@@ -284,35 +285,49 @@ class SubmissionService(BaseService):
         )
         return submission
 
+    def _apply_answer_updates(self, submission: Submission, items: List[dict]) -> List[Answer]:
+        question_ids = [item['question_id'] for item in items]
+        answers_by_question = {
+            answer.question_id: answer
+            for answer in Answer.objects.select_related('question').prefetch_related(
+                'question__question_options',
+                Prefetch(
+                    'answer_selections',
+                    queryset=AnswerSelection.objects.select_related('question_option'),
+                ),
+            ).filter(
+                submission_id=submission.id,
+                question_id__in=question_ids,
+            )
+        }
+        updated: List[Answer] = []
+        for item in items:
+            answer = answers_by_question.get(item['question_id'])
+            self.validate_not_none(answer, '题目不在此答卷中')
+            update_fields = []
+            if 'user_answer' in item:
+                normalized = self._normalize_user_answer_input(answer, item['user_answer'])
+                if answer.is_subjective:
+                    if answer.text_answer != normalized['text_answer']:
+                        answer.text_answer = normalized['text_answer']
+                        update_fields.append('text_answer')
+                else:
+                    self._sync_answer_option_ids(answer, normalized['option_ids'])
+            if 'is_marked' in item and answer.is_marked != item['is_marked']:
+                answer.is_marked = item['is_marked']
+                update_fields.append('is_marked')
+            if update_fields:
+                answer.save(update_fields=[*update_fields, 'updated_at'])
+            updated.append(answer)
+        return updated
+
     @transaction.atomic
-    def save_answer(
-        self,
-        submission: Submission,
-        question_id: int,
-        user_answer: Any = UNSET,
-        is_marked: bool = UNSET,
-    ) -> Answer:
+    def save_answers(self, submission: Submission, items: List[dict]) -> List[Answer]:
         submission = self._lock_in_progress_submission(
             submission,
             closed_message='当前答卷不可继续作答',
         )
-        answer = self._get_answer_by_submission_and_question(submission.id, question_id)
-        self.validate_not_none(answer, '题目不在此答卷中')
-
-        update_fields = []
-        if user_answer is not UNSET:
-            normalized = self._normalize_user_answer_input(answer, user_answer)
-            if answer.is_subjective:
-                answer.text_answer = normalized['text_answer']
-                update_fields.append('text_answer')
-            else:
-                self._sync_answer_option_ids(answer, normalized['option_ids'])
-        if is_marked is not UNSET and answer.is_marked != is_marked:
-            answer.is_marked = is_marked
-            update_fields.append('is_marked')
-        if update_fields:
-            answer.save(update_fields=update_fields)
-        return answer
+        return self._apply_answer_updates(submission, items)
 
     @transaction.atomic
     @log_operation(
@@ -324,26 +339,43 @@ class SubmissionService(BaseService):
         group='答题/考试',
         label='提交答卷',
     )
-    def submit(self, submission: Submission) -> Submission:
+    def submit(self, submission: Submission, answers: Optional[List[dict]] = None) -> Submission:
         """提交答卷并刷新成绩、任务完成状态。"""
         submission = self._lock_in_progress_submission(
             submission,
             closed_message='该答卷已提交',
         )
+        if answers:
+            self._apply_answer_updates(submission, answers)
 
         task = submission.task_assignment.task
         submission.submitted_at = task.deadline if timezone.now() > task.deadline else timezone.now()
         submission.status = 'GRADING' if submission.has_subjective_questions else 'SUBMITTED'
 
-        for answer in self._list_objective_answers(submission.id):
-            answer.auto_grade()
+        objective_answers = list(self._list_objective_answers(submission.id))
+        for answer in objective_answers:
+            answer.auto_grade(save=False)
+        if objective_answers:
+            Answer.objects.bulk_update(objective_answers, ['is_correct', 'obtained_score'])
 
-        submission.obtained_score = calculate_submission_obtained_score(submission)
-        submission.save(update_fields=['status', 'submitted_at', 'obtained_score'])
+        (
+            submission.objective_score,
+            submission.subjective_score,
+            submission.obtained_score,
+        ) = calculate_submission_scores(submission)
+        submission.save(
+            update_fields=[
+                'status',
+                'submitted_at',
+                'objective_score',
+                'subjective_score',
+                'obtained_score',
+                'updated_at',
+            ]
+        )
         refresh_assignment_score(submission.task_assignment, Submission)
         if submission.status == 'SUBMITTED':
             from apps.tasks.assignment_workflow import sync_assignment_completion_status
 
             sync_assignment_completion_status(submission.task_assignment)
-        submission.refresh_from_db()
-        return submission
+        return self._base_queryset().get(pk=submission.pk)

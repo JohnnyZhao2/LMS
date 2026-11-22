@@ -1,8 +1,6 @@
 """Question selectors."""
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, QuerySet
-
-from apps.quizzes.models import QuizQuestion
+from django.db.models import Count, Prefetch, QuerySet
 
 from .models import Question, QuestionOption
 
@@ -20,7 +18,6 @@ def question_base_queryset() -> QuerySet:
         'tags',
     ).annotate(
         usage_count=Count('quiz_uses', distinct=True),
-        is_referenced=Exists(QuizQuestion.objects.filter(question_id=OuterRef('pk'))),
     )
 
 

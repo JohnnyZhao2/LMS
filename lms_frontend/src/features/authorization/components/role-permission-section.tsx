@@ -1,44 +1,27 @@
 import { useMemo } from 'react';
-import {
-  useGroupPermissions,
-  useReplaceGroupPermissions,
-  useReplaceUserPermissions,
-  useUserPermissions,
-} from '@/features/authorization/api/authorization';
 import { getModulePresentation, getPermissionLabel } from '@/features/authorization/lib/permission-presentation';
 import { applyPermissionSelectionChange } from '@/features/authorization/lib/permission-dependencies';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/lib/utils';
-import { showApiError } from '@/utils/error-handler';
-import type { PermissionCatalogItem } from '@/features/authorization/types';
+import type { PermissionCatalogItem, UpdateRolePayload } from '@/features/authorization/types';
 import type { RoleCode } from '@/types/common';
 
-interface UserPermissionSectionProps {
-  userId?: number;
-  roleCode?: RoleCode;
+interface RolePermissionSectionProps {
+  roleCode: RoleCode;
+  permissionCodes: string[];
   permissionCatalog: PermissionCatalogItem[];
-  canUpdate: boolean;
+  isUpdatingRole: boolean;
+  onUpdateRole: (payload: UpdateRolePayload) => Promise<void>;
 }
 
-export function UserPermissionSection({
-  userId,
+export function RolePermissionSection({
   roleCode,
+  permissionCodes,
   permissionCatalog,
-  canUpdate,
-}: UserPermissionSectionProps) {
-  const isGroupMode = Boolean(roleCode);
-  const userPermissionsQuery = useUserPermissions(userId ?? null, !isGroupMode);
-  const groupPermissionsQuery = useGroupPermissions(roleCode ?? null, isGroupMode);
-  const replaceUserPermissions = useReplaceUserPermissions();
-  const replaceGroupPermissions = useReplaceGroupPermissions();
-  const isSaving = replaceUserPermissions.isPending || replaceGroupPermissions.isPending;
+  isUpdatingRole,
+  onUpdateRole,
+}: RolePermissionSectionProps) {
+  const isSaving = isUpdatingRole;
 
-  const permissionData = isGroupMode ? groupPermissionsQuery.data : userPermissionsQuery.data;
-  const permissionCodes = permissionData?.permission_codes ?? [];
-  const basePermissionCodeSet = useMemo(
-    () => new Set(userPermissionsQuery.data?.base_permission_codes ?? []),
-    [userPermissionsQuery.data?.base_permission_codes],
-  );
   const permissionCodeSet = useMemo(() => new Set(permissionCodes), [permissionCodes]);
   const permissionSections = useMemo(() => {
     const grouped = new Map<string, PermissionCatalogItem[]>();
@@ -60,7 +43,7 @@ export function UserPermissionSection({
   }, [permissionCatalog]);
 
   const handlePermissionToggle = async (permissionCode: string, nextChecked: boolean) => {
-    if (!canUpdate || isSaving) {
+    if (isSaving) {
       return;
     }
 
@@ -77,30 +60,11 @@ export function UserPermissionSection({
       return;
     }
 
-    try {
-      if (roleCode) {
-        await replaceGroupPermissions.mutateAsync({
-          roleCode,
-          permissionCodes: nextCodes,
-        });
-      } else if (userId) {
-        await replaceUserPermissions.mutateAsync({
-          userId,
-          permissionCodes: nextCodes,
-        });
-      }
-    } catch (error) {
-      showApiError(error);
-    }
+    await onUpdateRole({
+      roleCode,
+      permission_codes: nextCodes,
+    });
   };
-
-  if (userPermissionsQuery.isLoading || groupPermissionsQuery.isLoading) {
-    return (
-      <div className="flex min-h-[260px] items-center justify-center text-sm text-text-muted">
-        正在加载权限...
-      </div>
-    );
-  }
 
   if (permissionSections.length === 0) {
     return (
@@ -121,35 +85,44 @@ export function UserPermissionSection({
             className="border-b border-border/60 pb-8 last:border-b-0 last:pb-0"
           >
             <div className="mb-4">
-              <h3 className="text-sm font-semibold text-foreground">
+              <h3 className="text-[15px] font-semibold text-foreground">
                 {modulePresentation.label}
               </h3>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {section.permissions.map((permission) => {
                 const checked = permissionCodeSet.has(permission.code);
-                // 角色基础权限是下限，用户页不可关闭
-                const disabled = !canUpdate || isSaving || basePermissionCodeSet.has(permission.code);
+                const disabled = isSaving;
 
                 return (
-                  <div
+                  <button
                     key={permission.code}
+                    type="button"
+                    role="switch"
+                    aria-checked={checked}
+                    disabled={disabled}
+                    onClick={() => {
+                      void handlePermissionToggle(permission.code, !checked);
+                    }}
                     className={cn(
-                      'flex min-h-[72px] items-center justify-between gap-3 rounded-[18px] border border-border/70 bg-white p-4',
-                      disabled && 'opacity-55',
+                      'flex min-h-[56px] w-full items-center justify-between gap-3 rounded-[16px] px-4 py-3 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
+                      checked
+                        ? 'bg-white shadow-[0_2px_10px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.05)] hover:shadow-[0_4px_12px_rgba(15,23,42,0.11),0_1px_3px_rgba(15,23,42,0.06)]'
+                        : 'bg-slate-50/80 hover:bg-slate-100/90',
+                      disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
                     )}
                   >
-                    <p className="line-clamp-1 min-w-0 flex-1 text-sm font-semibold leading-6 text-slate-800">
+                    <span
+                      className={cn(
+                        'line-clamp-1 min-w-0 flex-1 text-sm leading-6 transition-colors',
+                        checked
+                          ? 'font-semibold text-slate-800'
+                          : 'font-medium text-slate-400',
+                      )}
+                    >
                       {getPermissionLabel(permission.code, permission.name)}
-                    </p>
-                    <ToggleSwitch
-                      checked={checked}
-                      disabled={disabled}
-                      onCheckedChange={(nextChecked) => {
-                        void handlePermissionToggle(permission.code, nextChecked);
-                      }}
-                    />
-                  </div>
+                    </span>
+                  </button>
                 );
               })}
             </div>

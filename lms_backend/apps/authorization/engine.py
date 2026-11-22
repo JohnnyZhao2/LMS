@@ -4,15 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
+from django.contrib.auth.models import Group
 from django.db.models import QuerySet
 
-from apps.authorization.roles import get_management_role_code
+from apps.authorization.models import DataScope
+from apps.authorization.roles import (
+    get_group_profile,
+    get_scoped_user_queryset,
+)
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
-from .registry import get_resource_authorizer, get_scope_filter
+from .registry import ASSIGNABLE_PERMISSION_CODES, get_resource_authorizer, get_scope_filter
+from .selectors import permission_code as _perm_code
 
 
 @dataclass(frozen=True)
@@ -22,7 +28,47 @@ class AuthorizationDecision:
 
 
 class AuthorizationEngine(BaseService):
-    """单次请求内的管理态权限判定器。"""
+    """单次请求内的管理态权限判定器（支持 Group + RoleProfile 多角色防串权，忽略 user.user_permissions）。"""
+
+    def __init__(self, request):
+        super().__init__(request)
+        self._grants_loaded = False
+        self._perm_to_groups: dict[str, list[Group]] = {}
+        self._effective_permissions: set[str] = set()
+
+    def _load_user_grants(self) -> None:
+        if self._grants_loaded:
+            return
+        self._grants_loaded = True
+        user = self.user
+        if not user or not getattr(user, 'is_authenticated', False) or not user.is_active:
+            return
+        if user.is_superuser:
+            self._effective_permissions = set(ASSIGNABLE_PERMISSION_CODES)
+            return
+
+        groups = list(
+            user.groups.select_related('profile')
+            .prefetch_related('permissions__content_type', 'profile__departments')
+            .all()
+        )
+        perm_to_groups: dict[str, list[Group]] = {}
+        for group in groups:
+            profile = get_group_profile(group)
+            if profile is None or not profile.is_active:
+                continue
+            for perm in group.permissions.all():
+                code = _perm_code(perm)
+                if code in ASSIGNABLE_PERMISSION_CODES:
+                    perm_to_groups.setdefault(code, []).append(group)
+
+        self._perm_to_groups = perm_to_groups
+        self._effective_permissions = set(perm_to_groups.keys())
+
+    @property
+    def effective_permissions(self) -> set[str]:
+        self._load_user_grants()
+        return self._effective_permissions
 
     def has_permission(self, permission_code: str) -> bool:
         user = self.user
@@ -30,10 +76,60 @@ class AuthorizationEngine(BaseService):
             return False
         if user.is_superuser:
             return bool(user.is_active)
-        # 个人 user_permissions 只在管理角色下生效；无管理 Group 即普通员工
-        if not get_management_role_code(user):
-            return False
-        return user.has_perm(permission_code)
+        return permission_code in self.effective_permissions
+
+    def _aggregate_groups_scope(self, groups: list[Group]) -> tuple[str, set[int]]:
+        if not groups:
+            return (DataScope.SELF, set())
+        dept_ids: set[int] = set()
+        has_custom = False
+        has_dept = False
+        for group in groups:
+            profile = get_group_profile(group)
+            if profile is None:
+                continue
+            scope = profile.data_scope
+            if scope == DataScope.ALL:
+                return (DataScope.ALL, set())
+            if scope == DataScope.CUSTOM_DEPT:
+                has_custom = True
+                dept_ids.update(dept.id for dept in profile.departments.all())
+            elif scope == DataScope.DEPT:
+                has_dept = True
+                if self.user.department_id:
+                    dept_ids.add(self.user.department_id)
+        if has_custom:
+            return (DataScope.CUSTOM_DEPT, dept_ids)
+        if has_dept:
+            return (DataScope.DEPT, dept_ids)
+        return (DataScope.SELF, set())
+
+    def get_permission_scope(self, permission_code: str) -> tuple[str, set[int]]:
+        """按具体权限码聚合授予该权限的激活角色组范围，避免多角色串权。"""
+        user = self.user
+        if not user or not getattr(user, 'is_authenticated', False) or not user.is_active:
+            return (DataScope.SELF, set())
+        if user.is_superuser:
+            return (DataScope.ALL, set())
+
+        self._load_user_grants()
+        return self._aggregate_groups_scope(self._perm_to_groups.get(permission_code, []))
+
+    def has_full_scope(self, permission_code: str) -> bool:
+        return self.get_permission_scope(permission_code)[0] == DataScope.ALL
+
+    def filter_users_by_scope(
+        self,
+        permission_code: str,
+        base_queryset: QuerySet,
+    ) -> QuerySet:
+        scope, dept_ids = self.get_permission_scope(permission_code)
+        return get_scoped_user_queryset(
+            self.user,
+            base_queryset,
+            data_scope=scope,
+            department_ids=dept_ids,
+        )
 
     def base_permission_decision(
         self,
@@ -167,7 +263,8 @@ class AuthorizationEngine(BaseService):
             raise ValueError(f'未注册 scope: {permission_code} / {model.__name__}')
         if not self.has_permission(permission_code):
             return queryset.none()
-        return filter_fn(self, queryset=queryset, context=context or {})
+        effective_context = {**(context or {}), '_permission_code': permission_code}
+        return filter_fn(self, queryset=queryset, context=effective_context)
 
 
 def get_engine(request) -> AuthorizationEngine:

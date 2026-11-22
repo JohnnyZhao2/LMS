@@ -19,7 +19,7 @@ export interface ResourceItem {
 }
 
 export interface SelectedResource extends ResourceItem {
-  uid: number;
+  uid: string;
 }
 
 export const mapTaskResourceOptionToResource = (item: TaskResourceOption): ResourceItem => {

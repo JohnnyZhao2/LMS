@@ -53,6 +53,32 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+const DrawerContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { showClose?: boolean }
+>(({ className, children, showClose = true, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay className="bg-slate-950/25 backdrop-blur-[2px]" />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "drawer-content-right fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-[480px] flex-col border-l border-border bg-white shadow-2xl focus:outline-none",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      {showClose ? (
+        <DialogPrimitive.Close className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20">
+          <X className="h-4 w-4" />
+          <span className="sr-only">关闭</span>
+        </DialogPrimitive.Close>
+      ) : null}
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
+DrawerContent.displayName = "DrawerContent"
+
 const DialogHeader = ({
   className,
   ...props
@@ -115,6 +141,7 @@ export {
   DialogTrigger,
   DialogClose,
   DialogContent,
+  DrawerContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,

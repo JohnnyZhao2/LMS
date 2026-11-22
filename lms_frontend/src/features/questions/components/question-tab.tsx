@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, PencilLine, Clock3, CircleHelp } from 'lucide-react';
+import { Trash2, PencilLine, CircleHelp } from 'lucide-react';
 import { useQuestions } from '@/api/questions/get-questions';
 import { useDeleteQuestion } from '@/api/questions/create-question';
 import { QuestionDetailDialog } from '@/components/questions/question-detail-dialog';
@@ -144,10 +144,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 width: '168px',
             },
             cell: ({ row }) => (
-                <CellMutedTimestamp
-                    icon={<Clock3 className="h-3.5 w-3.5" strokeWidth={1.8} />}
-                    value={row.original.updated_at}
-                />
+                <CellMutedTimestamp value={row.original.updated_at} />
             ),
         },
         {
@@ -236,7 +233,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 cancelText="取消"
                 confirmVariant="destructive"
                 onConfirm={handleDelete}
-                isConfirming={false}
+                isConfirming={deleteQuestion.isPending}
             />
         </>
     );

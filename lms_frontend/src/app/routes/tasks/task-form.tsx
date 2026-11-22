@@ -51,7 +51,6 @@ export const TaskForm: React.FC = () => {
     isLoading,
     isSubmitting,
     canSubmit,
-    resourcesDisabled,
     canRemoveAssignee,
     addResource,
     toggleQuizType,
@@ -76,7 +75,6 @@ export const TaskForm: React.FC = () => {
       name: user.username,
       avatarKey: user.avatar_key,
       meta: tags.join(' · '),
-      tags,
     };
   });
 
@@ -97,7 +95,6 @@ export const TaskForm: React.FC = () => {
           <div className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background lg:min-h-0">
             <TaskPipelinePanel
               selectedResources={selectedResources}
-              resourcesDisabled={resourcesDisabled}
               isEdit={isEdit}
               onDragEnd={handleDragEnd}
               onRemoveResource={removeResource}
@@ -156,7 +153,7 @@ export const TaskForm: React.FC = () => {
                 setResourceSearch(value);
                 setCurrentPage(1);
               }}
-              onResourceAdd={(resource) => addResource(resource)}
+              onResourceAdd={addResource}
               onResourceRemove={removeResource}
               onDone={closePicker}
               totalResourceCount={totalResourceCount}

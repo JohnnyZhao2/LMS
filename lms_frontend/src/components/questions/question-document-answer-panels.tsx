@@ -92,7 +92,6 @@ interface QuestionDocumentResponsePanelProps {
   disabled?: boolean;
   interactive?: boolean;
   onResponseChange?: (value: string | string[]) => void;
-  onResponseBlur?: () => void;
 }
 
 export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePanelProps> = ({
@@ -103,7 +102,6 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
   disabled = false,
   interactive = false,
   onResponseChange,
-  onResponseBlur,
 }) => {
   const activeValues = interactive
     ? normalizeQuestionValueToArray(response, questionType)
@@ -139,7 +137,6 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
         readOnly={!editing}
         placeholder={editing ? '请填写答案' : (value ? undefined : (interactive ? '未作答' : '暂无参考答案'))}
         onChange={editing ? (next) => onResponseChange?.(next) : undefined}
-        onBlur={editing ? onResponseBlur : undefined}
       />
     );
   }
@@ -153,7 +150,12 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
           const actionProps = interactive
             ? {
               type: 'button' as const,
-              onClick: () => onResponseChange?.(item.key),
+              disabled,
+              onClick: () => {
+                if (!disabled) {
+                  onResponseChange?.(item.key);
+                }
+              },
             }
             : {};
 

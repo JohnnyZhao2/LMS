@@ -159,15 +159,7 @@ class ExamReportService(BaseService):
             records = self._materialize_records(ctx, ctx['filtered_student_ids'])
             self._write_detail_sheet(workbook, records)
         elif template == 'student_summary':
-            data = {
-                'exams': ctx['exams'],
-                'students': [
-                    ctx['student_map'][sid]
-                    for sid in ctx['eligible_student_ids']
-                ],
-                'records': self._materialize_records(ctx, ctx['filtered_student_ids']),
-            }
-            self._write_student_sheet(workbook, data)
+            self._write_student_sheet(workbook, ctx)
         elif template == 'exam_summary':
             records = self._materialize_records(ctx, ctx['filtered_student_ids'])
             self._write_exam_sheet(workbook, {'records': records})
@@ -222,11 +214,12 @@ class ExamReportService(BaseService):
         assignees_by_task: dict[int, list[int]] = defaultdict(list)
         if student_ids and exams:
             task_ids = {exam['task_id'] for exam in exams}
-            for row in TaskAssignment.objects.filter(
+            for task_id, assignee_id in TaskAssignment.objects.filter(
                 task_id__in=task_ids,
                 assignee_id__in=student_ids,
-            ).only('task_id', 'assignee_id'):
-                assignees_by_task[row.task_id].append(row.assignee_id)
+                task__is_archived=False,
+            ).values_list('task_id', 'assignee_id'):
+                assignees_by_task[task_id].append(assignee_id)
 
         cohort_student_ids = list({
             sid
@@ -301,39 +294,39 @@ class ExamReportService(BaseService):
         }
 
     def _accessible_students(self):
-        """按 task.analytics.view 取学员范围。
-
-        有分析权限：走组织关系人员范围（管理员 ALL）。
-        无分析权限：仅 ADMIN/超管可回退全员，其余返回空集。
-        """
+        """按 tasks.view_task_analytics 范围取可访问学员。"""
         from apps.authorization.roles import learning_member_queryset
 
-        base = learning_member_queryset()
-
-        if get_engine(self.request).has_permission('tasks.view_task_analytics'):
-            return get_engine(self.request).scope_filter('tasks.view_task_analytics',
-                base_queryset=base,
-                resource_model=User,
-            )
-
-        if self.user.is_admin:
-            return base
-        return base.none()
+        return get_engine(self.request).scope_filter(
+            'tasks.view_task_analytics',
+            base_queryset=learning_member_queryset(),
+            resource_model=User,
+        )
 
     def _load_exams(self, student_ids: list[int]) -> list[dict[str, Any]]:
         if not student_ids:
             return []
 
-        # 学员被分配的任务 ∩ 当前用户 task.view 可见任务，避免泄露他人创建的不可见任务
-        assigned_task_ids = (
-            TaskAssignment.objects.filter(assignee_id__in=student_ids)
-            .values_list('task_id', flat=True)
-            .distinct()
+        # 学员被分配的未归档任务 ∩ 当前用户 view_task ∩ view_task_analytics 范围，与 authorize_task_resource 保持同一交集口径
+        engine = get_engine(self.request)
+        base_tasks = Task.objects.filter(
+            is_archived=False,
+            assignments__assignee_id__in=student_ids,
         )
-        visible_task_ids = get_engine(self.request).scope_filter('tasks.view_task',
+        visible_tasks = engine.scope_filter(
+            'tasks.view_task',
             resource_model=Task,
-            base_queryset=Task.objects.filter(id__in=assigned_task_ids),
-        ).values_list('id', flat=True)
+            base_queryset=base_tasks,
+        )
+        visible_tasks = engine.scope_filter(
+            'tasks.view_task_analytics',
+            resource_model=Task,
+            base_queryset=visible_tasks,
+        )
+        visible_task_ids = list(visible_tasks.values_list('id', flat=True).distinct())
+        if not visible_task_ids:
+            return []
+
         quizzes = (
             TaskQuiz.objects.filter(
                 task_id__in=visible_task_ids,
@@ -400,7 +393,7 @@ class ExamReportService(BaseService):
         *,
         student_ids: list[int],
         exam_ids: list[int],
-    ) -> dict[tuple[int, int], Submission]:
+    ) -> dict[tuple[int, int], dict[str, Any]]:
         if not student_ids or not exam_ids:
             return {}
 
@@ -409,7 +402,7 @@ class ExamReportService(BaseService):
                 task_quiz_id__in=exam_ids,
                 user_id__in=student_ids,
             )
-            .only(
+            .values(
                 'id',
                 'task_quiz_id',
                 'user_id',
@@ -422,34 +415,35 @@ class ExamReportService(BaseService):
             )
             .order_by('task_quiz_id', 'user_id', '-attempt_number', '-created_at', '-id')
         )
-        by_pair: dict[tuple[int, int], Submission] = {}
+        by_pair: dict[tuple[int, int], dict[str, Any]] = {}
         for submission in submissions:
-            key = (submission.task_quiz_id, submission.user_id)
+            key = (submission['task_quiz_id'], submission['user_id'])
             if key not in by_pair:
                 by_pair[key] = submission
         return by_pair
 
     def _extract_submission_fields(
         self,
-        submission: Optional[Submission],
+        submission: Optional[dict[str, Any]],
         pass_score: Optional[float],
     ) -> tuple[Optional[float], str, str, Optional[int], Optional[int]]:
         if submission is None:
             return None, PASS_ABSENT, '未参加', None, None
 
-        submission_status = SUBMISSION_STATUS_LABELS.get(submission.status, submission.status)
-        attempt_number = submission.attempt_number
+        status = submission['status']
+        submission_status = SUBMISSION_STATUS_LABELS.get(status, status)
+        attempt_number = submission['attempt_number']
+        obtained_score = submission['obtained_score']
         # SUBMITTED=纯客观自动终分；GRADED=阅卷终分；GRADING 仅客观题小计，不当终分
-        if (
-            submission.status in {'SUBMITTED', 'GRADED'}
-            and submission.obtained_score is not None
-        ):
-            score = float(submission.obtained_score)
+        if status in {'SUBMITTED', 'GRADED'} and obtained_score is not None:
+            score = float(obtained_score)
         else:
             score = None
-        pass_status = self._resolve_pass_status(score, pass_score, submission.status)
-        if submission.submitted_at and submission.started_at:
-            seconds = max(0.0, (submission.submitted_at - submission.started_at).total_seconds())
+        pass_status = self._resolve_pass_status(score, pass_score)
+        started_at = submission['started_at']
+        submitted_at = submission['submitted_at']
+        if submitted_at and started_at:
+            seconds = max(0.0, (submitted_at - started_at).total_seconds())
             time_spent_minutes = int(seconds / 60)
         else:
             time_spent_minutes = None
@@ -459,7 +453,6 @@ class ExamReportService(BaseService):
     def _resolve_pass_status(
         score: Optional[float],
         pass_score: Optional[float],
-        submission_status: str,
     ) -> str:
         if score is None:
             return PASS_PENDING
@@ -630,23 +623,6 @@ class ExamReportService(BaseService):
         ]
         return rows, total
 
-    def _build_student_rows(self, data: dict[str, Any]) -> list[dict[str, Any]]:
-        """导出学员汇总用：基于已物化 records。"""
-        exam_ids = [exam['id'] for exam in data['exams']]
-        grouped: dict[int, list[dict[str, Any]]] = defaultdict(list)
-        for record in data['records']:
-            grouped[record['student_id']].append(record)
-        rows = [
-            _student_summary(
-                student,
-                exam_ids,
-                {record['exam_id']: record for record in grouped.get(student['id'], [])},
-            )
-            for student in data['students']
-        ]
-        rows.sort(key=lambda item: item['employee_id'])
-        return rows
-
     # ------------------------------------------------------------------
     # Excel
     # ------------------------------------------------------------------
@@ -698,14 +674,25 @@ class ExamReportService(BaseService):
                 item['time_spent_minutes'] if item['time_spent_minutes'] is not None else '',
             ])
 
-    def _write_student_sheet(self, workbook: Workbook, data: dict[str, Any]) -> None:
+    def _write_student_sheet(self, workbook: Workbook, ctx: dict[str, Any]) -> None:
         sheet = workbook.create_sheet('学员汇总')
-        exams = data['exams']
+        exams = ctx['exams']
+        exam_ids = [exam['id'] for exam in exams]
         headers = ['学员姓名', '工号', '部门', '导师', '已考场次', '平均分', '及格场次']
         headers.extend(exam['label'] for exam in exams)
         self._style_header(sheet, headers)
 
-        rows = self._build_student_rows(data)
+        rows = [
+            _student_summary(
+                ctx['student_map'][sid],
+                exam_ids,
+                {
+                    exam['id']: ctx['score_info_by_exam'].get(exam['id'], {}).get(sid)
+                    for exam in exams
+                },
+            )
+            for sid in ctx['eligible_student_ids']
+        ]
         for row_index, item in enumerate(rows, start=2):
             values = [
                 item['student_name'],
@@ -728,16 +715,7 @@ class ExamReportService(BaseService):
         ]
         self._style_header(sheet, headers)
 
-        records = sorted(
-            data['records'],
-            key=lambda item: (
-                item['exam_title'],
-                item['task_title'],
-                item['rank'] if item['rank'] is not None else _RANK_SORT_MISSING,
-                item['employee_id'],
-            ),
-        )
-        for row_index, item in enumerate(records, start=2):
+        for row_index, item in enumerate(data['records'], start=2):
             self._write_cells(sheet, row_index, [
                 item['exam_title'],
                 item['task_title'],

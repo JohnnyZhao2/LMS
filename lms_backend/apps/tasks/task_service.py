@@ -1,11 +1,11 @@
 """Task management service."""
 
-from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from apps.authorization.engine import get_engine
 from apps.activity_logs.decorators import log_operation
@@ -13,7 +13,7 @@ from apps.activity_logs.text import format_datetime
 from apps.knowledge.models import Knowledge
 from apps.knowledge.services import ensure_knowledge_revision
 from apps.quizzes.models import Quiz
-from apps.quizzes.services import freeze_quiz_for_task
+from apps.quizzes.services import freeze_quiz_for_task, validate_exam_pass_score
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
@@ -38,10 +38,6 @@ def _update_task_log_description(ctx: dict) -> str:
         parts.append('任务说明')
     if 'deadline' in ctx:
         parts.append(f'截止时间调整为 {format_datetime(ctx.get("deadline"))}')
-    if ctx.get('knowledge_ids') is not None:
-        parts.append(f'关联知识调整为 {len(ctx["knowledge_ids"])} 篇')
-    if ctx.get('quiz_ids') is not None:
-        parts.append(f'关联试卷调整为 {len(ctx["quiz_ids"])} 份')
     if ctx.get('quiz_pass_scores'):
         parts.append('考试及格分数已调整')
     if ctx.get('assignee_ids') is not None:
@@ -78,8 +74,11 @@ class TaskService(BaseService):
             message='creator_side 参数无效，仅支持 all、management、non_management',
         )
 
-    def get_task_by_id(self, pk: int) -> Task:
-        task = task_detail_queryset().filter(pk=pk).first()
+    def get_task_by_id(self, pk: int, *, include_archived: bool = False) -> Task:
+        queryset = task_detail_queryset().filter(pk=pk)
+        if not include_archived:
+            queryset = queryset.filter(is_archived=False)
+        task = queryset.first()
         self.validate_not_none(task, f'任务 {pk} 不存在')
         return task
 
@@ -123,7 +122,7 @@ class TaskService(BaseService):
                 },
             )
         quizzes = list(seen_quizzes.values())
-        assignee_ids = assignee_ids or []
+        assignee_ids = self._dedupe_resource_ids(assignee_ids or [])
         get_engine(self.request).enforce('tasks.add_task', error_message='无权创建任务')
         self._validate_create_payload(knowledge_ids, quizzes, assignee_ids)
 
@@ -131,7 +130,7 @@ class TaskService(BaseService):
             title=title,
             description=description,
             deadline=deadline,
-            created_by_admin=self.user.is_admin,
+            created_by_admin=get_engine(self.request).has_full_scope('tasks.add_task'),
             created_by=self.user,
             updated_by=self.user,
         )
@@ -140,7 +139,7 @@ class TaskService(BaseService):
         if quizzes:
             self._create_quiz_associations(task, quizzes)
         self._bulk_create_assignments(task_id=task.id, assignee_ids=assignee_ids)
-        return task
+        return self.get_task_by_id(task.id)
 
     def _bulk_create_assignments(self, task_id: int, assignee_ids: List[int]) -> List[TaskAssignment]:
         if not assignee_ids:
@@ -182,12 +181,12 @@ class TaskService(BaseService):
             TaskKnowledge.objects.bulk_create(associations, batch_size=500)
 
     def _create_quiz_associations(self, task: Task, quizzes: List[dict]) -> None:
+        quiz_ids = [item['id'] for item in quizzes]
         quiz_map = {
             quiz.id: quiz
-            for quiz in get_engine(self.request).scope_filter('quizzes.view_quiz',
-                base_queryset=Quiz.objects.filter(id__in=[item['id'] for item in quizzes]),
-            ).prefetch_related(
-                'quiz_questions__question__question_options',
+            for quiz in get_engine(self.request).scope_filter(
+                'quizzes.view_quiz',
+                base_queryset=Quiz.objects.select_for_update(of=('self',)).filter(id__in=quiz_ids).order_by('pk'),
             )
         }
         for order, item in enumerate(quizzes, start=1):
@@ -219,49 +218,48 @@ class TaskService(BaseService):
     def update_task(
         self,
         task: Task,
-        knowledge_ids: List[int] = None,
-        quiz_ids: List[int] = None,
         quiz_pass_scores: List[dict] = None,
         assignee_ids: List[int] = None,
         **kwargs,
     ) -> Task:
-        self._validate_update_payload(knowledge_ids, quiz_ids, assignee_ids)
-        if knowledge_ids is not None:
-            existing_ids = list(
-                TaskKnowledge.objects.filter(task_id=task.id)
-                .order_by('order')
-                .values_list('source_knowledge_id', flat=True)
+        Task.objects.select_for_update().only('id').get(pk=task.id)
+        task.refresh_from_db()
+        if task.is_archived:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message=f'任务 {task.id} 不存在',
             )
-            if existing_ids != self._dedupe_resource_ids(knowledge_ids):
+        if assignee_ids is not None:
+            if not assignee_ids:
                 raise BusinessError(
-                    code=ErrorCodes.INVALID_OPERATION,
-                    message='任务创建后无法修改知识文档，请创建新任务',
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='请至少选择一名指派人员',
                 )
-        if quiz_ids is not None:
-            existing_ids = list(task.task_quizzes.order_by('order', 'id').values_list('source_quiz_id', flat=True))
-            if existing_ids != self._dedupe_resource_ids(quiz_ids):
-                raise BusinessError(
-                    code=ErrorCodes.INVALID_OPERATION,
-                    message='任务创建后无法修改试卷，请创建新任务',
-                )
-        if task.has_student_progress and assignee_ids is not None:
             existing_ids = set(task.assignments.values_list('assignee_id', flat=True))
-            removed_ids = existing_ids - set(assignee_ids)
+            new_ids = set(assignee_ids)
+            removed_ids = existing_ids - new_ids
             if removed_ids:
-                raise BusinessError(
-                    code=ErrorCodes.INVALID_OPERATION,
-                    message='任务已有人员开始执行，无法移除已分配的学员',
-                )
+                if task.has_student_progress:
+                    raise BusinessError(
+                        code=ErrorCodes.INVALID_OPERATION,
+                        message='任务已有人员开始执行，无法移除已分配的学员',
+                    )
+                enforce_assignable_students_scope(list(removed_ids), self.request)
+            added_ids = list(new_ids - existing_ids)
+            if added_ids:
+                self._ensure_valid_assignee_ids(added_ids)
         if quiz_pass_scores is not None:
             self._update_quiz_pass_scores(task, quiz_pass_scores)
         if kwargs:
             for key, value in kwargs.items():
                 setattr(task, key, value)
         task.updated_by = self.user
-        task.save(update_fields=[*kwargs.keys(), 'updated_by'])
+        task.save(update_fields=[*kwargs.keys(), 'updated_by', 'updated_at'])
+        if 'deadline' in kwargs and task.deadline and task.deadline >= timezone.now():
+            task.assignments.filter(status='OVERDUE').update(status='IN_PROGRESS')
         if assignee_ids is not None:
             self._update_assignments(task, assignee_ids)
-        return task
+        return self.get_task_by_id(task.id)
 
     def _update_quiz_pass_scores(self, task: Task, quiz_pass_scores: List[dict]) -> None:
         if not quiz_pass_scores:
@@ -280,18 +278,11 @@ class TaskService(BaseService):
                     code=ErrorCodes.INVALID_OPERATION,
                     message=f'测验「{task_quiz.title}」不支持设置及格分数',
                 )
-            new_pass_score = Decimal(str(item['pass_score']))
-            if new_pass_score <= 0:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'考试「{task_quiz.title}」的及格分数必须大于 0',
-                )
-            total_score = Decimal(str(task_quiz.total_score or 0))
-            if total_score > 0 and new_pass_score > total_score:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'考试「{task_quiz.title}」的及格分数不能超过试卷总分 {total_score}',
-                )
+            new_pass_score = validate_exam_pass_score(
+                item['pass_score'],
+                task_quiz.total_score,
+                task_quiz.title,
+            )
             if task_quiz.pass_score != new_pass_score:
                 task_quiz.pass_score = new_pass_score
                 task_quiz.save(update_fields=['pass_score'])
@@ -342,7 +333,7 @@ class TaskService(BaseService):
             assignee_count=task.assignments.count(),
         )
         task.is_archived = True
-        task.save(update_fields=['is_archived'])
+        task.save(update_fields=['is_archived', 'updated_at'])
         return snapshot
 
     def _ensure_valid_resource_ids(self, resource_ids: List[int], resource_model: Any, resource_label: str) -> List[int]:
@@ -388,29 +379,6 @@ class TaskService(BaseService):
         self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
         self._ensure_valid_resource_ids([item['id'] for item in quizzes], Quiz, '试卷')
         self._ensure_valid_assignee_ids(assignee_ids)
-
-    def _validate_update_payload(
-        self,
-        knowledge_ids: List[int] = None,
-        quiz_ids: List[int] = None,
-        assignee_ids: List[int] = None,
-    ) -> None:
-        if knowledge_ids is not None:
-            self._ensure_valid_resource_ids(knowledge_ids, Knowledge, '知识文档')
-        if quiz_ids is not None:
-            self._ensure_valid_resource_ids(quiz_ids, Quiz, '试卷')
-        if knowledge_ids is not None and quiz_ids is not None and not knowledge_ids and not quiz_ids:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='请至少选择一个知识文档或试卷',
-            )
-        if assignee_ids is not None:
-            if not assignee_ids:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='请至少选择一名指派人员',
-                )
-            self._ensure_valid_assignee_ids(assignee_ids)
 
     @staticmethod
     def _validate_current_resources(resource_ids: List[int], resource_queryset: QuerySet) -> Tuple[bool, List[int]]:

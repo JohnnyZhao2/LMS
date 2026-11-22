@@ -3,6 +3,7 @@
  * 提供统一的表格单元格渲染样式，确保跨页面一致性
  */
 import * as React from 'react';
+import { Clock } from 'lucide-react';
 import { UserAvatar } from '@/components/users/user-avatar';
 import { formatListDateTime } from '@/lib/date-time';
 import { cn } from '@/lib/utils';
@@ -82,6 +83,7 @@ interface CellWithAvatarProps {
     subtitle?: string;
     avatar?: React.ReactNode;
     avatarClassName?: string;
+    nameClassName?: string;
     size?: 'sm' | 'md' | 'lg';
     className?: string;
 }
@@ -91,6 +93,7 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
     subtitle,
     avatar,
     avatarClassName = 'bg-primary-100 text-primary',
+    nameClassName,
     size = 'md',
     className,
 }) => {
@@ -115,7 +118,7 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
                 </div>
             )}
             <div className="flex min-w-0 flex-col">
-                <span className={cn(PRIMARY_CELL_TEXT_CLASS, 'line-clamp-1', s.text)}>
+                <span className={cn(PRIMARY_CELL_TEXT_CLASS, 'line-clamp-1', s.text, nameClassName)}>
                     {name}
                 </span>
                 {subtitle && (
@@ -211,19 +214,17 @@ export const CellReferenceTag: React.FC<CellReferenceTagProps> = ({
 );
 
 interface CellMutedTimestampProps {
-    icon?: React.ReactNode;
     value?: string | Date | null;
     className?: string;
 }
 
 export const CellMutedTimestamp: React.FC<CellMutedTimestampProps> = ({
-    icon,
     value,
     className,
 }) => (
     <div className={cn('inline-flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-text-muted', className)}>
-        {icon ? <span className="text-text-muted">{icon}</span> : null}
-        <span className="text-text-muted">
+        <Clock className="h-3.5 w-3.5 shrink-0" />
+        <span>
             {formatListDateTime(value)}
         </span>
     </div>

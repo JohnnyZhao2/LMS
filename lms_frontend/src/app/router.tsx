@@ -38,6 +38,7 @@ export const appRouter = createBrowserRouter(
               <ProtectedRoute
                 requiredPermissions={route.requiredPermissions}
                 permissionMode={route.permissionMode}
+                workbenches={route.workbenches}
               >
                 {route.element}
               </ProtectedRoute>

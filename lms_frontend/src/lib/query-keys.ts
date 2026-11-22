@@ -6,18 +6,7 @@ export const queryKeys = {
   },
   authorization: {
     permissionCatalog: () => ['authorization', 'permission-catalog'] as const,
-    groupPermissionsRoot: () => ['authorization', 'group-permissions'] as const,
-    groupPermissions: ({
-      roleCode,
-    }: {
-      roleCode: string | null | undefined;
-    }) => ['authorization', 'group-permissions', roleCode ?? 'NONE'] as const,
-    userPermissionsRoot: () => ['authorization', 'user-permissions'] as const,
-    userPermissions: ({
-      userId,
-    }: {
-      userId: number | null;
-    }) => ['authorization', 'user-permissions', userId ?? 'NONE'] as const,
+    roles: () => ['authorization', 'roles'] as const,
   },
   dashboards: {
     admin: () => ['admin-dashboard'] as const,
@@ -30,6 +19,7 @@ export const queryKeys = {
       knowledgeLimit: number;
     }) => ['student-dashboard', taskLimit, knowledgeLimit] as const,
     taskParticipants: (taskId: number | null) => ['task-participants', taskId] as const,
+    examReportRoot: () => ['exam-report'] as const,
     examReport: ({
       filters,
     }: {
@@ -47,9 +37,13 @@ export const queryKeys = {
     studentExecutionsRoot: () => ['student-executions'] as const,
     studentExecutions: ({
       taskId,
+      nodeType = null,
+      nodeId = null,
     }: {
       taskId: number;
-    }) => ['student-executions', taskId] as const,
+      nodeType?: string | null;
+      nodeId?: number | null;
+    }) => ['student-executions', taskId, nodeType, nodeId] as const,
     questionsRoot: () => ['grading-questions'] as const,
     questions: ({
       taskId,
@@ -196,8 +190,6 @@ export const queryKeys = {
     }) => ['spot-check-detail', id] as const,
   },
   submissions: {
-    detailRoot: () => ['submission'] as const,
-    detail: (submissionId: number) => ['submission', submissionId] as const,
     result: ({
       submissionId,
     }: {

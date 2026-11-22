@@ -2,6 +2,8 @@
 
 from rest_framework import serializers
 
+from apps.authorization.models import DataScope
+
 
 class PermissionSerializer(serializers.Serializer):
     code = serializers.CharField()
@@ -10,23 +12,41 @@ class PermissionSerializer(serializers.Serializer):
     implies = serializers.ListField(child=serializers.CharField())
 
 
-class PermissionCodesSerializer(serializers.Serializer):
+class RoleItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+    data_scope = serializers.ChoiceField(choices=DataScope.choices)
+    department_ids = serializers.ListField(child=serializers.IntegerField())
+    is_builtin = serializers.BooleanField()
+    is_active = serializers.BooleanField()
+    permission_codes = serializers.ListField(child=serializers.CharField())
+
+
+class RoleCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(required=True, max_length=64)
+    data_scope = serializers.ChoiceField(choices=DataScope.choices, default=DataScope.SELF)
+    department_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+    )
     permission_codes = serializers.ListField(
         child=serializers.CharField(),
-        allow_empty=True,
-        help_text='用户期望的最终权限列表（角色基础 + 个人额外）',
+        required=False,
+        default=list,
     )
 
 
-class UserPermissionSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
-    permission_codes = serializers.ListField(child=serializers.CharField())
-    base_permission_codes = serializers.ListField(
+class RoleUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False, max_length=64)
+    data_scope = serializers.ChoiceField(choices=DataScope.choices, required=False)
+    department_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+    )
+    is_active = serializers.BooleanField(required=False)
+    permission_codes = serializers.ListField(
         child=serializers.CharField(),
-        help_text='当前管理角色 Group 基础权限（权限下限，不可关闭）',
+        required=False,
     )
-
-
-class GroupPermissionSerializer(serializers.Serializer):
-    role_code = serializers.CharField()
-    permission_codes = serializers.ListField(child=serializers.CharField())

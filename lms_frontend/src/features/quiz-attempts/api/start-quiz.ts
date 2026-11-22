@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { invalidateAfterSubmissionSubmitted } from '@/lib/cache-invalidation';
-import type { SubmissionDetail } from '@/features/quiz-attempts/types';
+import type { SaveAnswerRequest, SubmissionDetail } from '@/features/quiz-attempts/types';
 
 interface StartQuizPayload {
     assignmentId: number;
@@ -18,6 +18,7 @@ export const useStartQuiz = () => {
                 assignment_id: assignmentId,
                 quiz_id: quizId,
             }),
+        onError: () => undefined,
     });
 };
 
@@ -28,8 +29,12 @@ export const useSubmitQuiz = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (submissionId: number) =>
-            apiClient.post<SubmissionDetail>(`/submissions/${submissionId}/submit/`),
+        mutationFn: ({ submissionId, answers }: { submissionId: number; answers?: SaveAnswerRequest[] }) =>
+            apiClient.post<SubmissionDetail>(
+                `/submissions/${submissionId}/submit/`,
+                answers ? { answers } : undefined,
+            ),
         onSuccess: () => invalidateAfterSubmissionSubmitted(queryClient),
+        onError: () => undefined,
     });
 };

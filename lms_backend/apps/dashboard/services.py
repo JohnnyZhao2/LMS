@@ -8,6 +8,7 @@ Dashboard 应用服务
 from typing import Any, Dict, List
 
 from apps.authorization.engine import get_engine
+from apps.tasks.models import Task
 from core.base_service import BaseService
 from apps.users.models import User
 
@@ -22,7 +23,6 @@ from .common_queries import (
 from .student_dashboard_queries import (
     get_student_all_tasks,
     get_student_assignments,
-    get_student_exam_avg_score,
     get_task_participants_progress,
     get_urgent_tasks_count,
 )
@@ -56,7 +56,7 @@ class StudentDashboardService(BaseService):
         获取学员仪表盘完整数据
         """
         stats = self.get_stats(user)
-        tasks = get_student_all_tasks(user.id, limit=task_limit)
+        tasks = list(get_student_all_tasks(user.id, limit=task_limit))
         latest_knowledge = get_latest_knowledge(limit=knowledge_limit)
 
         return {
@@ -82,7 +82,7 @@ class StudentDashboardService(BaseService):
         assignments = get_student_assignments(user_id=user.id)
         task_stats = calculate_task_stats(assignments)
         urgent_count = get_urgent_tasks_count(user.id)
-        exam_avg_score = get_student_exam_avg_score(user.id)
+        exam_avg_score = calculate_avg_score(student_ids=[user.id])
 
         return {
             'in_progress_count': task_stats['in_progress_tasks'],
@@ -105,20 +105,32 @@ class MentorDashboardService(BaseService):
         """
         获取导师/室经理的完整仪表盘数据
         """
-        students = get_engine(self.request).scope_filter(MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
+        engine = get_engine(self.request)
+        students = engine.scope_filter(
+            MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
             resource_model=User,
         )
         student_ids = list(students.values_list('id', flat=True))
+        viewable_tasks = engine.scope_filter(
+            'tasks.view_task',
+            base_queryset=Task.objects.filter(is_archived=False),
+        )
+        scoped_tasks = engine.scope_filter(
+            MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
+            base_queryset=viewable_tasks,
+        )
+        monthly_tasks = get_monthly_tasks_count(scoped_tasks)
         return {
-            'summary': self._calculate_summary(student_ids),
+            'summary': self._calculate_summary(student_ids, monthly_tasks=monthly_tasks),
         }
 
     def _calculate_summary(
         self,
-        student_ids: List[int]
+        student_ids: List[int],
+        *,
+        monthly_tasks: int,
     ) -> Dict[str, Any]:
         """计算总体摘要统计"""
-        monthly_tasks = get_monthly_tasks_count()
         if not student_ids:
             return {
                 'total_students': 0,

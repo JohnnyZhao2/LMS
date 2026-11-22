@@ -1,430 +1,498 @@
 import * as React from 'react';
-import {
-  Users,
-  Clock,
-  Target,
-  AlertTriangle,
-  BookOpen,
-  FileQuestion,
-  GraduationCap,
-  type LucideIcon,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import { SearchInput } from '@/components/ui/search-input';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
+import { formatScore } from '@/lib/score';
 import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 import type { ColumnDef } from '@tanstack/react-table';
+import type { NodeExecutionStatus } from '@/types/common';
 import type {
   StudentExecution,
   TaskAnalytics,
+  TaskNodeProgress,
 } from '@/types/task-analytics';
-import { useTaskAnalytics, useStudentExecutions } from '@/api/grading/task-analytics';
+import { useStudentExecutions } from '@/api/grading/task-analytics';
 import { IconBox } from '@/components/common/icon-box';
 import { UserAvatar } from '@/components/users/user-avatar';
-import { StatCard } from '@/components/ui/stat-card';
-import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
+import { CellMutedTimestamp, CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
+import { NODE_CATEGORY_META } from './node-category-meta';
+import { NodeDistributionCard } from './node-distribution-card';
+import { OverviewRing } from './task-overview-strip';
 
 interface ProgressMonitoringTabProps {
   taskId?: number;
+  analytics?: TaskAnalytics;
+  isLoading?: boolean;
+  isError?: boolean;
 }
 
-type AggregatedProgressCategory = {
-  key: string;
-  label: string;
-  icon: LucideIcon;
-  textClass: string;
-  bgClass: string;
-  barClass: string;
-  nodeCount: number;
-  completedCount: number;
-  totalCount: number;
-  percentage: number;
-};
+type StatusFilter = 'ALL' | NodeExecutionStatus;
 
-const progressCategories: Omit<AggregatedProgressCategory, 'nodeCount' | 'completedCount' | 'totalCount' | 'percentage'>[] = [
-  { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, textClass: 'text-secondary', bgClass: 'bg-secondary-50', barClass: 'bg-secondary' },
-  { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, textClass: 'text-primary', bgClass: 'bg-primary-50', barClass: 'bg-primary' },
-  { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
+const STATUS_FILTER_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
+  { label: '全部', value: 'ALL' },
+  { label: '未开始', value: 'NOT_STARTED' },
+  { label: '进行中', value: 'IN_PROGRESS' },
+  { label: '待批改', value: 'PENDING_GRADING' },
+  { label: '已完成', value: 'COMPLETED' },
+  { label: '已逾期', value: 'OVERDUE' },
 ];
 
-export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ taskId }) => {
-  const [chartType, setChartType] = React.useState<'time' | 'score'>('time');
+const getNodeKey = (node: Pick<TaskNodeProgress, 'category' | 'node_id'>) =>
+  `${node.category}-${node.node_id}`;
 
-  const { data: analytics, isLoading: analyticsLoading } = useTaskAnalytics(taskId || 0, {
-    enabled: Boolean(taskId),
-  });
-  const { data: students, isLoading: studentsLoading } = useStudentExecutions(taskId || 0, {
-    enabled: Boolean(taskId),
-  });
-
-  const isLoading = analyticsLoading || studentsLoading;
-  const hasScoreDistribution = analytics?.score_distribution != null;
-  const studentExecutions = students || [];
-
-  const aggregatedProgress = React.useMemo(() => {
-    if (!analytics?.node_progress) return [];
-
-    return progressCategories.map(({ key, label, icon, textClass, bgClass, barClass }) => {
-      const nodes = analytics.node_progress.filter((n) => n.category === key);
-
-      if (nodes.length === 0) return null;
-
-      const totalCount = nodes[0].total_count;
-      const nodeCount = nodes.length;
-      const avgCompleted = Math.round(nodes.reduce((sum, n) => sum + n.completed_count, 0) / nodeCount);
-      const percentage = Math.round((avgCompleted / totalCount) * 100);
-
-      return { key, label, icon, textClass, bgClass, barClass, nodeCount, completedCount: avgCompleted, totalCount, percentage };
-    }).filter(Boolean) as AggregatedProgressCategory[];
-  }, [analytics]);
-
-  const columns = React.useMemo<ColumnDef<StudentExecution>[]>(() => [
-    {
-      header: '学员信息',
-      id: 'student_info',
-      size: 280,
-      minSize: 240,
-      cell: ({ row }) => (
-        <CellWithAvatar
-          name={row.original.student_name}
-          subtitle={`${row.original.employee_id} · ${row.original.department}`}
-          avatar={(
-            <UserAvatar
-              avatarKey={row.original.avatar_key}
-              name={row.original.student_name}
-              size="md"
-            />
-          )}
-        />
-      ),
-    },
-    {
-      header: '状态判定',
-      id: 'status',
-      size: 126,
-      minSize: 110,
-      cell: ({ row }) => {
-        const status = TASK_EXECUTION_STATUS_META[row.original.status];
-        return (
-          <span
-            className={cn(
-              'inline-flex rounded-md px-2 py-1 text-[11px] font-semibold whitespace-nowrap',
-              status.textClassName,
-              status.bgClassName,
-            )}
-          >
-            {status.label}
-          </span>
-        );
-      },
-    },
-    {
-      header: '任务节点进度',
-      id: 'node_progress',
-      size: 120,
-      minSize: 110,
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground tabular-nums">
-          {row.original.node_progress}
-        </span>
-      ),
-    },
-    {
-      header: '分数',
-      id: 'score',
-      size: 88,
-      minSize: 80,
-      cell: ({ row }) => (
-        <span className={cn(
-          'text-sm font-bold tabular-nums',
-          row.original.score !== null ? 'text-foreground' : 'text-text-muted'
-        )}>
-          {row.original.score !== null ? row.original.score : '-'}
-        </span>
-      ),
-    },
-    {
-      header: '用时',
-      id: 'time_spent',
-      size: 110,
-      minSize: 100,
-      cell: ({ row }) => (
-        <span className="text-sm text-text-muted tabular-nums">
-          {row.original.time_spent} 分钟
-        </span>
-      ),
-    },
-  ], []);
-
-  if (isLoading || !analytics) {
-    return (
-      <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="grid gap-4 xl:grid-cols-12 xl:items-stretch">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-4 xl:h-full xl:grid-cols-2 xl:grid-rows-2">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 xl:h-full" />
-            ))}
-          </div>
-          <Skeleton className="h-52 xl:col-span-4 xl:h-full" />
-          <Skeleton className="h-52 xl:col-span-4 xl:h-full" />
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    );
+const formatDuration = (minutes: number): string => {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return '0 分钟';
   }
-
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="grid gap-4 xl:grid-cols-12 xl:items-stretch">
-        <div className="xl:col-span-4 xl:h-full">
-          <ProgressMetricGrid analytics={analytics} />
-        </div>
-        <div className="xl:col-span-4">
-          <NodeProgressPanel aggregatedProgress={aggregatedProgress} />
-        </div>
-        <div className="xl:col-span-4">
-          <DistributionPanel
-            analytics={analytics}
-            chartType={chartType}
-            hasScoreDistribution={hasScoreDistribution}
-            onChartTypeChange={setChartType}
-          />
-        </div>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={studentExecutions}
-        header={(
-          <>
-            <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">
-              执行列表
-            </p>
-            <div className="text-xs text-text-muted">
-              共 <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人
-            </div>
-          </>
-        )}
-        className="mt-0"
-        minHeight={220}
-      />
-    </div>
-  );
+  if (minutes < 60) {
+    return `${Math.round(minutes * 10) / 10} 分钟`;
+  }
+  const roundedMinutes = Math.round(minutes);
+  if (roundedMinutes < 1440) {
+    const hours = Math.floor(roundedMinutes / 60);
+    const remMinutes = roundedMinutes % 60;
+    return remMinutes > 0 ? `${hours} 小时 ${remMinutes} 分钟` : `${hours} 小时`;
+  }
+  const totalHours = Math.floor(roundedMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const remHours = totalHours % 24;
+  return remHours > 0 ? `${days} 天 ${remHours} 小时` : `${days} 天`;
 };
 
-const ProgressMetricGrid: React.FC<{ analytics: TaskAnalytics }> = ({ analytics }) => (
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:h-full xl:grid-cols-2 xl:grid-rows-2">
-    <StatCard
-      title="完成人数"
-      value={`${analytics.completion.completed_count}/${analytics.completion.total_count}`}
-      subtitle={`${analytics.completion.percentage}%`}
-      icon={Users}
-      iconClassName="text-primary"
-      accentClassName="bg-primary-50"
-      size="xs"
-      className="xl:h-full"
-    />
-    <StatCard
-      title="平均用时"
-      value={`${analytics.average_time}`}
-      subtitle="分钟"
-      icon={Clock}
-      iconClassName="text-secondary"
-      accentClassName="bg-secondary-50"
-      size="xs"
-      className="xl:h-full"
-    />
-    <StatCard
-      title={analytics.accuracy.has_quiz ? '准确率' : '考试情况'}
-      value={analytics.accuracy.has_quiz ? `${analytics.accuracy.percentage}%` : '无考试'}
-      subtitle={analytics.accuracy.has_quiz ? '平均正确率' : ''}
-      icon={Target}
-      iconClassName="text-primary-500"
-      accentClassName="bg-primary-50"
-      size="xs"
-      className="xl:h-full"
-    />
-    <StatCard
-      title="异常人数"
-      value={analytics.abnormal_count.toString()}
-      subtitle="需关注"
-      icon={AlertTriangle}
-      iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-text-muted'}
-      accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-muted'}
-      size="xs"
-      className="xl:h-full"
-    />
-  </div>
-);
-
-const NodeProgressPanel: React.FC<{
-  aggregatedProgress: AggregatedProgressCategory[];
-}> = ({ aggregatedProgress }) => (
-  <Card className="flex h-full flex-col border border-border/70 p-4">
-    <div className="mb-3">
-      <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">节点概览</p>
-    </div>
-
-    <div className="space-y-3">
-      {aggregatedProgress.map((category) => (
-        <CategoryProgressBar key={category.key} category={category} />
-      ))}
-      {aggregatedProgress.length === 0 && (
-        <p className="py-4 text-center text-sm text-text-muted">暂无任务节点</p>
-      )}
-    </div>
-  </Card>
-);
-
-interface DistributionPanelProps {
-  analytics: TaskAnalytics;
-  chartType: 'time' | 'score';
-  hasScoreDistribution: boolean;
-  onChartTypeChange: (type: 'time' | 'score') => void;
-}
-
-const DistributionPanel: React.FC<DistributionPanelProps> = ({
+export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
+  taskId,
   analytics,
-  chartType,
-  hasScoreDistribution,
-  onChartTypeChange,
-}) => (
-  <Card className="flex h-full flex-col border border-border/70 p-4">
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="space-y-1">
-        <p className="text-xs font-semibold tracking-[0.08em] text-text-muted">结果分布</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {analytics.pass_rate !== null && (
-            <div className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1',
-              analytics.pass_rate >= 80 ? 'border-secondary-200 bg-secondary-50 text-secondary-700' :
-              analytics.pass_rate >= 60 ? 'border-warning-200 bg-warning-50 text-warning-700' :
-              'border-destructive-200 bg-destructive-50 text-destructive-700',
-            )}>
-              <span className="text-[11px] font-medium">通过率</span>
-              <span className={cn(
-                'text-xs font-bold tabular-nums',
-                analytics.pass_rate >= 80 ? 'text-secondary-900' :
-                analytics.pass_rate >= 60 ? 'text-warning-900' :
-                'text-destructive-900',
-              )}>
-                {analytics.pass_rate}%
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+  isLoading: analyticsLoading = false,
+  isError: analyticsError = false,
+}) => {
+  const [selectedNodeKey, setSelectedNodeKey] = React.useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('ALL');
 
-      {hasScoreDistribution && (
-        <div className="flex rounded-xl bg-muted p-1">
-          <button
-            onClick={() => onChartTypeChange('time')}
-            className={cn(
-              'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-200',
-              chartType === 'time'
-                ? 'bg-background text-foreground'
-                : 'text-text-muted hover:text-foreground'
-            )}
-          >
-            时间分布
-          </button>
-          <button
-            onClick={() => onChartTypeChange('score')}
-            className={cn(
-              'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-200',
-              chartType === 'score'
-                ? 'bg-background text-foreground'
-                : 'text-text-muted hover:text-foreground'
-            )}
-          >
-            分数分布
-          </button>
-        </div>
-      )}
-    </div>
-
-    <div className="flex flex-1 flex-col justify-center">
-      <DistributionChart
-        data={chartType === 'time' ? analytics.time_distribution : (analytics.score_distribution || [])}
-        type={chartType}
-      />
-    </div>
-  </Card>
-);
-
-interface CategoryProgressBarProps {
-  category: AggregatedProgressCategory;
-}
-
-const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) => {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-3">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <IconBox
-          icon={category.icon}
-          size="sm"
-          bgColor={category.bgClass}
-          iconColor={category.textClass}
-          rounded="md"
-          hoverScale={false}
-        />
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">{category.label}</span>
-            <span className="text-[11px] text-text-muted">{category.nodeCount}项</span>
-          </div>
-        </div>
-      </div>
-      <span className="shrink-0 text-xs font-medium text-text-muted tabular-nums">
-        {category.completedCount}/{category.totalCount} 人
-      </span>
-    </div>
+  const nodes = React.useMemo(
+    () => analytics?.node_progress ?? [],
+    [analytics?.node_progress],
   );
-};
 
-interface DistributionChartProps {
-  data: { range: string; count: number }[];
-  type: 'time' | 'score';
-}
+  const selectedNode = React.useMemo(() => {
+    if (nodes.length === 0) return null;
+    return nodes.find((n) => getNodeKey(n) === selectedNodeKey) ?? nodes[0];
+  }, [nodes, selectedNodeKey]);
 
-const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => {
-  if (data.length === 0) {
+  const selectedCategory = selectedNode?.category ?? null;
+
+  const { data: students, isLoading: studentsLoading } = useStudentExecutions(
+    taskId || 0,
+    selectedNode?.category ?? null,
+    selectedNode?.node_id ?? null,
+    { enabled: Boolean(taskId) && Boolean(selectedNode) }
+  );
+
+  const studentExecutions = React.useMemo(() => students ?? [], [students]);
+
+  const statusFilterOptions = React.useMemo(
+    () => (selectedCategory === 'KNOWLEDGE'
+      ? STATUS_FILTER_OPTIONS.filter((option) => option.value !== 'PENDING_GRADING')
+      : STATUS_FILTER_OPTIONS),
+    [selectedCategory],
+  );
+
+  const effectiveStatusFilter: StatusFilter =
+    selectedCategory === 'KNOWLEDGE' && statusFilter === 'PENDING_GRADING'
+      ? 'ALL'
+      : statusFilter;
+
+  const filteredExecutions = React.useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    return studentExecutions.filter((row) => {
+      if (effectiveStatusFilter !== 'ALL' && row.status !== effectiveStatusFilter) {
+        return false;
+      }
+      if (!trimmed) {
+        return true;
+      }
+      return (
+        row.student_name.toLowerCase().includes(trimmed) ||
+        row.employee_id.toLowerCase().includes(trimmed)
+      );
+    });
+  }, [studentExecutions, searchQuery, effectiveStatusFilter]);
+
+  const isFiltering = Boolean(searchQuery.trim()) || effectiveStatusFilter !== 'ALL';
+
+  const columns = React.useMemo<ColumnDef<StudentExecution>[]>(() => {
+    const baseColumns: ColumnDef<StudentExecution>[] = [
+      {
+        header: '学员信息',
+        id: 'student_info',
+        size: 200,
+        minSize: 180,
+        cell: ({ row }) => (
+          <CellWithAvatar
+            name={row.original.student_name}
+            subtitle={[row.original.employee_id, row.original.department].filter(Boolean).join(' · ') || '—'}
+            nameClassName="text-[13px]"
+            className="py-0"
+            avatar={(
+              <UserAvatar
+                avatarKey={row.original.avatar_key}
+                name={row.original.student_name}
+                size="md"
+                className="h-8 w-8"
+              />
+            )}
+          />
+        ),
+      },
+      {
+        header: '状态',
+        id: 'status',
+        size: 110,
+        minSize: 96,
+        cell: ({ row }) => {
+          const status =
+            TASK_EXECUTION_STATUS_META[row.original.status] ?? TASK_EXECUTION_STATUS_META.NOT_STARTED;
+          return (
+            <StatusDotLabel
+              dotClassName={status.dotClassName}
+              label={status.label}
+              textClassName={status.textClassName}
+            />
+          );
+        },
+      },
+      {
+        header: '开始时间',
+        id: 'started_at',
+        size: 168,
+        minSize: 164,
+        cell: ({ row }) => renderTimestampCell(row.original.started_at),
+      },
+      {
+        header: '结束时间',
+        id: 'completed_at',
+        size: 168,
+        minSize: 164,
+        cell: ({ row }) => renderTimestampCell(row.original.completed_at),
+      },
+      {
+        header: '用时',
+        id: 'time_spent',
+        size: 120,
+        minSize: 104,
+        cell: ({ row }) => (
+          <TimeSpentCell
+            timeSpent={row.original.time_spent}
+            isAbnormal={selectedCategory === 'EXAM' && row.original.is_abnormal}
+          />
+        ),
+      },
+    ];
+
+    if (selectedCategory === 'PRACTICE' || selectedCategory === 'EXAM') {
+      baseColumns.push(
+        {
+          header: '客观题',
+          id: 'objective_score',
+          size: 96,
+          minSize: 84,
+          cell: ({ row }) => <ScoreCell score={row.original.objective_score} />,
+        },
+        {
+          header: '主观题',
+          id: 'subjective_score',
+          size: 100,
+          minSize: 88,
+          cell: ({ row }) => (
+            <ScoreCell
+              score={row.original.subjective_score}
+              isPendingGrading={row.original.is_subjective_pending}
+            />
+          ),
+        },
+        {
+          header: '总分',
+          id: 'score',
+          size: 92,
+          minSize: 80,
+          cell: ({ row }) => (
+            <ScoreCell
+              score={row.original.score}
+              isFailed={row.original.is_passed === false}
+            />
+          ),
+        },
+      );
+    }
+
+    if (selectedCategory === 'PRACTICE') {
+      baseColumns.push({
+        header: '作答次数',
+        id: 'attempt_count',
+        size: 96,
+        minSize: 84,
+        cell: ({ row }) => (
+          row.original.attempt_count !== null && row.original.attempt_count > 0 ? (
+            <span className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted tabular-nums">
+              {row.original.attempt_count} 次
+            </span>
+          ) : (
+            <MutedPlaceholder />
+          )
+        ),
+      });
+    }
+
+    return baseColumns;
+  }, [selectedCategory]);
+
+  if (analyticsLoading) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-text-muted">
-        暂无分布数据
+      <div className="flex h-full min-h-0 flex-col gap-4 xl:flex-row xl:items-stretch">
+        <Skeleton className="h-72 w-full rounded-xl xl:h-full xl:w-[336px] xl:shrink-0" />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+          <Skeleton className="h-44 w-full rounded-xl" />
+          <Skeleton className="min-h-0 w-full flex-1 rounded-xl" />
+        </div>
       </div>
     );
   }
 
-  const maxCount = Math.max(...data.map((d) => d.count), 1);
-  const barClassName = type === 'time' ? 'bg-primary' : 'bg-secondary';
+  if (analyticsError || !analytics) {
+    return (
+      <div className="flex h-full min-h-[240px] items-center justify-center rounded-xl border border-border/70 bg-muted/20 px-6 text-sm text-text-muted">
+        {analyticsError ? '加载进度监控数据失败，请刷新重试' : '暂无进度监控数据'}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2.5">
-      {data.map((item) => (
-        <div key={item.range} className="group flex items-center gap-3">
-          <span className="w-14 text-[11px] font-medium text-right text-text-muted tabular-nums">
-            {item.range}
-          </span>
-          <div className="h-5 flex-1 overflow-hidden rounded-md bg-muted/80">
-            <div
-              className={cn(
-                "flex h-full items-center justify-end rounded-md pr-2 text-white transition-all duration-300 ease-out group-hover:opacity-85",
-                barClassName
-              )}
-              style={{
-                width: `${(item.count / maxCount) * 100}%`,
-                minWidth: item.count > 0 ? '28px' : '0',
-              }}
-            >
-              {item.count > 0 && (
-                <span className="text-[11px] font-semibold tabular-nums">{item.count}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="flex h-full min-h-0 flex-col gap-4 xl:flex-row xl:items-stretch">
+      <div className="w-full xl:w-[336px] xl:shrink-0">
+        <NodeSidebarPanel
+          nodes={nodes}
+          selectedNodeKey={selectedNode ? getNodeKey(selectedNode) : null}
+          onSelectNode={(node) => {
+            setSelectedNodeKey(getNodeKey(node));
+            setSearchQuery('');
+            setStatusFilter('ALL');
+          }}
+        />
+      </div>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+        <NodeDistributionCard selectedNode={selectedNode} />
+
+        <DataTable
+          columns={columns}
+          data={filteredExecutions}
+          isLoading={Boolean(selectedNode) && studentsLoading && !students}
+          fillHeight
+          header={(
+            <>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <SearchInput
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="搜索姓名或工号"
+                  className="w-48 sm:w-52"
+                  inputClassName="h-8 rounded-lg text-xs"
+                />
+                <SegmentedControl
+                  size="sm"
+                  value={effectiveStatusFilter}
+                  onChange={(value) => setStatusFilter(value as StatusFilter)}
+                  options={statusFilterOptions}
+                />
+              </div>
+              <div className="shrink-0 text-xs text-text-muted">
+                {isFiltering ? (
+                  <>
+                    筛选 <span className="font-semibold tabular-nums text-foreground">{filteredExecutions.length}</span> / 共{' '}
+                    <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人
+                  </>
+                ) : (
+                  <>
+                    共 <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人
+                  </>
+                )}
+              </div>
+            </>
+          )}
+          className="mt-0"
+          minHeight={220}
+        />
+      </div>
     </div>
   );
 };
+
+const MutedPlaceholder: React.FC = () => (
+  <span className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted">—</span>
+);
+
+const renderTimestampCell = (value: string | null) => (
+  value
+    ? <CellMutedTimestamp value={value} className="pt-px leading-5 tabular-nums" />
+    : <MutedPlaceholder />
+);
+
+const TimeSpentCell: React.FC<{
+  timeSpent: number | null;
+  isAbnormal: boolean;
+}> = ({ timeSpent, isAbnormal }) => {
+  if (timeSpent === null) {
+    return <MutedPlaceholder />;
+  }
+
+  const formatted = formatDuration(timeSpent);
+  const rawHint = `${timeSpent} 分钟`;
+
+  if (isAbnormal) {
+    return (
+      <span
+        title={`考试用时低于参考时长 20%（${rawHint}）`}
+        className="flex h-5 items-center gap-1.5 text-[13px] font-semibold leading-5 text-destructive tabular-nums whitespace-nowrap"
+      >
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <span>{formatted}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={timeSpent >= 60 ? rawHint : undefined}
+      className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted tabular-nums whitespace-nowrap"
+    >
+      {formatted}
+    </span>
+  );
+};
+
+const StatusDotLabel: React.FC<{
+  dotClassName: string;
+  label: string;
+  textClassName?: string;
+}> = ({ dotClassName, label, textClassName = 'text-foreground' }) => (
+  <span className={cn('flex h-5 items-center gap-1.5 text-[13px] font-medium leading-5 whitespace-nowrap', textClassName)}>
+    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotClassName)} />
+    <span>{label}</span>
+  </span>
+);
+
+const ScoreCell: React.FC<{
+  score: number | null;
+  isPendingGrading?: boolean;
+  isFailed?: boolean;
+}> = ({ score, isPendingGrading = false, isFailed = false }) => {
+  if (isPendingGrading) {
+    return (
+      <StatusDotLabel
+        dotClassName={TASK_EXECUTION_STATUS_META.PENDING_GRADING.dotClassName}
+        label="待批改"
+        textClassName="text-warning-700"
+      />
+    );
+  }
+  if (score === null) {
+    return <MutedPlaceholder />;
+  }
+  return (
+    <span className="flex h-5 items-center gap-1.5 leading-5 tabular-nums whitespace-nowrap">
+      <span
+        className={cn(
+          'inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
+          isFailed ? 'bg-destructive/15' : 'bg-warning-500/20',
+        )}
+      >
+        <span
+          className={cn(
+            'h-1.5 w-1.5 rounded-full',
+            isFailed ? 'bg-destructive' : 'bg-warning-500',
+          )}
+        />
+      </span>
+      <span className="text-[13px] leading-5">
+        <span className={cn(
+          'font-semibold',
+          isFailed ? 'text-destructive' : 'text-foreground',
+        )}>
+          {formatScore(score)}
+        </span>{' '}
+        <span className={cn(
+          'font-normal',
+          isFailed ? 'text-destructive/75' : 'text-text-muted',
+        )}>
+          分
+        </span>
+      </span>
+    </span>
+  );
+};
+
+const NodeSidebarPanel: React.FC<{
+  nodes: TaskNodeProgress[];
+  selectedNodeKey: string | null;
+  onSelectNode: (node: TaskNodeProgress) => void;
+}> = ({ nodes, selectedNodeKey, onSelectNode }) => (
+  <Card className="flex h-full min-h-0 flex-col border border-border/70 p-4">
+    <div className="mb-3 flex shrink-0 items-center justify-between">
+      <p className="text-[13px] font-semibold text-foreground">任务节点</p>
+      <span className="text-xs text-text-muted">共 {nodes.length} 项</span>
+    </div>
+
+    <ScrollContainer className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 max-h-72 xl:max-h-none">
+      {nodes.map((node) => {
+        const key = getNodeKey(node);
+        const isSelected = key === selectedNodeKey;
+        const meta = NODE_CATEGORY_META[node.category];
+        return (
+          <button
+            key={key}
+            type="button"
+            title={`${node.completed_count}/${node.total_count} 人 (${node.percentage}%)`}
+            onClick={() => onSelectNode(node)}
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors duration-150',
+              isSelected
+                ? 'border-primary-200 bg-primary-50/60'
+                : 'border-transparent bg-muted/35 hover:bg-muted/60',
+            )}
+          >
+            <IconBox
+              icon={meta.icon}
+              size="sm"
+              bgColor={meta.bgClass}
+              iconColor={meta.textClass}
+              rounded="md"
+              hoverScale={false}
+            />
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate text-sm',
+                isSelected ? 'font-semibold text-primary-700' : 'font-medium text-foreground',
+              )}
+            >
+              {node.node_name}
+            </span>
+            <OverviewRing
+              percent={node.percentage}
+              strokeColor={node.percentage >= 100 ? 'var(--color-secondary)' : 'var(--color-primary)'}
+              size={20}
+              strokeWidth={3}
+            />
+          </button>
+        );
+      })}
+      {nodes.length === 0 && (
+        <p className="py-6 text-center text-sm text-text-muted">暂无任务节点</p>
+      )}
+    </ScrollContainer>
+  </Card>
+);

@@ -2,38 +2,48 @@
  * 任务分析相关类型定义
  */
 
-import type { TaskExecutionStatus } from './common';
+import type { NodeExecutionStatus } from './common';
+
+export type TaskNodeCategory = 'KNOWLEDGE' | 'PRACTICE' | 'EXAM';
+
+export interface DistributionItem {
+  range: string;
+  count: number;
+}
+
+export interface TaskNodeProgress {
+  node_id: number;
+  node_name: string;
+  category: TaskNodeCategory;
+  completed_count: number;
+  pending_count: number;
+  overdue_count: number;
+  total_count: number;
+  percentage: number;
+  average_time: number | null;
+  average_score: number | null;
+  duration: number | null;
+  total_score: number | null;
+  pass_score: number | null;
+  pass_rate: number | null;
+  passed_count: number | null;
+  failed_count: number | null;
+  abnormal_count: number;
+  time_distribution: DistributionItem[];
+  score_distribution: DistributionItem[] | null;
+}
 
 export interface TaskAnalytics {
   completion: {
     completed_count: number;
+    in_progress_count: number;
+    overdue_count: number;
     total_count: number;
     percentage: number;
   };
   average_time: number; // in minutes
-  accuracy: {
-    has_quiz: boolean;
-    percentage: number | null;
-  };
   abnormal_count: number;
   node_progress: TaskNodeProgress[];
-  time_distribution: DistributionItem[];
-  score_distribution: DistributionItem[] | null;
-  pass_rate: number | null;
-}
-
-interface TaskNodeProgress {
-  node_id: number;
-  node_name: string;
-  category: 'KNOWLEDGE' | 'PRACTICE' | 'EXAM';
-  completed_count: number;
-  total_count: number;
-  percentage: number;
-}
-
-interface DistributionItem {
-  range: string;
-  count: number;
 }
 
 export interface StudentExecution {
@@ -42,10 +52,16 @@ export interface StudentExecution {
   avatar_key: string;
   employee_id: string;
   department: string;
-  status: TaskExecutionStatus;
-  node_progress: string;
+  status: NodeExecutionStatus;
+  started_at: string | null;
+  completed_at: string | null;
+  time_spent: number | null;
+  objective_score: number | null;
+  subjective_score: number | null;
   score: number | null;
-  time_spent: number;
+  is_passed: boolean | null;
+  is_subjective_pending: boolean;
+  attempt_count: number | null;
   is_abnormal: boolean;
 }
 

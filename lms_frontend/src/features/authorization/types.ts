@@ -1,3 +1,5 @@
+import type { DataScope } from '@/types/common';
+
 export interface PermissionCatalogItem {
   code: string;
   name: string;
@@ -5,14 +7,29 @@ export interface PermissionCatalogItem {
   implies: string[];
 }
 
-export interface UserPermissions {
-  user_id: number;
+export interface RoleItem {
+  id: number;
+  code: string;
+  name: string;
+  data_scope: DataScope;
+  department_ids: number[];
+  is_builtin: boolean;
+  is_active: boolean;
   permission_codes: string[];
-  /** 当前管理角色 Group 基础权限（下限，不可关闭） */
-  base_permission_codes: string[];
 }
 
-export interface GroupPermissions {
-  role_code: string;
-  permission_codes: string[];
+export interface CreateRolePayload {
+  name: string;
+  data_scope: DataScope;
+  department_ids?: number[];
+  permission_codes?: string[];
+}
+
+export interface UpdateRolePayload {
+  roleCode: string;
+  name?: string;
+  data_scope?: DataScope;
+  department_ids?: number[];
+  is_active?: boolean;
+  permission_codes?: string[];
 }

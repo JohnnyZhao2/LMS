@@ -1,13 +1,17 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
+import { canAccessBusinessRoute } from '@/app/route-registry';
 import { Spinner } from '@/components/ui/spinner';
 import { ROUTES } from '@/config/routes';
+import { useWorkbench } from '@/hooks/use-workbench';
 import { useAuth } from '@/lib/auth';
+import type { Workbench } from '@/types/common';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermissions?: string[];
   permissionMode?: 'all' | 'any';
+  workbenches?: Workbench[];
 }
 
 export const RequireAuth: React.FC = () => {
@@ -32,15 +36,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredPermissions,
   permissionMode = 'all',
+  workbenches,
 }) => {
   const { hasCapability } = useAuth();
+  const workbench = useWorkbench();
 
-  const hasRequiredPermissions = !requiredPermissions?.length
-    || (permissionMode === 'any'
-      ? requiredPermissions.some(hasCapability)
-      : requiredPermissions.every((permissionCode) => hasCapability(permissionCode)));
-
-  if (!hasRequiredPermissions) {
+  if (!canAccessBusinessRoute({ workbenches, requiredPermissions, permissionMode }, workbench, hasCapability)) {
     return <Navigate to={ROUTES.FORBIDDEN} replace />;
   }
 

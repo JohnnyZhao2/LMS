@@ -1,5 +1,5 @@
 import { QuestionTypeBadge } from '@/components/questions/question-type-badge';
-import type { QuestionSection, QuestionSectionEntry } from '@/lib/question-sections';
+import type { QuestionSection } from '@/lib/question-sections';
 import type { MutableRefObject } from 'react';
 
 import type { SubmissionDetail } from '@/features/quiz-attempts/types';
@@ -9,15 +9,14 @@ import { QuestionCard } from './question-card';
 interface QuizPlayerMainPanelProps {
   submission: SubmissionDetail;
   sections: QuestionSection<SubmissionDetail['answers'][number]>[];
-  displayEntries: QuestionSectionEntry<SubmissionDetail['answers'][number]>[];
   activeQuestionIndex: number;
   answers: Record<number, string | string[]>;
   markedQuestions: Record<number, boolean>;
   questionRefs: MutableRefObject<Record<number, HTMLElement | null>>;
   scrollViewportRef: MutableRefObject<HTMLDivElement | null>;
   onAnswerChange: (questionId: number, value: string | string[]) => void;
-  onAnswerBlur: (questionId: number) => void;
   onToggleMark: (questionId: number) => void;
+  disabled?: boolean;
 }
 
 export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
@@ -29,8 +28,8 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
   questionRefs,
   scrollViewportRef,
   onAnswerChange,
-  onAnswerBlur,
   onToggleMark,
+  disabled = false,
 }) => {
   return (
     <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-background">
@@ -60,7 +59,7 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
           {sections.map((section, sectionIndex) => (
             <section key={`${section.type}-${sectionIndex}`} className="space-y-4">
               <div className="flex items-center justify-between gap-2 border-b border-border/70 pb-2">
-                <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+                <QuestionTypeBadge type={section.type} />
                 <span className="shrink-0 text-[12px] font-medium tabular-nums text-text-muted">
                   {section.entries.length} 题
                 </span>
@@ -80,9 +79,9 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
                       userAnswer={answers[answer.question]}
                       isMarked={Boolean(markedQuestions[answer.question])}
                       onAnswerChange={(value) => onAnswerChange(answer.question, value)}
-                      onAnswerBlur={() => onAnswerBlur(answer.question)}
                       onToggleMark={() => onToggleMark(answer.question)}
                       questionNumber={number}
+                      disabled={disabled}
                     />
                   </div>
                 ))}
@@ -94,8 +93,3 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
     </main>
   );
 };
-
-const SectionHeader: React.FC<{
-  sectionType: QuestionSection<SubmissionDetail['answers'][number]>['type'];
-  sectionIndex: number;
-}> = ({ sectionType }) => <QuestionTypeBadge type={sectionType} />;

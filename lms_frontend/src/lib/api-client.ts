@@ -45,8 +45,9 @@ export class ApiError extends Error {
 /**
  * API 请求选项
  */
-interface ApiRequestOptions extends RequestInit {
+export interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;
+  keepalive?: boolean;
 }
 
 /**

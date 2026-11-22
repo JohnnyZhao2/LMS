@@ -4,6 +4,7 @@ import json
 from typing import Optional
 
 from django.db import transaction
+from django.db.models import ProtectedError
 
 from apps.activity_logs.decorators import log_content_action
 from apps.activity_logs.text import preview_text
@@ -83,6 +84,7 @@ class QuestionService(BaseService):
         label='创建题目',
     )
     def create(self, data: dict) -> Question:
+        get_engine(self.request).enforce('questions.add_question', error_message='无权创建题目')
         payload = dict(data)
         self.validate_question_payload(payload)
         tag_payload = pop_resource_tag_payload(payload, scope='question')
@@ -145,11 +147,10 @@ class QuestionService(BaseService):
             for field, value in model_payload.items()
             if getattr(question, field) != value
         }
-        if changed_fields:
-            changed_fields['updated_by'] = self.user
-            for key, value in changed_fields.items():
-                setattr(question, key, value)
-            question.save(update_fields=list(changed_fields.keys()))
+        changed_fields['updated_by'] = self.user
+        for key, value in changed_fields.items():
+            setattr(question, key, value)
+        question.save(update_fields=[*changed_fields.keys(), 'updated_at'])
         if has_content_changes:
             self._sync_question_options(question, option_defs)
 
@@ -171,6 +172,7 @@ class QuestionService(BaseService):
         label='删除题目',
     )
     def delete(self, pk: int) -> Question:
+        Question.objects.select_for_update(of=('self',)).filter(pk=pk).only('id').first()
         question = self.get_by_id(pk)
         get_engine(self.request).enforce('questions.delete_question', resource=question, error_message='无权删除此题目')
         if question.quiz_uses.exists():
@@ -178,7 +180,13 @@ class QuestionService(BaseService):
                 code=ErrorCodes.INVALID_OPERATION,
                 message='题目仍被当前试卷引用，请先从试卷移除',
             )
-        question.delete()
+        try:
+            question.delete()
+        except ProtectedError:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='该题目已被试卷引用，无法删除',
+            )
         return question
 
     @classmethod
@@ -240,10 +248,10 @@ class QuestionService(BaseService):
                         message='单选题答案必须是有效的选项',
                     )
             else:
-                if not isinstance(answer, list):
+                if not isinstance(answer, list) or not answer:
                     raise BusinessError(
                         code=ErrorCodes.VALIDATION_ERROR,
-                        message='多选题答案必须是列表',
+                        message='多选题至少需要选择一个正确答案',
                     )
                 for ans in answer:
                     if ans not in option_keys:
@@ -263,6 +271,11 @@ class QuestionService(BaseService):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='简答题答案必须是字符串',
                 )
+        else:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='不支持的题目类型',
+            )
 
     def _build_merged_question_payload(
         self,

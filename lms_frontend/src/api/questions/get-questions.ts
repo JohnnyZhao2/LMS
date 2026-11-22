@@ -12,13 +12,14 @@ interface GetQuestionsParams {
   search?: string;
   spaceTagId?: number;
   tagId?: number;
+  enabled?: boolean;
 }
 
 /**
  * 获取题目列表
  */
 export const useQuestions = (params: GetQuestionsParams = {}) => {
-  const { page = 1, pageSize = 20, questionType, search, spaceTagId, tagId } = params;
+  const { page = 1, pageSize = 20, questionType, search, spaceTagId, tagId, enabled = true } = params;
 
   return useQuery({
     queryKey: queryKeys.questions.list({
@@ -40,7 +41,7 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<Question>>(`/questions/${queryString}`);
     },
-    enabled: true,
+    enabled,
     // 保持之前的数据，避免翻页时闪烁
     placeholderData: (previousData) => previousData,
   });

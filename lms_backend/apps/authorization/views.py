@@ -3,17 +3,16 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.selectors import get_user_or_404
 from core.base_view import BaseAPIView
-from core.responses import list_response, success_response
+from core.responses import created_response, list_response, no_content_response, success_response
 
 from .engine import get_engine
 from .selectors import list_permissions
 from .serializers import (
-    GroupPermissionSerializer,
-    PermissionCodesSerializer,
     PermissionSerializer,
-    UserPermissionSerializer,
+    RoleCreateSerializer,
+    RoleItemSerializer,
+    RoleUpdateSerializer,
 )
 from .services import AuthorizationService
 
@@ -30,91 +29,83 @@ class PermissionCatalogView(BaseAPIView):
         tags=['用户授权'],
     )
     def get(self, request):
-        get_engine(request).require_permission('users.view_user_permission', error_message='无权查看权限目录')
+        get_engine(request).require_permission('users.assign_user_role', error_message='无权查看权限目录')
         serializer = PermissionSerializer(list_permissions(), many=True)
         return list_response(serializer.data)
 
 
-class UserPermissionView(BaseAPIView):
+class RoleListCreateView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='获取用户权限（角色基础 + 个人额外）',
+        summary='获取角色列表',
         responses={
-            200: UserPermissionSerializer,
+            200: RoleItemSerializer(many=True),
             403: OpenApiResponse(description='无权限'),
         },
         tags=['用户授权'],
     )
-    def get(self, request, user_id: int):
-        target = get_user_or_404(user_id)
-        get_engine(request).enforce(
-            'users.view_user_permission',
-            resource=target,
-            error_message='无权查看该用户权限',
-        )
-        return success_response(self.service.user_permission_payload(user=target))
+    def get(self, request):
+        serializer = RoleItemSerializer(self.service.list_roles(), many=True)
+        return list_response(serializer.data)
 
     @extend_schema(
-        summary='替换用户权限（基础不可关，多出的写入个人额外）',
-        request=PermissionCodesSerializer,
+        summary='新建自定义角色',
+        request=RoleCreateSerializer,
         responses={
-            200: UserPermissionSerializer,
+            201: RoleItemSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
         },
         tags=['用户授权'],
     )
-    def put(self, request, user_id: int):
-        target = get_user_or_404(user_id)
-        get_engine(request).enforce(
-            'users.change_user_permission',
-            resource=target,
-            error_message='无权更新该用户权限',
-        )
-        serializer = PermissionCodesSerializer(data=request.data)
+    def post(self, request):
+        serializer = RoleCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.service.replace_user_permissions(
-            user=target,
+        role_data = self.service.create_role(
+            name=serializer.validated_data['name'],
+            data_scope=serializer.validated_data['data_scope'],
+            department_ids=serializer.validated_data['department_ids'],
             permission_codes=serializer.validated_data['permission_codes'],
         )
-        return success_response(self.service.user_permission_payload(user=target))
+        return created_response(role_data)
 
 
-class GroupPermissionView(BaseAPIView):
+class RoleDetailView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     service_class = AuthorizationService
 
     @extend_schema(
-        summary='获取角色基础权限',
-        responses={200: GroupPermissionSerializer, 403: OpenApiResponse(description='无权限')},
-        tags=['用户授权'],
-    )
-    def get(self, request, role_code: str):
-        return success_response({
-            'role_code': role_code,
-            'permission_codes': self.service.list_group_permission_codes(role_code=role_code),
-        })
-
-    @extend_schema(
-        summary='替换角色基础权限',
-        request=PermissionCodesSerializer,
+        summary='更新角色配置',
+        request=RoleUpdateSerializer,
         responses={
-            200: GroupPermissionSerializer,
+            200: RoleItemSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='角色不存在'),
         },
         tags=['用户授权'],
     )
-    def put(self, request, role_code: str):
-        serializer = PermissionCodesSerializer(data=request.data)
+    def patch(self, request, role_code: str):
+        serializer = RoleUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        permission_codes = self.service.replace_group_permissions(
+        role_data = self.service.update_role(
             role_code=role_code,
-            permission_codes=serializer.validated_data['permission_codes'],
+            **serializer.validated_data,
         )
-        return success_response({
-            'role_code': role_code,
-            'permission_codes': permission_codes,
-        })
+        return success_response(role_data)
+
+    @extend_schema(
+        summary='删除自定义角色',
+        responses={
+            200: OpenApiResponse(description='删除成功'),
+            400: OpenApiResponse(description='内置角色不可删除'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='角色不存在'),
+        },
+        tags=['用户授权'],
+    )
+    def delete(self, request, role_code: str):
+        self.service.delete_role(role_code=role_code)
+        return no_content_response()

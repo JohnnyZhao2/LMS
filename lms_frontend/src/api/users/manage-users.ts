@@ -33,7 +33,10 @@ export const useCreateUser = () => {
 
   return useMutation({
     mutationFn: (data: CreateUserRequest) => apiClient.post<UserList>('/users/', data),
-    onSuccess: () => invalidateAfterUserMutation(queryClient, { includeAssignableUsers: true }),
+    onSuccess: () => invalidateAfterUserMutation(queryClient, {
+      includeMentors: true,
+      includeAssignableUsers: true,
+    }),
   });
 };
 

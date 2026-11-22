@@ -3,6 +3,7 @@ import { LayoutGrid } from 'lucide-react';
 import type { Workbench } from '@/types/common';
 import {
   BUSINESS_ROUTE_META,
+  canAccessBusinessRoute,
   type MenuMeta,
 } from './route-registry';
 
@@ -16,28 +17,21 @@ export interface MenuItem {
 export const getMenuItemsBySection = (
   workbench: Workbench,
   hasCapability: (permissionCode: string) => boolean,
+  showManageDashboard = true,
 ): MenuItem[] => {
-  const items: Array<MenuItem & { order: number; group?: MenuMeta['group'] }> = [
-    {
+  const items: Array<MenuItem & { order: number; group?: MenuMeta['group'] }> = [];
+
+  if (workbench === 'learn' || showManageDashboard) {
+    items.push({
       key: '/dashboard',
       icon: <LayoutGrid className="h-4 w-4" />,
       label: '概览',
       order: 0,
-    },
-  ];
+    });
+  }
 
   BUSINESS_ROUTE_META.forEach((route) => {
-    if (!route.menu) {
-      return;
-    }
-    if (!(route.workbenches ?? ['manage']).includes(workbench)) {
-      return;
-    }
-    if (route.requiredPermissions?.length && !(
-      route.permissionMode === 'any'
-        ? route.requiredPermissions.some(hasCapability)
-        : route.requiredPermissions.every(hasCapability)
-    )) {
+    if (!route.menu || !canAccessBusinessRoute(route, workbench, hasCapability)) {
       return;
     }
 
@@ -78,4 +72,18 @@ export const getMenuItemsBySection = (
   return [...items.filter((item) => !item.group), ...groupItems]
     .sort((left, right) => left.order - right.order)
     .map(({ key, icon, label, children }) => ({ key, icon, label, children }));
+};
+
+export const getFirstAccessibleRoutePath = (menuItems: MenuItem[]): string | null => {
+  for (const item of menuItems) {
+    if (item.children?.length) {
+      const childPath = getFirstAccessibleRoutePath(item.children);
+      if (childPath) {
+        return childPath;
+      }
+    } else if (item.key && item.key !== '/dashboard') {
+      return item.key;
+    }
+  }
+  return null;
 };

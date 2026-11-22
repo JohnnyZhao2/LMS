@@ -116,7 +116,7 @@ export const QuizProgressPanel: React.FC<QuizProgressPanelProps> = ({
             <div key={`${section.type}-${sectionIndex}`} className="space-y-4">
               <div className="flex items-center justify-between gap-2 border-b border-border/70 pb-2">
                 <div className="min-w-0">
-                  <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+                  <QuestionTypeBadge type={section.type} />
                 </div>
                 <span className="shrink-0 text-[12px] font-medium tabular-nums text-text-muted">
                   {section.entries.length} 题
@@ -159,11 +159,6 @@ export const QuizProgressPanel: React.FC<QuizProgressPanelProps> = ({
     </div>
   </aside>
 );
-
-const SectionHeader: React.FC<{
-  sectionType: QuestionSection<SubmissionDetail['answers'][number]>['type'];
-  sectionIndex: number;
-}> = ({ sectionType }) => <QuestionTypeBadge type={sectionType} />;
 
 export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
   submission,
@@ -236,6 +231,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
             size="lg"
             variant="outline"
             onClick={onAbandon}
+            disabled={isSubmitPending}
             className="h-11 rounded-full font-semibold shadow-none"
           >
             暂时退出

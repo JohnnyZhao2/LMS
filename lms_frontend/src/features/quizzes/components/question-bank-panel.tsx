@@ -1,8 +1,9 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/pagination';
 import { QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +24,11 @@ interface QuestionBankPanelProps {
   onFilterQuestionTypeChange: (value: string) => void;
   spaceTags?: Tag[];
   questionsData?: PaginatedResponse<Question>;
+  selectedQuestionIds: ReadonlySet<number>;
   questionsLoading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
   onPreview: (question: Question) => void;
   onAddQuestion: (question: Question) => void;
 }
@@ -39,7 +44,11 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   onFilterQuestionTypeChange,
   spaceTags,
   questionsData,
+  selectedQuestionIds,
   questionsLoading,
+  page,
+  pageSize,
+  onPageChange,
   onPreview,
   onAddQuestion,
 }) => {
@@ -130,17 +139,29 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           <div className="space-y-3">
             {questionsData?.results.map((q) => {
               const typeStyle = getQuestionTypeStyle(q.question_type);
+              const isSelected = selectedQuestionIds.has(q.id);
 
               return (
                 <div
                   key={q.id}
-                  className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-primary-300"
+                  className={cn(
+                    'group relative flex items-start gap-3 overflow-hidden rounded-xl border p-4 transition-[border-color,background-color,color,box-shadow] duration-150',
+                    isSelected
+                      ? 'border-border/70 bg-muted/30'
+                      : 'border-border bg-background hover:border-primary-300',
+                  )}
                 >
                   <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
                     <div className="mb-1 flex items-center gap-2">
                       <Badge className={cn('h-5 px-1.5 text-[10px] font-semibold', typeStyle.bg, typeStyle.color)}>
                         {getQuestionTypeLabel(q.question_type)}
                       </Badge>
+                      {isSelected && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-secondary-50 px-1.5 py-0.5 text-[10px] font-semibold text-secondary-700">
+                          <Check className="h-3 w-3" />
+                          已加入
+                        </span>
+                      )}
                     </div>
                     <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">
                       {richTextToPreviewText(q.content)}
@@ -149,13 +170,21 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+                    disabled={isSelected}
+                    aria-label={isSelected ? '已加入试卷' : '添加到试卷'}
+                    title={isSelected ? '已加入试卷' : '添加到试卷'}
+                    className={cn(
+                      'h-7 w-7 shrink-0 p-0 transition-all',
+                      isSelected
+                        ? 'text-secondary-600 opacity-100 disabled:opacity-70'
+                        : 'text-text-muted opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground',
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
                       onAddQuestion(q);
                     }}
                   >
-                    <Plus className="h-4 w-4" />
+                    {isSelected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                   </Button>
                 </div>
               );
@@ -163,6 +192,19 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           </div>
         )}
       </div>
+
+      {questionsData && questionsData.count > pageSize && (
+        <div className="border-t border-border px-4 py-2.5">
+          <Pagination
+            variant="compact"
+            current={page}
+            total={questionsData.count}
+            pageSize={pageSize}
+            onChange={(nextPage) => onPageChange(nextPage)}
+            className="justify-center"
+          />
+        </div>
+      )}
     </div>
   );
 };

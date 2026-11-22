@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
+import { useAuth } from '@/lib/auth';
 import {
   DEFAULT_WORKBENCH,
   getWorkbench,
@@ -8,11 +9,15 @@ import {
 } from '@/lib/workbench-store';
 import type { Workbench } from '@/types/common';
 
-export const useWorkbench = (): Workbench => useSyncExternalStore(
-  subscribeWorkbench,
-  getWorkbench,
-  () => DEFAULT_WORKBENCH,
-);
+export const useWorkbench = (): Workbench => {
+  const { canAccessManage } = useAuth();
+  const workbench = useSyncExternalStore(
+    subscribeWorkbench,
+    getWorkbench,
+    () => DEFAULT_WORKBENCH,
+  );
+  return canAccessManage ? workbench : DEFAULT_WORKBENCH;
+};
 
 export const useSetWorkbench = () => useCallback((next: Workbench) => {
   writeWorkbench(next);

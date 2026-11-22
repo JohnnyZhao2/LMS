@@ -5,84 +5,67 @@ import type { TaskDetail } from '@/types/task';
 
 import type { ResourceGroup, SelectedResource } from './task-form.types';
 
-export const buildStableUid = (seed: string, fallback: number): number => {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) % 2147483647;
-  }
-  return hash || fallback;
-};
-
 export const buildTaskFormInitialSelectedResources = ({
   isEdit,
   task,
-  initialResources,
 }: {
   isEdit: boolean;
   task?: TaskDetail;
-  initialResources?: SelectedResource[];
 }): SelectedResource[] => {
-  if (isEdit && task) {
-    const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => {
-      const sourceId = item.knowledge ?? -item.knowledge_revision_id;
+  if (!isEdit || !task) {
+    return [];
+  }
+
+  const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => {
+    const sourceId = item.knowledge ?? -item.knowledge_revision_id;
+    return {
+      uid: `DOCUMENT:${item.knowledge_revision_id}:${idx}`,
+      id: sourceId,
+      title: item.source_title || item.knowledge_title || `文档 ${item.knowledge_revision_id}`,
+      resourceType: 'DOCUMENT',
+      category: item.space_tag_name || '文档',
+      isMissingSource: item.knowledge == null,
+    };
+  });
+
+  const practiceResources: SelectedResource[] = (task.quizzes || [])
+    .filter((item) => item.allow_retry)
+    .map((item) => {
+      const sourceId = item.quiz ?? -item.id;
       return {
-        uid: buildStableUid(`DOCUMENT:${sourceId}:${idx}`, item.knowledge_revision_id + idx),
+        uid: `QUIZ:${item.id}`,
         id: sourceId,
-        title: item.source_title || item.knowledge_title || `文档 ${item.knowledge_revision_id}`,
-        resourceType: 'DOCUMENT',
-        category: item.space_tag_name || '文档',
-        isMissingSource: item.knowledge == null,
+        taskQuizId: item.id,
+        title: item.source_title || item.quiz_title || `试卷 ${item.id}`,
+        resourceType: 'QUIZ',
+        category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
+        quizType: 'PRACTICE',
+        totalScore: Number(item.total_score || 0),
+        isMissingSource: item.quiz == null,
       };
     });
 
-    const practiceResources: SelectedResource[] = (task.quizzes || [])
-      .filter((item) => item.allow_retry)
-      .map((item, idx) => {
-        const sourceId = item.quiz ?? -item.task_quiz_id;
-        return {
-          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:practice`, item.task_quiz_id + idx + 1000),
-          id: sourceId,
-          taskQuizId: item.task_quiz_id,
-          title: item.source_title || item.quiz_title || `试卷 ${item.task_quiz_id}`,
-          resourceType: 'QUIZ',
-          category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
-          quizType: 'PRACTICE',
-          totalScore: Number(item.total_score || 0),
-          isMissingSource: item.quiz == null,
-        };
-      });
+  const examResources: SelectedResource[] = (task.quizzes || [])
+    .filter((item) => !item.allow_retry)
+    .map((item) => {
+      const sourceId = item.quiz ?? -item.id;
+      return {
+        uid: `QUIZ:${item.id}`,
+        id: sourceId,
+        taskQuizId: item.id,
+        title: item.source_title || item.quiz_title || `试卷 ${item.id}`,
+        resourceType: 'QUIZ',
+        category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
+        quizType: 'EXAM',
+        totalScore: Number(item.total_score || 0),
+        duration: item.duration != null ? String(item.duration) : '',
+        passScore: item.pass_score != null ? formatScore(item.pass_score) : '',
+        isMissingSource: item.quiz == null,
+      };
+    });
 
-    const examResources: SelectedResource[] = (task.quizzes || [])
-      .filter((item) => !item.allow_retry)
-      .map((item, idx) => {
-        const sourceId = item.quiz ?? -item.task_quiz_id;
-        return {
-          uid: buildStableUid(`QUIZ:${sourceId}:${idx}:exam`, item.task_quiz_id + idx + 2000),
-          id: sourceId,
-          taskQuizId: item.task_quiz_id,
-          title: item.source_title || item.quiz_title || `试卷 ${item.task_quiz_id}`,
-          resourceType: 'QUIZ',
-          category: `${item.question_count || 0} 题 · 总分 ${formatScore(item.total_score)}`,
-          quizType: 'EXAM',
-          totalScore: Number(item.total_score || 0),
-          duration: item.duration != null ? String(item.duration) : '',
-          passScore: item.pass_score != null ? formatScore(item.pass_score) : '',
-          isMissingSource: item.quiz == null,
-        };
-      });
-
-    return [...knowledgeResources, ...practiceResources, ...examResources];
-  }
-
-  if (!isEdit && initialResources && initialResources.length > 0) {
-    return initialResources;
-  }
-
-  return [];
+  return [...knowledgeResources, ...practiceResources, ...examResources];
 };
-
-export const hasMissingTaskResourceSources = (resources: SelectedResource[]) =>
-  resources.some((item) => item.isMissingSource);
 
 export const TASK_RESOURCE_GROUP_ORDER: ResourceGroup[] = ['DOCUMENT', 'PRACTICE', 'EXAM'];
 
@@ -106,8 +89,8 @@ export const reorderSelectedResourcesWithinGroup = (
   activeUid: string,
   overUid: string,
 ): SelectedResource[] => {
-  const oldIndex = resources.findIndex((item) => String(item.uid) === activeUid);
-  const newIndex = resources.findIndex((item) => String(item.uid) === overUid);
+  const oldIndex = resources.findIndex((item) => item.uid === activeUid);
+  const newIndex = resources.findIndex((item) => item.uid === overUid);
 
   if (oldIndex === -1 || newIndex === -1) {
     return resources;
@@ -155,18 +138,18 @@ export const buildTaskSubmitPayload = ({
   deadline,
   selectedResources,
   selectedUserIds,
-  resourcesDisabled,
+  isEdit,
 }: {
   title: string;
   description: string;
   deadline: Date;
   selectedResources: SelectedResource[];
   selectedUserIds: number[];
-  resourcesDisabled: boolean;
+  isEdit: boolean;
 }): TaskCreateRequest | TaskUpdateRequest => {
   const orderedResources = sortSelectedResourcesByGroup(selectedResources);
 
-  if (resourcesDisabled) {
+  if (isEdit) {
     const quizPassScores = orderedResources
       .filter((item) => item.resourceType === 'QUIZ' && item.quizType === 'EXAM' && item.taskQuizId)
       .map((item) => ({
@@ -176,7 +159,7 @@ export const buildTaskSubmitPayload = ({
 
     return {
       title,
-      description: description || undefined,
+      description,
       deadline: deadline.toISOString(),
       ...(quizPassScores.length > 0 ? { quiz_pass_scores: quizPassScores } : {}),
       assignee_ids: selectedUserIds,

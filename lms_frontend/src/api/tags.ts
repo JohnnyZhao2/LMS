@@ -12,6 +12,7 @@ interface GetTagsParams {
   search?: string;
   limit?: number;
   applicable_to?: 'knowledge' | 'question';
+  enabled?: boolean;
 }
 
 interface TagMutationPayload {
@@ -36,7 +37,7 @@ interface ReorderSpaceTagsPayload {
 
 export const useTags = (params: GetTagsParams = {}) => {
   const { hasCapability, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { tag_type, search, limit = 50, applicable_to } = params;
+  const { tag_type, search, limit = 50, applicable_to, enabled = true } = params;
   const canQueryTags = hasCapability('tags.view_tag')
     || (tag_type === 'SPACE' && isAuthenticated);
 
@@ -58,7 +59,7 @@ export const useTags = (params: GetTagsParams = {}) => {
       return apiClient.get<Tag[]>(`/tags/${queryString}`);
     },
     staleTime: 2 * 60 * 1000,
-    enabled: !isAuthLoading && canQueryTags,
+    enabled: enabled && !isAuthLoading && canQueryTags,
   });
 };
 

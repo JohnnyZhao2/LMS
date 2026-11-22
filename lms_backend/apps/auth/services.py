@@ -89,7 +89,7 @@ class AuthenticationService(BaseService):
         authorization_service = AuthorizationService(self.request)
         return {
             'user': UserInfoSerializer(user).data,
-            'roles': serialize_user_roles(user),
+            'roles': serialize_user_roles(user, include_permissions=True),
             'capabilities': sorted(
                 authorization_service.get_user_permission_codes(user=user)
             ),

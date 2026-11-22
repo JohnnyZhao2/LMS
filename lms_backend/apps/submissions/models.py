@@ -59,6 +59,20 @@ class Submission(TimestampMixin, models.Model):
         blank=True,
         verbose_name='获得分数',
     )
+    objective_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='客观题得分',
+    )
+    subjective_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='主观题得分',
+    )
     started_at = models.DateTimeField(auto_now_add=True, verbose_name='开始时间')
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='提交时间')
     remaining_seconds = models.PositiveIntegerField(
@@ -72,6 +86,22 @@ class Submission(TimestampMixin, models.Model):
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['task_assignment', 'task_quiz', 'attempt_number'],
+                name='uniq_submission_assignment_quiz_attempt',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['task_quiz', 'task_assignment', 'status', 'attempt_number'],
+                name='idx_sub_quiz_assign_stat_att',
+            ),
+            models.Index(
+                fields=['task_quiz', 'status'],
+                name='idx_sub_quiz_status',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user.username} - {self.task_quiz.title} (第{self.attempt_number}次)'
@@ -112,16 +142,21 @@ class Submission(TimestampMixin, models.Model):
 
     @property
     def is_passed(self):
-        if self.obtained_score is None or self.task_quiz.pass_score is None:
+        if (
+            self.status not in ('SUBMITTED', 'GRADED')
+            or self.task_quiz.allow_retry
+            or self.obtained_score is None
+            or self.task_quiz.pass_score is None
+        ):
             return None
         return self.obtained_score >= self.task_quiz.pass_score
 
     def get_reference_remaining_seconds(self):
-        """返回参考剩余秒数。保存答案时记下剩余时间，再次进入时扣除离线耗时。"""
+        """返回参考剩余秒数；未配置时长（如测验）直接返回 None。"""
+        if not self.task_quiz.duration:
+            return None
         base_seconds = self.remaining_seconds
         if base_seconds is None:
-            if not self.task_quiz.duration:
-                return None
             base_seconds = self.task_quiz.duration * 60
         elapsed_seconds = max(0, int((timezone.now() - self.started_at).total_seconds()))
         return max(base_seconds - elapsed_seconds, 0)
@@ -173,6 +208,12 @@ class Answer(TimestampMixin, models.Model):
             models.UniqueConstraint(
                 fields=['submission', 'question'],
                 name='uniq_submission_revision_question',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['submission', 'graded_by'],
+                name='idx_ans_sub_graded_by',
             ),
         ]
 
@@ -227,7 +268,7 @@ class Answer(TimestampMixin, models.Model):
     def max_score(self):
         return self.question.score
 
-    def auto_grade(self):
+    def auto_grade(self, *, save: bool = True):
         """客观题自动判分；主观题留给人工评分流程。"""
         if self.is_subjective:
             return
@@ -237,7 +278,8 @@ class Answer(TimestampMixin, models.Model):
         )
         self.is_correct = is_correct
         self.obtained_score = score
-        self.save(update_fields=['is_correct', 'obtained_score'])
+        if save:
+            self.save(update_fields=['is_correct', 'obtained_score'])
 
     def apply_manual_grade(self, grader, score: Decimal, comment=''):
         """写入人工评分结果并同步是否满分。"""

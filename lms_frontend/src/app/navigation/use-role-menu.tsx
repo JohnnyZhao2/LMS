@@ -7,9 +7,10 @@ export type { MenuItem };
 
 export const useRoleMenu = (workbench: Workbench): MenuItem[] => {
   const { hasCapability } = useAuth();
+  const showManageDashboard = hasCapability('tasks.view_task_analytics');
 
   return useMemo(
-    () => getMenuItemsBySection(workbench, hasCapability),
-    [hasCapability, workbench],
+    () => getMenuItemsBySection(workbench, hasCapability, showManageDashboard),
+    [hasCapability, showManageDashboard, workbench],
   );
 };

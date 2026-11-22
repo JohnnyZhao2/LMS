@@ -37,6 +37,7 @@ const PANEL_GRID_CLASS = 'grid min-h-0 items-stretch gap-5 xl:grid-cols-[20rem_m
 export const ActivityLogsPanel: React.FC = () => {
   const { hasCapability } = useAuth();
   const canViewActivityLogs = hasCapability('activity_logs.view_activitylog');
+  const canDeleteActivityLogs = hasCapability('activity_logs.delete_activitylog');
 
   const [activeType, setActiveType] = useState<ActivityLogType>('user');
   const [page, setPage] = useState(1);
@@ -275,7 +276,7 @@ export const ActivityLogsPanel: React.FC = () => {
                   </button>
                 )}
 
-                {normalizedItems.length > 0 && (
+                {canDeleteActivityLogs && normalizedItems.length > 0 && (
                   <div className="flex h-14 flex-wrap items-center gap-3">
                     <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
                       <Checkbox
@@ -312,9 +313,9 @@ export const ActivityLogsPanel: React.FC = () => {
               <ActivityLogFeed
                 items={normalizedItems}
                 isLoading={isLoading}
-                selectedLogIds={selectedLogIds}
+                selectedLogIds={canDeleteActivityLogs ? selectedLogIds : []}
                 selectionDisabled={isDeleting}
-                onToggleSelect={handleToggleLog}
+                onToggleSelect={canDeleteActivityLogs ? handleToggleLog : undefined}
               />
             </div>
 
