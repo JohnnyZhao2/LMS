@@ -11,11 +11,7 @@ import { formatScore } from '@/lib/score';
 import { TASK_EXECUTION_STATUS_META } from '@/features/tasks/lib/task-status';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { NodeExecutionStatus } from '@/types/common';
-import type {
-  StudentExecution,
-  TaskAnalytics,
-  TaskNodeProgress,
-} from '@/types/task-analytics';
+import type { StudentExecution, TaskAnalytics, TaskNodeProgress } from '@/types/task-analytics';
 import { useStudentExecutions } from '@/api/grading/task-analytics';
 import { IconBox } from '@/components/common/icon-box';
 import { UserAvatar } from '@/components/users/user-avatar';
@@ -42,27 +38,32 @@ const STATUS_FILTER_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: '已逾期', value: 'OVERDUE' },
 ];
 
-const getNodeKey = (node: Pick<TaskNodeProgress, 'category' | 'node_id'>) =>
-  `${node.category}-${node.node_id}`;
+const getNodeKey = (node: Pick<TaskNodeProgress, 'category' | 'node_id'>) => `${node.category}-${node.node_id}`;
 
 const formatDuration = (minutes: number): string => {
-  if (!Number.isFinite(minutes) || minutes <= 0) {
-    return '0 分钟';
+  if (!Number.isFinite(minutes) || minutes <= 0) return '0 分钟';
+  if (minutes < 60) return `${Math.round(minutes * 10) / 10} 分钟`;
+  const totalMinutes = Math.round(minutes);
+  const hours = Math.floor(totalMinutes / 60);
+  if (totalMinutes < 1440) {
+    const rem = totalMinutes % 60;
+    return rem > 0 ? `${hours} 小时 ${rem} 分钟` : `${hours} 小时`;
   }
-  if (minutes < 60) {
-    return `${Math.round(minutes * 10) / 10} 分钟`;
-  }
-  const roundedMinutes = Math.round(minutes);
-  if (roundedMinutes < 1440) {
-    const hours = Math.floor(roundedMinutes / 60);
-    const remMinutes = roundedMinutes % 60;
-    return remMinutes > 0 ? `${hours} 小时 ${remMinutes} 分钟` : `${hours} 小时`;
-  }
-  const totalHours = Math.floor(roundedMinutes / 60);
-  const days = Math.floor(totalHours / 24);
-  const remHours = totalHours % 24;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
   return remHours > 0 ? `${days} 天 ${remHours} 小时` : `${days} 天`;
 };
+
+const timestampColumn = (id: 'started_at' | 'completed_at', header: string): ColumnDef<StudentExecution> => ({
+  header,
+  id,
+  size: 168,
+  minSize: 164,
+  cell: ({ row }) => {
+    const value = row.original[id];
+    return value ? <CellMutedTimestamp value={value} className="pt-px leading-5 tabular-nums" /> : <MutedPlaceholder />;
+  },
+});
 
 export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
   taskId,
@@ -74,54 +75,34 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('ALL');
 
-  const nodes = React.useMemo(
-    () => analytics?.node_progress ?? [],
-    [analytics?.node_progress],
-  );
-
-  const selectedNode = React.useMemo(() => {
-    if (nodes.length === 0) return null;
-    return nodes.find((n) => getNodeKey(n) === selectedNodeKey) ?? nodes[0];
-  }, [nodes, selectedNodeKey]);
-
+  const nodes = analytics?.node_progress ?? [];
+  const selectedNode = nodes.find((n) => getNodeKey(n) === selectedNodeKey) ?? nodes[0] ?? null;
   const selectedCategory = selectedNode?.category ?? null;
 
   const { data: students, isLoading: studentsLoading } = useStudentExecutions(
     taskId || 0,
     selectedNode?.category ?? null,
     selectedNode?.node_id ?? null,
-    { enabled: Boolean(taskId) && Boolean(selectedNode) }
+    { enabled: Boolean(taskId) && Boolean(selectedNode) },
   );
 
-  const studentExecutions = React.useMemo(() => students ?? [], [students]);
-
-  const statusFilterOptions = React.useMemo(
-    () => (selectedCategory === 'KNOWLEDGE'
-      ? STATUS_FILTER_OPTIONS.filter((option) => option.value !== 'PENDING_GRADING')
-      : STATUS_FILTER_OPTIONS),
-    [selectedCategory],
-  );
-
-  const effectiveStatusFilter: StatusFilter =
-    selectedCategory === 'KNOWLEDGE' && statusFilter === 'PENDING_GRADING'
-      ? 'ALL'
-      : statusFilter;
+  const studentExecutions = students ?? [];
+  const statusFilterOptions = selectedCategory === 'KNOWLEDGE'
+    ? STATUS_FILTER_OPTIONS.filter((option) => option.value !== 'PENDING_GRADING')
+    : STATUS_FILTER_OPTIONS;
+  const effectiveStatusFilter: StatusFilter = selectedCategory === 'KNOWLEDGE' && statusFilter === 'PENDING_GRADING'
+    ? 'ALL'
+    : statusFilter;
 
   const filteredExecutions = React.useMemo(() => {
+    const rows = students ?? [];
     const trimmed = searchQuery.trim().toLowerCase();
-    return studentExecutions.filter((row) => {
-      if (effectiveStatusFilter !== 'ALL' && row.status !== effectiveStatusFilter) {
-        return false;
-      }
-      if (!trimmed) {
-        return true;
-      }
-      return (
-        row.student_name.toLowerCase().includes(trimmed) ||
-        row.employee_id.toLowerCase().includes(trimmed)
-      );
+    return rows.filter((row) => {
+      if (effectiveStatusFilter !== 'ALL' && row.status !== effectiveStatusFilter) return false;
+      if (!trimmed) return true;
+      return row.student_name.toLowerCase().includes(trimmed) || row.employee_id.toLowerCase().includes(trimmed);
     });
-  }, [studentExecutions, searchQuery, effectiveStatusFilter]);
+  }, [students, searchQuery, effectiveStatusFilter]);
 
   const isFiltering = Boolean(searchQuery.trim()) || effectiveStatusFilter !== 'ALL';
 
@@ -138,14 +119,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
             subtitle={[row.original.employee_id, row.original.department].filter(Boolean).join(' · ') || '—'}
             nameClassName="text-[13px]"
             className="py-0"
-            avatar={(
-              <UserAvatar
-                avatarKey={row.original.avatar_key}
-                name={row.original.student_name}
-                size="md"
-                className="h-8 w-8"
-              />
-            )}
+            avatar={<UserAvatar avatarKey={row.original.avatar_key} name={row.original.student_name} size="md" className="h-8 w-8" />}
           />
         ),
       },
@@ -155,78 +129,32 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
         size: 110,
         minSize: 96,
         cell: ({ row }) => {
-          const status =
-            TASK_EXECUTION_STATUS_META[row.original.status] ?? TASK_EXECUTION_STATUS_META.NOT_STARTED;
-          return (
-            <StatusDotLabel
-              dotClassName={status.dotClassName}
-              label={status.label}
-              textClassName={status.textClassName}
-            />
-          );
+          const status = TASK_EXECUTION_STATUS_META[row.original.status] ?? TASK_EXECUTION_STATUS_META.NOT_STARTED;
+          return <StatusDotLabel dotClassName={status.dotClassName} label={status.label} textClassName={status.textClassName} />;
         },
       },
-      {
-        header: '开始时间',
-        id: 'started_at',
-        size: 168,
-        minSize: 164,
-        cell: ({ row }) => renderTimestampCell(row.original.started_at),
-      },
-      {
-        header: '结束时间',
-        id: 'completed_at',
-        size: 168,
-        minSize: 164,
-        cell: ({ row }) => renderTimestampCell(row.original.completed_at),
-      },
+      timestampColumn('started_at', '开始时间'),
+      timestampColumn('completed_at', '结束时间'),
       {
         header: '用时',
         id: 'time_spent',
         size: 120,
         minSize: 104,
-        cell: ({ row }) => (
-          <TimeSpentCell
-            timeSpent={row.original.time_spent}
-            isAbnormal={selectedCategory === 'EXAM' && row.original.is_abnormal}
-          />
-        ),
+        cell: ({ row }) => <TimeSpentCell timeSpent={row.original.time_spent} isAbnormal={selectedCategory === 'EXAM' && row.original.is_abnormal} />,
       },
     ];
 
     if (selectedCategory === 'PRACTICE' || selectedCategory === 'EXAM') {
       baseColumns.push(
-        {
-          header: '客观题',
-          id: 'objective_score',
-          size: 96,
-          minSize: 84,
-          cell: ({ row }) => <ScoreCell score={row.original.objective_score} />,
-        },
+        { header: '客观题', id: 'objective_score', size: 96, minSize: 84, cell: ({ row }) => <ScoreCell score={row.original.objective_score} /> },
         {
           header: '主观题',
           id: 'subjective_score',
           size: 100,
           minSize: 88,
-          cell: ({ row }) => (
-            <ScoreCell
-              score={row.original.subjective_score}
-              isPendingGrading={row.original.is_subjective_pending}
-            />
-          ),
+          cell: ({ row }) => <ScoreCell score={row.original.subjective_score} isPendingGrading={row.original.is_subjective_pending} />,
         },
-        {
-          header: '总分',
-          id: 'score',
-          size: 92,
-          minSize: 80,
-          cell: ({ row }) => (
-            <ScoreCell
-              score={row.original.score}
-              isFailed={row.original.is_passed === false}
-            />
-          ),
-        },
+        { header: '总分', id: 'score', size: 92, minSize: 80, cell: ({ row }) => <ScoreCell score={row.original.score} isFailed={row.original.is_passed === false} /> },
       );
     }
 
@@ -236,15 +164,9 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
         id: 'attempt_count',
         size: 96,
         minSize: 84,
-        cell: ({ row }) => (
-          row.original.attempt_count !== null && row.original.attempt_count > 0 ? (
-            <span className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted tabular-nums">
-              {row.original.attempt_count} 次
-            </span>
-          ) : (
-            <MutedPlaceholder />
-          )
-        ),
+        cell: ({ row }) => (row.original.attempt_count !== null && row.original.attempt_count > 0
+          ? <span className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted tabular-nums">{row.original.attempt_count} 次</span>
+          : <MutedPlaceholder />),
       });
     }
 
@@ -293,6 +215,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
           data={filteredExecutions}
           isLoading={Boolean(selectedNode) && studentsLoading && !students}
           fillHeight
+          className="mt-0"
+          minHeight={220}
           header={(
             <>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -317,15 +241,11 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({
                     <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人
                   </>
                 ) : (
-                  <>
-                    共 <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人
-                  </>
+                  <>共 <span className="font-semibold tabular-nums text-foreground">{studentExecutions.length}</span> 人</>
                 )}
               </div>
             </>
           )}
-          className="mt-0"
-          minHeight={220}
         />
       </div>
     </div>
@@ -336,23 +256,10 @@ const MutedPlaceholder: React.FC = () => (
   <span className="flex h-5 items-center text-[13px] font-medium leading-5 text-text-muted">—</span>
 );
 
-const renderTimestampCell = (value: string | null) => (
-  value
-    ? <CellMutedTimestamp value={value} className="pt-px leading-5 tabular-nums" />
-    : <MutedPlaceholder />
-);
-
-const TimeSpentCell: React.FC<{
-  timeSpent: number | null;
-  isAbnormal: boolean;
-}> = ({ timeSpent, isAbnormal }) => {
-  if (timeSpent === null) {
-    return <MutedPlaceholder />;
-  }
-
+const TimeSpentCell: React.FC<{ timeSpent: number | null; isAbnormal: boolean }> = ({ timeSpent, isAbnormal }) => {
+  if (timeSpent === null) return <MutedPlaceholder />;
   const formatted = formatDuration(timeSpent);
   const rawHint = `${timeSpent} 分钟`;
-
   if (isAbnormal) {
     return (
       <span
@@ -364,7 +271,6 @@ const TimeSpentCell: React.FC<{
       </span>
     );
   }
-
   return (
     <span
       title={timeSpent >= 60 ? rawHint : undefined}
@@ -375,62 +281,34 @@ const TimeSpentCell: React.FC<{
   );
 };
 
-const StatusDotLabel: React.FC<{
-  dotClassName: string;
-  label: string;
-  textClassName?: string;
-}> = ({ dotClassName, label, textClassName = 'text-foreground' }) => (
+const StatusDotLabel: React.FC<{ dotClassName: string; label: string; textClassName?: string }> = ({
+  dotClassName,
+  label,
+  textClassName = 'text-foreground',
+}) => (
   <span className={cn('flex h-5 items-center gap-1.5 text-[13px] font-medium leading-5 whitespace-nowrap', textClassName)}>
     <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dotClassName)} />
     <span>{label}</span>
   </span>
 );
 
-const ScoreCell: React.FC<{
-  score: number | null;
-  isPendingGrading?: boolean;
-  isFailed?: boolean;
-}> = ({ score, isPendingGrading = false, isFailed = false }) => {
+const ScoreCell: React.FC<{ score: number | null; isPendingGrading?: boolean; isFailed?: boolean }> = ({
+  score,
+  isPendingGrading = false,
+  isFailed = false,
+}) => {
   if (isPendingGrading) {
-    return (
-      <StatusDotLabel
-        dotClassName={TASK_EXECUTION_STATUS_META.PENDING_GRADING.dotClassName}
-        label="待批改"
-        textClassName="text-warning-700"
-      />
-    );
+    return <StatusDotLabel dotClassName={TASK_EXECUTION_STATUS_META.PENDING_GRADING.dotClassName} label="待批改" textClassName="text-warning-700" />;
   }
-  if (score === null) {
-    return <MutedPlaceholder />;
-  }
+  if (score === null) return <MutedPlaceholder />;
   return (
     <span className="flex h-5 items-center gap-1.5 leading-5 tabular-nums whitespace-nowrap">
-      <span
-        className={cn(
-          'inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
-          isFailed ? 'bg-destructive/15' : 'bg-warning-500/20',
-        )}
-      >
-        <span
-          className={cn(
-            'h-1.5 w-1.5 rounded-full',
-            isFailed ? 'bg-destructive' : 'bg-warning-500',
-          )}
-        />
+      <span className={cn('inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-full', isFailed ? 'bg-destructive/15' : 'bg-warning-500/20')}>
+        <span className={cn('h-1.5 w-1.5 rounded-full', isFailed ? 'bg-destructive' : 'bg-warning-500')} />
       </span>
       <span className="text-[13px] leading-5">
-        <span className={cn(
-          'font-semibold',
-          isFailed ? 'text-destructive' : 'text-foreground',
-        )}>
-          {formatScore(score)}
-        </span>{' '}
-        <span className={cn(
-          'font-normal',
-          isFailed ? 'text-destructive/75' : 'text-text-muted',
-        )}>
-          分
-        </span>
+        <span className={cn('font-semibold', isFailed ? 'text-destructive' : 'text-foreground')}>{formatScore(score)}</span>{' '}
+        <span className={cn('font-normal', isFailed ? 'text-destructive/75' : 'text-text-muted')}>分</span>
       </span>
     </span>
   );
@@ -446,7 +324,6 @@ const NodeSidebarPanel: React.FC<{
       <p className="text-[13px] font-semibold text-foreground">任务节点</p>
       <span className="text-xs text-text-muted">共 {nodes.length} 项</span>
     </div>
-
     <ScrollContainer className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 max-h-72 xl:max-h-none">
       {nodes.map((node) => {
         const key = getNodeKey(node);
@@ -460,25 +337,11 @@ const NodeSidebarPanel: React.FC<{
             onClick={() => onSelectNode(node)}
             className={cn(
               'flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors duration-150',
-              isSelected
-                ? 'border-primary-200 bg-primary-50/60'
-                : 'border-transparent bg-muted/35 hover:bg-muted/60',
+              isSelected ? 'border-primary-200 bg-primary-50/60' : 'border-transparent bg-muted/35 hover:bg-muted/60',
             )}
           >
-            <IconBox
-              icon={meta.icon}
-              size="sm"
-              bgColor={meta.bgClass}
-              iconColor={meta.textClass}
-              rounded="md"
-              hoverScale={false}
-            />
-            <span
-              className={cn(
-                'min-w-0 flex-1 truncate text-sm',
-                isSelected ? 'font-semibold text-primary-700' : 'font-medium text-foreground',
-              )}
-            >
+            <IconBox icon={meta.icon} size="sm" bgColor={meta.bgClass} iconColor={meta.textClass} rounded="md" hoverScale={false} />
+            <span className={cn('min-w-0 flex-1 truncate text-sm', isSelected ? 'font-semibold text-primary-700' : 'font-medium text-foreground')}>
               {node.node_name}
             </span>
             <OverviewRing
@@ -490,9 +353,7 @@ const NodeSidebarPanel: React.FC<{
           </button>
         );
       })}
-      {nodes.length === 0 && (
-        <p className="py-6 text-center text-sm text-text-muted">暂无任务节点</p>
-      )}
+      {nodes.length === 0 && <p className="py-6 text-center text-sm text-text-muted">暂无任务节点</p>}
     </ScrollContainer>
   </Card>
 );

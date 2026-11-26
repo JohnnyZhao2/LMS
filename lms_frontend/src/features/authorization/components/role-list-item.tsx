@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { Check, MoreHorizontal, Pencil, Power, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { useDeleteRole } from '@/features/authorization/api/authorization';
 import type { RoleItem, UpdateRolePayload } from '@/features/authorization/types';
@@ -43,10 +37,7 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const showRoleMenu = canManageRole && !role.is_builtin;
 
-  const patchRole = async (
-    payload: Omit<UpdateRolePayload, 'roleCode'>,
-    successMessage: string,
-  ): Promise<boolean> => {
+  const patchRole = async (payload: Omit<UpdateRolePayload, 'roleCode'>, successMessage: string): Promise<boolean> => {
     const ok = await onUpdateRole({ roleCode: role.code, ...payload });
     if (ok) toast.success(successMessage);
     return ok;
@@ -59,11 +50,7 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
       toast.warning('角色名称不能为空');
       return;
     }
-    if (trimmed === role.name) {
-      setEditingName(false);
-      return;
-    }
-    if (await patchRole({ name: trimmed }, '角色名称已更新')) {
+    if (trimmed === role.name || await patchRole({ name: trimmed }, '角色名称已更新')) {
       setEditingName(false);
     }
   };
@@ -81,12 +68,7 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
 
   if (editingName) {
     return (
-      <div
-        className={cn(
-          'flex h-10 w-full items-center gap-1 rounded-lg px-2',
-          isActive ? 'bg-slate-200/65' : 'bg-slate-200/35',
-        )}
-      >
+      <div className={cn('flex h-10 w-full items-center gap-1 rounded-lg px-2', isActive ? 'bg-slate-200/65' : 'bg-slate-200/35')}>
         <Input
           value={nameDraft}
           onChange={(event) => setNameDraft(event.target.value)}
@@ -136,19 +118,13 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
         }}
         className={cn(
           'group flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-          isActive
-            ? 'bg-slate-200/65 font-semibold text-foreground'
-            : 'font-medium text-slate-600 hover:bg-slate-200/35 hover:text-foreground',
+          isActive ? 'bg-slate-200/65 font-semibold text-foreground' : 'font-medium text-slate-600 hover:bg-slate-200/35 hover:text-foreground',
         )}
       >
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className={cn('truncate text-[13px]', !role.is_active && 'text-text-muted')}>
-            {role.name}
-          </span>
+          <span className={cn('truncate text-[13px]', !role.is_active && 'text-text-muted')}>{role.name}</span>
           {!role.is_active ? (
-            <span className="shrink-0 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
-              已停用
-            </span>
+            <span className="shrink-0 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-medium text-text-muted">已停用</span>
           ) : null}
         </span>
 
@@ -198,12 +174,7 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
                 <DropdownMenuItem
                   disabled={isUpdatingRole}
                   className="gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium [&>svg]:size-3.5"
-                  onClick={() => {
-                    void patchRole(
-                      { is_active: !role.is_active },
-                      role.is_active ? '已停用角色' : '已启用角色',
-                    );
-                  }}
+                  onClick={() => void patchRole({ is_active: !role.is_active }, role.is_active ? '已停用角色' : '已启用角色')}
                 >
                   <Power />
                   {role.is_active ? '停用角色' : '启用角色'}

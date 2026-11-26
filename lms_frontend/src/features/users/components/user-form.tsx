@@ -3,31 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import {
-  Dialog,
-  DialogDescription,
-  DialogTitle,
-  DrawerContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogDescription, DialogTitle, DrawerContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl, type SegmentedOption } from '@/components/ui/segmented-control';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserAvatar } from '@/components/users/user-avatar';
-import {
-  DATA_SCOPE_LABELS,
-  LEARNER_ROLE_VALUE,
-  USER_ROLE_ASSIGN_PERMISSION,
-} from '@/config/authorization';
+import { DATA_SCOPE_LABELS, LEARNER_ROLE_VALUE, USER_ROLE_ASSIGN_PERMISSION } from '@/config/authorization';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/lib/auth';
 import {
@@ -72,11 +57,7 @@ interface FormErrors {
 const FIELD_INPUT_CLASS = 'h-10 text-sm';
 const FIELD_LABEL_CLASS = 'text-xs font-semibold text-text-muted';
 
-const FormField: React.FC<{
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}> = ({ label, error, children }) => (
+const FormField: React.FC<{ label: string; error?: string; children: React.ReactNode }> = ({ label, error, children }) => (
   <div>
     <label className={cn('mb-1.5 block', FIELD_LABEL_CLASS)}>{label}</label>
     {children}
@@ -99,24 +80,16 @@ export const UserForm: React.FC<UserFormProps> = ({
     : `new-${initialDepartmentId ?? 'none'}-${initialMentorId ?? 'none'}`;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!nextOpen) onClose();
-    }}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DrawerContent className="max-w-[460px]">
-        <DialogTitle className="sr-only">
-          {isEdit ? '编辑用户' : '新建用户'}
-        </DialogTitle>
-        <DialogDescription className="sr-only">
-          用户资料与角色配置
-        </DialogDescription>
+        <DialogTitle className="sr-only">{isEdit ? '编辑用户' : '新建用户'}</DialogTitle>
+        <DialogDescription className="sr-only">用户资料与角色配置</DialogDescription>
         {open ? (
           isEdit && !userDetail ? (
             isUserDetailError ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-7 text-sm text-text-muted">
                 <p>加载用户信息失败，请关闭重试</p>
-                <Button type="button" variant="outline" size="sm" onClick={onClose}>
-                  关闭
-                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={onClose}>关闭</Button>
               </div>
             ) : (
               <div className="flex h-full flex-col gap-6 px-7 py-6">
@@ -135,7 +108,6 @@ export const UserForm: React.FC<UserFormProps> = ({
           ) : (
             <UserDrawerBody
               key={bodyKey}
-              isEdit={isEdit}
               userId={userId}
               userDetail={userDetail}
               initialDepartmentId={initialDepartmentId}
@@ -151,7 +123,6 @@ export const UserForm: React.FC<UserFormProps> = ({
 };
 
 interface UserDrawerBodyProps {
-  isEdit: boolean;
   userId?: number;
   userDetail?: UserDetail;
   initialDepartmentId?: number;
@@ -161,7 +132,6 @@ interface UserDrawerBodyProps {
 }
 
 const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
-  isEdit,
   userId,
   userDetail,
   initialDepartmentId,
@@ -169,13 +139,10 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const isEdit = Boolean(userId);
   const navigate = useNavigate();
   const { hasCapability, user } = useAuth();
-  const {
-    data: mentors = [],
-    isLoading: isMentorsLoading,
-    isError: isMentorsError,
-  } = useMentors();
+  const { data: mentors = [], isLoading: isMentorsLoading, isError: isMentorsError } = useMentors();
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
 
@@ -192,31 +159,26 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
   const assignRoles = useAssignRoles();
   const assignMentor = useAssignMentor();
 
-  const deptManagerByDeptId = departments.reduce<Record<number, { id: number; username: string }>>((acc, dept) => {
-    if (dept.manager_id && dept.manager_name) {
-      acc[dept.id] = { id: dept.manager_id, username: dept.manager_name };
-    }
-    return acc;
-  }, {});
+  const getDeptManager = (deptId?: number) => (
+    deptId ? departments.find((d) => d.id === deptId && d.manager_id && d.manager_name) : undefined
+  );
 
-  const initialSavedRoleCodes: RoleCode[] =
-    isEdit && userDetail && !userDetail.is_superuser
-      ? userDetail.roles.map((role) => role.code)
-      : [];
-  const initialSavedMentorId: number | null =
-    isEdit && userDetail ? (userDetail.mentor?.id || null) : null;
+  const initialSavedRoleCodes: RoleCode[] = isEdit && userDetail && !userDetail.is_superuser
+    ? userDetail.roles.map((role) => role.code)
+    : [];
+  const initialSavedMentorId: number | null = isEdit && userDetail ? (userDetail.mentor?.id || null) : null;
 
-  const savedBaseInfoRef = useRef({
+  const savedRef = useRef({
     username: userDetail?.username ?? '',
     employee_id: userDetail?.employee_id ?? '',
     department_id: userDetail?.department?.id ?? null,
+    role_codes: initialSavedRoleCodes,
+    mentor_id: initialSavedMentorId,
   });
-  const savedRoleCodesRef = useRef<RoleCode[]>(initialSavedRoleCodes);
-  const savedMentorIdRef = useRef<number | null>(initialSavedMentorId);
 
-  const [formData, setFormData] = useState<FormData>(() => {
-    if (isEdit && userDetail) {
-      return {
+  const [formData, setFormData] = useState<FormData>(() => (
+    isEdit && userDetail
+      ? {
         username: userDetail.username,
         employee_id: userDetail.employee_id,
         password: '',
@@ -224,18 +186,17 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
         primary_identity: getPrimaryIdentity(initialSavedRoleCodes),
         specialty_role_codes: getSpecialtyRoleCodes(initialSavedRoleCodes),
         mentor_id: initialSavedMentorId,
-      };
-    }
-    return {
-      username: '',
-      employee_id: '',
-      password: '',
-      department_id: initialDepartmentId,
-      primary_identity: LEARNER_ROLE_VALUE,
-      specialty_role_codes: [],
-      mentor_id: initialMentorId ?? null,
-    };
-  });
+      }
+      : {
+        username: '',
+        employee_id: '',
+        password: '',
+        department_id: initialDepartmentId,
+        primary_identity: LEARNER_ROLE_VALUE,
+        specialty_role_codes: [],
+        mentor_id: initialMentorId ?? null,
+      }
+  ));
 
   const [mentorTouched, setMentorTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -254,45 +215,22 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
   const specialtyRoles = [...activeSpecialtyRoles, ...assignedInactiveSpecialtyRoles];
   const selectableMentors = mentors.filter((m) => !userId || m.id !== userId);
 
-  const existingDeptManager = effectiveDepartmentId
-    ? deptManagerByDeptId[effectiveDepartmentId]
-    : undefined;
-  const deptManagerOccupiedByOther = Boolean(
-    existingDeptManager && existingDeptManager.id !== userDetail?.id,
-  );
+  const existingDeptManagerDept = getDeptManager(effectiveDepartmentId);
+  const deptManagerOccupiedByOther = Boolean(existingDeptManagerDept && existingDeptManagerDept.manager_id !== userDetail?.id);
 
-  const isSelfAccount = Boolean(
-    isEdit && userDetail?.id && user?.id && userDetail.id === user.id,
-  );
-  const isAdminAccountLocked = Boolean(
-    isEdit && !isSuperuser && initialSavedRoleCodes.includes('ADMIN'),
-  );
-  const roleControlDisabled = (
-    !canAssignUserRole
-    || isSuperuserAccount
-    || isAdminAccountLocked
-    || (!isSuperuser && isSelfAccount)
-  );
+  const isSelfAccount = Boolean(isEdit && userDetail?.id && user?.id && userDetail.id === user.id);
+  const isAdminAccountLocked = Boolean(isEdit && !isSuperuser && initialSavedRoleCodes.includes('ADMIN'));
+  const roleControlDisabled = !canAssignUserRole || isSuperuserAccount || isAdminAccountLocked || (!isSuperuser && isSelfAccount);
 
   const primaryOptions: SegmentedOption[] = [
-    {
-      value: LEARNER_ROLE_VALUE,
-      label: '普通学员',
-      disabled: roleControlDisabled,
-    },
-    ...(
-      (['MENTOR', 'DEPT_MANAGER', 'ADMIN'] as const)
-        .filter((code) => roleByCode.has(code))
-        .map((code) => {
-          const role = roleByCode.get(code)!;
-          const deptBlocked = code === 'DEPT_MANAGER' && (!effectiveDepartmentId || deptManagerOccupiedByOther);
-          return {
-            value: code,
-            label: role.name,
-            disabled: roleControlDisabled || !canAssignRole(role) || deptBlocked,
-          };
-        })
-    ),
+    { value: LEARNER_ROLE_VALUE, label: '普通学员', disabled: roleControlDisabled },
+    ...(['MENTOR', 'DEPT_MANAGER', 'ADMIN'] as const)
+      .filter((code) => roleByCode.has(code))
+      .map((code) => {
+        const role = roleByCode.get(code)!;
+        const deptBlocked = code === 'DEPT_MANAGER' && (!effectiveDepartmentId || deptManagerOccupiedByOther);
+        return { value: code, label: role.name, disabled: roleControlDisabled || !canAssignRole(role) || deptBlocked };
+      }),
   ];
 
   const departmentOptions: SegmentedOption[] = departments.map((dept) => ({
@@ -311,30 +249,27 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
   };
 
   const toggleSpecialtyRole = (code: RoleCode) => {
-    setFormData((prev) => {
-      const exists = prev.specialty_role_codes.includes(code);
-      return {
-        ...prev,
-        specialty_role_codes: exists
-          ? prev.specialty_role_codes.filter((item) => item !== code)
-          : [...prev.specialty_role_codes, code],
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      specialty_role_codes: prev.specialty_role_codes.includes(code)
+        ? prev.specialty_role_codes.filter((item) => item !== code)
+        : [...prev.specialty_role_codes, code],
+    }));
   };
 
   const handleDepartmentChange = (deptIdStr: string) => {
     if (!canEditBaseInfo) return;
     const deptId = Number(deptIdStr);
-    const occupied = Boolean(deptManagerByDeptId[deptId] && deptManagerByDeptId[deptId].id !== userDetail?.id);
+    const dept = getDeptManager(deptId);
+    const occupied = Boolean(dept && dept.manager_id !== userDetail?.id);
     setErrors((prev) => ({ ...prev, department_id: undefined }));
-    setFormData((prev) => {
-      const shouldResetDeptManager = !roleControlDisabled && occupied && prev.primary_identity === 'DEPT_MANAGER';
-      return {
-        ...prev,
-        department_id: deptId,
-        primary_identity: shouldResetDeptManager ? LEARNER_ROLE_VALUE : prev.primary_identity,
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      department_id: deptId,
+      primary_identity: !roleControlDisabled && occupied && prev.primary_identity === 'DEPT_MANAGER'
+        ? LEARNER_ROLE_VALUE
+        : prev.primary_identity,
+    }));
   };
 
   const validate = (): boolean => {
@@ -350,33 +285,22 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
 
   const handleSubmit = async (event?: React.FormEvent) => {
     event?.preventDefault();
-    if (isSubmitting) return;
-    if (!validate()) return;
+    if (isSubmitting || !validate()) return;
     setIsSubmitting(true);
     try {
+      const trimmedUsername = formData.username.trim();
+      const trimmedEmployeeId = formData.employee_id.trim();
       if (isEdit) {
-        const trimmedUsername = formData.username.trim();
-        const trimmedEmployeeId = formData.employee_id.trim();
+        const saved = savedRef.current;
         const nextSet = new Set(resolvedRoleCodes);
-        const initialSet = new Set(savedRoleCodesRef.current);
-        const rolesChanged =
-          nextSet.size !== initialSet.size
-          || [...nextSet].some((code) => !initialSet.has(code));
+        const initialSet = new Set(saved.role_codes);
+        const rolesChanged = nextSet.size !== initialSet.size || [...nextSet].some((code) => !initialSet.has(code));
         const baseInfoChanged = canEditBaseInfo && (
-          trimmedUsername !== savedBaseInfoRef.current.username
-          || trimmedEmployeeId !== savedBaseInfoRef.current.employee_id
-          || (effectiveDepartmentId ?? null) !== savedBaseInfoRef.current.department_id
+          trimmedUsername !== saved.username
+          || trimmedEmployeeId !== saved.employee_id
+          || (effectiveDepartmentId ?? null) !== saved.department_id
         );
-        const mentorChanged = canEditBaseInfo && mentorTouched && formData.mentor_id !== savedMentorIdRef.current;
-
-        if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
-          toast.error('当前账号无权修改基础信息');
-          return;
-        }
-        if (rolesChanged && !canAssignUserRole) {
-          toast.error('当前账号无权分配角色');
-          return;
-        }
+        const mentorChanged = canEditBaseInfo && mentorTouched && formData.mentor_id !== saved.mentor_id;
 
         if (baseInfoChanged) {
           await updateUser.mutateAsync({
@@ -388,36 +312,24 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
               ...(rolesChanged ? { role_codes: resolvedRoleCodes } : {}),
             },
           });
-          savedBaseInfoRef.current = {
-            username: trimmedUsername,
-            employee_id: trimmedEmployeeId,
-            department_id: effectiveDepartmentId ?? null,
-          };
-          if (rolesChanged) {
-            savedRoleCodesRef.current = resolvedRoleCodes;
-          }
+          saved.username = trimmedUsername;
+          saved.employee_id = trimmedEmployeeId;
+          saved.department_id = effectiveDepartmentId ?? null;
+          if (rolesChanged) saved.role_codes = resolvedRoleCodes;
         } else if (rolesChanged) {
           await assignRoles.mutateAsync({ id: userId!, roles: resolvedRoleCodes });
-          savedRoleCodesRef.current = resolvedRoleCodes;
+          saved.role_codes = resolvedRoleCodes;
         }
         if (mentorChanged) {
           await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
-          savedMentorIdRef.current = formData.mentor_id;
+          saved.mentor_id = formData.mentor_id;
           setMentorTouched(false);
         }
         toast.success('已保存');
       } else {
-        if (!canCreateUser) {
-          toast.error('当前账号无权创建用户');
-          return;
-        }
-        if (resolvedRoleCodes.length > 0 && !canAssignUserRole) {
-          toast.error('当前账号无权分配角色');
-          return;
-        }
         await createUser.mutateAsync({
-          username: formData.username.trim(),
-          employee_id: formData.employee_id.trim(),
+          username: trimmedUsername,
+          employee_id: trimmedEmployeeId,
           password: formData.password,
           department_id: effectiveDepartmentId!,
           mentor_id: formData.mentor_id,
@@ -436,20 +348,12 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="flex h-full min-h-0 flex-col">
-      {/* Header */}
       <header className="shrink-0 border-b border-border/60 px-7 py-5 pr-16">
         {isEdit && userDetail ? (
           <div className="flex items-center gap-3.5">
-            <UserAvatar
-              avatarKey={userDetail.avatar_key}
-              name={userDetail.username}
-              size="md"
-              className="h-11 w-11 shrink-0"
-            />
+            <UserAvatar avatarKey={userDetail.avatar_key} name={userDetail.username} size="md" className="h-11 w-11 shrink-0" />
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold tracking-tight text-foreground">
-                {userDetail.username}
-              </h2>
+              <h2 className="truncate text-lg font-bold tracking-tight text-foreground">{userDetail.username}</h2>
               <p className="mt-0.5 truncate text-xs font-medium text-text-muted">
                 <span className="font-mono">{userDetail.employee_id}</span>
                 {userDetail.department?.name ? ` · ${userDetail.department.name}` : ''}
@@ -461,10 +365,8 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
         )}
       </header>
 
-      {/* Body */}
       <ScrollContainer className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
         <div className="space-y-6">
-          {/* 姓名 & 工号 */}
           <div className="grid grid-cols-2 gap-4">
             <FormField label="姓名" error={errors.username}>
               <Input
@@ -487,7 +389,6 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
             </FormField>
           </div>
 
-          {/* 初始密码（仅新建） */}
           {!isEdit ? (
             <FormField label="初始密码" error={errors.password}>
               <Input
@@ -501,16 +402,9 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
             </FormField>
           ) : null}
 
-          {/* 部门 & 导师 */}
           <div className="grid grid-cols-2 gap-4">
             <FormField label="所属部门" error={errors.department_id}>
-              <SegmentedControl
-                options={departmentOptions}
-                value={effectiveDepartmentId?.toString() ?? null}
-                onChange={handleDepartmentChange}
-                fill
-                className="w-full"
-              />
+              <SegmentedControl options={departmentOptions} value={effectiveDepartmentId?.toString() ?? null} onChange={handleDepartmentChange} fill className="w-full" />
             </FormField>
 
             <FormField label="带教导师">
@@ -528,12 +422,10 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
                     <SelectValue placeholder={isMentorsLoading ? '加载中...' : '未分配'} />
                   </SelectTrigger>
                   <SelectContent className="max-h-60 z-[9999]">
-                    {isMentorsLoading ? (
-                      <div className="px-3 py-3 text-sm text-text-muted">加载中...</div>
-                    ) : isMentorsError ? (
-                      <div className="px-3 py-3 text-sm text-destructive">加载失败</div>
-                    ) : selectableMentors.length === 0 ? (
-                      <div className="px-3 py-3 text-sm text-text-muted">无可选导师</div>
+                    {isMentorsLoading || isMentorsError || selectableMentors.length === 0 ? (
+                      <div className={cn('px-3 py-3 text-sm', isMentorsError ? 'text-destructive' : 'text-text-muted')}>
+                        {isMentorsLoading ? '加载中...' : isMentorsError ? '加载失败' : '无可选导师'}
+                      </div>
                     ) : (
                       selectableMentors.map((mentor) => (
                         <SelectItem key={mentor.id} value={mentor.id.toString()}>
@@ -565,14 +457,11 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
 
           <div className="h-px bg-border/60" />
 
-          {/* 常规身份 */}
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <label className={FIELD_LABEL_CLASS}>常规身份</label>
               {deptManagerOccupiedByOther && formData.primary_identity !== 'DEPT_MANAGER' ? (
-                <span className="text-xs font-medium text-amber-600">
-                  室经理：{existingDeptManager?.username}
-                </span>
+                <span className="text-xs font-medium text-amber-600">室经理：{existingDeptManagerDept?.manager_name}</span>
               ) : null}
             </div>
             <SegmentedControl
@@ -592,7 +481,6 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
             />
           </div>
 
-          {/* 专项角色 */}
           {formData.primary_identity !== 'ADMIN' ? (
             <div>
               <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -628,31 +516,21 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
                         className={cn(
                           'flex h-11 items-center justify-between gap-3 rounded-lg border px-3.5 transition-colors',
                           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-                          checked
-                            ? 'border-primary/40 bg-primary/5'
-                            : 'border-border bg-background hover:bg-muted/40',
+                          checked ? 'border-primary/40 bg-primary/5' : 'border-border bg-background hover:bg-muted/40',
                         )}
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <Checkbox
                             checked={checked}
                             disabled={disabled}
-                            onCheckedChange={() => {
-                              if (!disabled) toggleSpecialtyRole(role.code);
-                            }}
+                            onCheckedChange={() => { if (!disabled) toggleSpecialtyRole(role.code); }}
                           />
-                          <span className="truncate text-sm font-medium text-foreground">
-                            {role.name}
-                          </span>
+                          <span className="truncate text-sm font-medium text-foreground">{role.name}</span>
                           {isInactiveRole ? (
-                            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
-                              已停用
-                            </span>
+                            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">已停用</span>
                           ) : null}
                         </div>
-                        <span className="shrink-0 text-xs text-text-muted">
-                          {DATA_SCOPE_LABELS[role.data_scope]}
-                        </span>
+                        <span className="shrink-0 text-xs text-text-muted">{DATA_SCOPE_LABELS[role.data_scope]}</span>
                       </label>
                     );
                   })}
@@ -663,20 +541,9 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
         </div>
       </ScrollContainer>
 
-      {/* Footer */}
       <footer className="flex shrink-0 items-center justify-end gap-3 border-t border-border bg-background px-7 py-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          取消
-        </Button>
-        <Button
-          type="submit"
-          disabled={isSubmitting || !canSubmitForm}
-        >
+        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>取消</Button>
+        <Button type="submit" disabled={isSubmitting || !canSubmitForm}>
           {isSubmitting ? '保存中...' : isEdit ? '保存' : '创建'}
         </Button>
       </footer>

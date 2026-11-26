@@ -3,17 +3,57 @@ import { formatDurationClock } from '@/lib/date-time';
 import { cn } from '@/lib/utils';
 import type { TaskAnalytics } from '@/types/task-analytics';
 
+export interface OverviewRingSegment {
+  key: string;
+  ratio: number;
+  color: string;
+}
+
 export const OverviewRing: React.FC<{
-  percent: number;
-  strokeColor: string;
+  percent?: number;
+  strokeColor?: string;
+  segments?: OverviewRingSegment[];
   size?: number;
   strokeWidth?: number;
   reverse?: boolean;
-}> = ({ percent, strokeColor, size = 38, strokeWidth = 4.5, reverse = true }) => {
-  const clamped = Math.min(100, Math.max(0, percent));
+}> = ({
+  percent = 0,
+  strokeColor = 'var(--color-secondary)',
+  segments,
+  size = 38,
+  strokeWidth = 4.5,
+  reverse = true,
+}) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - clamped / 100);
+  const clamped = Math.min(100, Math.max(0, percent));
+
+  const arcs = (() => {
+    if (!segments) {
+      return clamped > 0
+        ? [{
+          key: 'single',
+          color: strokeColor,
+          dashArray: `${circumference}`,
+          dashOffset: circumference * (1 - clamped / 100),
+          round: true,
+        }]
+        : [];
+    }
+    const active = segments.filter((s) => s.ratio > 0);
+    let offset = 0;
+    return active.map((s) => {
+      const dashOffset = -offset * circumference;
+      offset += s.ratio;
+      return {
+        key: s.key,
+        color: s.color,
+        dashArray: `${s.ratio * circumference} ${circumference}`,
+        dashOffset,
+        round: active.length === 1,
+      };
+    });
+  })();
 
   return (
     <svg
@@ -23,28 +63,22 @@ export const OverviewRing: React.FC<{
       className={cn('-rotate-90 shrink-0', reverse && '-scale-y-100')}
       aria-hidden="true"
     >
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="rgba(15, 23, 42, 0.1)"
-        strokeWidth={strokeWidth}
-      />
-      {clamped > 0 && (
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(15, 23, 42, 0.1)" strokeWidth={strokeWidth} />
+      {arcs.map((arc) => (
         <circle
+          key={arc.key}
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={strokeColor}
+          stroke={arc.color}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          className="transition-[stroke-dashoffset] duration-300 ease-out"
+          strokeLinecap={arc.round ? 'round' : 'butt'}
+          strokeDasharray={arc.dashArray}
+          strokeDashoffset={arc.dashOffset}
+          className={segments ? 'transition-all duration-300 ease-out' : 'transition-[stroke-dashoffset] duration-300 ease-out'}
         />
-      )}
+      ))}
     </svg>
   );
 };
