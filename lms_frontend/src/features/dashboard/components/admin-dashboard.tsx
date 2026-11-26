@@ -5,7 +5,6 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { useAdminDashboard } from '../api/admin-dashboard';
-import { ExamReportPanel } from './exam-report-panel';
 
 import { StatCard } from '@/components/ui/stat-card';
 import { PageWorkbench } from '@/components/ui/page-shell';
@@ -27,7 +26,6 @@ export const AdminDashboard: React.FC = () => {
               <Skeleton key={i} className="h-28 rounded-lg" />
             ))}
           </div>
-          <Skeleton className="min-h-0 flex-1 rounded-lg" />
         </>
       ) : (
         <>
@@ -53,10 +51,6 @@ export const AdminDashboard: React.FC = () => {
               accentClassName="bg-cyan-500"
               size="sm"
             />
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col">
-            <ExamReportPanel />
           </div>
         </>
       )}

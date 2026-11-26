@@ -19,12 +19,6 @@ export const queryKeys = {
       knowledgeLimit: number;
     }) => ['student-dashboard', taskLimit, knowledgeLimit] as const,
     taskParticipants: (taskId: number | null) => ['task-participants', taskId] as const,
-    examReportRoot: () => ['exam-report'] as const,
-    examReport: ({
-      filters,
-    }: {
-      filters: string;
-    }) => ['exam-report', filters] as const,
   },
   grading: {
     pending: () => ['grading', 'pending'] as const,

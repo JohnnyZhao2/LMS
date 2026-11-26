@@ -10,7 +10,7 @@ interface RolePermissionSectionProps {
   permissionCodes: string[];
   permissionCatalog: PermissionCatalogItem[];
   isUpdatingRole: boolean;
-  onUpdateRole: (payload: UpdateRolePayload) => Promise<void>;
+  onUpdateRole: (payload: UpdateRolePayload) => Promise<boolean | void>;
 }
 
 export function RolePermissionSection({

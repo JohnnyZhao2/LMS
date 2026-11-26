@@ -17,7 +17,6 @@ import { ActionCard } from '@/components/ui/action-card';
 import { Card } from '@/components/ui/card';
 
 import { useMentorDashboard } from '../api/mentor-dashboard';
-import { ExamReportPanel } from './exam-report-panel';
 
 
 /**
@@ -35,7 +34,6 @@ export const MentorDashboard: React.FC = () => {
               <Skeleton key={i} className="h-28 rounded-lg" />
             ))}
           </div>
-          <Skeleton className="min-h-0 flex-1 rounded-lg" />
         </>
       ) : (
         <>
@@ -102,10 +100,6 @@ export const MentorDashboard: React.FC = () => {
                 />
               </div>
             </Card>
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col">
-            <ExamReportPanel />
           </div>
         </>
       )}

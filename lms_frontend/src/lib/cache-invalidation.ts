@@ -34,7 +34,6 @@ export const invalidateAfterGradingMutation = (queryClient: QueryClient) =>
     queryKeys.grading.taskAnalyticsRoot(),
     queryKeys.grading.studentExecutionsRoot(),
     queryKeys.tasks.all(),
-    queryKeys.dashboards.examReportRoot(),
     queryKeys.dashboards.mentor(),
   ]);
 
@@ -105,7 +104,6 @@ export const invalidateAfterTaskMutation = (queryClient: QueryClient) =>
     queryKeys.tasks.studentLearningDetailRoot(),
     queryKeys.grading.taskAnalyticsRoot(),
     queryKeys.grading.studentExecutionsRoot(),
-    queryKeys.dashboards.examReportRoot(),
   ]);
 
 export const invalidateAfterTaskProgressMutation = (queryClient: QueryClient) =>

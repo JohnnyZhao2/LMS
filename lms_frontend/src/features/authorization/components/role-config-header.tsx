@@ -15,7 +15,7 @@ interface RoleConfigHeaderProps {
   role: RoleItem;
   departments: Department[];
   isUpdatingRole: boolean;
-  onUpdateRole: (payload: UpdateRolePayload) => Promise<void>;
+  onUpdateRole: (payload: UpdateRolePayload) => Promise<boolean | void>;
 }
 
 export const RoleConfigHeader: React.FC<RoleConfigHeaderProps> = ({
