@@ -16,6 +16,7 @@ from apps.auth.serializers import (
     AuthSessionSerializer,
     ChangeMyPasswordRequestSerializer,
     ChangePasswordRequestSerializer,
+    ImpersonateRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -233,4 +234,29 @@ class OneAccountCodeLoginView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
 
         result = self.service.login_by_one_account_code(code=serializer.validated_data['code'])
+        return success_response(result)
+
+
+class ImpersonateView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    service_class = AuthenticationService
+
+    @extend_schema(
+        summary='超管视角扮演',
+        description='超级管理员签发指定普通用户的视角会话令牌',
+        request=ImpersonateRequestSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            403: OpenApiResponse(description='非超级管理员或目标已停用'),
+            404: OpenApiResponse(description='用户不存在'),
+        },
+        tags=['认证']
+    )
+    def post(self, request):
+        serializer = ImpersonateRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = self.service.impersonate(
+            operator=request.user,
+            target_user_id=serializer.validated_data['user_id'],
+        )
         return success_response(result)

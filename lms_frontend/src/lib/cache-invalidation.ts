@@ -51,6 +51,13 @@ export const invalidateAfterKnowledgeMutation = (queryClient: QueryClient) =>
     queryKeys.knowledge.detailRoot(),
   ]);
 
+export const invalidateAfterKnowledgeBulkImport = (queryClient: QueryClient) =>
+  invalidateMany(queryClient, [
+    ...knowledgeCollectionKeys,
+    queryKeys.knowledge.detailRoot(),
+    queryKeys.tags.all(),
+  ]);
+
 export const invalidateAfterKnowledgeViewMutation = (queryClient: QueryClient) =>
   invalidateMany(queryClient, [
     queryKeys.knowledge.listRoot(),
@@ -128,7 +135,7 @@ export const invalidateAfterUserMutation = (
   ];
 
   if (options.includeMentors) {
-    keys.push(queryKeys.users.mentors());
+    keys.push(queryKeys.users.mentors(), queryKeys.users.mentorCandidates());
   }
 
   if (options.includeAssignableUsers) {

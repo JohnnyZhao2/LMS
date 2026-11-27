@@ -32,6 +32,7 @@ register_user_log_action('login', group='认证', label='登录成功')
 register_user_log_action('login_failed', group='认证', label='登录失败')
 register_user_log_action('logout', group='认证', label='登出')
 register_user_log_action('password_change', group='账号管理', label='修改密码')
+register_user_log_action('impersonate', group='认证', label='视角扮演')
 
 
 class AuthenticationService(BaseService):
@@ -85,7 +86,15 @@ class AuthenticationService(BaseService):
             )
         raise BusinessError(code=code, message=message)
 
-    def _build_user_payload(self, user: User) -> Dict[str, Any]:
+    def _build_user_payload(
+        self,
+        user: User,
+        impersonator: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        if impersonator is None:
+            auth = getattr(self.request, 'auth', None)
+            if hasattr(auth, 'get'):
+                impersonator = auth.get('impersonator')
         authorization_service = AuthorizationService(self.request)
         return {
             'user': UserInfoSerializer(user).data,
@@ -93,11 +102,16 @@ class AuthenticationService(BaseService):
             'capabilities': sorted(
                 authorization_service.get_user_permission_codes(user=user)
             ),
+            'impersonator': impersonator,
         }
 
-    def _build_auth_payload(self, user: User) -> Dict[str, Any]:
-        user_payload = self._build_user_payload(user)
-        tokens = self._generate_tokens(user)
+    def _build_auth_payload(
+        self,
+        user: User,
+        impersonator: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        user_payload = self._build_user_payload(user, impersonator=impersonator)
+        tokens = self._generate_tokens(user, impersonator=impersonator)
         return {
             'access_token': tokens['access'],
             'refresh_token': tokens['refresh'],
@@ -217,8 +231,18 @@ class AuthenticationService(BaseService):
                     message='无效的刷新令牌',
                 )
 
+            impersonator = incoming_token.get('impersonator')
+            if impersonator:
+                impersonator_id = impersonator.get('id') if isinstance(impersonator, dict) else None
+                impersonator_user = get_user_by_id(impersonator_id) if impersonator_id else None
+                if not impersonator_user or not impersonator_user.is_active or not impersonator_user.is_superuser:
+                    raise BusinessError(
+                        code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
+                        message='无效的刷新令牌',
+                    )
+
             user = self._validate_active_user(get_user_by_id(user_id))
-            tokens = self._generate_tokens(user)
+            tokens = self._generate_tokens(user, impersonator=impersonator)
 
             # 轮换 refresh token：生成新 token 后立刻失效旧 token
             incoming_token.blacklist()
@@ -237,6 +261,32 @@ class AuthenticationService(BaseService):
     def get_me(self, user: User) -> Dict[str, Any]:
         active_user = self._validate_active_user(get_user_by_id(user.id))
         return self._build_user_payload(active_user)
+
+    def impersonate(self, operator: User, target_user_id: int) -> Dict[str, Any]:
+        if not operator.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有超级管理员可以切换用户视角',
+            )
+        target_user = self._validate_active_user(get_user_by_id(target_user_id))
+        if target_user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='不可切换为超级管理员视角',
+            )
+        impersonator = {
+            'id': operator.id,
+            'username': operator.username,
+            'employee_id': operator.employee_id,
+        }
+        self._log_user_action(
+            user=target_user,
+            operator=operator,
+            action='impersonate',
+            description=f'超管 {operator.username}（{operator.employee_id}）以 {target_user.username}（{target_user.employee_id}）视角浏览',
+            status='success',
+        )
+        return self._build_auth_payload(target_user, impersonator=impersonator)
 
     def change_password(self, operator: User, target_user_id: int, password: str) -> None:
         target_user = self.validate_not_none(
@@ -281,8 +331,14 @@ class AuthenticationService(BaseService):
         )
         return self._build_auth_payload(active_user)
 
-    def _generate_tokens(self, user: User) -> Dict[str, str]:
+    def _generate_tokens(
+        self,
+        user: User,
+        impersonator: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, str]:
         refresh = RefreshToken.for_user(user)
+        if impersonator:
+            refresh['impersonator'] = impersonator
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),

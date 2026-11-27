@@ -17,6 +17,13 @@ class Tag(TimestampMixin, models.Model):
         choices=TAG_TYPE_CHOICES,
         verbose_name='标签类型',
     )
+    category = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        db_index=True,
+        verbose_name='标签分类',
+    )
     sort_order = models.IntegerField(default=0, verbose_name='排序序号')
     allow_knowledge = models.BooleanField(default=True, verbose_name='适用于知识')
     allow_question = models.BooleanField(default=False, verbose_name='适用于题目')
@@ -30,7 +37,9 @@ class Tag(TimestampMixin, models.Model):
 
     def clean(self):
         super().clean()
+        self.category = (self.category or '').strip()
         if self.tag_type == 'SPACE':
+            self.category = ''
             self.allow_knowledge = True
             self.allow_question = True
             return

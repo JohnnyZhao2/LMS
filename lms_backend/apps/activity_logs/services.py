@@ -17,6 +17,7 @@ _USER_ACTION_SUMMARIES = {
     'password_change': '{actor} 修改了用户密码',
     'role_assigned': '{actor} 更新了用户角色',
     'mentor_assigned': '{actor} 分配了导师',
+    'impersonate': '{actor} 切换为 {user} 视角',
 }
 
 _CONTENT_TYPE_NAMES = {

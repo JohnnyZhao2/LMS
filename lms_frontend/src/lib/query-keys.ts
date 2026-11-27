@@ -59,20 +59,27 @@ export const queryKeys = {
   },
   knowledge: {
     listRoot: () => ['knowledge-list'] as const,
+    pinnedList: () => ['knowledge-list', 'pinned'] as const,
     infiniteList: ({
       spaceTagId,
+      tagIds,
       search,
       pageSize,
+      groupByDoc,
     }: {
       spaceTagId?: number;
+      tagIds?: number[];
       search?: string;
       pageSize: number;
+      groupByDoc?: boolean;
     }) => [
       'knowledge-list',
       'infinite',
       spaceTagId,
+      tagIds?.join(',') ?? '',
       search,
       pageSize,
+      groupByDoc,
     ] as const,
     detailRoot: () => ['knowledge-detail'] as const,
     detail: ({
@@ -198,12 +205,14 @@ export const queryKeys = {
       search,
       limit,
       applicableTo,
+      spaceTagId,
     }: {
       canQueryTags: boolean;
       tagType?: string;
       search?: string;
-      limit: number;
+      limit?: number;
       applicableTo?: string;
+      spaceTagId?: number;
     }) => [
       'tags',
       canQueryTags,
@@ -211,6 +220,7 @@ export const queryKeys = {
       search,
       limit,
       applicableTo,
+      spaceTagId,
     ] as const,
   },
   tasks: {
@@ -310,6 +320,7 @@ export const queryKeys = {
       id: number;
     }) => ['user-detail', id] as const,
     mentors: () => ['mentors'] as const,
+    mentorCandidates: () => ['mentor-candidates'] as const,
     roles: () => ['roles'] as const,
     departments: () => ['departments'] as const,
     assignable: () => ['assignable-users'] as const,

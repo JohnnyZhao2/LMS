@@ -23,7 +23,7 @@ import {
   type PrimaryIdentityValue,
 } from '@/lib/user-role-assignment';
 import { cn } from '@/lib/utils';
-import { useDepartments, useMentors, useRoles, useUserDetail } from '@/api/users/get-users';
+import { useDepartments, useMentorCandidates, useRoles, useUserDetail } from '@/api/users/get-users';
 import { useAssignMentor, useAssignRoles, useCreateUser, useUpdateUser } from '@/api/users/manage-users';
 import { showApiError } from '@/utils/error-handler';
 import type { Role, RoleCode, UserList as UserDetail } from '@/types/common';
@@ -142,7 +142,7 @@ const UserDrawerBody: React.FC<UserDrawerBodyProps> = ({
   const isEdit = Boolean(userId);
   const navigate = useNavigate();
   const { hasCapability, user } = useAuth();
-  const { data: mentors = [], isLoading: isMentorsLoading, isError: isMentorsError } = useMentors();
+  const { data: mentors = [], isLoading: isMentorsLoading, isError: isMentorsError } = useMentorCandidates();
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
 

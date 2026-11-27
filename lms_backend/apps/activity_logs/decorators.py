@@ -63,6 +63,15 @@ def _render_log_text(spec: LogText, ctx: dict[str, Any], default: str = '') -> s
     return spec.format(**ctx)
 
 
+def _with_impersonator_note(self: Any, text: str) -> str:
+    auth = getattr(getattr(self, 'request', None), 'auth', None)
+    impersonator = auth.get('impersonator') if hasattr(auth, 'get') else None
+    if isinstance(impersonator, dict) and impersonator.get('username'):
+        note = f"由超管 {impersonator['username']} 代操作"
+        return f'{text}（{note}）' if text else note
+    return text
+
+
 def log_user_action(
     action: str,
     description: LogText = None,
@@ -94,7 +103,10 @@ def log_user_action(
                 user=user,
                 operator=_resolve_operator(self, kwargs),
                 action=action,
-                description=_render_log_text(description, ctx, default=f'{action} 操作'),
+                description=_with_impersonator_note(
+                    self,
+                    _render_log_text(description, ctx, default=f'{action} 操作'),
+                ),
                 status='success',
                 action_key=action_key,
             )
@@ -142,7 +154,10 @@ def log_content_action(
                 content_title=content_title,
                 operator=_resolve_operator(self, kwargs),
                 action=action,
-                description=_render_log_text(description, ctx, default=f'{action} {content_type}'),
+                description=_with_impersonator_note(
+                    self,
+                    _render_log_text(description, ctx, default=f'{action} {content_type}'),
+                ),
                 status='success',
                 action_key=action_key,
             )
@@ -190,7 +205,10 @@ def log_operation(
                 operator=_resolve_operator(self, kwargs),
                 operation_type=operation_type,
                 action=action,
-                description=_render_log_text(description, ctx, default=f'{action} 操作'),
+                description=_with_impersonator_note(
+                    self,
+                    _render_log_text(description, ctx, default=f'{action} 操作'),
+                ),
                 duration=duration,
                 status='success',
                 action_key=action_key,

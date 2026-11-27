@@ -47,6 +47,7 @@ export interface Tag {
   color: string;
   tag_type: TagType;
   tag_type_display: string;
+  category?: string;
   sort_order: number;
   allow_knowledge: boolean;
   allow_question: boolean;
@@ -59,6 +60,7 @@ export interface SimpleTag {
   id: number;
   name: string;
   color?: string;
+  category?: string;
 }
 
 // ==================== 基础类型 ====================

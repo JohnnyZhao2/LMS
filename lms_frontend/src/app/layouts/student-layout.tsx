@@ -4,7 +4,7 @@ import { LogOut, ChevronDown, KeyRound, Menu, X } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { AvatarPickerPopover } from '@/components/users/avatar-picker-popover'
 import { type MenuItem, useRoleMenu } from '@/app/navigation/use-role-menu'
-import { RoleIndicatorDot } from '@/app/layouts/workspace-user-controls'
+import { ImpersonationBanner, RoleIndicatorDot } from '@/app/layouts/workspace-user-controls'
 import { useWorkspaceUserControls } from '@/app/layouts/use-workspace-user-controls'
 import { ChangeOwnPasswordDialog } from '@/features/auth/components/change-own-password-dialog'
 import { cn } from '@/lib/utils'
@@ -70,11 +70,11 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           onClick={() => handleNavClick(item.key)}
           className={cn(
             'relative inline-flex h-14 items-center px-2.5 text-[14px] font-medium tracking-[-0.015em] transition-colors whitespace-nowrap',
-            isActive ? 'text-black' : 'text-text-muted hover:text-black'
+            isActive ? 'text-primary' : 'text-text-muted hover:text-foreground'
           )}
         >
           {item.label}
-          {isActive && <span className="absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full bg-black" />}
+          {isActive && <span className="absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full bg-primary" />}
         </button>
       )
     }
@@ -85,7 +85,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
             type="button"
             className={cn(
               'inline-flex h-14 items-center gap-1 px-2.5 text-[14px] font-medium tracking-[-0.015em] transition-colors whitespace-nowrap',
-              isActive ? 'text-black' : 'text-text-muted hover:text-black'
+              isActive ? 'text-primary' : 'text-text-muted hover:text-foreground'
             )}
           >
             {item.label}
@@ -98,8 +98,8 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
               key={child.key}
               onClick={() => handleNavClick(child.key)}
               className={cn(
-                'cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted focus:text-black mb-1 last:mb-0',
-                isMenuItemActive(child) && 'bg-muted text-black'
+                'cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted/60 focus:text-foreground mb-1 last:mb-0',
+                isMenuItemActive(child) && 'bg-muted/60 text-foreground'
               )}
             >
               {child.label}
@@ -112,7 +112,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#F6F8FC]">
-      <header className="sticky top-0 z-30 h-14 shrink-0 bg-[#F6F8FC]/92 backdrop-blur-xl supports-[backdrop-filter]:bg-[#F6F8FC]/78">
+      <div className="sticky top-0 z-30 shrink-0">
+        <ImpersonationBanner />
+        <header className="h-14 bg-[#F6F8FC]/92 backdrop-blur-xl supports-[backdrop-filter]:bg-[#F6F8FC]/78">
         <div className={cn(
           STUDENT_FRAME_CLASS,
           'grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4'
@@ -139,7 +141,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] text-black/88 transition-colors outline-none hover:bg-black/[0.04]"
+                    className="inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] text-foreground transition-colors outline-none hover:bg-muted/60"
                   >
                     <span className="max-w-[96px] truncate font-medium">{userLabel || 'LMS 用户'}</span>
                     <RoleIndicatorDot
@@ -147,17 +149,17 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                       managementRole={managementRole}
                       isSuperuser={Boolean(user?.is_superuser)}
                     />
-                    <ChevronDown className="h-3 w-3 shrink-0 text-black/40" />
+                    <ChevronDown className="h-3 w-3 shrink-0 text-text-muted" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
                   sideOffset={8}
-                  className="w-[188px] rounded-[14px] border border-black/[0.06] bg-white/96 p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl"
+                  className="w-[188px] rounded-[14px] border border-border/70 bg-white/96 p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl"
                 >
                   <div className="rounded-[10px] px-3 pb-1 pt-2">
                     <div className="text-[11px] text-text-muted">当前工作台</div>
-                    <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-black">
+                    <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-foreground">
                       <RoleIndicatorDot
                         workbench={workbench}
                         managementRole={managementRole}
@@ -176,8 +178,8 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                           onClick={() => handleWorkbenchChange(option.value)}
                           aria-label={option.label}
                           className={cn(
-                            'mb-1 rounded-[10px] px-3 py-2 text-[13px] text-text-muted last:mb-0 focus:bg-black/[0.04] focus:text-black',
-                            option.value === workbench && 'bg-black/[0.04] text-black'
+                            'mb-1 rounded-[10px] px-3 py-2 text-[13px] text-text-muted last:mb-0 focus:bg-muted/60 focus:text-foreground',
+                            option.value === workbench && 'bg-muted/60 text-foreground'
                           )}
                         >
                           <RoleIndicatorDot
@@ -190,10 +192,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                         ))}
                     </div>
                   )}
-                  <DropdownMenuSeparator className="my-1.5 h-px bg-black/[0.06]" />
+                  <DropdownMenuSeparator className="my-1.5 h-px bg-border/60" />
                   <DropdownMenuItem
                     onClick={() => setPasswordDialogOpen(true)}
-                    className="rounded-[10px] px-3 py-2 text-[13px] text-text-muted focus:bg-black/[0.04] focus:text-black"
+                    className="rounded-[10px] px-3 py-2 text-[13px] text-text-muted focus:bg-muted/60 focus:text-foreground"
                   >
                     <KeyRound className="h-4 w-4" />
                     修改密码
@@ -296,7 +298,8 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
             </div>
           </div>
         )}
-      </header>
+        </header>
+      </div>
 
       <main className="flex min-w-0 flex-1 flex-col">
         <div className={cn(

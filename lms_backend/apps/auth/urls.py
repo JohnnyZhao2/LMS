@@ -13,6 +13,7 @@ from django.urls import path
 from apps.auth.views import (
     ChangeMyPasswordView,
     ChangePasswordView,
+    ImpersonateView,
     LoginView,
     LogoutView,
     MeView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='auth-login'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
+    path('impersonate/', ImpersonateView.as_view(), name='auth-impersonate'),
     path('me/', MeView.as_view(), name='auth-me'),
     path('me/password/', ChangeMyPasswordView.as_view(), name='auth-change-my-password'),
     path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),

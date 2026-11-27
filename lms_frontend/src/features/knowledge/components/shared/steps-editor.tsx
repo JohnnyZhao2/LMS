@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { sanitizeStepsHtml } from '@/lib/knowledge-content';
+import { cn } from '@/lib/utils';
 
 interface StepsEditorProps {
   value: string;
@@ -7,6 +8,7 @@ interface StepsEditorProps {
   onBlur?: () => void;
   placeholder?: string;
   className?: string;
+  editorClassName?: string;
   minHeight?: number;
 }
 
@@ -19,6 +21,7 @@ export function StepsEditor({
   onBlur,
   placeholder = '填写简洁执行步骤…',
   className,
+  editorClassName,
   minHeight = 72,
 }: StepsEditorProps) {
   const ref = React.useRef<HTMLDivElement | null>(null);
@@ -54,26 +57,14 @@ export function StepsEditor({
           onBlur?.();
         }}
         data-placeholder={placeholder}
-        className="ks-steps-editor"
+        className={cn(
+          'w-full text-[13px] leading-[1.65] text-[#333] break-words whitespace-pre-wrap outline-none',
+          'empty:before:pointer-events-none empty:before:text-[#b0b6c0] empty:before:content-[attr(data-placeholder)]',
+          '[&_b]:font-bold [&_b]:text-[#111] [&_strong]:font-bold [&_strong]:text-[#111]',
+          editorClassName,
+        )}
         style={{ minHeight }}
       />
-      <style>{`
-        .ks-steps-editor {
-          width: 100%;
-          outline: none;
-          font-size: 13px;
-          line-height: 1.65;
-          color: #333;
-          white-space: pre-wrap;
-          word-break: break-word;
-        }
-        .ks-steps-editor:empty::before {
-          content: attr(data-placeholder);
-          color: #b0b6c0;
-          pointer-events: none;
-        }
-        .ks-steps-editor strong, .ks-steps-editor b { font-weight: 700; color: #111; }
-      `}</style>
     </div>
   );
 }

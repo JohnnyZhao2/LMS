@@ -8,7 +8,8 @@ Endpoints:
 - DELETE /api/users/{id}/ - Hard delete user and related data (admin only)
 - POST /api/users/{id}/assign-roles/ - Assign roles to user (admin only)
 - POST /api/users/{id}/assign-mentor/ - Assign mentor to user (admin only)
-- GET /api/users/mentors/ - Get all mentors list (admin only)
+- GET /api/users/mentors/ - Get mentors list (admin only)
+- GET /api/users/mentor-candidates/ - Get assignable mentor candidates list (admin only)
 - GET /api/users/roles/ - Get all roles list (admin only)
 - GET /api/users/departments/ - Get all departments list (admin only)
 """
@@ -17,7 +18,7 @@ from django.urls import path
 from apps.users.views.assignment import UserAssignMentorView, UserAssignRolesView
 from apps.users.views.avatar import UserAvatarUpdateView, UserSelfAvatarView
 from apps.users.views.crud import UserDetailView, UserListCreateView
-from apps.users.views.reference import DepartmentsListView, MentorsListView, RolesListView
+from apps.users.views.reference import DepartmentsListView, MentorCandidatesListView, MentorsListView, RolesListView
 
 urlpatterns = [
     path('', UserListCreateView.as_view(), name='user-list-create'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('<int:pk>/assign-roles/', UserAssignRolesView.as_view(), name='user-assign-roles'),
     path('<int:pk>/assign-mentor/', UserAssignMentorView.as_view(), name='user-assign-mentor'),
     path('mentors/', MentorsListView.as_view(), name='user-mentors'),
+    path('mentor-candidates/', MentorCandidatesListView.as_view(), name='user-mentor-candidates'),
     path('roles/', RolesListView.as_view(), name='user-roles'),
     path('departments/', DepartmentsListView.as_view(), name='user-departments'),
 ]

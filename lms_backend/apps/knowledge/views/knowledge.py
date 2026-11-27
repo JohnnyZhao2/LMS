@@ -14,12 +14,13 @@ from apps.authorization.engine import get_engine
 from apps.knowledge.serializers import (
     KnowledgeBulkDeleteSerializer,
     KnowledgeBulkImportSerializer,
+    KnowledgeBulkUpdateSerializer,
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
     KnowledgeListSerializer,
     KnowledgeUpdateSerializer,
 )
-from apps.knowledge.selectors import get_knowledge_queryset
+from apps.knowledge.selectors import get_knowledge_queryset, knowledge_base_queryset
 from apps.knowledge.services import KnowledgeService
 from apps.tasks.models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from core.base_view import BaseAPIView
@@ -50,16 +51,54 @@ def _build_knowledge_filters(request):
     if space_tag_id is not None:
         filters['space_tag_id'] = space_tag_id
 
-    tag_id = parse_int_query_param(
-        request=request,
-        name='tag_id',
-        minimum=1,
-    )
-    if tag_id is not None:
-        filters['tag_id'] = tag_id
+    tag_ids_raw = (request.query_params.get('tag_ids') or '').strip()
+    if tag_ids_raw:
+        parsed_ids = []
+        for part in tag_ids_raw.split(','):
+            part = part.strip()
+            if not part:
+                continue
+            if not part.isdigit() or int(part) < 1:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='无效的 tag_ids 参数',
+                )
+            parsed_ids.append(int(part))
+        if parsed_ids:
+            filters['tag_ids'] = list(dict.fromkeys(parsed_ids))
+    else:
+        tag_id = parse_int_query_param(
+            request=request,
+            name='tag_id',
+            minimum=1,
+        )
+        if tag_id is not None:
+            filters['tag_ids'] = [tag_id]
+
+    pinned = (request.query_params.get('pinned') or '').strip().lower()
+    if pinned in ('true', '1'):
+        filters['pinned'] = True
 
     search = request.query_params.get('search')
     return filters, search
+
+
+def _group_knowledge_id_rows(id_doc_rows):
+    """基于轻量的 (id, doc_key, section) 序列有序归组，同文档按 section 拆卡，保持首次出现顺序。"""
+    groups: list[list[int]] = []
+    by_group_key: dict[tuple[str, str], list[int]] = {}
+    for knowledge_id, doc_key, section in id_doc_rows:
+        if not doc_key:
+            groups.append([knowledge_id])
+            continue
+        group_key = (doc_key, (section or '').strip())
+        bucket = by_group_key.get(group_key)
+        if bucket is None:
+            bucket = []
+            by_group_key[group_key] = bucket
+            groups.append(bucket)
+        bucket.append(knowledge_id)
+    return groups
 
 
 class KnowledgeListCreateView(BaseAPIView):
@@ -78,7 +117,32 @@ class KnowledgeListCreateView(BaseAPIView):
             search=search
         )
 
+        group_by_doc = (request.query_params.get('group_by_doc') or '').strip().lower() in ('true', '1')
         paginator = StandardResultsSetPagination()
+
+        if group_by_doc and not filters.get('pinned'):
+            # shortcut: 万篇以内直接拉轻量 (id, doc_key, section) 在内存归组分页；超万篇时再改用窗口函数分组分页
+            id_doc_rows = list(knowledge_queryset.values_list('id', 'doc_key', 'section'))
+            id_groups = _group_knowledge_id_rows(id_doc_rows)
+            page_id_groups = paginator.paginate_queryset(id_groups, request)
+            page_ids = [kid for group in page_id_groups for kid in group]
+            items_by_id = {
+                obj.id: obj
+                for obj in knowledge_base_queryset().filter(id__in=page_ids)
+            }
+            serialized = []
+            for id_group in page_id_groups:
+                group_objs = [items_by_id[kid] for kid in id_group if kid in items_by_id]
+                if not group_objs:
+                    continue
+                lead_data = KnowledgeListSerializer(group_objs[0]).data
+                if len(group_objs) > 1:
+                    lead_data['grouped_items'] = KnowledgeListSerializer(group_objs, many=True).data
+                serialized.append(lead_data)
+            response = paginator.get_paginated_response(serialized)
+            response.data['data']['total_knowledge_count'] = len(id_doc_rows)
+            return response
+
         page = paginator.paginate_queryset(knowledge_queryset, request)
         serializer = KnowledgeListSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
@@ -146,7 +210,24 @@ class KnowledgeBulkDeleteView(BaseAPIView):
         get_engine(request).enforce('knowledge.delete_knowledge', error_message='无权删除知识文档')
         serializer = KnowledgeBulkDeleteSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        return success_response(self.service.bulk_delete(items=serializer.validated_data['items']))
+        return success_response(
+            self.service.bulk_delete(
+                ids=serializer.validated_data.get('ids'),
+                items=serializer.validated_data.get('items'),
+            )
+        )
+
+
+class KnowledgeBulkUpdateView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    service_class = KnowledgeService
+
+    @extend_schema(summary='批量更新知识文档', request=KnowledgeBulkUpdateSerializer, tags=['知识管理'])
+    def post(self, request):
+        get_engine(request).enforce('knowledge.change_knowledge', error_message='无权更新知识文档')
+        serializer = KnowledgeBulkUpdateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        return success_response(self.service.bulk_update(**serializer.validated_data))
 
 
 class KnowledgeDetailView(BaseAPIView):

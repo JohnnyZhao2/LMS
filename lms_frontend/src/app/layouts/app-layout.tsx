@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './sidebar'
 import { GlobalBreadcrumb } from './global-breadcrumb'
+import { ImpersonationBanner } from './workspace-user-controls'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -39,6 +40,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* 主内容区 */}
       <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden bg-[#F6F8FC]">
+        <ImpersonationBanner />
         <div className="flex h-full w-full min-w-0 min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 xl:px-10">
           <GlobalBreadcrumb />
           <div className="scrollbar-subtle -mx-8 -mt-4 flex min-h-0 flex-1 flex-col overflow-auto px-8 pt-4">

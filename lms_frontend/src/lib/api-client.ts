@@ -1,5 +1,6 @@
 import { config } from '@/config/app-config';
 import { tokenStorage } from './token-storage';
+import { clearImpersonationWorkbench } from './workbench-store';
 import { ROUTES } from '@/config/routes';
 
 /**
@@ -101,7 +102,11 @@ class ApiClient {
     try {
       await this.refreshPromise;
     } catch (error) {
-      tokenStorage.clearTokens();
+      if (tokenStorage.isImpersonating()) {
+        tokenStorage.clearImpersonationTokens();
+      } else {
+        tokenStorage.clearTokens();
+      }
       throw error;
     } finally {
       this.refreshPromise = null;
@@ -161,6 +166,7 @@ class ApiClient {
 
     // access token 过期时刷新后重放原请求；刷新失败则清理会话并回登录页。
     if (response.status === 401 && !skipAuth) {
+      const wasImpersonating = tokenStorage.isImpersonating();
       try {
         await this.refreshToken();
         // 重新发送请求
@@ -173,6 +179,12 @@ class ApiClient {
           headers,
         });
       } catch (error) {
+        if (wasImpersonating) {
+          tokenStorage.clearImpersonationTokens();
+          clearImpersonationWorkbench();
+          window.location.href = ROUTES.USERS;
+          throw error;
+        }
         // 刷新失败：会话已失效，清 token 并回登录页
         tokenStorage.clearTokens();
         if (window.location.pathname !== ROUTES.LOGIN) {

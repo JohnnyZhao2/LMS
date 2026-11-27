@@ -104,7 +104,6 @@ export const TagManagementPage: React.FC = () => {
 
   const { data: tags = [], isLoading } = useTags({
     tag_type: activeTab,
-    limit: 200,
     search: search || undefined,
     applicable_to: activeTab === 'TAG' && applicableScope !== 'all' ? applicableScope : undefined,
   });

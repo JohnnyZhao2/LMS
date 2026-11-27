@@ -21,6 +21,12 @@ class LoginRequestSerializer(serializers.Serializer):
     )
 
 
+class ImpersonatorSerializer(serializers.Serializer):
+    id = serializers.IntegerField(help_text='超管用户ID')
+    username = serializers.CharField(help_text='超管姓名')
+    employee_id = serializers.CharField(help_text='超管工号')
+
+
 class AuthSessionSerializer(serializers.Serializer):
     """Shared session payload for authenticated responses."""
     user = UserInfoSerializer(help_text='用户信息')
@@ -29,6 +35,15 @@ class AuthSessionSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text='当前已授权的 Django 权限码列表',
     )
+    impersonator = ImpersonatorSerializer(
+        allow_null=True,
+        required=False,
+        help_text='当前视角扮演发起人（仅超管扮演态返回）',
+    )
+
+
+class ImpersonateRequestSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True, help_text='目标用户ID')
 
 
 class TokenPairSerializer(serializers.Serializer):

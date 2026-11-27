@@ -2,6 +2,10 @@ import * as React from 'react';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { StepsEditor } from '../shared/steps-editor';
 import { plain } from '@/lib/knowledge-content';
+import { cn } from '@/lib/utils';
+
+const CARD_INPUT_CLASS =
+  'mb-2 w-full border-0 border-b border-black/[0.08] bg-transparent pt-1 pb-2 font-inherit text-[12px] text-[#555] outline-none';
 
 interface AddKnowledgeCardProps {
   onSave: (payload: { title: string; externalDocUrl: string; content: string }) => Promise<void> | void;
@@ -41,11 +45,11 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   };
 
   return (
-    <div className="akc-card" style={{ marginBottom: 14, breakInside: 'avoid' }}>
-      <div className="akc-body">
+    <div className="relative [break-inside:avoid]">
+      <div className="relative rounded-[7px] bg-white px-5 py-[18px] [box-shadow:0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)] transition-[box-shadow] duration-[200ms] hover:[box-shadow:0_14px_24px_rgba(0,0,0,0.13),10px_14px_24px_rgba(0,0,0,0.10)] focus-within:[box-shadow:0_14px_24px_rgba(0,0,0,0.13),10px_14px_24px_rgba(0,0,0,0.10)]">
         <button
           type="button"
-          className="akc-expand"
+          className="absolute top-[10px] right-[10px] z-[2] flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0"
           onMouseDown={(e) => {
             e.preventDefault();
             onExpand({ title, externalDocUrl, content });
@@ -56,15 +60,15 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           <FocusOrbIcon size={16} interactive />
         </button>
 
-        <p className="akc-label">添加知识</p>
+        <p className="m-0 mb-[10px] text-[10.5px] font-bold tracking-[0.1em] text-[#e8793a] uppercase">添加知识</p>
         <input
-          className="akc-input akc-title"
+          className={cn(CARD_INPUT_CLASS, 'text-[15px] font-semibold text-[#111]')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="标题"
         />
         <input
-          className="akc-input"
+          className={CARD_INPUT_CLASS}
           value={externalDocUrl}
           onChange={(e) => setExternalDocUrl(e.target.value)}
           placeholder="文档链接（可选）"
@@ -74,7 +78,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         {canSave && (
           <button
             type="button"
-            className="akc-save"
+            className="mt-3 w-full cursor-pointer rounded-[6px] border-0 bg-[#e8793a] py-[10px] font-inherit text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isSaving}
             onMouseDown={(e) => {
               e.preventDefault();
@@ -85,40 +89,6 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           </button>
         )}
       </div>
-
-      <style>{`
-        .akc-card { position: relative; }
-        .akc-body {
-          position: relative;
-          background: #fff;
-          border-radius: 7px;
-          padding: 18px 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,.06);
-        }
-        .akc-expand {
-          position: absolute; top: 10px; right: 10px; z-index: 2;
-          width: 28px; height: 28px; border: none; border-radius: 50%;
-          background: transparent; padding: 0; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .akc-label {
-          margin: 0 0 10px;
-          font-size: 10.5px; font-weight: 700; color: #e8793a;
-          letter-spacing: .1em; text-transform: uppercase;
-        }
-        .akc-input {
-          width: 100%; border: none; border-bottom: 1px solid rgba(0,0,0,.08);
-          outline: none; background: transparent; font-family: inherit;
-          padding: 4px 0 8px; margin-bottom: 8px; color: #555; font-size: 12px;
-        }
-        .akc-title { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 8px; }
-        .akc-save {
-          width: 100%; margin-top: 12px; border: none; border-radius: 6px;
-          background: #e8793a; color: #fff; font-family: inherit;
-          font-size: 12px; font-weight: 600; padding: 10px 0; cursor: pointer;
-        }
-        .akc-save:disabled { opacity: .5; cursor: not-allowed; }
-      `}</style>
     </div>
   );
 };

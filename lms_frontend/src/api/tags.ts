@@ -12,6 +12,7 @@ interface GetTagsParams {
   search?: string;
   limit?: number;
   applicable_to?: 'knowledge' | 'question';
+  space_tag_id?: number;
   enabled?: boolean;
 }
 
@@ -37,9 +38,9 @@ interface ReorderSpaceTagsPayload {
 
 export const useTags = (params: GetTagsParams = {}) => {
   const { hasCapability, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { tag_type, search, limit = 50, applicable_to, enabled = true } = params;
+  const { tag_type, search, limit, applicable_to, space_tag_id, enabled = true } = params;
   const canQueryTags = hasCapability('tags.view_tag')
-    || (tag_type === 'SPACE' && isAuthenticated);
+    || (isAuthenticated && (tag_type === 'SPACE' || applicable_to === 'knowledge'));
 
   return useQuery({
     queryKey: queryKeys.tags.list({
@@ -48,6 +49,7 @@ export const useTags = (params: GetTagsParams = {}) => {
       search,
       limit,
       applicableTo: applicable_to,
+      spaceTagId: space_tag_id,
     }),
     queryFn: () => {
       const queryString = buildQueryString({
@@ -55,6 +57,7 @@ export const useTags = (params: GetTagsParams = {}) => {
         search,
         limit,
         applicable_to,
+        space_tag_id,
       });
       return apiClient.get<Tag[]>(`/tags/${queryString}`);
     },

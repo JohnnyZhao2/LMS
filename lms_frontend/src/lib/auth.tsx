@@ -7,12 +7,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { queryClient } from '@/lib/react-query';
-import { setWorkbench } from '@/lib/workbench-store';
+import {
+  clearImpersonationWorkbench,
+  setWorkbench,
+  syncWorkbenchFromStorage,
+} from '@/lib/workbench-store';
 import type {
   AuthSessionPayload,
   CapabilityCodes,
   ChangeOwnPasswordRequest,
   ChangeOwnPasswordResponse,
+  ImpersonatorInfo,
   LoginRequest,
   LoginResponse,
 } from '@/types/auth';
@@ -24,15 +29,19 @@ interface AuthState {
   user: UserInfo | null;
   roles: Role[];
   capabilities: CapabilityCodes;
+  impersonator: ImpersonatorInfo | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 interface AuthContextValue extends AuthState {
+  isImpersonating: boolean;
   managementRole: RoleCode | null;
   canAccessManage: boolean;
   login: (data: LoginRequest) => Promise<void>;
   loginByOneAccountCode: (code: string) => Promise<void>;
+  startImpersonation: (userId: number) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
   logout: () => Promise<void>;
   changeOwnPassword: (data: ChangeOwnPasswordRequest) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -46,6 +55,7 @@ const buildLoggedOutState = (): AuthState => ({
   user: null,
   roles: [],
   capabilities: [],
+  impersonator: null,
   isAuthenticated: false,
   isLoading: false,
 });
@@ -58,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user: null,
       roles: [],
       capabilities: [],
+      impersonator: null,
       isAuthenticated: false,
       isLoading: hasTokens,
     };
@@ -65,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetAuthState = useCallback(() => {
     tokenStorage.clearTokens();
+    clearImpersonationWorkbench();
     setWorkbench('learn');
     queryClient.clear();
     setState(buildLoggedOutState());
@@ -79,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user: session.user,
       roles: nextRoles,
       capabilities: session.capabilities ?? [],
+      impersonator: session.impersonator ?? null,
       isAuthenticated: true,
       isLoading: false,
     });
@@ -99,6 +112,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       if (error instanceof ApiError && error.status === 401) {
+        if (tokenStorage.isImpersonating()) {
+          tokenStorage.clearImpersonationTokens();
+          clearImpersonationWorkbench();
+          syncWorkbenchFromStorage();
+          queryClient.clear();
+          if (tokenStorage.getAccessToken() || tokenStorage.getRefreshToken()) {
+            try {
+              const fallback = await apiClient.get<AuthSessionPayload>('/auth/me/');
+              applyAuthSession(fallback);
+              return;
+            } catch {
+              // 超管令牌同样失效时继续清理登录态
+            }
+          }
+        }
         resetAuthState();
         return;
       }
@@ -110,6 +138,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyAuthSession, resetAuthState]);
 
   const completeLogin = useCallback((response: LoginResponse) => {
+    tokenStorage.clearImpersonationTokens();
+    clearImpersonationWorkbench();
     setWorkbench('learn');
     queryClient.clear();
     tokenStorage.setTokenPair(response);
@@ -130,12 +160,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     completeLogin(response);
   }, [completeLogin]);
 
+  const startImpersonation = useCallback(async (userId: number) => {
+    const response = await apiClient.post<LoginResponse>('/auth/impersonate/', { user_id: userId });
+    tokenStorage.setImpersonationTokenPair(response);
+    setWorkbench('learn');
+    queryClient.clear();
+    applyAuthSession(response);
+  }, [applyAuthSession]);
+
+  const stopImpersonation = useCallback(async () => {
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (tokenStorage.isImpersonating() && refreshToken) {
+      try {
+        await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
+      } catch {
+        // 忽略已过期扮演令牌
+      }
+    }
+    tokenStorage.clearImpersonationTokens();
+    clearImpersonationWorkbench();
+    syncWorkbenchFromStorage();
+    queryClient.clear();
+    await refreshUser();
+  }, [refreshUser]);
+
   const logout = useCallback(async () => {
+    const wasImpersonating = tokenStorage.isImpersonating();
     const refreshToken = tokenStorage.getRefreshToken();
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
     await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
+    if (wasImpersonating) {
+      tokenStorage.clearImpersonationTokens();
+      const primaryRefreshToken = tokenStorage.getPrimaryRefreshToken();
+      if (primaryRefreshToken && primaryRefreshToken !== refreshToken) {
+        try {
+          await apiClient.post('/auth/logout/', { refresh_token: primaryRefreshToken });
+        } catch {
+          // 主登录态令牌已过期时忽略
+        }
+      }
+    }
     resetAuthState();
   }, [resetAuthState]);
 
@@ -194,12 +260,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ))?.code ?? null;
   const canAccessManage = Boolean(state.user?.is_superuser || state.roles.length > 0);
 
+  const isImpersonating = Boolean(state.impersonator || tokenStorage.isImpersonating());
+
   const value: AuthContextValue = {
     ...state,
+    isImpersonating,
     managementRole,
     canAccessManage,
     login,
     loginByOneAccountCode,
+    startImpersonation,
+    stopImpersonation,
     logout,
     changeOwnPassword,
     refreshUser,

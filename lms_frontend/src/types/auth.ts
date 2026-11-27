@@ -20,6 +20,12 @@ export interface ChangeOwnPasswordRequest {
   password: string;
 }
 
+export interface ImpersonatorInfo {
+  id: number;
+  username: string;
+  employee_id: string;
+}
+
 /**
  * 登录 / 会话响应
  */
@@ -27,6 +33,7 @@ export interface AuthSessionPayload {
   user: UserInfo;
   roles: Role[];
   capabilities: CapabilityCodes;
+  impersonator?: ImpersonatorInfo | null;
 }
 
 /**

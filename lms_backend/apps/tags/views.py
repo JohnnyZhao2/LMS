@@ -22,8 +22,9 @@ class TagListCreateView(APIView):
         parameters=[
             OpenApiParameter(name='tag_type', type=str, description='标签类型（SPACE/TAG）'),
             OpenApiParameter(name='search', type=str, description='搜索关键词'),
-            OpenApiParameter(name='limit', type=int, description='返回数量限制（默认50）'),
+            OpenApiParameter(name='limit', type=int, description='返回数量限制（不传则返回全量）'),
             OpenApiParameter(name='applicable_to', type=str, description='适用范围（knowledge/question）'),
+            OpenApiParameter(name='space_tag_id', type=int, description='按空间标签筛选已关联的二级标签'),
         ],
         responses={200: TagSerializer(many=True)},
         tags=['标签管理'],
@@ -32,23 +33,31 @@ class TagListCreateView(APIView):
         tag_type = request.query_params.get('tag_type', '').strip() or None
         search = request.query_params.get('search', '').strip() or None
         applicable_to = request.query_params.get('applicable_to', '').strip() or None
+        space_tag_id = parse_int_query_param(
+            request=request,
+            name='space_tag_id',
+            default=None,
+            minimum=1,
+        )
         enforce_tag_view_permission(
             request,
             '无权查看标签列表',
             tag_type=tag_type,
+            applicable_to=applicable_to,
         )
         service = TagService(request)
         limit = parse_int_query_param(
             request=request,
             name='limit',
-            default=50,
+            default=None,
             minimum=1,
-            maximum=200,
+            maximum=2000,
         )
         queryset = service.list(
             tag_type=tag_type,
             search=search,
             applicable_to=applicable_to,
+            space_tag_id=space_tag_id,
             limit=limit,
         )
         serializer = TagSerializer(queryset, many=True)

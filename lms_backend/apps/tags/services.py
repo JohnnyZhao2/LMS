@@ -26,19 +26,27 @@ def _merge_tags_log_description(ctx: dict) -> str:
 
 
 class TagService(BaseService):
-    def list(self, *, tag_type=None, search=None, applicable_to=None, limit=50):
+    def list(self, *, tag_type=None, search=None, applicable_to=None, space_tag_id=None, limit=None):
         queryset = Tag.objects.all()
         if tag_type:
             queryset = queryset.filter(tag_type=tag_type)
         if applicable_to == 'knowledge':
             queryset = queryset.filter(allow_knowledge=True)
+            if space_tag_id is not None:
+                queryset = queryset.filter(knowledge_items__space_tag_id=space_tag_id).distinct()
         elif applicable_to == 'question':
             queryset = queryset.filter(allow_question=True)
+            if space_tag_id is not None:
+                queryset = queryset.filter(questions__space_tag_id=space_tag_id).distinct()
+        elif space_tag_id is not None:
+            queryset = queryset.filter(knowledge_items__space_tag_id=space_tag_id).distinct()
         if search:
             queryset = queryset.filter(name__icontains=search)
         if tag_type == 'SPACE':
-            return queryset.order_by('sort_order', 'name')[:limit]
-        return queryset.order_by('name')[:limit]
+            ordered = queryset.order_by('sort_order', 'name')
+        else:
+            ordered = queryset.order_by('category', 'name')
+        return ordered[:limit] if limit is not None else ordered
 
     @transaction.atomic
     @log_content_action(
@@ -53,6 +61,8 @@ class TagService(BaseService):
         extend_scope = data.pop('extend_scope', False)
         data['name'] = data['name'].strip()
         tag_type = data['tag_type']
+        category = (data.get('category') or '').strip() if tag_type == 'TAG' else ''
+        data['category'] = category
 
         if tag_type == 'SPACE':
             data['allow_knowledge'] = True
@@ -65,12 +75,16 @@ class TagService(BaseService):
 
         existing = Tag.objects.filter(name=data['name'], tag_type=tag_type).first()
         if existing:
-            return self._reuse_existing_tag(
+            reused = self._reuse_existing_tag(
                 existing=existing,
                 tag_type=tag_type,
                 current_module=current_module,
                 extend_scope=extend_scope,
             )
+            if tag_type == 'TAG' and category and not reused.category:
+                reused.category = category
+                reused.save(update_fields=['category'])
+            return reused
 
         try:
             return Tag.objects.create(**data)
@@ -365,12 +379,15 @@ class TagService(BaseService):
             tag.color = data['color']
         if 'sort_order' in data:
             tag.sort_order = data['sort_order']
+        tag.category = ''
 
     def _apply_tag_fields(self, tag: Tag, data: dict) -> None:
         if 'name' in data:
             tag.name = data['name']
         if 'color' in data and data['color']:
             tag.color = data['color']
+        if 'category' in data:
+            tag.category = (data['category'] or '').strip()
         if 'allow_knowledge' in data:
             tag.allow_knowledge = data['allow_knowledge']
         elif tag.tag_type == 'SPACE':
@@ -450,11 +467,14 @@ def enforce_tag_view_permission(
     error_message='无权查看标签',
     *,
     tag_type: Optional[str] = None,
+    applicable_to: Optional[str] = None,
 ) -> None:
     from apps.authorization.engine import get_engine
 
-    if get_engine(request).authorize('tags.view_tag').allowed:
+    engine = get_engine(request)
+    if engine.authorize('tags.view_tag').allowed:
         return
-    if tag_type == 'SPACE' and getattr(request.user, 'is_authenticated', False):
-        return
+    if getattr(request.user, 'is_authenticated', False):
+        if tag_type == 'SPACE' or applicable_to == 'knowledge':
+            return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)

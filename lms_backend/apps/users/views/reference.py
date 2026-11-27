@@ -12,12 +12,43 @@ from core.responses import list_response
 from .constants import USER_REFERENCE_PERMISSION_CODES
 
 
+def _get_scoped_mentor_queryset(request, *, require_mentor_role: bool):
+    engine = get_engine(request)
+    engine.enforce_any(
+        USER_REFERENCE_PERMISSION_CODES,
+        error_message='无权查看导师列表',
+    )
+    mentors = User.objects.filter(
+        is_active=True,
+        is_superuser=False,
+    )
+    if require_mentor_role:
+        mentors = mentors.filter(groups__name='MENTOR').distinct()
+    if not engine.user.is_superuser:
+        write_codes = [
+            code for code in ('users.add_user', 'users.change_user')
+            if engine.has_permission(code)
+        ]
+        scope_codes = write_codes or [
+            code for code in USER_REFERENCE_PERMISSION_CODES
+            if engine.has_permission(code)
+        ]
+        scopes = [engine.get_permission_scope(code) for code in scope_codes]
+        if not any(scope == 'ALL' for scope, _ in scopes):
+            allowed_dept_ids = set().union(*(dept_ids for _, dept_ids in scopes))
+            if allowed_dept_ids:
+                mentors = mentors.filter(department_id__in=allowed_dept_ids)
+            else:
+                mentors = mentors.filter(pk=engine.user.pk)
+    return mentors.order_by('username')
+
+
 class MentorsListView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary='获取导师列表',
-        description='获取可指定为导师的在职员工',
+        description='获取所有具有导师角色（MENTOR）的在职员工，用于按导师筛选学员',
         responses={
             200: MentorSerializer(many=True),
             403: OpenApiResponse(description='无权限'),
@@ -25,31 +56,25 @@ class MentorsListView(APIView):
         tags=['用户管理'],
     )
     def get(self, request):
-        engine = get_engine(request)
-        engine.enforce_any(USER_REFERENCE_PERMISSION_CODES,
-            error_message='无权查看导师列表',
-        )
-        mentors = User.objects.filter(
-            is_active=True,
-            is_superuser=False,
-        )
-        if not engine.user.is_superuser:
-            write_codes = [
-                code for code in ('users.add_user', 'users.change_user')
-                if engine.has_permission(code)
-            ]
-            scope_codes = write_codes or [
-                code for code in USER_REFERENCE_PERMISSION_CODES
-                if engine.has_permission(code)
-            ]
-            scopes = [engine.get_permission_scope(code) for code in scope_codes]
-            if not any(scope == 'ALL' for scope, _ in scopes):
-                allowed_dept_ids = set().union(*(dept_ids for _, dept_ids in scopes))
-                if allowed_dept_ids:
-                    mentors = mentors.filter(department_id__in=allowed_dept_ids)
-                else:
-                    mentors = mentors.filter(pk=engine.user.pk)
-        return list_response(MentorSerializer(mentors.order_by('username'), many=True).data)
+        mentors = _get_scoped_mentor_queryset(request, require_mentor_role=True)
+        return list_response(MentorSerializer(mentors, many=True).data)
+
+
+class MentorCandidatesListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='获取可指定为带教导师的在职员工列表',
+        description='获取当前权限范围内可指定为带教导师的所有在职员工，不限制 MENTOR 角色',
+        responses={
+            200: MentorSerializer(many=True),
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['用户管理'],
+    )
+    def get(self, request):
+        candidates = _get_scoped_mentor_queryset(request, require_mentor_role=False)
+        return list_response(MentorSerializer(candidates, many=True).data)
 
 
 class DepartmentsListView(APIView):

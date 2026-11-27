@@ -5,6 +5,7 @@
 import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
+  Eye,
   Pencil,
   KeyRound,
   Trash2,
@@ -17,6 +18,7 @@ import { AvatarPickerPopover } from '@/components/users/avatar-picker-popover'
 import { getRoleColor, SUPERUSER_VISUAL } from "@/lib/role-config"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import {
+  LIST_ACTION_ICON_ANALYTICS_CLASS,
   LIST_ACTION_ICON_DESTRUCTIVE_CLASS,
   LIST_ACTION_ICON_EDIT_CLASS,
   LIST_ACTION_ICON_WARNING_CLASS,
@@ -44,7 +46,7 @@ const DISABLED_ACTION_CLASS = 'disabled:opacity-25 disabled:grayscale'
 
 export const UserList: React.FC = () => {
   const navigate = useNavigate()
-  const { user, hasCapability } = useAuth()
+  const { user, hasCapability, isImpersonating, startImpersonation } = useAuth()
   const isSuperuser = Boolean(user?.is_superuser)
   const hasPermission = (code: string) => isSuperuser || hasCapability(code)
   const canCreateUser = hasPermission('users.add_user')
@@ -75,6 +77,7 @@ export const UserList: React.FC = () => {
   })
 
   // 用户操作状态
+  const [impersonatingUserId, setImpersonatingUserId] = React.useState<number | null>(null)
   const [formModalOpen, setFormModalOpen] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<number | undefined>()
   const [changePasswordDialog, setChangePasswordDialog] = React.useState<{
@@ -191,6 +194,20 @@ export const UserList: React.FC = () => {
     }
   }, [updateUserAvatar])
 
+  const handleImpersonate = React.useCallback(async (targetUser: UserListType) => {
+    if (impersonatingUserId !== null) return
+    setImpersonatingUserId(targetUser.id)
+    try {
+      await startImpersonation(targetUser.id)
+      toast.success(`已切换为「${targetUser.username}」视角`)
+      navigate(ROUTES.DASHBOARD)
+    } catch (error) {
+      showApiError(error, '切换用户视角失败')
+    } finally {
+      setImpersonatingUserId(null)
+    }
+  }, [impersonatingUserId, navigate, startImpersonation])
+
   // DataTable 列定义 - 使用共用 Cell 组件
   const columns = React.useMemo<ColumnDef<UserListType>[]>(() => [
     {
@@ -300,11 +317,37 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
-      meta: { minWidth: '140px' },
+      meta: { minWidth: '172px' },
       cell: ({ row }) => {
         const manageable = canManageUser(row.original)
+        const canImpersonateTarget = !row.original.is_superuser && row.original.is_active !== false
         return (
         <div className="inline-flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {isSuperuser && !isImpersonating && (
+            <Tooltip
+              title={
+                canImpersonateTarget
+                  ? "以此身份查看（仅当前标签页）"
+                  : row.original.is_superuser
+                    ? "不可切换超管账号"
+                    : "停用账号不可登录"
+              }
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`以 ${row.original.username} 身份查看`}
+                disabled={!canImpersonateTarget || impersonatingUserId !== null}
+                className={cn(LIST_ACTION_ICON_ANALYTICS_CLASS, DISABLED_ACTION_CLASS)}
+                onClick={() => {
+                  if (!canImpersonateTarget) return
+                  void handleImpersonate(row.original)
+                }}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip title={manageable ? "编辑资料" : "不可操作当前账号"}>
             <Button
               variant="ghost"
@@ -360,7 +403,11 @@ export const UserList: React.FC = () => {
     canJumpToAuthorization,
     canManageUser,
     canOpenUserEditor,
+    handleImpersonate,
     handleUserAvatarSelect,
+    impersonatingUserId,
+    isImpersonating,
+    isSuperuser,
     navigate,
     openChangePasswordDialog,
     updateUserAvatar.isPending,

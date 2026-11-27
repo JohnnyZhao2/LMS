@@ -81,12 +81,22 @@ export const useUserDetail = (id: number) => {
 };
 
 /**
- * 可指定为导师的在职员工
+ * 获取导师列表（拥有导师角色的用户，用于按导师筛选）
  */
 export const useMentors = () => {
   return useQuery({
     queryKey: queryKeys.users.mentors(),
     queryFn: () => apiClient.get<Mentor[]>('/users/mentors/'),
+  });
+};
+
+/**
+ * 可指定为带教导师的在职员工
+ */
+export const useMentorCandidates = () => {
+  return useQuery({
+    queryKey: queryKeys.users.mentorCandidates(),
+    queryFn: () => apiClient.get<Mentor[]>('/users/mentor-candidates/'),
   });
 };
 

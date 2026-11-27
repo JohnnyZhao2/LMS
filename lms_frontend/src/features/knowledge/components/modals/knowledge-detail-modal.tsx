@@ -1,70 +1,27 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { CheckCircle, Eye, PanelRightClose, PanelRightOpen, PencilLine } from 'lucide-react';
 
-import { Skeleton } from '@/components/ui/skeleton';
 import { useTags } from '@/api/tags';
-import { useKnowledgeDetail, useCreateKnowledge, useUpdateKnowledge } from '../../api/knowledge';
-import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
-import { useAuth } from '@/lib/auth';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useWorkbench } from '@/hooks/use-workbench';
-import type { KnowledgeDetail as KnowledgeDetailType, KnowledgeWriteRequest, RelatedLink } from '@/types/knowledge';
-import type { SimpleTag } from '@/types/common';
-import { StepsEditor } from '../shared/steps-editor';
-import { FocusOrbIcon } from '../shared/focus-icon';
-import { KnowledgeDetailSidePanel } from './knowledge-detail-side-panel';
+import { useAuth } from '@/lib/auth';
 import { buildDocUrl, sanitizeStepsHtml } from '@/lib/knowledge-content';
+import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
-import { sanitizeRelatedLinks } from '../../utils/related-links';
-import './knowledge-detail-modal.css';
+import { useKnowledgeDetailEditor } from '../../hooks/use-knowledge-detail-editor';
+import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
+import { FocusOrbIcon } from '../shared/focus-icon';
+import { StepsEditor } from '../shared/steps-editor';
+import {
+  KnowledgeDetailSidePanel,
+  SIDE_PANEL_HEADER_BG_CLASS,
+  SIDE_PANEL_SHELL_CLASS,
+} from './knowledge-detail-side-panel';
 
-const EMPTY_RELATED_LINK: RelatedLink = { title: '', url: '' };
-
-function relTime(dateStr: string): string {
-  const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (d === 0) return '今天';
-  if (d === 1) return '昨天';
-  if (d < 30) return `${d} 天前`;
-  return `${Math.floor(d / 30)} 个月前`;
-}
-
-/**
- * 比较两组标签 id 是否一致
- */
-function hasSameTagIds(left: { id: number }[], right: { id: number }[]) {
-  return left.length === right.length && left.every((tag, index) => tag.id === right[index]?.id);
-}
-
-/**
- * 比较两组相关链接是否一致
- */
-function hasSameRelatedLinks(left: RelatedLink[], right: RelatedLink[]) {
-  const normalizedLeft = sanitizeRelatedLinks(left);
-  const normalizedRight = sanitizeRelatedLinks(right);
-  return (
-    normalizedLeft.length === normalizedRight.length
-    && normalizedLeft.every((link, index) => (
-      link.url === normalizedRight[index]?.url
-      && (link.title ?? '') === (normalizedRight[index]?.title ?? '')
-    ))
-  );
-}
-
-function getRelatedLinksDraftError(relatedLinks: RelatedLink[]) {
-  for (const link of relatedLinks) {
-    const title = link.title?.trim() ?? '';
-    const url = link.url.trim();
-    if (!title && !url) continue;
-    if (!url) return '请填写链接地址';
-    try {
-      new URL(url);
-    } catch {
-      return '链接地址格式不正确';
-    }
-  }
-  return null;
-}
+const IFRAME_MODE_BTN_CLASS =
+  'inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white/[0.92] p-0 text-[#475569] shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition-[background-color,color,border-color,box-shadow] duration-150 hover:bg-white hover:text-[#0f172a] hover:shadow-[0_4px_14px_rgba(15,23,42,0.1)]';
 
 export type KnowledgeLearning = {
   isCompleted: boolean;
@@ -85,6 +42,7 @@ interface KnowledgeDetailModalProps {
   learning?: KnowledgeLearning;
   onClose: () => void;
   onCreated?: (id: number) => void;
+  onSelectKnowledge?: (id: number) => void;
   onDelete?: (id: number) => void;
 }
 
@@ -100,443 +58,58 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   learning,
   onClose,
   onCreated,
+  onSelectKnowledge,
   onDelete,
 }) => {
-  const isCreateMode = typeof knowledgeId !== 'number';
   const { hasCapability } = useAuth();
   const workbench = useWorkbench();
-  const isStudent = workbench === 'learn';
-  const canUpdateKnowledge = !previewOnly && workbench === 'manage' && (
-    isCreateMode
-      ? hasCapability('knowledge.add_knowledge')
-      : hasCapability('knowledge.change_knowledge')
-  );
-  const canDeleteKnowledge = !previewOnly && workbench === 'manage' && !isCreateMode && hasCapability('knowledge.delete_knowledge');
-
-  const { data, isLoading } = useKnowledgeDetail({ knowledgeId, taskKnowledgeId });
-  const createKnowledge = useCreateKnowledge();
-  const updateKnowledge = useUpdateKnowledge();
-
-  const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
-
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
-
-  const [isFocusMode, setIsFocusMode] = useState(startInFocus);
-  const [iframeEditMode, setIframeEditMode] = useState(false);
-  const [editContent, setEditContent] = useState<string | undefined>(
-    isCreateMode ? initialContent : undefined,
-  );
-  const [editTitle, setEditTitle] = useState<string | undefined>(
-    isCreateMode ? initialTitle : undefined,
-  );
-  const [editExternalDocUrl, setEditExternalDocUrl] = useState<string | undefined>(
-    isCreateMode ? initialExternalDocUrl : undefined,
-  );
-  const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
-  const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(
-    isCreateMode && typeof initialSpaceTagId === 'number' ? initialSpaceTagId : undefined,
-  );
-  const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
-
-  const knowledge = useMemo(() => {
-    if (!isCreateMode) {
-      return knowledgeFromQuery;
-    }
-    const preferredSpaceId = editSpaceTagId === undefined ? initialSpaceTagId : editSpaceTagId;
-    const spaceTag = typeof preferredSpaceId === 'number'
-      ? spaces.find((tag) => tag.id === preferredSpaceId)
-      : undefined;
-    return {
-      id: 0,
-      title: initialTitle,
-      content: initialContent,
-      external_doc_url: initialExternalDocUrl,
-      tags: [],
-      related_links: [],
-      space_tag: spaceTag ? { id: spaceTag.id, name: spaceTag.name } : null,
-      view_count: 0,
-      created_at: '',
-      updated_at: '',
-    } satisfies KnowledgeDetailType;
-  }, [
-    editSpaceTagId,
+  const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
+  const editor = useKnowledgeDetailEditor({
+    knowledgeId,
+    taskKnowledgeId,
+    initialTitle,
     initialContent,
     initialExternalDocUrl,
     initialSpaceTagId,
-    initialTitle,
-    isCreateMode,
-    knowledgeFromQuery,
     spaces,
-  ]);
-
-  useEffect(() => {
-    if (!isCreateMode || typeof initialSpaceTagId !== 'number') return;
-    if (!spaces.some((tag) => tag.id === initialSpaceTagId)) {
-      setEditSpaceTagId(null);
-    }
-  }, [initialSpaceTagId, isCreateMode, spaces]);
-  const relatedLinksSectionRef = useRef<HTMLDivElement | null>(null);
-  const [editingLinks, setEditingLinks] = useState(false);
-  const [showTagInput, setShowTagInput] = useState(false);
-  const [showSpaceTags, setShowSpaceTags] = useState(false);
-
-  const activeContent = editContent ?? knowledge?.content ?? '';
-  const activeTitle = editTitle ?? knowledge?.title ?? '';
-  const activeExternalDocUrl = editExternalDocUrl ?? knowledge?.external_doc_url ?? '';
-  const activeTags = editTags ?? knowledge?.tags ?? [];
-  const shouldShowSystemTagsSection = !isStudent || activeTags.length > 0;
-  const activeSpaceTagId = editSpaceTagId === undefined
-    ? knowledge?.space_tag?.id ?? null
-    : editSpaceTagId;
-  const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
-
-  const hasChanges = isCreateMode || Boolean(knowledge && (
-    (editContent !== undefined && editContent !== knowledge.content)
-    || (editTitle !== undefined && editTitle !== knowledge.title)
-    || (editExternalDocUrl !== undefined && editExternalDocUrl !== knowledge.external_doc_url)
-    || (editTags !== undefined)
-    || (editSpaceTagId !== undefined)
-    || (editRelatedLinks !== undefined)
-  ));
-
-  const isSaving = isCreateMode ? createKnowledge.isPending : updateKnowledge.isPending;
-
-  /**
-   * 编辑态字段级落库
-   */
-  const commitPatch = useCallback(async (
-    data: KnowledgeWriteRequest,
-    errorMessage: string,
-    onSuccess?: () => void,
-  ) => {
-    if (isCreateMode || !knowledgeId) return null;
-    try {
-      const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId,
-        data,
-      });
-      onSuccess?.();
-      return updatedKnowledge;
-    } catch (error) {
-      showApiError(error, errorMessage);
-      return null;
-    }
-  }, [isCreateMode, knowledgeId, updateKnowledge]);
-
-  const clearLocalEdits = useCallback(() => {
-    setEditContent(undefined);
-    setEditTitle(undefined);
-    setEditExternalDocUrl(undefined);
-    setEditTags(undefined);
-    setEditSpaceTagId(undefined);
-    setEditRelatedLinks(undefined);
-    setEditingLinks(false);
-    setShowTagInput(false);
-    setShowSpaceTags(false);
-  }, []);
-
-  const handleCreateSave = useCallback(async () => {
-    if (createKnowledge.isPending) return;
-    const draftError = getRelatedLinksDraftError(activeRelatedLinks);
-    if (draftError) {
-      toast.error(draftError);
-      return;
-    }
-    try {
-      const sanitizedLinks = sanitizeRelatedLinks(activeRelatedLinks);
-      const result = await createKnowledge.mutateAsync({
-        ...(activeTitle.trim() && { title: activeTitle.trim() }),
-        ...(typeof activeSpaceTagId === 'number' && { space_tag_id: activeSpaceTagId }),
-        content: sanitizeStepsHtml(activeContent),
-        ...(activeExternalDocUrl.trim() && {
-          external_doc_url: activeExternalDocUrl.trim(),
-        }),
-        related_links: sanitizedLinks.length > 0 ? sanitizedLinks : undefined,
-        tag_ids: activeTags.map((tag) => tag.id),
-      });
-      toast.success('知识创建成功');
-      onClose();
-      onCreated?.(result.id);
-    } catch (error) {
-      showApiError(error, '创建失败');
-    }
-  }, [
-    activeContent,
-    activeExternalDocUrl,
-    activeRelatedLinks,
-    activeSpaceTagId,
-    activeTags,
-    activeTitle,
-    createKnowledge,
+    relatedLinksSectionRef,
     onClose,
     onCreated,
-  ]);
+  });
 
-  /**
-   * 失焦时把当前脏字段一次落库（内容失焦 / 显式保存）
-   */
-  const handleSave = useCallback(async () => {
-    if (isCreateMode) {
-      await handleCreateSave();
-      return true;
-    }
-    if (!hasChanges || !knowledge) return false;
-    const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
-    if (draftError) {
-      toast.error(draftError);
-      return false;
-    }
-    const nextDocUrl = (editExternalDocUrl ?? knowledge.external_doc_url ?? '').trim();
-    const updatedKnowledge = await commitPatch(
-      {
-        title: editTitle ?? knowledge.title,
-        content: sanitizeStepsHtml(editContent ?? knowledge.content),
-        external_doc_url: nextDocUrl,
-        ...(editTags !== undefined && { tag_ids: editTags.map((t) => t.id) }),
-        ...(editSpaceTagId !== undefined && { space_tag_id: editSpaceTagId ?? undefined }),
-        ...(editRelatedLinks !== undefined && {
-          related_links: sanitizeRelatedLinks(editRelatedLinks),
-        }),
-      },
-      '保存失败',
-      clearLocalEdits,
-    );
-    return Boolean(updatedKnowledge);
-  }, [
-    clearLocalEdits,
-    commitPatch,
-    editContent,
-    editExternalDocUrl,
-    editRelatedLinks,
-    editSpaceTagId,
-    editTags,
-    editTitle,
-    handleCreateSave,
-    hasChanges,
-    isCreateMode,
-    knowledge,
-  ]);
+  const isStudent = workbench === 'learn';
+  const canUpdateKnowledge = !previewOnly && workbench === 'manage' && (
+    editor.isCreateMode
+      ? hasCapability('knowledge.add_knowledge')
+      : hasCapability('knowledge.change_knowledge')
+  );
+  const canDeleteKnowledge = !previewOnly && workbench === 'manage' && !editor.isCreateMode && hasCapability('knowledge.delete_knowledge');
+  const canCreateSpace = canUpdateKnowledge && hasCapability('tags.add_tag');
+  const shouldShowSystemTagsSection = !isStudent || editor.activeTags.length > 0;
 
-  const handleTitleBlur = useCallback(() => {
-    if (isCreateMode || !knowledge || editTitle === undefined || editTitle === knowledge.title) {
-      return;
-    }
-    const nextTitle = editTitle;
-    void commitPatch(
-      { title: nextTitle },
-      '标题保存失败',
-      () => {
-        setEditTitle((currentTitle) => (
-          currentTitle === nextTitle ? undefined : currentTitle
-        ));
-      },
-    );
-  }, [commitPatch, editTitle, isCreateMode, knowledge]);
-
-  const handleExternalDocUrlBlur = useCallback(() => {
-    if (isCreateMode || !knowledge || editExternalDocUrl === undefined) return;
-    const nextDocUrl = editExternalDocUrl.trim();
-    const currentDocUrl = knowledge.external_doc_url ?? '';
-    if (nextDocUrl === currentDocUrl) {
-      setEditExternalDocUrl(undefined);
-      return;
-    }
-    void commitPatch(
-      { external_doc_url: nextDocUrl },
-      '文档链接保存失败',
-      () => {
-        setEditExternalDocUrl((current) => (
-          current !== undefined && current.trim() === nextDocUrl ? undefined : current
-        ));
-      },
-    );
-  }, [commitPatch, editExternalDocUrl, isCreateMode, knowledge]);
-
-  /**
-   * 移除文档链接并落库
-   */
-  const handleExternalDocUrlClear = useCallback(() => {
-    if (isCreateMode) {
-      setEditExternalDocUrl(undefined);
-      return;
-    }
-    if (!knowledge) return;
-    if (!(knowledge.external_doc_url ?? '').trim()) {
-      setEditExternalDocUrl(undefined);
-      return;
-    }
-    void commitPatch(
-      { external_doc_url: '' },
-      '文档链接保存失败',
-      () => setEditExternalDocUrl(undefined),
-    );
-  }, [commitPatch, isCreateMode, knowledge]);
-
-  const handleContentBlur = useCallback(() => {
-    if (isCreateMode) return;
-    if (!hasChanges) return;
-    void handleSave();
-  }, [handleSave, hasChanges, isCreateMode]);
-
-  const addTag = useCallback((tag: { id: number; name: string }) => {
-    const current = editTags ?? knowledge?.tags ?? [];
-    if (current.some((t) => t.id === tag.id)) return;
-    const nextTags = [...current, tag];
-    setEditTags(nextTags);
-    if (isCreateMode) return;
-    void commitPatch(
-      { tag_ids: nextTags.map((item) => item.id) },
-      '标签保存失败',
-      () => {
-        setEditTags((currentTags) => (
-          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
-        ));
-      },
-    );
-  }, [commitPatch, editTags, isCreateMode, knowledge?.tags]);
-
-  const removeTag = useCallback((tagId: number) => {
-    const current = editTags ?? knowledge?.tags ?? [];
-    const nextTags = current.filter((t) => t.id !== tagId);
-    setEditTags(nextTags);
-    if (isCreateMode) return;
-    void commitPatch(
-      { tag_ids: nextTags.map((item) => item.id) },
-      '标签保存失败',
-      () => {
-        setEditTags((currentTags) => (
-          currentTags && hasSameTagIds(currentTags, nextTags) ? undefined : currentTags
-        ));
-      },
-    );
-  }, [commitPatch, editTags, isCreateMode, knowledge?.tags]);
-
-  const updateRelatedLinksDraft = useCallback((
-    updater: (current: RelatedLink[]) => RelatedLink[],
-  ) => {
-    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
-    const nextLinks = updater(current);
-    setEditRelatedLinks(nextLinks);
-    return nextLinks;
-  }, [editRelatedLinks, knowledge?.related_links]);
-
-  const handleRelatedLinkChange = useCallback((
-    index: number,
-    field: keyof RelatedLink,
-    value: string,
-  ) => {
-    updateRelatedLinksDraft((current) => current.map((item, itemIndex) => (
-      itemIndex === index ? { ...item, [field]: value } : item
-    )));
-  }, [updateRelatedLinksDraft]);
-
-  const handleAddRelatedLink = useCallback(() => {
-    updateRelatedLinksDraft((current) => [...current, { ...EMPTY_RELATED_LINK }]);
-  }, [updateRelatedLinksDraft]);
-
-  const handleRemoveRelatedLink = useCallback((index: number) => {
-    const nextLinks = updateRelatedLinksDraft((current) => current.filter((_, itemIndex) => itemIndex !== index));
-    if (isCreateMode) return;
-    void commitPatch(
-      { related_links: sanitizeRelatedLinks(nextLinks) },
-      '相关链接保存失败',
-      () => {
-        setEditRelatedLinks((currentLinks) => (
-          currentLinks && hasSameRelatedLinks(currentLinks, nextLinks) ? undefined : currentLinks
-        ));
-      },
-    );
-  }, [commitPatch, isCreateMode, updateRelatedLinksDraft]);
-
-  const handleOpenRelatedLinksEditor = useCallback((appendEmpty = false) => {
-    setEditingLinks(true);
-    if (!appendEmpty) return;
-    setEditRelatedLinks((currentLinks) => [
-      ...(currentLinks ?? knowledge?.related_links ?? []),
-      { ...EMPTY_RELATED_LINK },
-    ]);
-  }, [knowledge?.related_links]);
-
-  const handleRelatedLinksBlur = useCallback(() => {
-    if (editRelatedLinks === undefined) {
-      setEditingLinks(false);
-      return;
-    }
-    const nextLinks = editRelatedLinks;
-    const draftError = getRelatedLinksDraftError(nextLinks);
-    if (draftError) {
-      toast.error(draftError);
-      return;
-    }
-    if (isCreateMode) {
-      setEditingLinks(false);
-      return;
-    }
-    if (!knowledge || hasSameRelatedLinks(nextLinks, knowledge.related_links ?? [])) {
-      setEditRelatedLinks(undefined);
-      setEditingLinks(false);
-      return;
-    }
-    setEditingLinks(false);
-    void commitPatch(
-      { related_links: sanitizeRelatedLinks(nextLinks) },
-      '相关链接保存失败',
-      () => {
-        setEditRelatedLinks(undefined);
-      },
-    );
-  }, [commitPatch, editRelatedLinks, isCreateMode, knowledge]);
-
-  useEffect(() => {
-    if (!editingLinks) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (target && relatedLinksSectionRef.current?.contains(target)) return;
-      handleRelatedLinksBlur();
-    };
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
-  }, [editingLinks, handleRelatedLinksBlur]);
-
-  const handleCancelEdit = useCallback(() => {
-    clearLocalEdits();
-  }, [clearLocalEdits]);
+  const [isFocusMode, setIsFocusMode] = useState(startInFocus);
+  const [iframeEditMode, setIframeEditMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useKnowledgeModalInteractions({
     onEscape: () => {
-      if (showSpaceTags) {
-        setShowSpaceTags(false);
+      if (editor.showSpaceTags) {
+        editor.closeSpaceTags();
       } else if (isFocusMode) {
         setIsFocusMode(false);
-      } else if (!isCreateMode && hasChanges) {
-        handleCancelEdit();
+      } else if (!editor.isCreateMode && editor.hasChanges) {
+        editor.cancelEdit();
       } else {
         onClose();
       }
     },
     onSubmit: () => {
-      if (isCreateMode || hasChanges) {
-        void handleSave();
+      if (editor.isCreateMode || editor.hasChanges) {
+        void editor.save();
       }
     },
   });
-
-  const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
-    setShowSpaceTags(false);
-    if (activeSpaceTagId === nextSpaceTagId) return;
-    if (isCreateMode) {
-      setEditSpaceTagId(nextSpaceTagId);
-      return;
-    }
-    const updatedKnowledge = await commitPatch(
-      { space_tag_id: nextSpaceTagId },
-      '空间更新失败',
-      () => setEditSpaceTagId(undefined),
-    );
-    if (updatedKnowledge) {
-      toast.success('空间已更新');
-    }
-  }, [activeSpaceTagId, commitPatch, isCreateMode]);
 
   const handleComplete = useCallback(async () => {
     if (!learning) return;
@@ -551,8 +124,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     if (!learning) return null;
     if (learning.isCompleted) {
       return (
-        <div className="kd-complete-done kd-complete-done-docked">
-          <CheckCircle style={{ width: 14, height: 14 }} />
+        <div className="flex min-w-[108px] items-center justify-center gap-2 rounded-[6px] border-0 bg-[#e0f5e0] px-3 py-[10px] text-[13px] font-semibold text-[#2d8a2d]">
+          <CheckCircle className="h-[14px] w-[14px]" />
           已学习
         </div>
       );
@@ -562,7 +135,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         type="button"
         onClick={() => { void handleComplete(); }}
         disabled={learning.isMarking}
-        className="kab-btn kd-complete-btn-docked"
+        className="inline-flex w-[min(100%,156px)] cursor-pointer items-center justify-center gap-2 rounded-[6px] border-0 bg-[#e8793a] px-3 py-[10px] font-inherit text-[13px] font-semibold text-white transition-[background-color,opacity] duration-180 ease-in-out hover:not-disabled:bg-[#d66b2e] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {learning.isMarking ? '处理中…' : '标记已学习'}
       </button>
@@ -570,21 +143,25 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   })();
 
   const iframeSrc = buildDocUrl(
-    activeExternalDocUrl,
+    editor.activeExternalDocUrl,
     iframeEditMode ? 'edit' : 'view',
   );
+  // 同文档兄弟知识切换时保持 iframe 实例存活不重刷
+  const iframeKey = `${editor.knowledge?.doc_key || iframeSrc}:${iframeEditMode ? 'edit' : 'view'}`;
 
-  const handleCancelEditOrClose = useCallback(() => {
-    if (isCreateMode) {
-      onClose();
-      return;
-    }
-    handleCancelEdit();
-  }, [handleCancelEdit, isCreateMode, onClose]);
+  const leftPanelBaseClass = cn(
+    'flex min-w-0 flex-1 flex-col overflow-hidden bg-white shadow-[0_10px_24px_rgba(21,38,61,0.07)]',
+    isFocusMode ? 'rounded-none' : 'rounded-[6px]',
+  );
 
   const modalContent = (
     <div
-      className={`kd-overlay${isFocusMode ? ' kd-overlay-focus' : ''}`}
+      className={cn(
+        'pointer-events-auto fixed inset-0 z-[45] box-border flex items-center justify-center bg-black/60 [animation:modalFadeIn_0.18s_ease]',
+        isFocusMode
+          ? 'p-0'
+          : 'px-16 py-[52px] max-[1280px]:px-9 max-[1280px]:py-10 max-[860px]:p-3',
+      )}
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         if (isFocusMode) {
@@ -595,12 +172,20 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       }}
     >
       <div
-        className={`kd-container${isFocusMode ? ' kd-container-focus' : ''}`}
+        className={cn(
+          'relative flex max-h-full max-w-full overflow-hidden transition-[width,height,border-radius,padding] duration-[220ms] ease-in-out [animation:modalPopIn_0.22s_cubic-bezier(0.4,0,0.2,1)]',
+          isFocusMode
+            ? 'h-dvh w-screen gap-0 rounded-none bg-transparent p-0 shadow-none'
+            : 'h-[calc(100dvh-104px)] w-[calc(100vw-128px)] gap-2 rounded-[12px] bg-[#f1f3f6] p-2 shadow-[0_40px_100px_rgba(0,0,0,0.35)] max-[1280px]:h-[calc(100dvh-80px)] max-[1280px]:w-[calc(100vw-72px)] max-[860px]:h-[calc(100dvh-24px)] max-[860px]:w-full max-[860px]:flex-col max-[860px]:gap-[6px] max-[860px]:p-[6px] max-[640px]:rounded-[10px]',
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
-          className="kd-focus-btn"
+          className={cn(
+            'absolute top-[14px] left-4 z-20 flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[#7c8794] transition-transform duration-180 ease-in-out hover:-translate-y-px',
+            'after:pointer-events-none after:absolute after:top-1/2 after:left-[calc(100%+12px)] after:-translate-x-[2px] after:-translate-y-1/2 after:rounded-full after:bg-[rgba(243,245,248,0.96)] after:px-6 after:py-[10px] after:text-[17px] after:leading-none after:font-medium after:whitespace-nowrap after:text-[#22252b] after:opacity-0 after:shadow-[0_10px_28px_rgba(15,23,42,0.1)] after:transition-[opacity,transform] after:duration-160 after:ease-in-out after:content-[attr(data-tip)] hover:after:translate-x-0 hover:after:opacity-100',
+          )}
           data-tip={isFocusMode ? '退出专注' : '专注'}
           title={isFocusMode ? '退出专注' : '专注'}
           aria-label={isFocusMode ? '退出专注' : '专注'}
@@ -609,112 +194,119 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <FocusOrbIcon size={20} interactive />
         </button>
 
-        {!isCreateMode && isLoading ? (
+        {!editor.isCreateMode && editor.isLoading ? (
           <>
-            <div className="kd-left">
-              <Skeleton className="h-10 w-3/4 mb-8" />
-              <Skeleton className="h-5 w-full mb-4" />
+            <div className={leftPanelBaseClass}>
+              <Skeleton className="mb-8 h-10 w-3/4" />
+              <Skeleton className="mb-4 h-5 w-full" />
             </div>
-            <div className="kd-right">
-              <div className="kd-right-header">
-                <Skeleton className="h-6 w-full mb-3" />
+            <div
+              className={cn(
+                SIDE_PANEL_SHELL_CLASS,
+                isFocusMode ? 'rounded-none' : 'rounded-[6px]',
+              )}
+            >
+              <div className={cn(SIDE_PANEL_HEADER_BG_CLASS, 'px-5 pt-[22px] pb-4')}>
+                <Skeleton className="mb-3 h-6 w-full" />
               </div>
             </div>
           </>
-        ) : !knowledge ? (
-          <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
+        ) : !editor.knowledge ? (
+          <div className={cn(leftPanelBaseClass, 'items-center justify-center')}>
+            <p className="text-[15px] text-[#aaa] italic">知识文档不存在</p>
           </div>
         ) : (
           <>
-            <div className={`kd-left${activeExternalDocUrl ? ' kd-left-iframe' : ' kd-left-content'}`}>
-              {activeExternalDocUrl ? (
+            <div
+              className={cn(
+                leftPanelBaseClass,
+                editor.activeExternalDocUrl ? 'relative p-0' : 'overflow-y-auto px-9 py-7',
+              )}
+            >
+              {editor.activeExternalDocUrl ? (
                 <>
                   <iframe
-                    key={iframeSrc}
+                    key={iframeKey}
                     src={iframeSrc}
-                    title={activeTitle || '知识文档'}
-                    className="kd-iframe"
+                    title={editor.activeTitle || '知识文档'}
+                    className="h-full w-full flex-1 border-0 bg-[#fafafa]"
                     allow="clipboard-read; clipboard-write"
                   />
-                  {canUpdateKnowledge && (
-                    <div className="kd-iframe-toolbar">
+                  <div className="absolute top-3 right-3 z-[2] flex items-center gap-[6px]">
+                    {canUpdateKnowledge && (
+                      <Tooltip title={iframeEditMode ? '查看模式' : '编辑文档'} side="bottom">
+                        <button
+                          type="button"
+                          aria-label={iframeEditMode ? '查看模式' : '编辑文档'}
+                          className={cn(
+                            IFRAME_MODE_BTN_CLASS,
+                            iframeEditMode && 'border-[rgba(37,99,235,0.28)] bg-[#eff6ff] text-[var(--theme-primary,#2563eb)]',
+                          )}
+                          onClick={() => setIframeEditMode((v) => !v)}
+                        >
+                          {iframeEditMode ? (
+                            <Eye className="h-4 w-4" strokeWidth={1.8} />
+                          ) : (
+                            <PencilLine className="h-4 w-4" strokeWidth={1.8} />
+                          )}
+                        </button>
+                      </Tooltip>
+                    )}
+                    <Tooltip title={sidebarCollapsed ? '展开信息栏' : '收起信息栏'} side="bottom">
                       <button
                         type="button"
-                        className={`kd-iframe-mode-btn${iframeEditMode ? ' is-active' : ''}`}
-                        onClick={() => setIframeEditMode((v) => !v)}
+                        aria-label={sidebarCollapsed ? '展开信息栏' : '收起信息栏'}
+                        className={IFRAME_MODE_BTN_CLASS}
+                        onClick={() => setSidebarCollapsed((v) => !v)}
                       >
-                        {iframeEditMode ? '查看模式' : '编辑文档'}
+                        {sidebarCollapsed ? (
+                          <PanelRightOpen className="h-4 w-4" strokeWidth={1.8} />
+                        ) : (
+                          <PanelRightClose className="h-4 w-4" strokeWidth={1.8} />
+                        )}
                       </button>
-                    </div>
-                  )}
+                    </Tooltip>
+                  </div>
                 </>
               ) : canUpdateKnowledge ? (
-                <div className="kd-content-editor">
+                <div className="mx-auto w-full max-w-[820px] flex-1">
                   <StepsEditor
-                    value={activeContent}
-                    onChange={setEditContent}
-                    onBlur={handleContentBlur}
+                    value={editor.activeContent}
+                    onChange={editor.setContent}
+                    onBlur={editor.blurContent}
                     placeholder="在这里填写知识内容…"
+                    editorClassName="text-[18px] leading-[1.75]"
                     minHeight={280}
                   />
                 </div>
-              ) : activeContent ? (
+              ) : editor.activeContent ? (
                 <div
-                  className="kd-content-preview"
-                  dangerouslySetInnerHTML={{ __html: sanitizeStepsHtml(activeContent) }}
+                  className="mx-auto w-full max-w-[820px] flex-1 text-[18px] leading-[1.75] text-[#333] break-words whitespace-pre-wrap [&_b]:font-bold [&_b]:text-[#111] [&_strong]:font-bold [&_strong]:text-[#111]"
+                  dangerouslySetInnerHTML={{ __html: sanitizeStepsHtml(editor.activeContent) }}
                 />
               ) : (
-                <div className="kd-iframe-empty">暂无内容</div>
+                <div className="flex flex-1 items-center justify-center text-[14px] text-[#9aa0aa]">暂无内容</div>
               )}
             </div>
 
-            <KnowledgeDetailSidePanel
-              knowledge={knowledge}
-              activeTitle={activeTitle}
-              activeContent={activeContent}
-              activeExternalDocUrl={activeExternalDocUrl}
-              showStepsInSidebar={Boolean(activeExternalDocUrl)}
-              activeTags={activeTags}
-              activeRelatedLinks={activeRelatedLinks}
-              activeSpaceTagId={activeSpaceTagId}
-              spaces={spaces}
-              updatedRelativeTime={isCreateMode ? '新建' : relTime(knowledge.updated_at)}
-              canUpdateKnowledge={canUpdateKnowledge}
-              canDeleteKnowledge={canDeleteKnowledge}
-              shouldShowSystemTagsSection={shouldShowSystemTagsSection}
-              showTagInput={showTagInput}
-              showSpaceTags={showSpaceTags}
-              isCreateMode={isCreateMode}
-              hasChanges={hasChanges}
-              editingLinks={editingLinks}
-              isSaving={isSaving}
-              learningAction={learningAction}
-              relatedLinksSectionRef={relatedLinksSectionRef}
-              onTitleChange={setEditTitle}
-              onTitleBlur={handleTitleBlur}
-              onContentChange={setEditContent}
-              onContentBlur={handleContentBlur}
-              onExternalDocUrlChange={setEditExternalDocUrl}
-              onExternalDocUrlBlur={handleExternalDocUrlBlur}
-              onExternalDocUrlClear={handleExternalDocUrlClear}
-              onShowTagInputChange={setShowTagInput}
-              onAddTag={addTag}
-              onRemoveTag={removeTag}
-              onOpenRelatedLinksEditor={handleOpenRelatedLinksEditor}
-              onAddRelatedLink={handleAddRelatedLink}
-              onRelatedLinkChange={handleRelatedLinkChange}
-              onRelatedLinksBlur={handleRelatedLinksBlur}
-              onRemoveRelatedLink={handleRemoveRelatedLink}
-              onToggleSpaceTags={() => setShowSpaceTags(!showSpaceTags)}
-              onSpaceTagSelect={handleSpaceTagSelect}
-              onDelete={() => {
-                onDelete?.(knowledgeId!);
-                onClose();
-              }}
-              onCancelEdit={handleCancelEditOrClose}
-              onSave={() => { void handleSave(); }}
-            />
+            {!sidebarCollapsed && (
+              <KnowledgeDetailSidePanel
+                editor={editor}
+                spaces={spaces}
+                isFocusMode={isFocusMode}
+                canUpdateKnowledge={canUpdateKnowledge}
+                canCreateSpace={canCreateSpace}
+                canDeleteKnowledge={canDeleteKnowledge}
+                shouldShowSystemTagsSection={shouldShowSystemTagsSection}
+                learningAction={learningAction}
+                relatedLinksSectionRef={relatedLinksSectionRef}
+                onSelectKnowledge={onSelectKnowledge}
+                onDelete={() => {
+                  onDelete?.(knowledgeId!);
+                  onClose();
+                }}
+              />
+            )}
           </>
         )}
       </div>

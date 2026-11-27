@@ -28,9 +28,14 @@ export const TagInput: React.FC<TagInputProps> = ({
   onDismiss,
 }) => {
   const [input, setInput] = React.useState('');
-  const { data: scopedTags = [] } = useTags({ tag_type: 'TAG', applicable_to: applicableTo });
-  const createTag = useCreateTag();
   const trimmedInput = input.trim();
+  const { data: scopedTags = [] } = useTags({
+    tag_type: 'TAG',
+    applicable_to: applicableTo,
+    search: trimmedInput || undefined,
+    limit: 30,
+  });
+  const createTag = useCreateTag();
 
   // 输入时匹配的已有标签（排除已选）
   const matchedTags = trimmedInput
